@@ -1,0 +1,57 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/session-start.sh",
+          "timeout": 10000,
+          "statusMessage": "Checking workspace health..."
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/check-edited-file.sh \"$CLAUDE_TOOL_INPUT\"",
+          "timeout": 15000,
+          "statusMessage": "Checking import boundaries..."
+        }]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/log-bash-failure.sh",
+          "timeout": 5000,
+          "statusMessage": "Logging failure..."
+        }]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/inject-rules.sh",
+          "timeout": 5000,
+          "statusMessage": "Injecting rules..."
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/stop-nudge-verify.sh",
+          "timeout": 10000,
+          "statusMessage": "Checking if verification needed..."
+        }]
+      }
+    ]
+  }
+}
