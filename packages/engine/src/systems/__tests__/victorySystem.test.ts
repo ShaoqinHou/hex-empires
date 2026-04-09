@@ -9,7 +9,7 @@ function makeCity(id: string, owner: string): CityState {
     id, name: id, owner, position: { q: 0, r: 0 },
     population: 1, food: 0, productionQueue: [], productionProgress: 0,
     buildings: [], territory: [coordToKey({ q: 0, r: 0 })],
-    housing: 5, amenities: 1,
+    settlementType: 'city', happiness: 10, isCapital: false,
   };
 }
 

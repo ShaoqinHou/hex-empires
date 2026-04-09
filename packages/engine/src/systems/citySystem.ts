@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, HexTile } from '../types/GameState';
+import type { GameState, GameAction, CityState, HexTile, SettlementType } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, range, distance } from '../hex/HexMath';
 
@@ -7,8 +7,16 @@ function nextCityId(state: GameState): string {
   return `city_${state.cities.size + 1}_t${state.turn}`;
 }
 
+/** Check whether the current player already owns a city (capital) */
+function playerHasCity(state: GameState, playerId: string): boolean {
+  for (const city of state.cities.values()) {
+    if (city.owner === playerId) return true;
+  }
+  return false;
+}
+
 /**
- * CitySystem handles city founding and tile purchasing.
+ * CitySystem handles city founding, tile purchasing, and settlement upgrades.
  */
 export function citySystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -16,6 +24,8 @@ export function citySystem(state: GameState, action: GameAction): GameState {
       return handleFoundCity(state, action.unitId, action.name);
     case 'PURCHASE_TILE':
       return handlePurchaseTile(state, action.cityId, action.tile);
+    case 'UPGRADE_SETTLEMENT':
+      return handleUpgradeSettlement(state, action.cityId);
     default:
       return state;
   }
@@ -65,6 +75,8 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   }
 
   const cityId = nextCityId(state);
+  const isFirstCity = !playerHasCity(state, unit.owner);
+  const settlementType: SettlementType = isFirstCity ? 'city' : 'town';
   const newCity: CityState = {
     id: cityId,
     name: cityName,
@@ -76,8 +88,9 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
     productionProgress: 0,
     buildings: [],
     territory,
-    housing: 5, // base housing
-    amenities: 1, // base amenity
+    settlementType,
+    happiness: settlementType === 'city' ? 10 : 5,
+    isCapital: isFirstCity,
   };
 
   // Remove settler unit
@@ -96,6 +109,39 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: `${cityName} founded at (${pos.q}, ${pos.r})`,
+      type: 'city',
+    }],
+  };
+}
+
+function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.owner !== state.currentPlayerId) return state;
+  if (city.settlementType !== 'town') return state;
+
+  const upgradeCost = 100;
+  const player = state.players.get(state.currentPlayerId);
+  if (!player || player.gold < upgradeCost) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, { ...player, gold: player.gold - upgradeCost });
+
+  const updatedCities = new Map(state.cities);
+  updatedCities.set(cityId, {
+    ...city,
+    settlementType: 'city',
+    happiness: 10,
+  });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    cities: updatedCities,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${city.name} upgraded to a City`,
       type: 'city',
     }],
   };

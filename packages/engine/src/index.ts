@@ -24,6 +24,7 @@ export type {
   HexMap,
   UnitCategory,
   UnitState,
+  SettlementType,
   CityState,
   ProductionItem,
   PlayerState,
@@ -85,7 +86,7 @@ export { citySystem } from './systems/citySystem';
 export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
 export { calculateCityYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';
-export { resourceSystem } from './systems/resourceSystem';
+export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './systems/resourceSystem';
 export { researchSystem } from './systems/researchSystem';
 export { ageSystem } from './systems/ageSystem';
 export { combatSystem } from './systems/combatSystem';

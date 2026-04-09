@@ -46,6 +46,8 @@ export interface UnitState {
 
 // ── Cities ──
 
+export type SettlementType = 'town' | 'city';
+
 export interface CityState {
   readonly id: CityId;
   readonly name: string;
@@ -57,8 +59,9 @@ export interface CityState {
   readonly productionProgress: number; // accumulated production on current item
   readonly buildings: ReadonlyArray<BuildingId>;
   readonly territory: ReadonlyArray<HexKey>; // owned hex keys
-  readonly housing: number;
-  readonly amenities: number;
+  readonly settlementType: SettlementType;
+  readonly happiness: number;
+  readonly isCapital: boolean;
 }
 
 export interface ProductionItem {
@@ -211,7 +214,9 @@ export type GameAction =
   | { readonly type: 'RESOLVE_CRISIS'; readonly crisisId: string; readonly choice: string }
   | { readonly type: 'FORTIFY_UNIT'; readonly unitId: UnitId }
   | { readonly type: 'PURCHASE_TILE'; readonly cityId: CityId; readonly tile: HexCoord }
-  | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string };
+  | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
+  | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
+  | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' };
 
 // ── Events ──
 

@@ -11,6 +11,7 @@ export type {
   HexMap,
   UnitCategory,
   UnitState,
+  SettlementType,
   CityState,
   ProductionItem,
   PlayerState,

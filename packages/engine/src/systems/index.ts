@@ -4,7 +4,7 @@ export { citySystem } from './citySystem';
 export { growthSystem, getGrowthThreshold } from './growthSystem';
 export { calculateCityYields } from '../state/YieldCalculator';
 export { productionSystem } from './productionSystem';
-export { resourceSystem } from './resourceSystem';
+export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './resourceSystem';
 export { researchSystem } from './researchSystem';
 export { ageSystem } from './ageSystem';
 export { combatSystem } from './combatSystem';

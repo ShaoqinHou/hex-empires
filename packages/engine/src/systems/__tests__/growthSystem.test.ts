@@ -16,8 +16,9 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     productionProgress: 0,
     buildings: [],
     territory: [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 }), coordToKey({ q: 3, r: 4 })],
-    housing: 10,
-    amenities: 1,
+    settlementType: 'city',
+    happiness: 10,
+    isCapital: true,
     ...overrides,
   };
 }
@@ -48,13 +49,13 @@ describe('growthSystem', () => {
     expect(updatedCity.food !== city.food || updatedCity.population !== city.population).toBe(true);
   });
 
-  it('does not grow past housing limit', () => {
-    const city = createTestCity({ population: 3, food: 100, housing: 3 });
+  it('does not grow past population cap for towns (cap=5)', () => {
+    const city = createTestCity({ population: 5, food: 100, settlementType: 'town', happiness: 5, isCapital: false });
     const state = createTestState({
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
-    expect(next.cities.get('c1')!.population).toBe(3);
+    expect(next.cities.get('c1')!.population).toBe(5);
   });
 
   it('ignores non-END_TURN actions', () => {

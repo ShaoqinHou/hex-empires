@@ -34,7 +34,15 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
 
   // 2. City production — based on current needs
   for (const city of ourCities) {
-    if (city.productionQueue.length === 0) {
+    if (city.settlementType === 'town') {
+      // Towns must purchase with gold — pick something affordable
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
+      const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
+      const cost = (state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100) * 2;
+      if (player.gold >= cost) {
+        actions.push({ type: 'PURCHASE_ITEM', cityId: city.id, itemId, itemType });
+      }
+    } else if (city.productionQueue.length === 0) {
       const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
       actions.push({ type: 'SET_PRODUCTION', cityId: city.id, itemId, itemType });

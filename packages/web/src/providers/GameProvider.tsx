@@ -34,7 +34,7 @@ import {
   getReachable,
   getMovementCost,
 } from '@hex/engine';
-import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState } from '@hex/engine';
+import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState, SettlementType } from '@hex/engine';
 
 // ── Engine singleton ──
 

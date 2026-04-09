@@ -25,7 +25,9 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const newFood = Math.max(0, city.food + foodSurplus);
     const growthThreshold = getGrowthThreshold(city.population);
 
-    if (newFood >= growthThreshold && city.population < city.housing) {
+    // Population cap based on settlement type: towns cap at 5, cities at 20
+    const popCap = city.settlementType === 'town' ? 5 : 20;
+    if (newFood >= growthThreshold && city.population < popCap) {
       // Population grows + territory expands
       const expandedTerritory = expandBorders(city, state, updatedCities);
       updatedCities.set(cityId, {

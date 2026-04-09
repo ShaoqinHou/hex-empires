@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { citySystem } from '../citySystem';
 import type { CityState } from '../../types/GameState';
-import { createTestState, createTestUnit, setTile } from './helpers';
+import { createTestState, createTestPlayer, createTestUnit, setTile } from './helpers';
 
 describe('citySystem', () => {
   describe('FOUND_CITY', () => {
@@ -23,6 +23,10 @@ describe('citySystem', () => {
       expect(city.position).toEqual({ q: 3, r: 3 });
       expect(city.population).toBe(1);
       expect(city.owner).toBe('p1');
+      // First city is always a City (capital)
+      expect(city.settlementType).toBe('city');
+      expect(city.isCapital).toBe(true);
+      expect(city.happiness).toBe(10);
     });
 
     it('grants territory of radius 1', () => {
@@ -110,8 +114,9 @@ describe('citySystem', () => {
         productionProgress: 0,
         buildings: [],
         territory: ['3,3'],
-        housing: 5,
-        amenities: 1,
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: true,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 5, r: 2 } })],
@@ -141,8 +146,9 @@ describe('citySystem', () => {
         productionProgress: 0,
         buildings: [],
         territory: ['3,3'],
-        housing: 5,
-        amenities: 1,
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: true,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 6, r: 3 } })],
@@ -172,8 +178,9 @@ describe('citySystem', () => {
         productionProgress: 0,
         buildings: [],
         territory: ['3,3'],
-        housing: 5,
-        amenities: 1,
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: true,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 7, r: 3 } })],
@@ -207,8 +214,9 @@ describe('citySystem', () => {
         productionProgress: 0,
         buildings: [],
         territory: ['3,3'],
-        housing: 5,
-        amenities: 1,
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: true,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 4, r: 1 } })],
@@ -223,6 +231,78 @@ describe('citySystem', () => {
 
       expect(next.cities.size).toBe(1); // rejected — hex distance is 2
       expect(next.units.has('s1')).toBe(true);
+    });
+
+    it('second city founded is a Town (not capital)', () => {
+      const existingCity: CityState = {
+        id: 'c1', name: 'Rome', owner: 'p1', position: { q: 3, r: 3 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: ['3,3'],
+        settlementType: 'city', happiness: 10, isCapital: true,
+      };
+      const units = new Map([
+        ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 7, r: 3 } })],
+      ]);
+      const cities = new Map([['c1', existingCity]]);
+      const state = createTestState({ units, cities });
+      const next = citySystem(state, {
+        type: 'FOUND_CITY',
+        unitId: 's1',
+        name: 'Carthage',
+      });
+
+      const newCity = [...next.cities.values()].find(c => c.name === 'Carthage');
+      expect(newCity).toBeDefined();
+      expect(newCity!.settlementType).toBe('town');
+      expect(newCity!.isCapital).toBe(false);
+      expect(newCity!.happiness).toBe(5);
+    });
+  });
+
+  describe('UPGRADE_SETTLEMENT', () => {
+    it('upgrades a town to a city for 100 gold', () => {
+      const town: CityState = {
+        id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: ['3,3'],
+        settlementType: 'town', happiness: 5, isCapital: false,
+      };
+      const state = createTestState({
+        cities: new Map([['c1', town]]),
+      });
+      const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
+      expect(next.cities.get('c1')!.settlementType).toBe('city');
+      expect(next.cities.get('c1')!.happiness).toBe(10);
+      expect(next.players.get('p1')!.gold).toBe(0); // 100 - 100
+    });
+
+    it('rejects upgrade if not enough gold', () => {
+      const town: CityState = {
+        id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: ['3,3'],
+        settlementType: 'town', happiness: 5, isCapital: false,
+      };
+      const state = createTestState({
+        cities: new Map([['c1', town]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 50 })]]),
+      });
+      const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
+      expect(next.cities.get('c1')!.settlementType).toBe('town'); // unchanged
+    });
+
+    it('rejects upgrade if already a city', () => {
+      const city: CityState = {
+        id: 'c1', name: 'Capital', owner: 'p1', position: { q: 3, r: 3 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: ['3,3'],
+        settlementType: 'city', happiness: 10, isCapital: true,
+      };
+      const state = createTestState({
+        cities: new Map([['c1', city]]),
+      });
+      const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
+      expect(next).toBe(state);
     });
   });
 

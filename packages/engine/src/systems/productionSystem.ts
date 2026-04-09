@@ -9,12 +9,15 @@ function nextUnitId(state: GameState, cityId: string): string {
 
 /**
  * ProductionSystem processes production queues on END_TURN.
- * Also handles SET_PRODUCTION actions.
+ * Also handles SET_PRODUCTION and PURCHASE_ITEM actions.
+ * Towns cannot produce via production queue — they must use PURCHASE_ITEM.
  */
 export function productionSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'SET_PRODUCTION':
       return handleSetProduction(state, action.cityId, action.itemId, action.itemType);
+    case 'PURCHASE_ITEM':
+      return handlePurchaseItem(state, action.cityId, action.itemId, action.itemType);
     case 'END_TURN':
       return processProduction(state);
     default:
@@ -31,6 +34,8 @@ function handleSetProduction(
   const city = state.cities.get(cityId);
   if (!city) return state;
   if (city.owner !== state.currentPlayerId) return state;
+  // Towns cannot use production queue — they must purchase with gold
+  if (city.settlementType === 'town') return state;
 
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, {
@@ -42,6 +47,70 @@ function handleSetProduction(
   return { ...state, cities: updatedCities };
 }
 
+function handlePurchaseItem(
+  state: GameState,
+  cityId: string,
+  itemId: string,
+  itemType: 'unit' | 'building',
+): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.owner !== state.currentPlayerId) return state;
+
+  const goldCost = getGoldCost(state, itemId);
+  const player = state.players.get(state.currentPlayerId);
+  if (!player || player.gold < goldCost) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, { ...player, gold: player.gold - goldCost });
+
+  const updatedCities = new Map(state.cities);
+  const updatedUnits = new Map(state.units);
+  const newLog = [...state.log];
+
+  if (itemType === 'unit') {
+    const unitId = nextUnitId(state, cityId);
+    const newUnit: UnitState = {
+      id: unitId,
+      typeId: itemId,
+      owner: city.owner,
+      position: city.position,
+      movementLeft: 0,
+      health: 100,
+      experience: 0,
+      promotions: [],
+      fortified: false,
+    };
+    updatedUnits.set(unitId, newUnit);
+    newLog.push({
+      turn: state.turn,
+      playerId: city.owner,
+      message: `${city.name} purchased ${itemId}`,
+      type: 'production',
+    });
+  } else if (itemType === 'building') {
+    if (city.buildings.includes(itemId)) return state; // already built
+    updatedCities.set(cityId, {
+      ...city,
+      buildings: [...city.buildings, itemId],
+    });
+    newLog.push({
+      turn: state.turn,
+      playerId: city.owner,
+      message: `${city.name} purchased ${itemId}`,
+      type: 'production',
+    });
+  }
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    cities: updatedCities,
+    units: updatedUnits,
+    log: newLog,
+  };
+}
+
 function processProduction(state: GameState): GameState {
   const updatedCities = new Map(state.cities);
   const updatedUnits = new Map(state.units);
@@ -50,6 +119,7 @@ function processProduction(state: GameState): GameState {
 
   for (const [cityId, city] of state.cities) {
     if (city.owner !== state.currentPlayerId) continue;
+    if (city.settlementType === 'town') continue; // Towns cannot produce via queue
     if (city.productionQueue.length === 0) continue;
 
     const currentItem = city.productionQueue[0];
@@ -130,4 +200,9 @@ function getProductionCost(state: GameState, itemId: string): number {
   return state.config.units.get(itemId)?.cost
     ?? state.config.buildings.get(itemId)?.cost
     ?? 100;
+}
+
+/** Gold cost for purchasing items (2x production cost) */
+function getGoldCost(state: GameState, itemId: string): number {
+  return getProductionCost(state, itemId) * 2;
 }
