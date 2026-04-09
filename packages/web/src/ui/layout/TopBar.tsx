@@ -1,4 +1,6 @@
 import { useGame } from '../../providers/GameProvider';
+import { ALL_TECHNOLOGIES } from '@hex/engine';
+import type { TechnologyDef } from '@hex/engine';
 
 interface TopBarProps {
   onOpenTechTree?: () => void;
@@ -11,10 +13,20 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }
   const { state, dispatch, saveGame, loadGame } = useGame();
   const player = state.players.get(state.currentPlayerId);
 
+  // Recent log entries for the current player (from previous turn)
+  const recentEvents = state.log
+    .filter(e => e.playerId === state.currentPlayerId && e.turn === state.turn - 1)
+    .slice(-2);
+
+  // Current research info
+  const currentResearchTech: TechnologyDef | undefined = player?.currentResearch
+    ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
+    : undefined;
+
   return (
     <div className="h-12 flex items-center justify-between px-4 select-none"
       style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
-      {/* Left: Turn & Age */}
+      {/* Left: Turn & Age & Notifications */}
       <div className="flex items-center gap-4">
         <span className="text-sm font-bold" style={{ color: 'var(--color-accent)' }}>
           Turn {state.turn}
@@ -25,12 +37,22 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }
         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
           Units: {[...state.units.values()].filter(u => u.owner === state.currentPlayerId).length}
         </span>
+        {recentEvents.length > 0 && (
+          <span className="text-xs italic truncate max-w-48" style={{ color: 'var(--color-accent)' }}>
+            {recentEvents[recentEvents.length - 1].message}
+          </span>
+        )}
       </div>
 
-      {/* Center: Resources */}
+      {/* Center: Resources + Research */}
       <div className="flex items-center gap-4 text-sm">
         <ResourceBadge label="Gold" value={player?.gold ?? 0} color="var(--color-gold)" />
         <ResourceBadge label="Science" value={player?.science ?? 0} color="var(--color-science)" />
+        {currentResearchTech && (
+          <span className="text-[10px]" style={{ color: 'var(--color-science)' }}>
+            {currentResearchTech.name} ({player?.researchProgress ?? 0}/{currentResearchTech.cost})
+          </span>
+        )}
         <ResourceBadge label="Culture" value={player?.culture ?? 0} color="var(--color-culture)" />
         <ResourceBadge label="Faith" value={player?.faith ?? 0} color="var(--color-faith)" />
       </div>

@@ -1,6 +1,6 @@
 import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
-import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './promotionSystem';
+import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 
 /**
  * CombatSystem handles unit attacks.

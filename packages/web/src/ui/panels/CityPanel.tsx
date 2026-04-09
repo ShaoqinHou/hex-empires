@@ -82,6 +82,11 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
             <span style={{ color: 'var(--color-text-muted)' }}>
               {city.productionProgress}/{getProductionCost(currentProduction.id)} ({yields.production}/turn)
             </span>
+            {yields.production > 0 && (
+              <span className="ml-2 font-bold" style={{ color: 'var(--color-production)' }}>
+                {Math.ceil((getProductionCost(currentProduction.id) - city.productionProgress) / yields.production)} turns remaining
+              </span>
+            )}
           </div>
         ) : (
           <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Nothing — choose below</span>

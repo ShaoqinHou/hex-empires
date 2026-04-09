@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { promotionSystem, getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus, getPromotionMovementBonus } from '../promotionSystem';
+import { promotionSystem } from '../promotionSystem';
+import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus, getPromotionMovementBonus } from '../../state/PromotionUtils';
 import { createTestState, createTestUnit, createTestPlayer } from './helpers';
 
 describe('promotionSystem', () => {
