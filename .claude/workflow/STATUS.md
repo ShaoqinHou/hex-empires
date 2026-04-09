@@ -1,89 +1,65 @@
 # Project Status
 
 ## Current State
-- **Phase:** All 6 phases implemented
-- **Last verified:** 2026-04-09
-- **Active feature:** Feature-complete first pass
-- **Tests:** 143 passing across 16 test files
+- **Phase:** All phases implemented + 7 quality iterations
+- **Last verified:** 2026-04-09 (browser E2E pass)
+- **Tests:** 158 passing across 18 test files
+- **Content:** 27 units, 19 buildings, 35 techs, 16 civs, 8 leaders, 7 terrains, 8 features
 
-## Completed
-- [x] .claude/ workflow configured (hooks, rules, skills)
-- [x] Package structure (engine + web workspaces)
+## Architecture
+- 16 pure system functions in pipeline + AI + visibility
+- Data-driven via GameConfig (state.config) — adding content is 2 edits
+- No cross-system imports (shared utils in hex/TerrainCost, state/YieldCalculator)
+- Engine has ZERO browser dependencies
+- Strict TypeScript, readonly state, seeded RNG
 
-## Phase 1: Foundation
-- [x] HexCoord, HexGrid, neighbor/distance math
-- [x] GameState type definition
-- [x] Registry<T> generic class
-- [x] Terrain data (7 base terrains, 8 features) + TerrainRegistry
-- [x] MapGenerator (seeded fractal noise)
-- [x] Canvas HexRenderer (terrain, units, cities, overlays)
-- [x] Camera (pan, zoom, screen-to-world)
-- [x] React app shell (GameProvider, App, TopBar, BottomBar)
-- [x] Seeded RNG (deterministic)
-- [x] A* Pathfinding + getReachable
+## Commit History
+1. `6398693` Project scaffolding
+2. `a9263af` All 6 phases implemented
+3. `37e1809` Critical UX fixes, architecture cleanup
+4. `c867f26` Data-driven refactor (GameConfig in GameState)
+5. `73e3aaa` Exploration/modern units, diplomacy/log panels, minimap
+6. `2a51337` Fog of war, age transition panel, visibility system
+7. `f353f91` 16 civs, 19 buildings, smarter AI, tech tree lines, right-click
+8. `1d4f377` Keyboard shortcuts, enhanced bottom bar, city distance fix
 
-## Phase 2: Core Game Loop
-- [x] TurnSystem (phase management, player order, unit refresh)
-- [x] MovementSystem (validation, cost calc, path following)
-- [x] Unit data (10 antiquity units with stats)
-- [x] Click-to-select, click-to-move flow
-- [x] TopBar + BottomBar UI with unit info
-- [x] Unit rendering on canvas
-- [x] GameEngine pipeline (system composition)
-
-## Phase 3: Cities & Production
-- [x] CitySystem (founding from settlers, territory)
-- [x] GrowthSystem (food surplus → population growth)
-- [x] ProductionSystem (queue, progress, unit/building completion)
-- [x] ResourceSystem (gold/science/culture/faith accumulation)
-- [x] City founding (settler → city)
-- [x] CityPanel UI (yields, growth, production, build queue)
-- [x] Territory/borders rendering
-- [x] Building data (9 antiquity buildings)
-
-## Phase 4: Research & Ages
-- [x] ResearchSystem (science accumulation, tech completion)
-- [x] Technology data (15 antiquity + 10 exploration + 10 modern = 35 techs)
-- [x] TechTreePanel UI (interactive grid layout)
-- [x] AgeSystem (progress tracking, transitions, legacy bonuses)
-- [x] Civilization data (6 antiquity civs with abilities)
-- [x] Leader data (8 leaders with abilities and agendas)
-- [x] Legacy bonuses on age transition
-
-## Phase 5: Combat & Diplomacy
-- [x] CombatSystem (melee + ranged, damage formula, terrain defense)
-- [x] DiplomacySystem (war/peace/alliance/friendship/denounce, grievances)
-- [x] AI player (basic: movement, city founding, production, research)
-- [x] FortifySystem (+50% defense toggle)
-- [x] Combat log entries
-
-## Phase 6: Victory, Crises, Polish
-- [x] VictorySystem (domination, science, culture, diplomacy, score)
-- [x] EffectSystem (legacy bonuses framework)
-- [x] Save/load (serialize/deserialize GameState with Maps/Sets)
-- [x] Minimap
-- [x] VictoryPanel UI
-- [x] Save/Load buttons in TopBar
-
-## Architecture Stats
-- **Engine systems:** 12 pure functions in pipeline
-- **Data files:** 35 techs, 10 units, 9 buildings, 7 terrains, 8 features, 6 civs, 8 leaders
-- **Tests:** 143 passing (16 test files)
-- **Zero browser deps in engine** ✓
-- **Strict TypeScript** ✓
-- **Deterministic (seeded RNG)** ✓
+## Features Complete
+- [x] Hex grid with 7 terrain types + 8 features
+- [x] Procedural map generation (seeded fractal noise)
+- [x] 27 unit types across 3 ages with upgrade chains
+- [x] 19 buildings across 3 ages
+- [x] 35 technologies across 3 ages with prerequisite trees
+- [x] 16 civilizations across 3 ages with unique abilities
+- [x] 8 leaders with abilities and agendas
+- [x] Turn-based gameplay with multi-player support
+- [x] A* pathfinding + movement range overlay
+- [x] Click-to-move, click-to-attack
+- [x] City founding, growth, production, territory
+- [x] Combat (melee, ranged, terrain defense, fortification)
+- [x] Research system with tech trees per age
+- [x] Age transitions with civilization selection + legacy bonuses
+- [x] Diplomacy (war, peace, alliance, friendship, denounce, grievances)
+- [x] Victory conditions (domination, science, culture, diplomacy, score)
+- [x] Fog of war with visibility/explored/unexplored states
+- [x] AI opponent (priority-based: research, build, settle, fight, defend)
+- [x] Save/Load to localStorage
+- [x] Canvas renderer with distinct unit icons per type
+- [x] Camera: grab-drag, WASD, edge scroll, zoom to cursor
+- [x] Keyboard shortcuts (Enter, T, F, B, Space, Escape)
+- [x] 8 UI panels: Tech Tree, City, Diplomacy, Event Log, Age Transition, Victory, Minimap, BottomBar
+- [x] Tech tree with prerequisite connection lines
+- [x] Right-click to deselect
+- [x] Minimap with click-to-navigate and viewport rectangle
 
 ## Known Areas for Future Work
-- [ ] More unit types for exploration + modern ages
-- [ ] More civilizations for exploration + modern ages
-- [ ] District system
-- [ ] Crisis events data + UI
-- [ ] Combat animations
-- [ ] Sound hooks
-- [ ] Fog of war rendering
-- [ ] AI diplomacy decisions
-- [ ] Unit promotions system
-- [ ] Great people system
-- [ ] Wonder buildings
-- [ ] Map types (continents, pangaea, etc.)
-- [ ] Multiplayer (local hotseat done, network future)
+- [ ] Unit promotion system (promotions array exists but unused)
+- [ ] District system for cities
+- [ ] Trade routes between cities
+- [ ] Great people mechanics
+- [ ] Crisis/narrative events (CrisisState exists but no CrisisSystem)
+- [ ] Sound effects
+- [ ] Visual animations (unit movement, combat)
+- [ ] Unique civ units as actual distinct unit definitions
+- [ ] More AI sophistication (diplomacy decisions, multi-front war)
+- [ ] Performance optimization for very large maps
+- [ ] Mobile/touch support
