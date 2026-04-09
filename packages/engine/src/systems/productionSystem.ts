@@ -156,11 +156,12 @@ function processProduction(state: GameState): GameState {
       } else if (currentItem.type === 'building') {
         // Add building to city
         const wallsBonus = currentItem.id === 'walls' ? 100 : 0;
+        // Production overflow carries to next project (Civ VII rule)
         updatedCities.set(cityId, {
           ...city,
           buildings: [...city.buildings, currentItem.id],
           productionQueue: city.productionQueue.slice(1),
-          productionProgress: 0,
+          productionProgress: newProgress - cost,
           defenseHP: city.defenseHP + wallsBonus,
         });
         changed = true;
@@ -174,10 +175,11 @@ function processProduction(state: GameState): GameState {
         continue;
       }
 
+      // Production overflow carries to next project (Civ VII rule)
       updatedCities.set(cityId, {
         ...city,
         productionQueue: city.productionQueue.slice(1),
-        productionProgress: 0,
+        productionProgress: newProgress - cost,
       });
       changed = true;
     } else {
