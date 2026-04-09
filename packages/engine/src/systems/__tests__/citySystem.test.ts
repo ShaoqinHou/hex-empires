@@ -118,6 +118,7 @@ describe('citySystem', () => {
         settlementType: 'city',
         happiness: 10,
         isCapital: true,
+        defenseHP: 100,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 5, r: 2 } })],
@@ -150,6 +151,7 @@ describe('citySystem', () => {
         settlementType: 'city',
         happiness: 10,
         isCapital: true,
+        defenseHP: 100,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 6, r: 3 } })],
@@ -182,6 +184,7 @@ describe('citySystem', () => {
         settlementType: 'city',
         happiness: 10,
         isCapital: true,
+        defenseHP: 100,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 7, r: 3 } })],
@@ -218,6 +221,7 @@ describe('citySystem', () => {
         settlementType: 'city',
         happiness: 10,
         isCapital: true,
+        defenseHP: 100,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 4, r: 1 } })],
@@ -239,7 +243,7 @@ describe('citySystem', () => {
         id: 'c1', name: 'Rome', owner: 'p1', position: { q: 3, r: 3 },
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: ['3,3'],
-        settlementType: 'city', happiness: 10, isCapital: true,
+        settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
       };
       const units = new Map([
         ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 7, r: 3 } })],
@@ -266,7 +270,7 @@ describe('citySystem', () => {
         id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: ['3,3'],
-        settlementType: 'town', happiness: 5, isCapital: false,
+        settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 100,
       };
       const state = createTestState({
         cities: new Map([['c1', town]]),
@@ -282,7 +286,7 @@ describe('citySystem', () => {
         id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: ['3,3'],
-        settlementType: 'town', happiness: 5, isCapital: false,
+        settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 100,
       };
       const state = createTestState({
         cities: new Map([['c1', town]]),
@@ -297,7 +301,7 @@ describe('citySystem', () => {
         id: 'c1', name: 'Capital', owner: 'p1', position: { q: 3, r: 3 },
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: ['3,3'],
-        settlementType: 'city', happiness: 10, isCapital: true,
+        settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
       };
       const state = createTestState({
         cities: new Map([['c1', city]]),

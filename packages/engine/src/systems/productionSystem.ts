@@ -90,9 +90,11 @@ function handlePurchaseItem(
     });
   } else if (itemType === 'building') {
     if (city.buildings.includes(itemId)) return state; // already built
+    const wallsBonus = itemId === 'walls' ? 100 : 0;
     updatedCities.set(cityId, {
       ...city,
       buildings: [...city.buildings, itemId],
+      defenseHP: city.defenseHP + wallsBonus,
     });
     newLog.push({
       turn: state.turn,
@@ -153,11 +155,13 @@ function processProduction(state: GameState): GameState {
         });
       } else if (currentItem.type === 'building') {
         // Add building to city
+        const wallsBonus = currentItem.id === 'walls' ? 100 : 0;
         updatedCities.set(cityId, {
           ...city,
           buildings: [...city.buildings, currentItem.id],
           productionQueue: city.productionQueue.slice(1),
           productionProgress: 0,
+          defenseHP: city.defenseHP + wallsBonus,
         });
         changed = true;
 

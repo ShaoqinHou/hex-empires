@@ -3,11 +3,13 @@ import type { GameState, GameAction, VictoryProgress, VictoryType } from '../typ
 /**
  * VictorySystem checks win conditions at the end of each turn.
  * Victory types:
- * - Domination: control all original capitals
- * - Science: complete the space race (research all modern techs)
- * - Culture: earn enough culture (culture >= threshold)
- * - Diplomacy: achieve diplomatic victory (alliances + world congress)
- * - Score: highest score at turn limit (300 turns)
+ * - Domination: eliminate all rival players (no cities/units remaining)
+ * - Science: research all modern techs + culture >= 100
+ * - Culture: culture >= 300 + at least 5 civics researched
+ * - Diplomacy: alliances with 60% of other players
+ * - Economic: gold >= 500, totalGoldEarned >= 1000, has alliance with at least 1 player
+ * - Military: totalKills >= 20 + at least 5 cities
+ * - Score: highest score at turn limit (300 turns) using legacy-based scoring
  */
 export function victorySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -28,6 +30,8 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
       checkScience(state, playerId),
       checkCulture(state, playerId),
       checkDiplomacy(state, playerId),
+      checkEconomic(state, playerId),
+      checkMilitary(state, playerId),
       checkScore(state, playerId),
     ];
 
@@ -60,7 +64,6 @@ function checkDomination(state: GameState, playerId: string): VictoryProgress {
   // Domination: must have at least one city AND all other players must have
   // lost all their units and cities (eliminated)
   const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
-  const ownedUnits = [...state.units.values()].filter(u => u.owner === playerId).length;
   const otherPlayersTotal = state.players.size - 1;
 
   // Count players that still have cities OR military units
@@ -86,19 +89,25 @@ function checkScience(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'science', progress: 0, achieved: false };
 
-  // Need to research all modern techs (10 techs)
+  // Need to research all modern techs (10 techs) AND have culture >= 100
   const modernTechs = [
     'industrialization', 'scientific_theory', 'rifling',
     'steam_power', 'electricity', 'replaceable_parts',
     'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
   ];
   const researched = modernTechs.filter(t => player.researchedTechs.includes(t)).length;
-  const progress = researched / modernTechs.length;
+  const cultureReq = 100;
+  const hasCulture = player.culture >= cultureReq;
+
+  // Progress: 80% from techs, 20% from culture requirement
+  const techProgress = researched / modernTechs.length;
+  const cultureProgress = Math.min(1, player.culture / cultureReq);
+  const progress = techProgress * 0.8 + cultureProgress * 0.2;
 
   return {
     type: 'science',
     progress,
-    achieved: researched === modernTechs.length,
+    achieved: researched === modernTechs.length && hasCulture,
   };
 }
 
@@ -106,13 +115,20 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'culture', progress: 0, achieved: false };
 
-  const threshold = 500;
-  const progress = Math.min(1, player.culture / threshold);
+  // Culture >= 300 AND at least 5 civics researched
+  const cultureThreshold = 300;
+  const civicsRequired = 5;
+  const civicsCount = player.researchedCivics.length;
+
+  // Progress: 60% from culture, 40% from civics
+  const cultureProgress = Math.min(1, player.culture / cultureThreshold);
+  const civicsProgress = Math.min(1, civicsCount / civicsRequired);
+  const progress = cultureProgress * 0.6 + civicsProgress * 0.4;
 
   return {
     type: 'culture',
     progress,
-    achieved: player.culture >= threshold,
+    achieved: player.culture >= cultureThreshold && civicsCount >= civicsRequired,
   };
 }
 
@@ -130,6 +146,55 @@ function checkDiplomacy(state: GameState, playerId: string): VictoryProgress {
     type: 'diplomacy',
     progress,
     achieved: alliances >= needed && otherPlayers > 0,
+  };
+}
+
+function checkEconomic(state: GameState, playerId: string): VictoryProgress {
+  const player = state.players.get(playerId);
+  if (!player) return { type: 'economic', progress: 0, achieved: false };
+
+  // Gold >= 500 AND totalGoldEarned >= 1000 AND has alliance with at least 1 player
+  const goldReq = 500;
+  const totalGoldReq = 1000;
+  const hasGold = player.gold >= goldReq;
+  const hasTotalGold = player.totalGoldEarned >= totalGoldReq;
+
+  const alliances = [...state.diplomacy.relations.entries()].filter(
+    ([key, rel]) => rel.hasAlliance && key.includes(playerId)
+  ).length;
+  const hasAlliance = alliances >= 1;
+
+  // Progress: 40% gold, 40% total gold, 20% alliance
+  const goldProgress = Math.min(1, player.gold / goldReq);
+  const totalGoldProgress = Math.min(1, player.totalGoldEarned / totalGoldReq);
+  const allianceProgress = hasAlliance ? 1 : 0;
+  const progress = goldProgress * 0.4 + totalGoldProgress * 0.4 + allianceProgress * 0.2;
+
+  return {
+    type: 'economic',
+    progress,
+    achieved: hasGold && hasTotalGold && hasAlliance,
+  };
+}
+
+function checkMilitary(state: GameState, playerId: string): VictoryProgress {
+  const player = state.players.get(playerId);
+  if (!player) return { type: 'military', progress: 0, achieved: false };
+
+  // totalKills >= 20 AND at least 5 cities
+  const killsReq = 20;
+  const citiesReq = 5;
+  const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
+
+  // Progress: 60% from kills, 40% from cities
+  const killsProgress = Math.min(1, player.totalKills / killsReq);
+  const citiesProgress = Math.min(1, ownedCities / citiesReq);
+  const progress = killsProgress * 0.6 + citiesProgress * 0.4;
+
+  return {
+    type: 'military',
+    progress,
+    achieved: player.totalKills >= killsReq && ownedCities >= citiesReq,
   };
 }
 
@@ -154,15 +219,22 @@ function checkScore(state: GameState, playerId: string): VictoryProgress {
   return { type: 'score', progress, achieved: false };
 }
 
+/**
+ * Legacy-based score calculation:
+ * milestones * 100 + legacyPoints * 50 + cities * 100 + techs * 20 + culture
+ */
 function calculateScore(state: GameState, playerId: string): number {
   const player = state.players.get(playerId);
   if (!player) return 0;
 
+  const paths = player.legacyPaths;
+  const totalMilestones = paths.military + paths.economic + paths.science + paths.culture;
+
   let score = 0;
+  score += totalMilestones * 100;
+  score += player.legacyPoints * 50;
   score += [...state.cities.values()].filter(c => c.owner === playerId).length * 100;
   score += player.researchedTechs.length * 20;
   score += player.culture;
-  score += player.gold;
-  score += [...state.units.values()].filter(u => u.owner === playerId).length * 10;
   return score;
 }

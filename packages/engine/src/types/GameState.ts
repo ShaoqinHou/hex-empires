@@ -149,7 +149,7 @@ export interface ActiveEffect {
 
 // ── Victory ──
 
-export type VictoryType = 'domination' | 'science' | 'culture' | 'diplomacy' | 'economic' | 'score';
+export type VictoryType = 'domination' | 'science' | 'culture' | 'diplomacy' | 'economic' | 'military' | 'score';
 
 export interface VictoryProgress {
   readonly type: VictoryType;

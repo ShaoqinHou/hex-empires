@@ -25,6 +25,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     settlementType: 'city',
     happiness: 10,
     isCapital: true,
+    defenseHP: 100,
     ...overrides,
   };
 }
