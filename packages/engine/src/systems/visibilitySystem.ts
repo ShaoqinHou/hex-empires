@@ -57,7 +57,5 @@ export function visibilitySystem(state: GameState, action: GameAction): GameStat
 }
 
 function getSightRange(state: GameState, typeId: string): number {
-  // Scouts see further
-  if (typeId === 'scout') return 3;
-  return 2;
+  return state.config.units.get(typeId)?.sightRange ?? 2;
 }

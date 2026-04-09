@@ -8,6 +8,7 @@ export interface UnitDef {
   readonly rangedCombat: number; // ranged combat strength (0 = melee only)
   readonly range: number;      // attack range (0 = melee)
   readonly movement: number;   // base movement points
+  readonly sightRange: number; // fog of war visibility radius (default 2)
   readonly requiredTech: string | null;
   readonly upgradesTo: string | null;
   readonly abilities: ReadonlyArray<string>;
@@ -23,6 +24,7 @@ export const WARRIOR: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 2,
+  sightRange: 2,
   requiredTech: null,
   upgradesTo: 'swordsman',
   abilities: [],
@@ -38,6 +40,7 @@ export const SLINGER: UnitDef = {
   rangedCombat: 15,
   range: 1,
   movement: 2,
+  sightRange: 2,
   requiredTech: null,
   upgradesTo: 'archer',
   abilities: [],
@@ -53,6 +56,7 @@ export const ARCHER: UnitDef = {
   rangedCombat: 25,
   range: 2,
   movement: 2,
+  sightRange: 2,
   requiredTech: 'archery',
   upgradesTo: 'crossbowman',
   abilities: [],
@@ -68,6 +72,7 @@ export const SCOUT: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 3,
+  sightRange: 3,
   requiredTech: null,
   upgradesTo: null,
   abilities: ['ignore_terrain_cost'],
@@ -83,6 +88,7 @@ export const SPEARMAN: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 2,
+  sightRange: 2,
   requiredTech: 'bronze_working',
   upgradesTo: 'pikeman',
   abilities: ['anti_cavalry'],
@@ -98,6 +104,7 @@ export const CHARIOT: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 3,
+  sightRange: 2,
   requiredTech: 'wheel',
   upgradesTo: 'horseman',
   abilities: [],
@@ -113,6 +120,7 @@ export const SETTLER: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 2,
+  sightRange: 2,
   requiredTech: null,
   upgradesTo: null,
   abilities: ['found_city'],
@@ -128,6 +136,7 @@ export const BUILDER: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 2,
+  sightRange: 2,
   requiredTech: null,
   upgradesTo: null,
   abilities: ['build_improvement'],
@@ -143,6 +152,7 @@ export const BATTERING_RAM: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 2,
+  sightRange: 2,
   requiredTech: 'masonry',
   upgradesTo: 'siege_tower',
   abilities: ['bonus_vs_walls'],
@@ -158,6 +168,7 @@ export const GALLEY: UnitDef = {
   rangedCombat: 0,
   range: 0,
   movement: 3,
+  sightRange: 2,
   requiredTech: 'sailing',
   upgradesTo: 'caravel',
   abilities: [],

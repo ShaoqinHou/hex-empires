@@ -285,11 +285,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalC
         }
       }
 
-      // B — Found city (if selected unit is a settler)
+      // B — Found city (if selected unit has found_city ability)
       if (key === 'b' || key === 'B') {
         if (selectedUnit) {
           const unitDef = unitRegistry.get(selectedUnit.typeId);
-          if (unitDef && unitDef.id === 'settler') {
+          if (unitDef && unitDef.abilities.includes('found_city')) {
             const cityCount = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId).length;
             dispatch({
               type: 'FOUND_CITY',

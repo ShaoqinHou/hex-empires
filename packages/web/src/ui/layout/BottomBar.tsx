@@ -5,7 +5,9 @@ import type { YieldSet } from '@hex/engine';
 export function BottomBar() {
   const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGame();
 
-  const isSettler = selectedUnit?.typeId === 'settler';
+  const canFoundCity = selectedUnit
+    ? state.config.units.get(selectedUnit.typeId)?.abilities.includes('found_city') ?? false
+    : false;
   const isCivilian = selectedUnit
     ? state.config.units.get(selectedUnit.typeId)?.category === 'civilian'
     : false;
@@ -49,7 +51,7 @@ export function BottomBar() {
 
           {/* Action buttons */}
           <div className="flex gap-1.5 ml-auto">
-            {isSettler && (
+            {canFoundCity && (
               <ActionButton
                 label="Found City"
                 shortcut="B"
