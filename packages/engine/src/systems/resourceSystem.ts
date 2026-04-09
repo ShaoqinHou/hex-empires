@@ -29,7 +29,20 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  return base - popPenalty + buildingBonus;
+  // War weariness: happiness penalty when at war with negative warSupport
+  let warWearinessPenalty = 0;
+  for (const [key, rel] of state.diplomacy.relations) {
+    if (rel.status !== 'war') continue;
+    if (!key.includes(city.owner)) continue;
+    // warSupport < 0 means defender has advantage (we are losing)
+    if (rel.warSupport < -30) {
+      warWearinessPenalty = Math.max(warWearinessPenalty, 5);
+    } else if (rel.warSupport < 0) {
+      warWearinessPenalty = Math.max(warWearinessPenalty, 3);
+    }
+  }
+
+  return base - popPenalty + buildingBonus - warWearinessPenalty;
 }
 
 /**

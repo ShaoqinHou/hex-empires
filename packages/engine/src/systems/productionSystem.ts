@@ -126,7 +126,19 @@ function processProduction(state: GameState): GameState {
 
     const currentItem = city.productionQueue[0];
     const yields = calculateCityYields(city, state);
-    const productionPerTurn = yields.production;
+    let productionPerTurn = yields.production;
+
+    // Barracks: +10% production toward military units
+    if (city.buildings.includes('barracks') && currentItem.type === 'unit') {
+      const unitDef = state.config.units.get(currentItem.id);
+      if (unitDef) {
+        const militaryCategories: ReadonlyArray<string> = ['melee', 'ranged', 'cavalry', 'siege'];
+        if (militaryCategories.includes(unitDef.category)) {
+          productionPerTurn = Math.floor(productionPerTurn * 1.1);
+        }
+      }
+    }
+
     const newProgress = city.productionProgress + productionPerTurn;
     const cost = getProductionCost(state, currentItem.id);
 

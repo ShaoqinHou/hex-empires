@@ -66,10 +66,13 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
       // Builders: skip for now (no improvements system)
     } else {
-      // Military: attack nearby enemies or explore
+      // Military: attack nearby enemy units first, then enemy cities, or explore
       const attacked = tryAttackNearby(state, unit, actions);
       if (!attacked) {
-        moveStrategically(state, unit, ourCities, actions);
+        const attackedCity = tryAttackNearbyCity(state, unit, actions);
+        if (!attackedCity) {
+          moveStrategically(state, unit, ourCities, actions);
+        }
       }
     }
   }
@@ -251,6 +254,35 @@ function tryAttackNearby(state: GameState, unit: UnitState, actions: GameAction[
 
   if (bestTarget) {
     actions.push({ type: 'ATTACK_UNIT', attackerId: unit.id, targetId: bestTarget.id });
+    return true;
+  }
+  return false;
+}
+
+/** Try to attack an adjacent enemy city */
+function tryAttackNearbyCity(state: GameState, unit: UnitState, actions: GameAction[]): boolean {
+  const unitDef = state.config.units.get(unit.typeId);
+  const attackRange = unitDef?.range ?? 0;
+  const maxRange = attackRange > 0 ? attackRange : 1;
+
+  let bestTarget: CityState | null = null;
+  let bestScore = -Infinity;
+
+  for (const city of state.cities.values()) {
+    if (city.owner === unit.owner) continue;
+    const dist = distance(unit.position, city.position);
+    if (dist > maxRange) continue;
+
+    // Prefer low-defense cities
+    const score = (200 - city.defenseHP) + city.population * 5;
+    if (score > bestScore) {
+      bestScore = score;
+      bestTarget = city;
+    }
+  }
+
+  if (bestTarget) {
+    actions.push({ type: 'ATTACK_CITY', attackerId: unit.id, cityId: bestTarget.id });
     return true;
   }
   return false;
