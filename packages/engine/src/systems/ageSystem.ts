@@ -240,7 +240,6 @@ function checkLegacyMilestones(state: GameState): GameState {
   const cultureGain = newCulture - paths.culture;
 
   const totalGain = militaryGain + economicGain + scienceGain + cultureGain;
-  if (totalGain <= 0) return state;
 
   const newPaths: LegacyPaths = {
     military: newMilitary,
@@ -249,11 +248,13 @@ function checkLegacyMilestones(state: GameState): GameState {
     culture: newCulture,
   };
 
+  // Always increment ageProgress by +1 per turn (natural age advancement)
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
     legacyPaths: newPaths,
     legacyPoints: player.legacyPoints + totalGain,
+    ageProgress: player.ageProgress + 1,
   });
 
   const logEntries = [...state.log];

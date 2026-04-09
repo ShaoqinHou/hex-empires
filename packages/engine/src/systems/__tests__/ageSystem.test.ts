@@ -149,8 +149,21 @@ describe('ageSystem', () => {
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = ageSystem(state, { type: 'END_TURN' });
-      // 3 kills = milestone 1, already at 1, so no new points
-      expect(next).toBe(state);
+      // 3 kills = milestone 1, already at 1, so no new legacy points
+      expect(next.players.get('p1')!.legacyPoints).toBe(1);
+      // But ageProgress still increments by +1 per turn
+      expect(next.players.get('p1')!.ageProgress).toBe(player.ageProgress + 1);
+    });
+
+    it('increments ageProgress by 1 per turn', () => {
+      const player = createTestPlayer({
+        ageProgress: 10,
+        legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+        legacyPoints: 0,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = ageSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.ageProgress).toBe(11);
     });
   });
 

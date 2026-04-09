@@ -1,8 +1,9 @@
 import type { HexCoord, HexKey } from '../types/HexCoord';
 import type { HexMap, HexTile, RngState } from '../types/GameState';
 import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
+import type { ResourceDef } from '../data/resources';
 import { coordToKey } from './HexMath';
-import { fractalNoise2D, nextRandom } from '../state/SeededRng';
+import { fractalNoise2D, nextRandom, createRng } from '../state/SeededRng';
 import { Registry } from '../registry/Registry';
 
 export interface MapGenOptions {
@@ -29,6 +30,7 @@ export function generateMap(
   terrainRegistry: Registry<TerrainDef>,
   featureRegistry: Registry<TerrainFeatureDef>,
   options: Partial<MapGenOptions> = {},
+  resources: ReadonlyArray<ResourceDef> = [],
 ): HexMap {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const tiles = new Map<HexKey, HexTile>();
@@ -73,11 +75,32 @@ export function generateMap(
         coord,
         terrain,
         feature,
-        resource: null, // resources assigned in a later pass
+        resource: null, // resources assigned in the spawning pass below
         river,
         elevation,
         continent,
       });
+    }
+  }
+
+  // Resource spawning pass: ~15% chance per valid terrain, using seeded RNG
+  if (resources.length > 0) {
+    let rng = createRng(opts.seed + 30000);
+    for (const [key, tile] of tiles) {
+      // Roll for resource spawn chance
+      const { value: spawnRoll, rng: rng1 } = nextRandom(rng);
+      rng = rng1;
+
+      if (spawnRoll < 0.15) {
+        // Find resources valid for this terrain
+        const validResources = resources.filter(r => r.validTerrains.includes(tile.terrain));
+        if (validResources.length > 0) {
+          const { value: pickRoll, rng: rng2 } = nextRandom(rng);
+          rng = rng2;
+          const picked = validResources[Math.floor(pickRoll * validResources.length)];
+          tiles.set(key, { ...tile, resource: picked.id });
+        }
+      }
     }
   }
 

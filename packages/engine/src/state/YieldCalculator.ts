@@ -20,6 +20,14 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
       total = addYields(total, featureYields);
     }
 
+    // Resource yield bonus
+    if (tile.resource) {
+      const resourceDef = state.config.resources.get(tile.resource);
+      if (resourceDef) {
+        total = addYields(total, resourceDef.yieldBonus);
+      }
+    }
+
     // River bonus
     if (tile.river.length > 0) {
       total = addYields(total, { gold: 1 });

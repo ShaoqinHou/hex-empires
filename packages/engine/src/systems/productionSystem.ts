@@ -41,7 +41,8 @@ function handleSetProduction(
   updatedCities.set(cityId, {
     ...city,
     productionQueue: [{ type: itemType, id: itemId }],
-    productionProgress: 0,
+    // Keep existing progress when switching production (no waste)
+    productionProgress: city.productionProgress,
   });
 
   return { ...state, cities: updatedCities };
@@ -57,7 +58,11 @@ function handlePurchaseItem(
   if (!city) return state;
   if (city.owner !== state.currentPlayerId) return state;
 
-  const goldCost = getGoldCost(state, itemId);
+  let goldCost = getGoldCost(state, itemId);
+  // Market: 10% discount on all unit gold purchases
+  if (city.buildings.includes('market') && itemType === 'unit') {
+    goldCost = Math.floor(goldCost * 0.9);
+  }
   const player = state.players.get(state.currentPlayerId);
   if (!player || player.gold < goldCost) return state;
 
@@ -128,7 +133,7 @@ function processProduction(state: GameState): GameState {
     const yields = calculateCityYields(city, state);
     let productionPerTurn = yields.production;
 
-    // Barracks: +10% production toward military units
+    // Barracks: +10% production toward military land units
     if (city.buildings.includes('barracks') && currentItem.type === 'unit') {
       const unitDef = state.config.units.get(currentItem.id);
       if (unitDef) {
@@ -137,6 +142,11 @@ function processProduction(state: GameState): GameState {
           productionPerTurn = Math.floor(productionPerTurn * 1.1);
         }
       }
+    }
+
+    // Workshop: +10% production toward all buildings
+    if (city.buildings.includes('workshop') && currentItem.type === 'building') {
+      productionPerTurn = Math.floor(productionPerTurn * 1.1);
     }
 
     const newProgress = city.productionProgress + productionPerTurn;

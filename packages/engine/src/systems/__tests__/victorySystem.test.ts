@@ -68,10 +68,29 @@ describe('victorySystem', () => {
       ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 100 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
-    const state = createTestState({ players, currentPlayerId: 'p2' });
+    const state = createTestState({ players, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBe('p1');
     expect(next.victory.winType).toBe('science');
+  });
+
+  it('does not trigger science victory outside modern age', () => {
+    const modernTechs = [
+      'industrialization', 'scientific_theory', 'rifling',
+      'steam_power', 'electricity', 'replaceable_parts',
+      'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
+    ];
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 100 })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+    ]);
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } } });
+    const next = victorySystem(state, { type: 'END_TURN' });
+    expect(next.victory.winner).toBeNull();
   });
 
   it('does not trigger science victory without culture >= 100', () => {
@@ -98,7 +117,7 @@ describe('victorySystem', () => {
       })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
-    const state = createTestState({ players, currentPlayerId: 'p2' });
+    const state = createTestState({ players, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBe('p1');
     expect(next.victory.winType).toBe('culture');
@@ -136,6 +155,7 @@ describe('victorySystem', () => {
       cities,
       currentPlayerId: 'p3',
       diplomacy: { relations: new Map([[allianceKey, allianceRel]]) },
+      age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBe('p1');
@@ -169,7 +189,7 @@ describe('victorySystem', () => {
       ['p1', createTestPlayer({ id: 'p1', totalKills: 20 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
-    const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBe('p1');
     expect(next.victory.winType).toBe('military');

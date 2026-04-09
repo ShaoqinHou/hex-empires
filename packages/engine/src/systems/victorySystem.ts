@@ -104,10 +104,13 @@ function checkScience(state: GameState, playerId: string): VictoryProgress {
   const cultureProgress = Math.min(1, player.culture / cultureReq);
   const progress = techProgress * 0.8 + cultureProgress * 0.2;
 
+  // Science victory can only be achieved in the modern age
+  const meetsRequirements = researched === modernTechs.length && hasCulture;
+
   return {
     type: 'science',
     progress,
-    achieved: researched === modernTechs.length && hasCulture,
+    achieved: meetsRequirements && state.age.currentAge === 'modern',
   };
 }
 
@@ -125,10 +128,13 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
   const civicsProgress = Math.min(1, civicsCount / civicsRequired);
   const progress = cultureProgress * 0.6 + civicsProgress * 0.4;
 
+  // Culture victory can only be achieved in the modern age
+  const meetsRequirements = player.culture >= cultureThreshold && civicsCount >= civicsRequired;
+
   return {
     type: 'culture',
     progress,
-    achieved: player.culture >= cultureThreshold && civicsCount >= civicsRequired,
+    achieved: meetsRequirements && state.age.currentAge === 'modern',
   };
 }
 
@@ -142,10 +148,13 @@ function checkDiplomacy(state: GameState, playerId: string): VictoryProgress {
   const needed = Math.max(1, Math.ceil(otherPlayers * 0.6));
   const progress = otherPlayers > 0 ? Math.min(1, alliances / needed) : 0;
 
+  // Diplomacy victory can only be achieved in the modern age
+  const meetsRequirements = alliances >= needed && otherPlayers > 0;
+
   return {
     type: 'diplomacy',
     progress,
-    achieved: alliances >= needed && otherPlayers > 0,
+    achieved: meetsRequirements && state.age.currentAge === 'modern',
   };
 }
 
@@ -170,10 +179,13 @@ function checkEconomic(state: GameState, playerId: string): VictoryProgress {
   const allianceProgress = hasAlliance ? 1 : 0;
   const progress = goldProgress * 0.4 + totalGoldProgress * 0.4 + allianceProgress * 0.2;
 
+  // Economic victory can only be achieved in the modern age
+  const meetsRequirements = hasGold && hasTotalGold && hasAlliance;
+
   return {
     type: 'economic',
     progress,
-    achieved: hasGold && hasTotalGold && hasAlliance,
+    achieved: meetsRequirements && state.age.currentAge === 'modern',
   };
 }
 
@@ -191,10 +203,13 @@ function checkMilitary(state: GameState, playerId: string): VictoryProgress {
   const citiesProgress = Math.min(1, ownedCities / citiesReq);
   const progress = killsProgress * 0.6 + citiesProgress * 0.4;
 
+  // Military victory can only be achieved in the modern age
+  const meetsRequirements = player.totalKills >= killsReq && ownedCities >= citiesReq;
+
   return {
     type: 'military',
     progress,
-    achieved: player.totalKills >= killsReq && ownedCities >= citiesReq,
+    achieved: meetsRequirements && state.age.currentAge === 'modern',
   };
 }
 

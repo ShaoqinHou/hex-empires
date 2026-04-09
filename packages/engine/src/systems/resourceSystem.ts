@@ -1,5 +1,6 @@
 import type { GameState, GameAction, CityState } from '../types/GameState';
 import { calculateCityYields } from '../state/YieldCalculator';
+import { coordToKey } from '../hex/HexMath';
 
 /** Number of free settlements before happiness penalty applies (Civ VII: 4) */
 const FREE_SETTLEMENT_CAP = 4;
@@ -29,6 +30,25 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
+  // Luxury resource happiness: each luxury tile in territory adds its happinessBonus
+  let luxuryBonus = 0;
+  for (const tileKey of city.territory) {
+    const tile = state.map.tiles.get(tileKey);
+    if (tile && tile.resource) {
+      const resDef = state.config.resources.get(tile.resource);
+      if (resDef && resDef.type === 'luxury') {
+        luxuryBonus += resDef.happinessBonus;
+      }
+    }
+  }
+
+  // Fresh water bonus: +3 happiness if city center tile has rivers
+  let freshWaterBonus = 0;
+  const centerTile = state.map.tiles.get(coordToKey(city.position));
+  if (centerTile && centerTile.river.length > 0) {
+    freshWaterBonus = 3;
+  }
+
   // War weariness: happiness penalty when at war with negative warSupport
   let warWearinessPenalty = 0;
   for (const [key, rel] of state.diplomacy.relations) {
@@ -42,7 +62,7 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  return base - popPenalty + buildingBonus - warWearinessPenalty;
+  return base - popPenalty + buildingBonus + luxuryBonus + freshWaterBonus - warWearinessPenalty;
 }
 
 /**

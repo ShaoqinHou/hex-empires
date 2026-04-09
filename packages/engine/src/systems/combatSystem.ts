@@ -170,7 +170,9 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
   const healthModifier = unit.health / 100; // damaged units fight worse
   const flankingBonus = isAttacking ? calculateFlankingBonus(unit, state) : 0;
-  return base * healthModifier + flankingBonus;
+  // First Strike bonus: +5 combat strength when attacking at full HP
+  const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
+  return base * healthModifier + flankingBonus + firstStrikeBonus;
 }
 
 /** Get effective defense strength with terrain and fortification bonuses */
