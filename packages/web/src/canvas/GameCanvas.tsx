@@ -7,10 +7,11 @@ import { coordToKey, findPath, getMovementCost } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
+  onToggleTechTree?: () => void;
   cameraRef?: React.MutableRefObject<Camera | null>;
 }
 
-export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalCameraRef }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalCamera = useRef(new Camera());
 
@@ -24,7 +25,7 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
 
   const rendererRef = useRef<HexRenderer | null>(null);
   const {
-    state, dispatch, terrainRegistry, featureRegistry,
+    state, dispatch, terrainRegistry, featureRegistry, unitRegistry,
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
     reachableHexes,
   } = useGame();
@@ -245,7 +246,7 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
     );
   }, []);
 
-  // Keyboard handler (arrows + WASD)
+  // Keyboard handler (arrows + WASD + game shortcuts)
   useEffect(() => {
     const keysDown = new Set<string>();
 
@@ -254,9 +255,73 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
         e.preventDefault();
       }
-      if (e.key === 'Escape') {
+
+      // Skip shortcuts when typing in an input field
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const key = e.key;
+
+      if (key === 'Escape') {
         setSelectedUnit(null);
         setSelectedHex(null);
+      }
+
+      // Enter — End turn
+      if (key === 'Enter') {
+        e.preventDefault();
+        dispatch({ type: 'END_TURN' });
+      }
+
+      // T — Toggle tech tree panel
+      if (key === 't' || key === 'T') {
+        onToggleTechTree?.();
+      }
+
+      // F — Fortify selected unit
+      if (key === 'f' || key === 'F') {
+        if (selectedUnit) {
+          dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id });
+        }
+      }
+
+      // B — Found city (if selected unit is a settler)
+      if (key === 'b' || key === 'B') {
+        if (selectedUnit) {
+          const unitDef = unitRegistry.get(selectedUnit.typeId);
+          if (unitDef && unitDef.id === 'settler') {
+            const cityCount = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId).length;
+            dispatch({
+              type: 'FOUND_CITY',
+              unitId: selectedUnit.id,
+              name: `City ${cityCount + 1}`,
+            });
+          }
+        }
+      }
+
+      // Space — Cycle to next unit with movement left
+      if (key === ' ') {
+        e.preventDefault();
+        const ownUnits = [...state.units.values()].filter(
+          u => u.owner === state.currentPlayerId && u.movementLeft > 0,
+        );
+        if (ownUnits.length === 0) return;
+
+        // Find the index of the currently selected unit
+        const currentIdx = selectedUnit
+          ? ownUnits.findIndex(u => u.id === selectedUnit.id)
+          : -1;
+        // Pick the next one (wrap around)
+        const nextIdx = (currentIdx + 1) % ownUnits.length;
+        const nextUnit = ownUnits[nextIdx];
+
+        setSelectedUnit(nextUnit);
+        setSelectedHex(nextUnit.position);
+
+        // Center camera on the unit
+        const { x, y } = hexToPixel(nextUnit.position);
+        cameraRef.current.centerOn(x, y);
       }
     };
 
@@ -282,7 +347,7 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(scrollFrame);
     };
-  }, [setSelectedUnit, setSelectedHex]);
+  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree]);
 
   // Edge-of-screen scrolling
   useEffect(() => {

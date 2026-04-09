@@ -38,6 +38,7 @@ function GameUI() {
             setSelectedCityId(city.id);
             setActivePanel('city');
           }}
+          onToggleTechTree={() => togglePanel('tech')}
         />
         {activePanel === 'city' && selectedCity && (
           <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />

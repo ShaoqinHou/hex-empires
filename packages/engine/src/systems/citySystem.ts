@@ -1,6 +1,6 @@
 import type { GameState, GameAction, CityState, HexTile } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
-import { coordToKey, range } from '../hex/HexMath';
+import { coordToKey, range, distance } from '../hex/HexMath';
 
 /** Generate deterministic city ID from state */
 function nextCityId(state: GameState): string {
@@ -36,16 +36,9 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   if (tile.terrain === 'ocean' || tile.terrain === 'coast') return state;
   if (tile.feature === 'mountains') return state;
 
-  // Can't found too close to another city (minimum 3 tiles apart)
+  // Can't found too close to another city (minimum 4 hexes apart, Civ VII 3-tile buffer)
   for (const city of state.cities.values()) {
-    const cityKey = coordToKey(city.position);
-    // Check distance from existing cities
-    const existingTile = state.map.tiles.get(cityKey);
-    if (existingTile) {
-      const dx = Math.abs(pos.q - city.position.q);
-      const dy = Math.abs(pos.r - city.position.r);
-      if (dx + dy < 3) return state; // too close
-    }
+    if (distance(pos, city.position) < 4) return state; // too close
   }
 
   // Create territory — all hexes within radius 1
