@@ -32,7 +32,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     let maintenance = 0;
     for (const unit of state.units.values()) {
       if (unit.owner === playerId) {
-        const isCivilian = unit.typeId === 'settler' || unit.typeId === 'builder';
+        const isCivilian = state.config.units.get(unit.typeId)?.category === 'civilian';
         if (!isCivilian) maintenance += 1;
       }
     }

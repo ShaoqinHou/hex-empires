@@ -1,4 +1,5 @@
 // Types
+export type { GameConfig } from './types';
 export type {
   HexCoord,
   CubeCoord,
@@ -96,6 +97,7 @@ export { effectSystem, getActiveEffects } from './systems/effectSystem';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
+export { createGameConfig } from './state/GameConfigFactory';
 
 // Terrain data
 export { ALL_BASE_TERRAINS, ALL_FEATURES } from './data/terrains';

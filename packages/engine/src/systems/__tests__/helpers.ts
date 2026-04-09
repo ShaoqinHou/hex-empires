@@ -1,6 +1,7 @@
 import type { GameState, HexTile, PlayerState, UnitState } from '../../types/GameState';
 import type { HexCoord } from '../../types/HexCoord';
 import { coordToKey } from '../../hex/HexMath';
+import { createGameConfig } from '../../state/GameConfigFactory';
 
 /**
  * Create a minimal GameState for testing.
@@ -28,6 +29,7 @@ export function createTestState(overrides: Partial<GameState> = {}): GameState {
     victory: { winner: null, winType: null, progress: new Map() },
     log: [],
     rng: { seed: 42, counter: 0 },
+    config: createGameConfig(),
     ...overrides,
   };
 }

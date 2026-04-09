@@ -30,7 +30,7 @@ function handleStartTurn(state: GameState): GameState {
     if (unit.owner === state.currentPlayerId) {
       updatedUnits.set(id, {
         ...unit,
-        movementLeft: getBaseMovement(unit.typeId),
+        movementLeft: getBaseMovement(state, unit.typeId),
         fortified: unit.fortified, // keep fortification status
       });
     }
@@ -80,19 +80,7 @@ function handleEndTurn(state: GameState): GameState {
   }
 }
 
-/** Base movement points by unit type (will be driven by data later) */
-function getBaseMovement(typeId: string): number {
-  const movementTable: Record<string, number> = {
-    settler: 2,
-    builder: 2,
-    warrior: 2,
-    slinger: 2,
-    archer: 2,
-    spearman: 2,
-    scout: 3,
-    chariot: 3,
-    horseman: 4,
-    cavalry: 5,
-  };
-  return movementTable[typeId] ?? 2;
+/** Base movement points by unit type — driven by state.config.units */
+function getBaseMovement(state: GameState, typeId: string): number {
+  return state.config.units.get(typeId)?.movement ?? 2;
 }

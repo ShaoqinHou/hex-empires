@@ -25,6 +25,7 @@ import {
   effectSystem,
   serializeState,
   deserializeState,
+  createGameConfig,
   ALL_UNITS,
   findPath,
   getReachable,
@@ -126,6 +127,7 @@ function createInitialState(): GameState {
     victory: { winner: null, winType: null, progress: new Map() },
     log: [],
     rng: { seed: Date.now(), counter: 0 },
+    config: createGameConfig(),
   };
 
   return state;
@@ -207,7 +209,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const loadGame = useCallback(() => {
     const json = localStorage.getItem('hex-empires-save');
     if (json) {
-      setState(deserializeState(json));
+      const loaded = deserializeState(json);
+      // Reconstruct config from current data definitions (config is static, not serialized)
+      setState({ ...loaded, config: createGameConfig() });
       setSelectedUnit(null);
       setSelectedHex(null);
     }

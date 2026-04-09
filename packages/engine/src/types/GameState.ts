@@ -1,4 +1,5 @@
 import type { HexCoord, HexKey } from './HexCoord';
+import type { GameConfig } from './GameConfig';
 import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId } from './Ids';
 import type { YieldSet, YieldType } from './Yields';
 import type { TerrainId, FeatureId } from './Terrain';
@@ -185,6 +186,7 @@ export interface GameState {
   readonly victory: VictoryState;
   readonly log: ReadonlyArray<GameEvent>;
   readonly rng: RngState;
+  readonly config: GameConfig;
 }
 
 // ── Actions ──

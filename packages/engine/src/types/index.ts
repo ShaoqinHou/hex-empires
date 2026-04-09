@@ -1,4 +1,5 @@
 export type { HexCoord, CubeCoord, HexKey } from './HexCoord';
+export type { GameConfig } from './GameConfig';
 export type { TerrainId, TerrainDef, FeatureId, TerrainFeatureDef } from './Terrain';
 export type { YieldType, YieldSet } from './Yields';
 export { EMPTY_YIELDS, addYields } from './Yields';

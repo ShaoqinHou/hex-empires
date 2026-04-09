@@ -1,9 +1,35 @@
 import type { HexTile } from '../types/GameState';
+import type { GameConfig } from '../types/GameConfig';
 
-/** Get movement cost to enter a tile. Returns null if impassable. */
-export function getMovementCost(tile: HexTile): number | null {
-  // Base terrain costs — using hardcoded values for now
-  // Will be replaced by registry lookups
+/**
+ * Get movement cost to enter a tile. Returns null if impassable.
+ * When config is provided, uses data-driven terrain/feature definitions.
+ * When not provided, falls back to hardcoded table for backward compatibility.
+ */
+export function getMovementCost(tile: HexTile, config?: GameConfig): number | null {
+  if (config) {
+    return getMovementCostFromConfig(tile, config);
+  }
+  return getMovementCostHardcoded(tile);
+}
+
+function getMovementCostFromConfig(tile: HexTile, config: GameConfig): number | null {
+  const terrainDef = config.terrains.get(tile.terrain);
+  if (!terrainDef || !terrainDef.isPassable) return null;
+
+  const baseCost = terrainDef.movementCost;
+
+  if (tile.feature) {
+    const featureDef = config.features.get(tile.feature);
+    if (featureDef?.blocksMovement) return null; // impassable feature
+    return baseCost + (featureDef?.movementCostModifier ?? 0);
+  }
+
+  return baseCost;
+}
+
+/** Hardcoded fallback when config is not available */
+function getMovementCostHardcoded(tile: HexTile): number | null {
   const terrainCosts: Record<string, number | null> = {
     grassland: 1,
     plains: 1,

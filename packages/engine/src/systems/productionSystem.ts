@@ -56,7 +56,7 @@ function processProduction(state: GameState): GameState {
     const yields = calculateCityYields(city, state);
     const productionPerTurn = yields.production;
     const newProgress = city.productionProgress + productionPerTurn;
-    const cost = getProductionCost(currentItem.id);
+    const cost = getProductionCost(state, currentItem.id);
 
     if (newProgress >= cost) {
       // Production complete
@@ -125,31 +125,9 @@ function processProduction(state: GameState): GameState {
   };
 }
 
-/** Production cost for items */
-function getProductionCost(itemId: string): number {
-  const unitCosts: Record<string, number> = {
-    warrior: 40,
-    slinger: 35,
-    archer: 60,
-    scout: 30,
-    spearman: 65,
-    chariot: 55,
-    settler: 80,
-    builder: 50,
-    battering_ram: 65,
-    galley: 65,
-  };
-
-  const buildingCosts: Record<string, number> = {
-    granary: 65,
-    monument: 60,
-    walls: 80,
-    barracks: 90,
-    library: 75,
-    market: 100,
-    workshop: 120,
-    watermill: 80,
-  };
-
-  return unitCosts[itemId] ?? buildingCosts[itemId] ?? 100;
+/** Production cost for items — driven by state.config.units and state.config.buildings */
+function getProductionCost(state: GameState, itemId: string): number {
+  return state.config.units.get(itemId)?.cost
+    ?? state.config.buildings.get(itemId)?.cost
+    ?? 100;
 }

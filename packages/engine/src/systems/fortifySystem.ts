@@ -12,8 +12,7 @@ export function fortifySystem(state: GameState, action: GameAction): GameState {
   if (unit.owner !== state.currentPlayerId) return state;
 
   // Civilians can't fortify
-  const civilians = ['settler', 'builder'];
-  if (civilians.includes(unit.typeId)) return state;
+  if (state.config.units.get(unit.typeId)?.category === 'civilian') return state;
 
   const updatedUnits = new Map(state.units);
   updatedUnits.set(unit.id, {
