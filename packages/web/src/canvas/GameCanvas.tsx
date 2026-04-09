@@ -79,6 +79,7 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
         ? new Set(reachableHexes.keys())
         : null;
 
+      const player = state.players.get(state.currentPlayerId);
       renderer.render(cameraRef.current, {
         state,
         terrainRegistry,
@@ -87,6 +88,8 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
         selectedUnit,
         reachableHexes: reachableSet,
         hoveredHex,
+        visibility: player?.visibility ?? null,
+        explored: player?.explored ?? null,
       });
 
       animFrame = requestAnimationFrame(render);

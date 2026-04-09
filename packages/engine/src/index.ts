@@ -94,6 +94,7 @@ export { fortifySystem } from './systems/fortifySystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';
+export { visibilitySystem } from './systems/visibilitySystem';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';

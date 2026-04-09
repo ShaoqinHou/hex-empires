@@ -23,6 +23,7 @@ import {
   generateAIActions,
   victorySystem,
   effectSystem,
+  visibilitySystem,
   serializeState,
   deserializeState,
   createGameConfig,
@@ -37,6 +38,7 @@ import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState } from '@hex/eng
 
 const engine = new GameEngine([
   turnSystem,
+  visibilitySystem,
   effectSystem,
   movementSystem,
   citySystem,

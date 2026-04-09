@@ -9,9 +9,10 @@ import { TechTreePanel } from './ui/panels/TechTreePanel';
 import { VictoryPanel } from './ui/panels/VictoryPanel';
 import { DiplomacyPanel } from './ui/panels/DiplomacyPanel';
 import { EventLogPanel } from './ui/panels/EventLogPanel';
+import { AgeTransitionPanel } from './ui/panels/AgeTransitionPanel';
 import { Minimap } from './ui/components/Minimap';
 
-type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log';
+type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log' | 'age';
 
 function GameUI() {
   const { state } = useGame();
@@ -28,6 +29,7 @@ function GameUI() {
         onOpenTechTree={() => togglePanel('tech')}
         onOpenDiplomacy={() => togglePanel('diplomacy')}
         onOpenLog={() => togglePanel('log')}
+        onOpenAge={() => togglePanel('age')}
       />
       <div className="flex-1 relative">
         <GameCanvas
@@ -48,6 +50,9 @@ function GameUI() {
         )}
         {activePanel === 'log' && (
           <EventLogPanel onClose={() => setActivePanel('none')} />
+        )}
+        {activePanel === 'age' && (
+          <AgeTransitionPanel onClose={() => setActivePanel('none')} />
         )}
         <Minimap cameraRef={cameraRef} />
         <VictoryPanel />

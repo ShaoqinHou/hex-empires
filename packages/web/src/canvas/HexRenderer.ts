@@ -18,6 +18,8 @@ export interface RenderContext {
   selectedUnit: UnitState | null;
   reachableHexes: ReadonlySet<string> | null;
   hoveredHex: HexCoord | null;
+  visibility: ReadonlySet<string> | null;  // currently visible tiles
+  explored: ReadonlySet<string> | null;    // ever-seen tiles
 }
 
 /** Convert axial hex coordinate to pixel position (center of hex) */
@@ -93,10 +95,13 @@ export class HexRenderer {
       this.drawReachableOverlay(rc);
     }
 
-    // Draw cities
+    // Draw fog of war overlay
+    this.drawFogOfWar(rc);
+
+    // Draw cities (only visible/explored)
     this.drawCities(rc);
 
-    // Draw units
+    // Draw units (only visible)
     this.drawUnits(rc);
 
     // Draw selection highlight
@@ -168,6 +173,31 @@ export class HexRenderer {
         ctx.fillStyle = dot.color;
         ctx.fill();
         dotIndex++;
+      }
+    }
+  }
+
+  private drawFogOfWar(rc: RenderContext): void {
+    if (!rc.visibility && !rc.explored) return; // no fog data, show everything
+
+    const ctx = this.ctx;
+    for (const tile of rc.state.map.tiles.values()) {
+      const key = coordToKey(tile.coord);
+      const isVisible = rc.visibility?.has(key) ?? true;
+      const isExplored = rc.explored?.has(key) ?? true;
+
+      if (!isExplored) {
+        // Completely unexplored — black
+        const { x, y } = hexToPixel(tile.coord);
+        drawHexPath(ctx, x, y);
+        ctx.fillStyle = 'rgba(10, 10, 20, 0.9)';
+        ctx.fill();
+      } else if (!isVisible) {
+        // Explored but not currently visible — dim
+        const { x, y } = hexToPixel(tile.coord);
+        drawHexPath(ctx, x, y);
+        ctx.fillStyle = 'rgba(10, 10, 20, 0.5)';
+        ctx.fill();
       }
     }
   }

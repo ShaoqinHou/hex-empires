@@ -4,9 +4,10 @@ interface TopBarProps {
   onOpenTechTree?: () => void;
   onOpenDiplomacy?: () => void;
   onOpenLog?: () => void;
+  onOpenAge?: () => void;
 }
 
-export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGame();
   const player = state.players.get(state.currentPlayerId);
 
@@ -66,6 +67,13 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog }: TopBarPro
         onClick={onOpenDiplomacy}
       >
         Diplo
+      </button>
+      <button
+        className="px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer"
+        style={{ backgroundColor: 'var(--color-gold)', color: 'var(--color-bg)' }}
+        onClick={onOpenAge}
+      >
+        Ages
       </button>
       <button
         className="px-2 py-1 rounded text-[10px] cursor-pointer"

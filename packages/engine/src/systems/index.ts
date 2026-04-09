@@ -13,3 +13,4 @@ export { fortifySystem } from './fortifySystem';
 export { generateAIActions } from './aiSystem';
 export { victorySystem } from './victorySystem';
 export { effectSystem, getActiveEffects } from './effectSystem';
+export { visibilitySystem } from './visibilitySystem';
