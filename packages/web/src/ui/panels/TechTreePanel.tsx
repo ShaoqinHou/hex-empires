@@ -1,6 +1,12 @@
+import { useMemo } from 'react';
 import { useGame } from '../../providers/GameProvider';
 import { ALL_ANTIQUITY_TECHS, ALL_EXPLORATION_TECHS, ALL_MODERN_TECHS } from '@hex/engine';
 import type { TechnologyDef } from '@hex/engine';
+
+/** Cell dimensions matching the CSS grid layout */
+const CELL_WIDTH = 180;
+const CELL_HEIGHT = 90;
+const GAP = 12;
 
 interface TechTreePanelProps {
   onClose: () => void;
@@ -50,10 +56,11 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
       <div className="p-6">
         <div className="relative" style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${maxCol + 1}, 180px)`,
-          gridTemplateRows: `repeat(${maxRow + 1}, 90px)`,
-          gap: '12px',
+          gridTemplateColumns: `repeat(${maxCol + 1}, ${CELL_WIDTH}px)`,
+          gridTemplateRows: `repeat(${maxRow + 1}, ${CELL_HEIGHT}px)`,
+          gap: `${GAP}px`,
         }}>
+          <PrerequisiteLines techs={techs} researchedSet={researchedSet} maxCol={maxCol} maxRow={maxRow} />
           {techs.map(tech => {
             const isResearched = researchedSet.has(tech.id);
             const isActive = currentResearch === tech.id;
@@ -146,5 +153,71 @@ function TechCard({
         </div>
       )}
     </button>
+  );
+}
+
+/** SVG overlay drawing prerequisite connection lines between tech cards */
+function PrerequisiteLines({
+  techs,
+  researchedSet,
+  maxCol,
+  maxRow,
+}: {
+  techs: ReadonlyArray<TechnologyDef>;
+  researchedSet: ReadonlySet<string>;
+  maxCol: number;
+  maxRow: number;
+}) {
+  const lines = useMemo(() => {
+    const techMap = new Map<string, TechnologyDef>();
+    for (const t of techs) techMap.set(t.id, t);
+
+    const result: Array<{ x1: number; y1: number; x2: number; y2: number; researched: boolean }> = [];
+
+    for (const tech of techs) {
+      for (const prereqId of tech.prerequisites) {
+        const prereq = techMap.get(prereqId);
+        if (!prereq) continue;
+
+        // Right edge of prerequisite card
+        const x1 = prereq.treePosition.col * (CELL_WIDTH + GAP) + CELL_WIDTH;
+        const y1 = prereq.treePosition.row * (CELL_HEIGHT + GAP) + CELL_HEIGHT / 2;
+
+        // Left edge of dependent card
+        const x2 = tech.treePosition.col * (CELL_WIDTH + GAP);
+        const y2 = tech.treePosition.row * (CELL_HEIGHT + GAP) + CELL_HEIGHT / 2;
+
+        const researched = researchedSet.has(prereqId);
+        result.push({ x1, y1, x2, y2, researched });
+      }
+    }
+    return result;
+  }, [techs, researchedSet]);
+
+  const svgWidth = (maxCol + 1) * CELL_WIDTH + maxCol * GAP;
+  const svgHeight = (maxRow + 1) * CELL_HEIGHT + maxRow * GAP;
+
+  return (
+    <svg
+      className="absolute inset-0 pointer-events-none"
+      width={svgWidth}
+      height={svgHeight}
+      style={{ zIndex: 0 }}
+    >
+      {lines.map((line, i) => {
+        const midX = (line.x1 + line.x2) / 2;
+        const d = `M ${line.x1} ${line.y1} Q ${midX} ${line.y1}, ${midX} ${(line.y1 + line.y2) / 2} Q ${midX} ${line.y2}, ${line.x2} ${line.y2}`;
+        return (
+          <path
+            key={i}
+            d={d}
+            fill="none"
+            stroke={line.researched ? 'var(--color-science)' : 'var(--color-border)'}
+            strokeWidth={2}
+            opacity={line.researched ? 0.8 : 0.4}
+          />
+        );
+      })}
+    </svg>
   );
 }

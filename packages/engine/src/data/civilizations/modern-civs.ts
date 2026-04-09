@@ -1,0 +1,91 @@
+import type { CivilizationDef } from './types';
+
+export const AMERICA: CivilizationDef = {
+  id: 'america',
+  name: 'America',
+  age: 'modern',
+  uniqueAbility: {
+    name: 'Founding Fathers',
+    description: '+1 to all yields per alliance.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 1 },
+    ],
+  },
+  uniqueUnit: 'minuteman',
+  uniqueBuilding: 'film_studio',
+  legacyBonus: {
+    name: 'American Dream',
+    description: '+2 culture in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+  },
+  color: '#0d47a1',
+};
+
+export const GERMANY: CivilizationDef = {
+  id: 'germany',
+  name: 'Germany',
+  age: 'modern',
+  uniqueAbility: {
+    name: 'Free Imperial Cities',
+    description: '+1 production per specialty district.',
+    effects: [{ type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 1 }],
+  },
+  uniqueUnit: 'u_boat',
+  uniqueBuilding: 'hansa',
+  legacyBonus: {
+    name: 'German Engineering',
+    description: '+3 production in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 3 },
+  },
+  color: '#424242',
+};
+
+export const RUSSIA: CivilizationDef = {
+  id: 'russia',
+  name: 'Russia',
+  age: 'modern',
+  uniqueAbility: {
+    name: 'Mother Russia',
+    description: '+1 faith and +1 production from tundra tiles.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'tile', yield: 'faith', value: 1 },
+      { type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 },
+    ],
+  },
+  uniqueUnit: 'cossack',
+  uniqueBuilding: 'lavra',
+  legacyBonus: {
+    name: 'Russian Orthodoxy',
+    description: '+3 faith in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 },
+  },
+  color: '#880e4f',
+};
+
+export const BRAZIL: CivilizationDef = {
+  id: 'brazil',
+  name: 'Brazil',
+  age: 'modern',
+  uniqueAbility: {
+    name: 'Amazon',
+    description: '+1 adjacency bonus per rainforest tile.',
+    effects: [{ type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 }],
+  },
+  uniqueUnit: 'minas_geraes',
+  uniqueBuilding: 'street_carnival',
+  legacyBonus: {
+    name: 'Carnival Spirit',
+    description: '+2 culture in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+  },
+  color: '#1b5e20',
+};
+
+export const ALL_MODERN_CIVS: ReadonlyArray<CivilizationDef> = [
+  AMERICA, GERMANY, RUSSIA, BRAZIL,
+];

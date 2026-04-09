@@ -299,12 +299,23 @@ export class HexRenderer {
     const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
+    // Build a set of city position keys for quick lookup
+    const cityPositionKeys = new Set<string>();
+    for (const city of rc.state.cities.values()) {
+      cityPositionKeys.add(coordToKey(city.position));
+    }
+
     for (const unit of rc.state.units.values()) {
-      const { x, y } = hexToPixel(unit.position);
+      const { x: baseX, y: baseY } = hexToPixel(unit.position);
       const players = [...rc.state.players.keys()];
       const playerIndex = players.indexOf(unit.owner);
       const color = playerColors[playerIndex % playerColors.length];
       const isSelected = rc.selectedUnit?.id === unit.id;
+
+      // Offset unit when on a city tile so both are visible
+      const onCity = cityPositionKeys.has(coordToKey(unit.position));
+      const x = onCity ? baseX - 10 : baseX;
+      const y = onCity ? baseY - 10 : baseY;
 
       // Unit icon (distinct per type)
       drawUnitIcon(ctx, unit.typeId, x, y - 2, color, isSelected);

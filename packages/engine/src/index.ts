@@ -109,7 +109,17 @@ export {
 
 // Building data
 export type { BuildingDef } from './data/buildings';
-export { ALL_BUILDINGS, ALL_ANTIQUITY_BUILDINGS } from './data/buildings';
+export { ALL_BUILDINGS, ALL_ANTIQUITY_BUILDINGS, ALL_EXPLORATION_BUILDINGS, ALL_MODERN_BUILDINGS } from './data/buildings';
+export {
+  GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
+  MARKET, WATERMILL, WORKSHOP, SHRINE,
+} from './data/buildings';
+export {
+  BANK, UNIVERSITY, STOCK_EXCHANGE, ARMORY, STAR_FORT,
+} from './data/buildings';
+export {
+  FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER,
+} from './data/buildings';
 
 // Unit data
 export type { UnitDef } from './data/units';
@@ -133,7 +143,16 @@ export { ALL_TECHNOLOGIES, ALL_ANTIQUITY_TECHS, ALL_EXPLORATION_TECHS, ALL_MODER
 
 // Civilization data
 export type { CivilizationDef } from './data/civilizations';
-export { ALL_CIVILIZATIONS, ALL_ANTIQUITY_CIVS } from './data/civilizations';
+export { ALL_CIVILIZATIONS, ALL_ANTIQUITY_CIVS, ALL_EXPLORATION_CIVS, ALL_MODERN_CIVS } from './data/civilizations';
+export {
+  ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA,
+} from './data/civilizations';
+export {
+  SPAIN, ENGLAND, FRANCE, OTTOMAN, JAPAN, MONGOLIA,
+} from './data/civilizations';
+export {
+  AMERICA, GERMANY, RUSSIA, BRAZIL,
+} from './data/civilizations';
 
 // Leader data
 export type { LeaderDef } from './data/leaders';

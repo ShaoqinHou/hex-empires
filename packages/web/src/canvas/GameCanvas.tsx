@@ -228,6 +228,12 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
     isDraggingRef.current = false;
   }, [handleClick]);
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedUnit(null);
+    setSelectedHex(null);
+  }, [setSelectedUnit, setSelectedHex]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -314,6 +320,7 @@ export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCa
       onMouseUp={handleMouseUp}
       onMouseLeave={() => { isDraggingRef.current = false; }}
       onWheel={handleWheel}
+      onContextMenu={handleContextMenu}
     />
   );
 }
