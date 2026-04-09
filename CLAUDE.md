@@ -49,18 +49,20 @@ The engine is a pipeline of pure functions. Each system processes actions it car
 type System = (state: GameState, action: GameAction) => GameState;
 
 const SYSTEMS: System[] = [
-  turnSystem,        // validates phase, player order
-  movementSystem,    // unit movement, pathfinding
-  combatSystem,      // combat resolution
-  productionSystem,  // city production queues
-  researchSystem,    // technology progress
-  growthSystem,      // city population, food
-  resourceSystem,    // yield calculation, trade
-  diplomacySystem,   // relations, treaties, war/peace
-  ageSystem,         // age progress, transitions
-  crisisSystem,      // crisis events
-  victorySystem,     // win condition checks
-  effectSystem,      // triggered abilities
+  turnSystem,                 // validates phase, player order
+  effectSystem,               // civ/leader/legacy ability effects (runs early so other systems see active effects)
+  movementSystem,             // unit movement, pathfinding
+  citySystem,                 // city founding, territory
+  combatSystem,               // combat resolution
+  fortifySystem,              // unit fortification
+  growthSystem,               // city population, food
+  productionSystem,           // city production queues
+  resourceSystem,             // yield calculation, trade
+  researchSystem,             // technology progress
+  ageSystem,                  // age progress, transitions
+  diplomacySystem,            // relations, treaties, war/peace
+  updateDiplomacyCounters,    // diplomacy turn counters
+  victorySystem,              // win condition checks
 ];
 
 function applyAction(state: GameState, action: GameAction): GameState {

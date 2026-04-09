@@ -1,7 +1,8 @@
 export { turnSystem } from './turnSystem';
 export { movementSystem } from './movementSystem';
 export { citySystem } from './citySystem';
-export { growthSystem, calculateCityYields, getGrowthThreshold } from './growthSystem';
+export { growthSystem, getGrowthThreshold } from './growthSystem';
+export { calculateCityYields } from '../state/YieldCalculator';
 export { productionSystem } from './productionSystem';
 export { resourceSystem } from './resourceSystem';
 export { researchSystem } from './researchSystem';

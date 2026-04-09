@@ -1,5 +1,5 @@
 import type { GameState, GameAction } from '../types/GameState';
-import { calculateCityYields } from './growthSystem';
+import { calculateCityYields } from '../state/YieldCalculator';
 
 /**
  * ResourceSystem accumulates per-turn yields (gold, science, culture, faith)

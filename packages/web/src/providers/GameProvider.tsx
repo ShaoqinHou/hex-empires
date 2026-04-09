@@ -36,6 +36,7 @@ import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState } from '@hex/eng
 
 const engine = new GameEngine([
   turnSystem,
+  effectSystem,
   movementSystem,
   citySystem,
   combatSystem,
@@ -48,7 +49,6 @@ const engine = new GameEngine([
   diplomacySystem,
   updateDiplomacyCounters,
   victorySystem,
-  effectSystem,
 ]);
 
 // ── Unit registry ──

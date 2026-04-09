@@ -1,6 +1,6 @@
 import type { GameState, GameAction, CityState, UnitState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
-import { calculateCityYields } from './growthSystem';
+import { calculateCityYields } from '../state/YieldCalculator';
 
 /** Generate deterministic unit ID from state */
 function nextUnitId(state: GameState, cityId: string): string {

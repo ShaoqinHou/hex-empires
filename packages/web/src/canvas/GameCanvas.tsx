@@ -190,7 +190,10 @@ export function GameCanvas({ onCityClick }: GameCanvasProps) {
     const screenY = e.clientY - rect.top;
     const world = cameraRef.current.screenToWorld(screenX, screenY);
     const hex = pixelToHex(world.x, world.y);
-    setHoveredHex(hex);
+    setHoveredHex(prev => {
+      if (prev && prev.q === hex.q && prev.r === hex.r) return prev;
+      return hex;
+    });
 
     // Always track mouse position for edge scrolling
     const prevMouse = lastMouseRef.current;
@@ -296,6 +299,7 @@ export function GameCanvas({ onCityClick }: GameCanvasProps) {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onMouseLeave={() => { isDraggingRef.current = false; }}
       onWheel={handleWheel}
     />
   );

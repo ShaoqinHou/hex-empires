@@ -327,10 +327,10 @@ export class HexRenderer {
     const feature = tile.feature ? rc.featureRegistry.get(tile.feature) : null;
 
     const text = `(${tile.coord.q}, ${tile.coord.r}) ${terrain?.name ?? ''}${feature ? ` + ${feature.name}` : ''}`;
+    ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(8, ctx.canvas.height - 28, ctx.measureText(text).width + 16, 22);
     ctx.fillStyle = '#e0e0e0';
-    ctx.font = '12px monospace';
     ctx.textAlign = 'left';
     ctx.fillText(text, 16, ctx.canvas.height - 12);
   }

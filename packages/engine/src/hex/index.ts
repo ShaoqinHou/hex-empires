@@ -15,3 +15,4 @@ export { findPath, getReachable } from './Pathfinding';
 export type { CostFn } from './Pathfinding';
 export { generateMap, createTerrainRegistries } from './MapGenerator';
 export type { MapGenOptions } from './MapGenerator';
+export { getMovementCost } from './TerrainCost';

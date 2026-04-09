@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useGame } from '../../providers/GameProvider';
 
 export function VictoryPanel() {
   const { state } = useGame();
+  const [dismissed, setDismissed] = useState(false);
 
-  if (!state.victory.winner) return null;
+  if (!state.victory.winner || dismissed) return null;
 
   const winner = state.players.get(state.victory.winner);
 
@@ -45,6 +47,24 @@ export function VictoryPanel() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-3 mt-6">
+          <button
+            className="flex-1 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer transition-colors"
+            style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-bg)' }}
+            onClick={() => window.location.reload()}
+          >
+            New Game
+          </button>
+          <button
+            className="flex-1 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer transition-colors"
+            style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+            onClick={() => setDismissed(true)}
+          >
+            Continue Playing
+          </button>
         </div>
       </div>
     </div>

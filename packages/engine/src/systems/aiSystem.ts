@@ -1,6 +1,6 @@
 import type { GameState, GameAction } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
-import { getMovementCost } from './movementSystem';
+import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
 
 /**

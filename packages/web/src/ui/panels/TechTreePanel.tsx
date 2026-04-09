@@ -58,7 +58,7 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
             const isResearched = researchedSet.has(tech.id);
             const isActive = currentResearch === tech.id;
             const prereqsMet = tech.prerequisites.every(p => researchedSet.has(p));
-            const canResearch = !isResearched && prereqsMet && !currentResearch;
+            const canResearch = !isResearched && prereqsMet;
 
             return (
               <TechCard
@@ -69,7 +69,7 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
                 canResearch={canResearch}
                 prereqsMet={prereqsMet}
                 onSelect={() => {
-                  if (canResearch || (!isResearched && prereqsMet)) {
+                  if (canResearch) {
                     dispatch({ type: 'SET_RESEARCH', techId: tech.id });
                   }
                 }}
@@ -124,7 +124,7 @@ function TechCard({
         opacity,
       }}
       onClick={onSelect}
-      disabled={!canResearch && !isActive}
+      disabled={isResearched || !prereqsMet}
     >
       <div className="text-xs font-bold truncate" style={{ color: isResearched ? 'var(--color-science)' : 'var(--color-text)' }}>
         {tech.name}

@@ -78,9 +78,11 @@ export { GameEngine } from './GameEngine';
 
 // Systems
 export { turnSystem } from './systems/turnSystem';
-export { movementSystem, getMovementCost } from './systems/movementSystem';
+export { movementSystem } from './systems/movementSystem';
+export { getMovementCost } from './hex/TerrainCost';
 export { citySystem } from './systems/citySystem';
-export { growthSystem, calculateCityYields, getGrowthThreshold } from './systems/growthSystem';
+export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
+export { calculateCityYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';
 export { resourceSystem } from './systems/resourceSystem';
 export { researchSystem } from './systems/researchSystem';

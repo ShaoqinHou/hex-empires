@@ -17,10 +17,14 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
   const currentProduction = city.productionQueue[0];
 
+  // Get the player's current age
+  const player = state.players.get(state.currentPlayerId);
+  const currentAge = player?.age ?? 'antiquity';
+
   // Available production items
-  const availableUnits = ALL_UNITS.filter(u => u.age === 'antiquity');
+  const availableUnits = ALL_UNITS.filter(u => u.age === currentAge);
   const availableBuildings = ALL_BUILDINGS.filter(
-    b => b.age === 'antiquity' && !city.buildings.includes(b.id)
+    b => b.age === currentAge && !city.buildings.includes(b.id)
   );
 
   return (
@@ -73,7 +77,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Production</h3>
         {currentProduction ? (
           <div className="text-xs">
-            <span className="font-bold">{currentProduction.id}</span>
+            <span className="font-bold">{getProductionName(currentProduction.id)}</span>
             <ProgressBar value={city.productionProgress} max={getProductionCost(currentProduction.id)} color="var(--color-production)" />
             <span style={{ color: 'var(--color-text-muted)' }}>
               {city.productionProgress}/{getProductionCost(currentProduction.id)} ({yields.production}/turn)
@@ -175,4 +179,12 @@ function getProductionCost(itemId: string): number {
   const building = ALL_BUILDINGS.find(b => b.id === itemId);
   if (building) return building.cost;
   return 100;
+}
+
+function getProductionName(itemId: string): string {
+  const unit = ALL_UNITS.find(u => u.id === itemId);
+  if (unit) return unit.name;
+  const building = ALL_BUILDINGS.find(b => b.id === itemId);
+  if (building) return building.name;
+  return itemId;
 }
