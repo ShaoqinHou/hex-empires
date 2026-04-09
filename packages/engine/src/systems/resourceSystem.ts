@@ -1,10 +1,10 @@
 import type { GameState, GameAction, CityState } from '../types/GameState';
 import { calculateCityYields } from '../state/YieldCalculator';
 
-/** Number of free settlements before happiness penalty applies */
-const FREE_SETTLEMENT_CAP = 3;
-/** Happiness penalty per settlement above the cap */
-const SETTLEMENT_CAP_PENALTY = 3;
+/** Number of free settlements before happiness penalty applies (Civ VII: 4) */
+const FREE_SETTLEMENT_CAP = 4;
+/** Happiness penalty per settlement above the cap (Civ VII: -5 per overage per settlement) */
+const SETTLEMENT_CAP_PENALTY = 5;
 
 /**
  * Calculate happiness for a single city.

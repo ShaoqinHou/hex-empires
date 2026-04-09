@@ -207,6 +207,7 @@ function getProductionCost(state: GameState, itemId: string): number {
 }
 
 /** Gold cost for purchasing items (2x production cost) */
+/** Gold purchase cost = 4x production cost (Civ VII standard) */
 function getGoldCost(state: GameState, itemId: string): number {
-  return getProductionCost(state, itemId) * 2;
+  return getProductionCost(state, itemId) * 4;
 }

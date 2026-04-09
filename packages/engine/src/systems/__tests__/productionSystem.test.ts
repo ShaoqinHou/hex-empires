@@ -133,8 +133,8 @@ describe('productionSystem', () => {
         itemId: 'warrior',
         itemType: 'unit',
       });
-      // Warrior cost = 40, gold cost = 80 (2x)
-      expect(next.players.get('p1')!.gold).toBe(120);
+      // Warrior cost = 40, gold cost = 160 (4x per Civ VII)
+      expect(next.players.get('p1')!.gold).toBe(40);
       const newUnits = [...next.units.values()].filter(u => u.typeId === 'warrior');
       expect(newUnits.length).toBe(1);
     });
@@ -143,7 +143,7 @@ describe('productionSystem', () => {
       const town = createTestCity({ settlementType: 'town', happiness: 5, isCapital: false });
       const state = createTestState({
         cities: new Map([['c1', town]]),
-        players: new Map([['p1', createTestPlayer({ gold: 200 })]]),
+        players: new Map([['p1', createTestPlayer({ gold: 300 })]]),
       });
       const next = productionSystem(state, {
         type: 'PURCHASE_ITEM',
@@ -151,8 +151,8 @@ describe('productionSystem', () => {
         itemId: 'granary',
         itemType: 'building',
       });
-      // Granary cost = 65, gold cost = 130 (2x)
-      expect(next.players.get('p1')!.gold).toBe(70);
+      // Granary cost = 65, gold cost = 260 (4x per Civ VII)
+      expect(next.players.get('p1')!.gold).toBe(40);
       expect(next.cities.get('c1')!.buildings).toContain('granary');
     });
 
