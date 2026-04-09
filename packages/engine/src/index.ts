@@ -168,15 +168,27 @@ export {
 
 // Civic data
 export type { CivicDef } from './data/civics';
-export { ALL_CIVICS, ALL_ANTIQUITY_CIVICS } from './data/civics';
+export { ALL_CIVICS, ALL_ANTIQUITY_CIVICS, ALL_EXPLORATION_CIVICS, ALL_MODERN_CIVICS } from './data/civics';
 export {
   CODE_OF_LAWS, CRAFTSMANSHIP, FOREIGN_TRADE, EARLY_EMPIRE,
   MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
+} from './data/civics';
+export {
+  HUMANISM, MERCANTILISM, DIVINE_RIGHT, EXPLORATION_CIVIC,
+  REFORMED_CHURCH, COLONIALISM, CIVIL_ENGINEERING, NATIONALISM,
+} from './data/civics';
+export {
+  IDEOLOGY, SUFFRAGE, TOTALITARIANISM,
+  ENVIRONMENTALISM, GLOBALIZATION, FUTURE_CIVIC,
 } from './data/civics';
 
 // Crisis data
 export type { CrisisEventDef, CrisisTriggerCondition } from './data/crises';
 export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, GOLDEN_AGE, TRADE_OPPORTUNITY, NATURAL_DISASTER } from './data/crises';
+
+// Resource data
+export type { ResourceDef } from './data/resources';
+export { ALL_RESOURCES, WHEAT, CATTLE, STONE, IRON, HORSES, NITER, SILK, GEMS, SPICES, WINE } from './data/resources';
 
 // Leader data
 export type { LeaderDef } from './data/leaders';

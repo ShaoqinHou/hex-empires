@@ -94,7 +94,7 @@ function getHealAmount(
   }
 
   // Neutral/enemy territory
-  return 5;
+  return 10;
 }
 
 function handleEndTurn(state: GameState): GameState {

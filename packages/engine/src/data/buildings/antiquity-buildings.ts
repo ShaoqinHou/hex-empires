@@ -110,7 +110,18 @@ export const SHRINE: BuildingDef = {
   requiredTech: 'astrology',
 } as const;
 
+export const PALACE: BuildingDef = {
+  id: 'palace',
+  name: 'Palace',
+  age: 'antiquity',
+  cost: 0, // auto-built in capital
+  maintenance: 0,
+  yields: { food: 5, production: 5 },
+  effects: ['+5 Happiness', '+1 Culture adjacency', '+1 Science adjacency'],
+  requiredTech: null,
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
-  GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
+  PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
 ] as const;

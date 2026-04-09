@@ -4,6 +4,7 @@ import type { BuildingDef } from '../data/buildings/antiquity-buildings';
 import type { TechnologyDef } from '../data/technologies/types';
 import type { CivicDef } from '../data/civics/types';
 import type { PromotionDef } from '../data/units/promotions';
+import type { ResourceDef } from '../data/resources';
 import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
 import { ALL_UNITS } from '../data/units';
 import { ALL_BUILDINGS } from '../data/buildings';
@@ -12,6 +13,7 @@ import { ALL_CIVICS } from '../data/civics';
 import { ALL_BASE_TERRAINS } from '../data/terrains/base-terrains';
 import { ALL_FEATURES } from '../data/terrains/features';
 import { ALL_PROMOTIONS } from '../data/units/promotions';
+import { ALL_RESOURCES } from '../data/resources';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -36,5 +38,8 @@ export function createGameConfig(): GameConfig {
   const promotions = new Map<string, PromotionDef>();
   for (const p of ALL_PROMOTIONS) promotions.set(p.id, p);
 
-  return { units, buildings, technologies, civics, terrains, features, promotions };
+  const resources = new Map<string, ResourceDef>();
+  for (const r of ALL_RESOURCES) resources.set(r.id, r);
+
+  return { units, buildings, technologies, civics, terrains, features, promotions, resources };
 }

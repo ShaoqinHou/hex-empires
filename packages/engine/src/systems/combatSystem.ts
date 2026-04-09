@@ -1,6 +1,7 @@
 import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
+import { nextRandom } from '../state/SeededRng';
 
 /**
  * CombatSystem handles unit attacks.
@@ -54,12 +55,22 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   const attackerStrength = getEffectiveCombatStrength(state, attacker, true) + attackerPromoBonus;
   const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
-  // Calculate damage
+  // Calculate damage with seeded randomness
   const strengthDiff = attackerStrength - defenderStrength;
-  const attackerDamage = Math.round(30 * Math.exp(strengthDiff / 25)); // damage to defender
+
+  // First random: modifier for attacker damage (0.75 to 1.25)
+  const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
+  const modifier1 = 0.75 + randomFactor1 * 0.5;
+  const attackerDamage = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1); // damage to defender
+
+  // Second random: modifier for defender damage (0.75 to 1.25)
+  const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
+  const modifier2 = 0.75 + randomFactor2 * 0.5;
   const defenderDamage = attackerRange > 0
     ? 0 // ranged units don't take damage when attacking
-    : Math.round(30 * Math.exp(-strengthDiff / 25)); // damage to attacker (melee only)
+    : Math.round(30 * Math.exp(-strengthDiff / 25) * modifier2); // damage to attacker (melee only)
+
+  let currentRng = rng2;
 
   const newDefenderHealth = Math.max(0, defender.health - attackerDamage);
   const newAttackerHealth = Math.max(0, attacker.health - defenderDamage);
@@ -149,6 +160,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     units: updatedUnits,
     players: updatedPlayers,
     log: logEntries,
+    rng: currentRng,
   };
 }
 
@@ -170,6 +182,11 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   if (tile) {
     const terrainBonus = getTerrainDefenseBonus(state, tile);
     strength *= (1 + terrainBonus);
+
+    // River penalty: defending on a tile with rivers gives -15% combat strength
+    if (tile.river.length > 0) {
+      strength *= 0.85;
+    }
   }
 
   // Fortification bonus (+50% when fortified)

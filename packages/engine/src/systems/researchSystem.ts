@@ -16,9 +16,26 @@ export function researchSystem(state: GameState, action: GameAction): GameState 
   }
 }
 
+/** Special tech ID for repeatable future research */
+const FUTURE_TECH_ID = 'future_tech';
+const FUTURE_TECH_COST = 100;
+const FUTURE_TECH_AGE_PROGRESS = 10;
+
 function handleSetResearch(state: GameState, techId: string): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
+
+  // Allow future_tech when all techs for the current age are researched
+  if (techId === FUTURE_TECH_ID) {
+    if (!allAgeTechsResearched(state, player)) return state;
+    const updatedPlayers = new Map(state.players);
+    updatedPlayers.set(player.id, {
+      ...player,
+      currentResearch: FUTURE_TECH_ID,
+      researchProgress: 0,
+    });
+    return { ...state, players: updatedPlayers };
+  }
 
   // Can't research already-known tech
   if (player.researchedTechs.includes(techId)) return state;
@@ -35,6 +52,16 @@ function handleSetResearch(state: GameState, techId: string): GameState {
   });
 
   return { ...state, players: updatedPlayers };
+}
+
+/** Check if a player has researched all technologies available in their current age */
+function allAgeTechsResearched(state: GameState, player: { readonly age: string; readonly researchedTechs: ReadonlyArray<string> }): boolean {
+  for (const [techId, techDef] of state.config.technologies) {
+    if (techDef.age === player.age && !player.researchedTechs.includes(techId)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function processResearch(state: GameState): GameState {
@@ -65,8 +92,30 @@ function processResearch(state: GameState): GameState {
   const techCost = getTechCost(state, player.currentResearch);
 
   if (newProgress >= techCost) {
-    // Tech complete!
     const updatedPlayers = new Map(state.players);
+
+    if (player.currentResearch === FUTURE_TECH_ID) {
+      // Future tech: repeatable — grant age progress but don't add to researchedTechs
+      updatedPlayers.set(player.id, {
+        ...player,
+        currentResearch: null,
+        researchProgress: 0,
+        ageProgress: player.ageProgress + FUTURE_TECH_AGE_PROGRESS,
+      });
+
+      return {
+        ...state,
+        players: updatedPlayers,
+        log: [...state.log, {
+          turn: state.turn,
+          playerId: player.id,
+          message: `Completed Future Tech! (+${FUTURE_TECH_AGE_PROGRESS} age progress)`,
+          type: 'research',
+        }],
+      };
+    }
+
+    // Normal tech complete!
     updatedPlayers.set(player.id, {
       ...player,
       researchedTechs: [...player.researchedTechs, player.currentResearch],
@@ -99,5 +148,6 @@ function processResearch(state: GameState): GameState {
 
 /** Tech cost from state.config.technologies — driven by data */
 function getTechCost(state: GameState, techId: string): number {
+  if (techId === FUTURE_TECH_ID) return FUTURE_TECH_COST;
   return state.config.technologies.get(techId)?.cost ?? 100;
 }

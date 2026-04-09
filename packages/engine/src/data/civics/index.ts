@@ -5,13 +5,25 @@ export {
   MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
 } from './antiquity/index';
 
+export { ALL_EXPLORATION_CIVICS } from './exploration/index';
+export {
+  HUMANISM, MERCANTILISM, DIVINE_RIGHT, EXPLORATION_CIVIC,
+  REFORMED_CHURCH, COLONIALISM, CIVIL_ENGINEERING, NATIONALISM,
+} from './exploration/index';
+
+export { ALL_MODERN_CIVICS } from './modern/index';
+export {
+  IDEOLOGY, SUFFRAGE, TOTALITARIANISM,
+  ENVIRONMENTALISM, GLOBALIZATION, FUTURE_CIVIC,
+} from './modern/index';
+
 import type { CivicDef } from './types';
 import { ALL_ANTIQUITY_CIVICS } from './antiquity/index';
-
-// Future: import ALL_EXPLORATION_CIVICS, ALL_MODERN_CIVICS
+import { ALL_EXPLORATION_CIVICS } from './exploration/index';
+import { ALL_MODERN_CIVICS } from './modern/index';
 
 export const ALL_CIVICS: ReadonlyArray<CivicDef> = [
   ...ALL_ANTIQUITY_CIVICS,
-  // ...ALL_EXPLORATION_CIVICS,
-  // ...ALL_MODERN_CIVICS,
+  ...ALL_EXPLORATION_CIVICS,
+  ...ALL_MODERN_CIVICS,
 ];

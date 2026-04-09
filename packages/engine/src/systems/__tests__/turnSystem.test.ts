@@ -77,13 +77,13 @@ describe('turnSystem', () => {
       expect(next.units.get('u1')!.health).toBe(75);
     });
 
-    it('heals unit in neutral territory by 5 HP', () => {
+    it('heals unit in neutral territory by 10 HP', () => {
       const units = new Map([
         ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 80, movementLeft: 1 })],
       ]);
       const state = createTestState({ phase: 'start', units });
       const next = turnSystem(state, { type: 'START_TURN' });
-      expect(next.units.get('u1')!.health).toBe(85);
+      expect(next.units.get('u1')!.health).toBe(90);
     });
 
     it('caps healing at 100 HP', () => {

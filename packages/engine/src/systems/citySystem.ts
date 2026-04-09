@@ -86,10 +86,10 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
     food: 0,
     productionQueue: [],
     productionProgress: 0,
-    buildings: [],
+    buildings: isFirstCity ? ['palace'] : [], // Capital gets Palace auto-built
     territory,
     settlementType,
-    happiness: settlementType === 'city' ? 10 : 5,
+    happiness: isFirstCity ? 15 : (settlementType === 'city' ? 10 : 5), // Palace adds +5 happiness
     isCapital: isFirstCity,
   };
 

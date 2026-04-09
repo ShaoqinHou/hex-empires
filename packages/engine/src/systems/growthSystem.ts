@@ -22,24 +22,32 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const yields = calculateCityYields(city, state);
     const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
-    const newFood = Math.max(0, city.food + foodSurplus);
+    const newFood = city.food + foodSurplus;
     const growthThreshold = getGrowthThreshold(city.population);
 
-    // Population cap based on settlement type: towns cap at 5, cities at 20
-    const popCap = city.settlementType === 'town' ? 5 : 20;
-    if (newFood >= growthThreshold && city.population < popCap) {
-      // Population grows + territory expands
-      const expandedTerritory = expandBorders(city, state, updatedCities);
-      updatedCities.set(cityId, {
-        ...city,
-        population: city.population + 1,
-        food: newFood - growthThreshold,
-        territory: expandedTerritory,
-      });
+    if (newFood < 0 && city.population > 1) {
+      // Starvation — lose population
+      updatedCities.set(cityId, { ...city, population: city.population - 1, food: 0 });
       changed = true;
-    } else if (newFood !== city.food) {
-      updatedCities.set(cityId, { ...city, food: newFood });
-      changed = true;
+    } else {
+      const clampedFood = Math.max(0, newFood);
+      // Towns soft-cap at 5 pop; cities grow as long as happiness >= 0
+      const townCap = city.settlementType === 'town' ? 5 : Infinity;
+      const canGrow = city.happiness >= 0 && city.population < townCap;
+      if (clampedFood >= growthThreshold && canGrow) {
+        // Population grows + territory expands
+        const expandedTerritory = expandBorders(city, state, updatedCities);
+        updatedCities.set(cityId, {
+          ...city,
+          population: city.population + 1,
+          food: clampedFood - growthThreshold,
+          territory: expandedTerritory,
+        });
+        changed = true;
+      } else if (clampedFood !== city.food) {
+        updatedCities.set(cityId, { ...city, food: clampedFood });
+        changed = true;
+      }
     }
   }
 

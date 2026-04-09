@@ -3,6 +3,7 @@ import type { BuildingDef } from '../data/buildings/antiquity-buildings';
 import type { TechnologyDef } from '../data/technologies/types';
 import type { CivicDef } from '../data/civics/types';
 import type { PromotionDef } from '../data/units/promotions';
+import type { ResourceDef } from '../data/resources';
 import type { TerrainDef, TerrainFeatureDef } from './Terrain';
 
 /**
@@ -18,4 +19,5 @@ export interface GameConfig {
   readonly terrains: ReadonlyMap<string, TerrainDef>;
   readonly features: ReadonlyMap<string, TerrainFeatureDef>;
   readonly promotions: ReadonlyMap<string, PromotionDef>;
+  readonly resources: ReadonlyMap<string, ResourceDef>;
 }

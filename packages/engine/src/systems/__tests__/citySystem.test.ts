@@ -26,7 +26,8 @@ describe('citySystem', () => {
       // First city is always a City (capital)
       expect(city.settlementType).toBe('city');
       expect(city.isCapital).toBe(true);
-      expect(city.happiness).toBe(10);
+      expect(city.happiness).toBe(15); // capital gets +5 from Palace
+      expect(city.buildings).toContain('palace');
     });
 
     it('grants territory of radius 1', () => {
