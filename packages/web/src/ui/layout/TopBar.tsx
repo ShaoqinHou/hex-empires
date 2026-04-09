@@ -66,6 +66,7 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           </span>
         )}
         <ResourceBadge label="Faith" value={player?.faith ?? 0} color="var(--color-faith)" />
+        <ResourceBadge label="Influence" value={player?.influence ?? 0} color="rgba(186, 104, 200, 0.9)" />
       </div>
 
       {/* Right: Tech Tree + End Turn */}

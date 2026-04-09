@@ -11,7 +11,7 @@ function createMinimalState(): GameState {
       id: 'p1', name: 'Test', isHuman: true, civilizationId: 'rome', leaderId: 'augustus',
       age: 'antiquity' as const, researchedTechs: ['pottery', 'mining'],
       currentResearch: 'archery', researchProgress: 15, gold: 200,
-      science: 50, culture: 30, faith: 10, ageProgress: 10,
+      science: 50, culture: 30, faith: 10, influence: 5, ageProgress: 10,
       legacyBonuses: [], visibility: new Set(['0,0', '1,0']), explored: new Set(['0,0', '1,0', '2,0']),
     }]]),
     map: { width: 5, height: 5, tiles: new Map([['0,0', {
@@ -24,7 +24,9 @@ function createMinimalState(): GameState {
     }]]),
     cities: new Map(),
     diplomacy: { relations: new Map([['p1:p2', {
-      status: 'peace' as const, grievances: 5, turnsAtPeace: 3, turnsAtWar: 0,
+      status: 'neutral' as const, relationship: 0, warSupport: 0, turnsAtPeace: 3, turnsAtWar: 0,
+      hasAlliance: false, hasFriendship: false, hasDenounced: false,
+      warDeclarer: null, isSurpriseWar: false,
     }]]) },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     crises: [],

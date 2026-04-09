@@ -1,8 +1,14 @@
-import type { GameState, GameAction, DiplomacyRelation } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus } from '../types/GameState';
 
 /**
  * DiplomacySystem handles diplomatic proposals between players.
  * Relations are stored as key "p1:p2" (alphabetically sorted).
+ *
+ * Civ VII-style diplomacy:
+ * - Relationship score (-100 to +100) drives diplomatic status stages
+ * - War Support replaces grievances (attacker/defender advantage)
+ * - Formal war requires hostile relationship; surprise war gives defender war support
+ * - Alliance requires helpful status (relationship > 60)
  */
 export function diplomacySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'PROPOSE_DIPLOMACY') return state;
@@ -19,68 +25,140 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
   let logMessage: string;
 
   switch (action.proposal.type) {
-    case 'DECLARE_WAR':
+    case 'DECLARE_WAR': {
       if (currentRelation.status === 'war') return state; // already at war
-      newRelation = {
-        ...currentRelation,
-        status: 'war',
-        turnsAtWar: 0,
-        turnsAtPeace: 0,
-        grievances: currentRelation.grievances + 20,
-      };
-      logMessage = `Declared war on ${targetId}`;
-      break;
 
-    case 'PROPOSE_PEACE':
-      if (currentRelation.status !== 'war') return state;
-      // AI auto-accepts if grievances are low enough (simplified)
-      if (currentRelation.grievances > 30) {
+      const warType = action.proposal.warType;
+
+      // Formal war requires hostile relationship (relationship < -60)
+      if (warType === 'formal' && currentRelation.relationship > -60) {
         return {
           ...state,
           log: [...state.log, {
             turn: state.turn,
             playerId: sourceId,
-            message: `Peace proposal rejected by ${targetId} (grievances too high)`,
+            message: `Cannot declare formal war on ${targetId} (relationship not hostile enough)`,
+            type: 'diplomacy',
+          }],
+        };
+      }
+
+      // Surprise war: any relationship but gives defender war support
+      const isSurprise = warType === 'surprise';
+      const warSupportChange = isSurprise ? -50 : 0; // negative = defender advantage
+
+      newRelation = {
+        ...currentRelation,
+        status: 'war',
+        turnsAtWar: 0,
+        turnsAtPeace: 0,
+        warSupport: clampWarSupport(currentRelation.warSupport + warSupportChange),
+        hasAlliance: false,  // war breaks alliance
+        hasFriendship: false, // war breaks friendship
+        hasDenounced: false,
+        warDeclarer: sourceId,
+        isSurpriseWar: isSurprise,
+        // Relationship drops significantly on war
+        relationship: clampRelationship(currentRelation.relationship - 40),
+      };
+      logMessage = `Declared ${warType} war on ${targetId}`;
+      break;
+    }
+
+    case 'PROPOSE_PEACE': {
+      if (currentRelation.status !== 'war') return state;
+      // Peace requires war support near zero or negative for the loser
+      // Simplified: auto-accepts if war has been going on > 5 turns or war support is near 0
+      if (currentRelation.turnsAtWar < 5 && Math.abs(currentRelation.warSupport) > 20) {
+        return {
+          ...state,
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `Peace proposal rejected by ${targetId} (war support too high)`,
+            type: 'diplomacy',
+          }],
+        };
+      }
+      const newRelationship = clampRelationship(currentRelation.relationship + 10);
+      newRelation = {
+        ...currentRelation,
+        status: getStatusFromRelationship(newRelationship),
+        turnsAtPeace: 0,
+        turnsAtWar: 0,
+        warSupport: 0,
+        warDeclarer: null,
+        isSurpriseWar: false,
+        relationship: newRelationship,
+      };
+      logMessage = `Made peace with ${targetId}`;
+      break;
+    }
+
+    case 'PROPOSE_ALLIANCE': {
+      if (currentRelation.status === 'war') return state;
+      // Alliance requires helpful status (relationship > 60)
+      if (currentRelation.relationship <= 60) {
+        return {
+          ...state,
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `Cannot form alliance with ${targetId} (relationship not high enough, need > 60)`,
             type: 'diplomacy',
           }],
         };
       }
       newRelation = {
         ...currentRelation,
-        status: 'peace',
-        turnsAtPeace: 0,
-        turnsAtWar: 0,
+        hasAlliance: true,
+        hasFriendship: true, // alliance implies friendship
+        hasDenounced: false,
+        relationship: clampRelationship(currentRelation.relationship + 15),
       };
-      logMessage = `Made peace with ${targetId}`;
-      break;
-
-    case 'PROPOSE_ALLIANCE':
-      if (currentRelation.status === 'war') return state;
-      newRelation = {
-        ...currentRelation,
-        status: 'alliance',
-      };
+      newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
       logMessage = `Formed alliance with ${targetId}`;
       break;
+    }
 
-    case 'PROPOSE_FRIENDSHIP':
+    case 'PROPOSE_FRIENDSHIP': {
       if (currentRelation.status === 'war') return state;
+      // Friendship requires at least neutral relationship (> -20)
+      if (currentRelation.relationship < -20) {
+        return {
+          ...state,
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `Cannot establish friendship with ${targetId} (relationship too low)`,
+            type: 'diplomacy',
+          }],
+        };
+      }
       newRelation = {
         ...currentRelation,
-        status: 'friendship',
+        hasFriendship: true,
+        hasDenounced: false,
+        relationship: clampRelationship(currentRelation.relationship + 20),
       };
+      newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
       logMessage = `Established friendship with ${targetId}`;
       break;
+    }
 
-    case 'DENOUNCE':
+    case 'DENOUNCE': {
       if (currentRelation.status === 'war') return state;
       newRelation = {
         ...currentRelation,
-        status: 'denounced',
-        grievances: currentRelation.grievances + 10,
+        hasDenounced: true,
+        hasAlliance: false, // denounce breaks alliance
+        hasFriendship: false, // denounce breaks friendship
+        relationship: clampRelationship(currentRelation.relationship - 25),
       };
+      newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
       logMessage = `Denounced ${targetId}`;
       break;
+    }
 
     default:
       return state;
@@ -101,17 +179,40 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
   };
 }
 
-function getRelationKey(a: string, b: string): string {
+/** Derive the diplomatic status stage from relationship score */
+export function getStatusFromRelationship(relationship: number): DiplomaticStatus {
+  if (relationship > 60) return 'helpful';
+  if (relationship > 20) return 'friendly';
+  if (relationship >= -20) return 'neutral';
+  if (relationship >= -60) return 'unfriendly';
+  return 'hostile';
+}
+
+export function getRelationKey(a: string, b: string): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
 }
 
-function defaultRelation(): DiplomacyRelation {
+export function defaultRelation(): DiplomacyRelation {
   return {
-    status: 'peace',
-    grievances: 0,
+    status: 'neutral',
+    relationship: 0,
+    warSupport: 0,
     turnsAtPeace: 0,
     turnsAtWar: 0,
+    hasAlliance: false,
+    hasFriendship: false,
+    hasDenounced: false,
+    warDeclarer: null,
+    isSurpriseWar: false,
   };
+}
+
+function clampRelationship(value: number): number {
+  return Math.max(-100, Math.min(100, value));
+}
+
+function clampWarSupport(value: number): number {
+  return Math.max(-100, Math.min(100, value));
 }
 
 /** Update diplomacy turn counters (called on END_TURN by the system pipeline) */
@@ -122,15 +223,33 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
   let changed = false;
 
   for (const [key, rel] of state.diplomacy.relations) {
-    const updated = { ...rel };
+    let updated = { ...rel };
     if (rel.status === 'war') {
       updated.turnsAtWar = rel.turnsAtWar + 1;
-      // Grievances decay slowly during war
-      updated.grievances = Math.max(0, rel.grievances - 1);
+      // War support decays toward 0 over time (by 5 per turn)
+      if (rel.warSupport > 0) {
+        updated.warSupport = Math.max(0, rel.warSupport - 5);
+      } else if (rel.warSupport < 0) {
+        updated.warSupport = Math.min(0, rel.warSupport + 5);
+      }
     } else {
       updated.turnsAtPeace = rel.turnsAtPeace + 1;
-      // Grievances decay faster during peace
-      updated.grievances = Math.max(0, rel.grievances - 2);
+      // Relationship naturally drifts toward 0 during peace (by 1 per turn)
+      if (rel.relationship > 0 && !rel.hasFriendship && !rel.hasAlliance) {
+        updated.relationship = Math.max(0, rel.relationship - 1);
+      } else if (rel.relationship < 0 && !rel.hasDenounced) {
+        updated.relationship = Math.min(0, rel.relationship + 1);
+      }
+      // Friendship/alliance improves relationship over time (+1 per turn)
+      if (rel.hasFriendship || rel.hasAlliance) {
+        updated.relationship = clampRelationship(rel.relationship + 1);
+      }
+      // Denouncement degrades relationship over time (-1 per turn)
+      if (rel.hasDenounced) {
+        updated.relationship = clampRelationship(rel.relationship - 1);
+      }
+      // Update status based on new relationship
+      updated.status = getStatusFromRelationship(updated.relationship);
     }
     updatedRelations.set(key, updated);
     changed = true;

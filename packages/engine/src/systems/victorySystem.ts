@@ -119,7 +119,7 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
 function checkDiplomacy(state: GameState, playerId: string): VictoryProgress {
   // Count alliances
   const alliances = [...state.diplomacy.relations.entries()].filter(
-    ([key, rel]) => rel.status === 'alliance' && key.includes(playerId)
+    ([key, rel]) => rel.hasAlliance && key.includes(playerId)
   ).length;
 
   const otherPlayers = state.players.size - 1;

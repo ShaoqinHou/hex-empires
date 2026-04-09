@@ -10,7 +10,7 @@ export { ageSystem } from './ageSystem';
 export { combatSystem } from './combatSystem';
 export { promotionSystem } from './promotionSystem';
 export { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus, getPromotionMovementBonus } from '../state/PromotionUtils';
-export { diplomacySystem, updateDiplomacyCounters } from './diplomacySystem';
+export { diplomacySystem, updateDiplomacyCounters, getStatusFromRelationship, getRelationKey, defaultRelation } from './diplomacySystem';
 export { fortifySystem } from './fortifySystem';
 export { generateAIActions } from './aiSystem';
 export { victorySystem } from './victorySystem';

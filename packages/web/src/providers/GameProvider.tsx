@@ -102,7 +102,7 @@ function createInitialState(): GameState {
     researchedCivics: [] as string[],
     currentCivic: null as string | null,
     civicProgress: 0,
-    gold: 100, science: 0, culture: 0, faith: 0,
+    gold: 100, science: 0, culture: 0, faith: 0, influence: 0,
     ageProgress: 0,
     legacyBonuses: [] as any[],
     legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },

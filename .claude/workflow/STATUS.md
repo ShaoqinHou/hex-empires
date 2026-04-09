@@ -1,65 +1,69 @@
 # Project Status
 
 ## Current State
-- **Phase:** All phases implemented + 7 quality iterations
-- **Last verified:** 2026-04-09 (browser E2E pass)
-- **Tests:** 158 passing across 18 test files
-- **Content:** 27 units, 19 buildings, 35 techs, 16 civs, 8 leaders, 7 terrains, 8 features
+- **Phase:** Civ VII accuracy iterations (A-C complete, D in progress)
+- **Last verified:** 2026-04-09
+- **Tests:** 236 passing across 21 test files
+- **Commits:** 20
+
+## Civ VII Accuracy Plan Progress
+
+### Iteration A: Core Gameplay Accuracy - DONE
+- [x] Tech research locked to current age
+- [x] Unit healing system (territory-dependent rates)
+- [x] Zone of Control (cavalry ignores)
+- [x] Yield display toggle (Lens button)
+- [x] City banners with production indicator
+- [x] Proper territory border rendering
+
+### Iteration B: Town/City & Happiness - DONE
+- [x] Settlement types: Towns (gold) and Cities (production)
+- [x] Happiness system replacing housing+amenities
+- [x] Town gold purchasing (PURCHASE_ITEM action)
+- [x] Settlement upgrade (town to city, 100g)
+- [x] Settlement cap with happiness penalty
+- [x] Population cap (towns=5, cities=20)
+
+### Iteration C: Civic Tree & Legacy Paths - DONE
+- [x] Civic tree (parallel to tech, uses Culture yield)
+- [x] 8 antiquity civics with prerequisites
+- [x] civicSystem with SET_CIVIC action
+- [x] CivicTreePanel UI
+- [x] 4 Legacy paths (military/economic/science/culture)
+- [x] Legacy milestones (kills, gold, techs, civics)
+- [x] Legacy points spent on age transition bonuses
+- [x] totalKills and totalGoldEarned tracking
+
+### Iteration D: Diplomacy & Trade - IN PROGRESS
+- [ ] Influence yield
+- [ ] Relationship stages (helpful→hostile)
+- [ ] War Support replaces grievances
+- [ ] Formal vs Surprise war types
+- [ ] Trade routes (future)
+
+### Iteration E: Victory & Polish - PLANNED
+- [ ] Modern-age-only victories with projects
+- [ ] Unit banners/flags
+- [ ] AI diplomacy improvements
+- [ ] More exploration/modern civics
+
+## Content Inventory
+| Type | Count |
+|------|-------|
+| Units | 27 (3 ages) |
+| Buildings | 19 (3 ages) |
+| Technologies | 35 (3 ages) |
+| Civics | 8 (antiquity) |
+| Civilizations | 16 (3 ages) |
+| Leaders | 8 |
+| Promotions | 11 (3 tiers) |
+| Crisis events | 5 |
+| Terrains | 7 + 8 features |
+| UI panels | 13 |
+| Test files | 21 |
 
 ## Architecture
-- 16 pure system functions in pipeline + AI + visibility
-- Data-driven via GameConfig (state.config) — adding content is 2 edits
-- No cross-system imports (shared utils in hex/TerrainCost, state/YieldCalculator)
-- Engine has ZERO browser dependencies
-- Strict TypeScript, readonly state, seeded RNG
-
-## Commit History
-1. `6398693` Project scaffolding
-2. `a9263af` All 6 phases implemented
-3. `37e1809` Critical UX fixes, architecture cleanup
-4. `c867f26` Data-driven refactor (GameConfig in GameState)
-5. `73e3aaa` Exploration/modern units, diplomacy/log panels, minimap
-6. `2a51337` Fog of war, age transition panel, visibility system
-7. `f353f91` 16 civs, 19 buildings, smarter AI, tech tree lines, right-click
-8. `1d4f377` Keyboard shortcuts, enhanced bottom bar, city distance fix
-
-## Features Complete
-- [x] Hex grid with 7 terrain types + 8 features
-- [x] Procedural map generation (seeded fractal noise)
-- [x] 27 unit types across 3 ages with upgrade chains
-- [x] 19 buildings across 3 ages
-- [x] 35 technologies across 3 ages with prerequisite trees
-- [x] 16 civilizations across 3 ages with unique abilities
-- [x] 8 leaders with abilities and agendas
-- [x] Turn-based gameplay with multi-player support
-- [x] A* pathfinding + movement range overlay
-- [x] Click-to-move, click-to-attack
-- [x] City founding, growth, production, territory
-- [x] Combat (melee, ranged, terrain defense, fortification)
-- [x] Research system with tech trees per age
-- [x] Age transitions with civilization selection + legacy bonuses
-- [x] Diplomacy (war, peace, alliance, friendship, denounce, grievances)
-- [x] Victory conditions (domination, science, culture, diplomacy, score)
-- [x] Fog of war with visibility/explored/unexplored states
-- [x] AI opponent (priority-based: research, build, settle, fight, defend)
-- [x] Save/Load to localStorage
-- [x] Canvas renderer with distinct unit icons per type
-- [x] Camera: grab-drag, WASD, edge scroll, zoom to cursor
-- [x] Keyboard shortcuts (Enter, T, F, B, Space, Escape)
-- [x] 8 UI panels: Tech Tree, City, Diplomacy, Event Log, Age Transition, Victory, Minimap, BottomBar
-- [x] Tech tree with prerequisite connection lines
-- [x] Right-click to deselect
-- [x] Minimap with click-to-navigate and viewport rectangle
-
-## Known Areas for Future Work
-- [ ] Unit promotion system (promotions array exists but unused)
-- [ ] District system for cities
-- [ ] Trade routes between cities
-- [ ] Great people mechanics
-- [ ] Crisis/narrative events (CrisisState exists but no CrisisSystem)
-- [ ] Sound effects
-- [ ] Visual animations (unit movement, combat)
-- [ ] Unique civ units as actual distinct unit definitions
-- [ ] More AI sophistication (diplomacy decisions, multi-front war)
-- [ ] Performance optimization for very large maps
-- [ ] Mobile/touch support
+- 20+ pure system functions in pipeline
+- Data-driven via GameConfig — zero hardcoded content IDs in systems
+- Single source of truth (GameState)
+- 236 tests, strict TypeScript, seeded RNG

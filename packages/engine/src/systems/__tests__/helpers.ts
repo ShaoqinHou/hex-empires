@@ -52,6 +52,7 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     science: 0,
     culture: 0,
     faith: 0,
+    influence: 0,
     ageProgress: 0,
     legacyBonuses: [],
     legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },

@@ -76,9 +76,11 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     let totalScience = 0;
     let totalCulture = 0;
     let totalFaith = 0;
+    let cityCount = 0;
 
     for (const city of state.cities.values()) {
       if (city.owner !== playerId) continue;
+      cityCount++;
       const yields = calculateCityYields(city, state);
 
       // Update happiness for this city
@@ -109,6 +111,14 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       totalFaith += faithFromCity;
     }
 
+    // Calculate influence: +1 per city, +2 per alliance
+    let totalInfluence = cityCount;
+    for (const [key, rel] of state.diplomacy.relations) {
+      if (key.includes(playerId) && rel.hasAlliance) {
+        totalInfluence += 2;
+      }
+    }
+
     // Unit maintenance (1 gold per military unit)
     let maintenance = 0;
     for (const unit of state.units.values()) {
@@ -125,6 +135,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       science: player.science + totalScience,
       culture: player.culture + totalCulture,
       faith: player.faith + totalFaith,
+      influence: player.influence + totalInfluence,
       totalGoldEarned: player.totalGoldEarned + Math.max(0, netGold),
     });
     changed = true;

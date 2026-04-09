@@ -95,6 +95,7 @@ export interface PlayerState {
   readonly science: number;
   readonly culture: number;
   readonly faith: number;
+  readonly influence: number;
   readonly ageProgress: number; // points toward next age
   readonly legacyBonuses: ReadonlyArray<ActiveEffect>;
   readonly legacyPaths: LegacyPaths;
@@ -107,13 +108,19 @@ export interface PlayerState {
 
 // ── Diplomacy ──
 
-export type DiplomaticStatus = 'peace' | 'war' | 'alliance' | 'friendship' | 'denounced';
+export type DiplomaticStatus = 'helpful' | 'friendly' | 'neutral' | 'unfriendly' | 'hostile' | 'war';
 
 export interface DiplomacyRelation {
   readonly status: DiplomaticStatus;
-  readonly grievances: number;
+  readonly relationship: number;        // -100 to +100 drives status stage
+  readonly warSupport: number;           // -100 to 100. Positive = attacker advantage, negative = defender advantage
   readonly turnsAtPeace: number;
   readonly turnsAtWar: number;
+  readonly hasAlliance: boolean;         // alliance is now a modifier on top of 'helpful'
+  readonly hasFriendship: boolean;       // friendship declaration
+  readonly hasDenounced: boolean;        // active denouncement
+  readonly warDeclarer: string | null;   // player who declared war (for surprise war tracking)
+  readonly isSurpriseWar: boolean;       // true if war was declared without hostile relationship
 }
 
 export interface DiplomacyState {
@@ -209,7 +216,7 @@ export interface GameState {
 // ── Actions ──
 
 export type DiplomacyProposal =
-  | { readonly type: 'DECLARE_WAR' }
+  | { readonly type: 'DECLARE_WAR'; readonly warType: 'formal' | 'surprise' }
   | { readonly type: 'PROPOSE_PEACE' }
   | { readonly type: 'PROPOSE_ALLIANCE' }
   | { readonly type: 'PROPOSE_FRIENDSHIP' }

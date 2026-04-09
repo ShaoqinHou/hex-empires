@@ -86,7 +86,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   }
 
   // Track kills for legacy milestones
-  let updatedPlayers = state.players;
+  const updatedPlayers = new Map(state.players);
 
   // Update defender
   if (newDefenderHealth <= 0) {
@@ -102,7 +102,6 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     if (newAttackerHealth > 0) {
       const attackerPlayer = state.players.get(attacker.owner);
       if (attackerPlayer) {
-        updatedPlayers = new Map(updatedPlayers);
         updatedPlayers.set(attackerPlayer.id, {
           ...attackerPlayer,
           totalKills: attackerPlayer.totalKills + 1,
@@ -138,7 +137,6 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   if (newAttackerHealth <= 0 && newDefenderHealth > 0) {
     const defenderPlayer = state.players.get(defender.owner);
     if (defenderPlayer) {
-      if (updatedPlayers === state.players) updatedPlayers = new Map(updatedPlayers);
       updatedPlayers.set(defenderPlayer.id, {
         ...defenderPlayer,
         totalKills: defenderPlayer.totalKills + 1,
