@@ -1,15 +1,16 @@
 import { useGame } from '../../providers/GameProvider';
-import { ALL_TECHNOLOGIES } from '@hex/engine';
-import type { TechnologyDef } from '@hex/engine';
+import { ALL_TECHNOLOGIES, ALL_CIVICS } from '@hex/engine';
+import type { TechnologyDef, CivicDef } from '@hex/engine';
 
 interface TopBarProps {
   onOpenTechTree?: () => void;
+  onOpenCivicTree?: () => void;
   onOpenDiplomacy?: () => void;
   onOpenLog?: () => void;
   onOpenAge?: () => void;
 }
 
-export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGame();
   const player = state.players.get(state.currentPlayerId);
 
@@ -21,6 +22,11 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }
   // Current research info
   const currentResearchTech: TechnologyDef | undefined = player?.currentResearch
     ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
+    : undefined;
+
+  // Current civic info
+  const currentCivicDef: CivicDef | undefined = player?.currentCivic
+    ? ALL_CIVICS.find(c => c.id === player.currentCivic)
     : undefined;
 
   return (
@@ -54,6 +60,11 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }
           </span>
         )}
         <ResourceBadge label="Culture" value={player?.culture ?? 0} color="var(--color-culture)" />
+        {currentCivicDef && (
+          <span className="text-[10px]" style={{ color: 'var(--color-culture)' }}>
+            {currentCivicDef.name} ({player?.civicProgress ?? 0}/{currentCivicDef.cost})
+          </span>
+        )}
         <ResourceBadge label="Faith" value={player?.faith ?? 0} color="var(--color-faith)" />
       </div>
 
@@ -86,6 +97,13 @@ export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog, onOpenAge }
       <button
         className="px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer"
         style={{ backgroundColor: 'var(--color-culture)', color: 'var(--color-bg)' }}
+        onClick={onOpenCivicTree}
+      >
+        Civics
+      </button>
+      <button
+        className="px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer"
+        style={{ backgroundColor: 'rgba(186, 104, 200, 0.7)', color: 'var(--color-bg)' }}
         onClick={onOpenDiplomacy}
       >
         Diplo

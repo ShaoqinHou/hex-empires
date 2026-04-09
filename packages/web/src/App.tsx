@@ -6,6 +6,7 @@ import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
 import { CityPanel } from './ui/panels/CityPanel';
 import { TechTreePanel } from './ui/panels/TechTreePanel';
+import { CivicTreePanel } from './ui/panels/CivicTreePanel';
 import { VictoryPanel } from './ui/panels/VictoryPanel';
 import { DiplomacyPanel } from './ui/panels/DiplomacyPanel';
 import { EventLogPanel } from './ui/panels/EventLogPanel';
@@ -14,7 +15,7 @@ import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
 import { YieldsToggle } from './ui/components/YieldsToggle';
 
-type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log' | 'age';
+type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age';
 
 function GameUI() {
   const { state } = useGame();
@@ -30,6 +31,7 @@ function GameUI() {
     <div className="w-full h-full flex flex-col">
       <TopBar
         onOpenTechTree={() => togglePanel('tech')}
+        onOpenCivicTree={() => togglePanel('civics')}
         onOpenDiplomacy={() => togglePanel('diplomacy')}
         onOpenLog={() => togglePanel('log')}
         onOpenAge={() => togglePanel('age')}
@@ -50,6 +52,9 @@ function GameUI() {
         )}
         {activePanel === 'tech' && (
           <TechTreePanel onClose={() => setActivePanel('none')} />
+        )}
+        {activePanel === 'civics' && (
+          <CivicTreePanel onClose={() => setActivePanel('none')} />
         )}
         {activePanel === 'diplomacy' && (
           <DiplomacyPanel onClose={() => setActivePanel('none')} />
