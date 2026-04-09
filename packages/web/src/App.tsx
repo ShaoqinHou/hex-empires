@@ -10,6 +10,7 @@ import { VictoryPanel } from './ui/panels/VictoryPanel';
 import { DiplomacyPanel } from './ui/panels/DiplomacyPanel';
 import { EventLogPanel } from './ui/panels/EventLogPanel';
 import { AgeTransitionPanel } from './ui/panels/AgeTransitionPanel';
+import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
 
 type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log' | 'age';
@@ -56,6 +57,7 @@ function GameUI() {
           <AgeTransitionPanel onClose={() => setActivePanel('none')} />
         )}
         <Minimap cameraRef={cameraRef} />
+        <CrisisPanel />
         <VictoryPanel />
       </div>
       <BottomBar />

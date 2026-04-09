@@ -210,7 +210,8 @@ export type GameAction =
   | { readonly type: 'TRANSITION_AGE'; readonly newCivId: CivilizationId }
   | { readonly type: 'RESOLVE_CRISIS'; readonly crisisId: string; readonly choice: string }
   | { readonly type: 'FORTIFY_UNIT'; readonly unitId: UnitId }
-  | { readonly type: 'PURCHASE_TILE'; readonly cityId: CityId; readonly tile: HexCoord };
+  | { readonly type: 'PURCHASE_TILE'; readonly cityId: CityId; readonly tile: HexCoord }
+  | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string };
 
 // ── Events ──
 

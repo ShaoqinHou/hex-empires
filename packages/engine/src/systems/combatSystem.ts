@@ -1,5 +1,6 @@
 import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
+import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './promotionSystem';
 
 /**
  * CombatSystem handles unit attacks.
@@ -18,22 +19,40 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   if (attacker.owner === defender.owner) return state; // can't attack own units
   if (attacker.movementLeft <= 0) return state;
 
-  // Check range
+  // Check range (includes promotion range bonus)
   const dist = distance(attacker.position, defender.position);
-  const attackerRange = getUnitRange(state, attacker.typeId);
+  const baseRange = getUnitRange(state, attacker.typeId);
+  const attackerRange = baseRange + getPromotionRangeBonus(state, attacker);
 
-  if (attackerRange === 0) {
-    // Melee: must be adjacent
+  if (baseRange === 0) {
+    // Melee: must be adjacent (range bonuses don't apply to melee)
     if (dist !== 1) return state;
   } else {
     // Ranged: must be within range
     if (dist > attackerRange || dist === 0) return state;
   }
 
-  // Calculate effective strengths
+  // Build promotion context for bonus calculations
+  const hasAdjacentAlly = checkAdjacentAlly(attacker, defender, state);
+  const promotionContext = {
+    isAttacking: true,
+    targetWounded: defender.health < 100,
+    targetFortified: defender.fortified,
+    adjacentAlly: hasAdjacentAlly,
+    targetIsWalls: false, // future: detect city wall targets
+  };
+
+  // Calculate effective strengths (with promotion bonuses)
   const defenderTile = state.map.tiles.get(coordToKey(defender.position));
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true);
-  const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null);
+  const attackerPromoBonus = getPromotionCombatBonus(state, attacker, promotionContext);
+  const defenderPromoBonus = getPromotionCombatBonus(state, defender, {
+    isAttacking: false,
+    targetWounded: attacker.health < 100,
+    adjacentAlly: false,
+  });
+  const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true) + attackerPromoBonus;
+  const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
   // Calculate damage
   const strengthDiff = attackerStrength - defenderStrength;
@@ -172,4 +191,17 @@ function calculateFlankingBonus(attacker: UnitState, state: GameState): number {
   let bonus = 0;
   // This is simplified — in a real implementation we'd look at the specific target
   return bonus;
+}
+
+/** Check if the attacker has a friendly unit adjacent to the defender */
+function checkAdjacentAlly(attacker: UnitState, defender: UnitState, state: GameState): boolean {
+  const defNeighbors = neighbors(defender.position);
+  for (const [, u] of state.units) {
+    if (u.id === attacker.id) continue;
+    if (u.owner !== attacker.owner) continue;
+    if (defNeighbors.some(n => n.q === u.position.q && n.r === u.position.r)) {
+      return true;
+    }
+  }
+  return false;
 }

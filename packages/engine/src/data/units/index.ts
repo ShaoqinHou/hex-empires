@@ -25,3 +25,11 @@ export const ALL_UNITS: ReadonlyArray<UnitDef> = [
   ...ALL_EXPLORATION_UNITS,
   ...ALL_MODERN_UNITS,
 ];
+
+// Promotion exports
+export type { PromotionDef } from './promotions';
+export {
+  ALL_PROMOTIONS, PROMOTION_THRESHOLDS,
+  BATTLECRY, TORTOISE, VOLLEY, ARROWS, CHARGE, PURSUIT,
+  BLITZ, LOGISTICS, FLANKING, BREAKTHROUGH, ELITE,
+} from './promotions';

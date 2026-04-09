@@ -17,6 +17,7 @@ import {
   researchSystem,
   ageSystem,
   combatSystem,
+  promotionSystem,
   diplomacySystem,
   updateDiplomacyCounters,
   fortifySystem,
@@ -24,6 +25,7 @@ import {
   victorySystem,
   effectSystem,
   visibilitySystem,
+  crisisSystem,
   serializeState,
   deserializeState,
   createGameConfig,
@@ -43,6 +45,7 @@ const engine = new GameEngine([
   movementSystem,
   citySystem,
   combatSystem,
+  promotionSystem,
   fortifySystem,
   growthSystem,
   productionSystem,
@@ -51,6 +54,7 @@ const engine = new GameEngine([
   ageSystem,
   diplomacySystem,
   updateDiplomacyCounters,
+  crisisSystem,
   victorySystem,
 ]);
 

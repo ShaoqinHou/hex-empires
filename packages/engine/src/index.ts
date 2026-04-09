@@ -89,12 +89,14 @@ export { resourceSystem } from './systems/resourceSystem';
 export { researchSystem } from './systems/researchSystem';
 export { ageSystem } from './systems/ageSystem';
 export { combatSystem } from './systems/combatSystem';
+export { promotionSystem, getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus, getPromotionMovementBonus } from './systems/promotionSystem';
 export { diplomacySystem, updateDiplomacyCounters } from './systems/diplomacySystem';
 export { fortifySystem } from './systems/fortifySystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
+export { crisisSystem } from './systems/crisisSystem';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
@@ -123,6 +125,12 @@ export {
 
 // Unit data
 export type { UnitDef } from './data/units';
+export type { PromotionDef } from './data/units/promotions';
+export { ALL_PROMOTIONS, PROMOTION_THRESHOLDS } from './data/units/promotions';
+export {
+  BATTLECRY, TORTOISE, VOLLEY, ARROWS, CHARGE, PURSUIT,
+  BLITZ, LOGISTICS, FLANKING, BREAKTHROUGH, ELITE,
+} from './data/units/promotions';
 export { ALL_UNITS, ALL_ANTIQUITY_UNITS, ALL_EXPLORATION_UNITS, ALL_MODERN_UNITS } from './data/units';
 export {
   WARRIOR, SLINGER, ARCHER, SCOUT, SPEARMAN,
@@ -153,6 +161,10 @@ export {
 export {
   AMERICA, GERMANY, RUSSIA, BRAZIL,
 } from './data/civilizations';
+
+// Crisis data
+export type { CrisisEventDef, CrisisTriggerCondition } from './data/crises';
+export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, GOLDEN_AGE, TRADE_OPPORTUNITY, NATURAL_DISASTER } from './data/crises';
 
 // Leader data
 export type { LeaderDef } from './data/leaders';
