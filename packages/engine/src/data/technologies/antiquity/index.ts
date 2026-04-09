@@ -1,0 +1,172 @@
+import type { TechnologyDef } from '../types';
+
+export const POTTERY: TechnologyDef = {
+  id: 'pottery',
+  name: 'Pottery',
+  age: 'antiquity',
+  cost: 25,
+  prerequisites: [],
+  unlocks: ['granary'],
+  description: 'Enables Granary building',
+  treePosition: { row: 0, col: 0 },
+};
+
+export const ANIMAL_HUSBANDRY: TechnologyDef = {
+  id: 'animal_husbandry',
+  name: 'Animal Husbandry',
+  age: 'antiquity',
+  cost: 25,
+  prerequisites: [],
+  unlocks: [],
+  description: 'Reveals horses on the map',
+  treePosition: { row: 1, col: 0 },
+};
+
+export const MINING: TechnologyDef = {
+  id: 'mining',
+  name: 'Mining',
+  age: 'antiquity',
+  cost: 25,
+  prerequisites: [],
+  unlocks: [],
+  description: 'Enables mine improvements',
+  treePosition: { row: 2, col: 0 },
+};
+
+export const SAILING: TechnologyDef = {
+  id: 'sailing',
+  name: 'Sailing',
+  age: 'antiquity',
+  cost: 50,
+  prerequisites: [],
+  unlocks: ['galley'],
+  description: 'Enables naval units',
+  treePosition: { row: 3, col: 0 },
+};
+
+export const ASTROLOGY: TechnologyDef = {
+  id: 'astrology',
+  name: 'Astrology',
+  age: 'antiquity',
+  cost: 50,
+  prerequisites: [],
+  unlocks: ['shrine'],
+  description: 'Enables Shrine building',
+  treePosition: { row: 4, col: 0 },
+};
+
+export const ARCHERY: TechnologyDef = {
+  id: 'archery',
+  name: 'Archery',
+  age: 'antiquity',
+  cost: 50,
+  prerequisites: ['animal_husbandry'],
+  unlocks: ['archer'],
+  description: 'Enables Archer unit',
+  treePosition: { row: 1, col: 1 },
+};
+
+export const WRITING: TechnologyDef = {
+  id: 'writing',
+  name: 'Writing',
+  age: 'antiquity',
+  cost: 50,
+  prerequisites: ['pottery'],
+  unlocks: ['library'],
+  description: 'Enables Library building',
+  treePosition: { row: 0, col: 1 },
+};
+
+export const MASONRY: TechnologyDef = {
+  id: 'masonry',
+  name: 'Masonry',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['mining'],
+  unlocks: ['walls', 'battering_ram'],
+  description: 'Enables Ancient Walls and Battering Ram',
+  treePosition: { row: 2, col: 1 },
+};
+
+export const BRONZE_WORKING: TechnologyDef = {
+  id: 'bronze_working',
+  name: 'Bronze Working',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['mining'],
+  unlocks: ['spearman', 'barracks'],
+  description: 'Enables Spearman and Barracks',
+  treePosition: { row: 2, col: 2 },
+};
+
+export const WHEEL: TechnologyDef = {
+  id: 'wheel',
+  name: 'Wheel',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['animal_husbandry'],
+  unlocks: ['chariot', 'watermill'],
+  description: 'Enables War Chariot and Water Mill',
+  treePosition: { row: 1, col: 2 },
+};
+
+export const IRRIGATION: TechnologyDef = {
+  id: 'irrigation',
+  name: 'Irrigation',
+  age: 'antiquity',
+  cost: 50,
+  prerequisites: ['pottery'],
+  unlocks: [],
+  description: 'Enables farm improvements on desert',
+  treePosition: { row: 0, col: 2 },
+};
+
+export const CURRENCY: TechnologyDef = {
+  id: 'currency',
+  name: 'Currency',
+  age: 'antiquity',
+  cost: 120,
+  prerequisites: ['writing'],
+  unlocks: ['market'],
+  description: 'Enables Market building',
+  treePosition: { row: 0, col: 3 },
+};
+
+export const CONSTRUCTION: TechnologyDef = {
+  id: 'construction',
+  name: 'Construction',
+  age: 'antiquity',
+  cost: 120,
+  prerequisites: ['masonry'],
+  unlocks: ['workshop'],
+  description: 'Enables Workshop building',
+  treePosition: { row: 2, col: 3 },
+};
+
+export const IRON_WORKING: TechnologyDef = {
+  id: 'iron_working',
+  name: 'Iron Working',
+  age: 'antiquity',
+  cost: 150,
+  prerequisites: ['bronze_working'],
+  unlocks: ['swordsman'],
+  description: 'Enables Swordsman unit',
+  treePosition: { row: 2, col: 4 },
+};
+
+export const MATHEMATICS: TechnologyDef = {
+  id: 'mathematics',
+  name: 'Mathematics',
+  age: 'antiquity',
+  cost: 150,
+  prerequisites: ['currency'],
+  unlocks: [],
+  description: 'Improved siege and science',
+  treePosition: { row: 0, col: 4 },
+};
+
+export const ALL_ANTIQUITY_TECHS: ReadonlyArray<TechnologyDef> = [
+  POTTERY, ANIMAL_HUSBANDRY, MINING, SAILING, ASTROLOGY,
+  ARCHERY, WRITING, MASONRY, BRONZE_WORKING, WHEEL,
+  IRRIGATION, CURRENCY, CONSTRUCTION, IRON_WORKING, MATHEMATICS,
+];

@@ -1,0 +1,196 @@
+import type { HexCoord, HexKey } from '../types/HexCoord';
+import type { HexMap, HexTile, RngState } from '../types/GameState';
+import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
+import { coordToKey } from './HexMath';
+import { fractalNoise2D, nextRandom } from '../state/SeededRng';
+import { Registry } from '../registry/Registry';
+
+export interface MapGenOptions {
+  readonly width: number;
+  readonly height: number;
+  readonly seed: number;
+  readonly waterRatio: number; // 0-1, fraction of map that's water
+  readonly wrapX: boolean;
+}
+
+const DEFAULT_OPTIONS: MapGenOptions = {
+  width: 60,
+  height: 40,
+  seed: 12345,
+  waterRatio: 0.4,
+  wrapX: true,
+};
+
+/**
+ * Generate a hex map with terrain using multi-octave noise.
+ * Uses offset coordinates internally, converts to axial for output.
+ */
+export function generateMap(
+  terrainRegistry: Registry<TerrainDef>,
+  featureRegistry: Registry<TerrainFeatureDef>,
+  options: Partial<MapGenOptions> = {},
+): HexMap {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const tiles = new Map<HexKey, HexTile>();
+
+  for (let row = 0; row < opts.height; row++) {
+    for (let col = 0; col < opts.width; col++) {
+      // Convert offset to axial: pointy-top, odd-r offset
+      const q = col - Math.floor(row / 2);
+      const r = row;
+      const coord: HexCoord = { q, r };
+      const key = coordToKey(coord);
+
+      // Generate elevation using fractal noise
+      const elevation = fractalNoise2D(opts.seed, col, row, 4, 12);
+
+      // Generate moisture for biome selection
+      const moisture = fractalNoise2D(opts.seed + 5000, col, row, 4, 10);
+
+      // Generate temperature (latitude-based + noise)
+      const latNorm = row / opts.height; // 0 = north, 1 = south
+      const latTemp = 1 - Math.abs(latNorm - 0.5) * 2; // 0 at poles, 1 at equator
+      const tempNoise = fractalNoise2D(opts.seed + 10000, col, row, 3, 15);
+      const temperature = latTemp * 0.7 + tempNoise * 0.3;
+
+      // Determine continent (simple: higher elevation = land)
+      const continent = elevation > opts.waterRatio ? 1 : 0;
+
+      // Determine terrain and feature
+      const { terrain, feature } = pickTerrain(
+        elevation,
+        moisture,
+        temperature,
+        opts.waterRatio,
+        terrainRegistry,
+        featureRegistry,
+      );
+
+      // Generate rivers on some tile edges (simplified)
+      const river = generateRiverEdges(opts.seed, col, row, elevation, opts.waterRatio);
+
+      tiles.set(key, {
+        coord,
+        terrain,
+        feature,
+        resource: null, // resources assigned in a later pass
+        river,
+        elevation,
+        continent,
+      });
+    }
+  }
+
+  return {
+    width: opts.width,
+    height: opts.height,
+    tiles,
+    wrapX: opts.wrapX,
+  };
+}
+
+function pickTerrain(
+  elevation: number,
+  moisture: number,
+  temperature: number,
+  waterRatio: number,
+  terrainReg: Registry<TerrainDef>,
+  featureReg: Registry<TerrainFeatureDef>,
+): { terrain: string; feature: string | null } {
+  // Water
+  if (elevation < waterRatio - 0.1) {
+    return { terrain: 'ocean', feature: elevation > waterRatio - 0.15 ? 'reef' : null };
+  }
+  if (elevation < waterRatio) {
+    return { terrain: 'coast', feature: null };
+  }
+
+  // Mountains (very high elevation)
+  if (elevation > 0.85) {
+    return { terrain: 'plains', feature: 'mountains' };
+  }
+
+  // Hills (high elevation)
+  const isHills = elevation > 0.7;
+
+  // Snow (very cold)
+  if (temperature < 0.15) {
+    return { terrain: 'snow', feature: isHills ? 'hills' : null };
+  }
+
+  // Tundra (cold)
+  if (temperature < 0.3) {
+    return { terrain: 'tundra', feature: isHills ? 'hills' : (moisture > 0.6 ? 'forest' : null) };
+  }
+
+  // Desert (hot + dry)
+  if (temperature > 0.7 && moisture < 0.3) {
+    if (moisture < 0.1 && elevation < waterRatio + 0.05) {
+      return { terrain: 'desert', feature: 'oasis' };
+    }
+    if (elevation > 0.5 && elevation < waterRatio + 0.08) {
+      return { terrain: 'desert', feature: 'floodplains' };
+    }
+    return { terrain: 'desert', feature: isHills ? 'hills' : null };
+  }
+
+  // Grassland vs plains based on moisture
+  const baseTerrain = moisture > 0.5 ? 'grassland' : 'plains';
+
+  // Feature selection
+  let feature: string | null = null;
+  if (isHills) {
+    feature = 'hills';
+  } else if (temperature > 0.65 && moisture > 0.65) {
+    feature = 'jungle';
+  } else if (moisture > 0.55 && temperature > 0.3) {
+    feature = 'forest';
+  } else if (moisture > 0.7 && temperature > 0.4) {
+    feature = 'marsh';
+  }
+
+  return { terrain: baseTerrain, feature };
+}
+
+function generateRiverEdges(
+  seed: number,
+  col: number,
+  row: number,
+  elevation: number,
+  waterRatio: number,
+): ReadonlyArray<number> {
+  // Only generate rivers on land near medium elevation
+  if (elevation < waterRatio || elevation > 0.8) return [];
+
+  const rivers: number[] = [];
+  // Use noise to determine river edges — rivers flow from high to low elevation
+  for (let edge = 0; edge < 6; edge++) {
+    const riverNoise = fractalNoise2D(seed + 20000 + edge * 1000, col, row, 2, 8);
+    // Rivers are rare — only place them when noise is very high
+    if (riverNoise > 0.82 && elevation > waterRatio + 0.1) {
+      rivers.push(edge);
+    }
+  }
+  return rivers;
+}
+
+/** Create and populate terrain registries from data arrays */
+export function createTerrainRegistries(
+  terrains: ReadonlyArray<TerrainDef>,
+  features: ReadonlyArray<TerrainFeatureDef>,
+): {
+  terrainRegistry: Registry<TerrainDef>;
+  featureRegistry: Registry<TerrainFeatureDef>;
+} {
+  const terrainRegistry = new Registry<TerrainDef>();
+  for (const t of terrains) {
+    terrainRegistry.register(t);
+  }
+
+  const featureRegistry = new Registry<TerrainFeatureDef>();
+  for (const f of features) {
+    featureRegistry.register(f);
+  }
+
+  return { terrainRegistry, featureRegistry };
+}

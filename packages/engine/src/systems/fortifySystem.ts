@@ -1,0 +1,26 @@
+import type { GameState, GameAction } from '../types/GameState';
+
+/**
+ * FortifySystem handles the FORTIFY_UNIT action.
+ * Fortified units get +50% defense bonus and skip their movement.
+ */
+export function fortifySystem(state: GameState, action: GameAction): GameState {
+  if (action.type !== 'FORTIFY_UNIT') return state;
+
+  const unit = state.units.get(action.unitId);
+  if (!unit) return state;
+  if (unit.owner !== state.currentPlayerId) return state;
+
+  // Civilians can't fortify
+  const civilians = ['settler', 'builder'];
+  if (civilians.includes(unit.typeId)) return state;
+
+  const updatedUnits = new Map(state.units);
+  updatedUnits.set(unit.id, {
+    ...unit,
+    fortified: !unit.fortified, // toggle fortification
+    movementLeft: 0, // fortifying uses all movement
+  });
+
+  return { ...state, units: updatedUnits };
+}

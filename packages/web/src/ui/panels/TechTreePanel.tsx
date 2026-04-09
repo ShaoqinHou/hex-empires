@@ -1,0 +1,150 @@
+import { useGame } from '../../providers/GameProvider';
+import { ALL_ANTIQUITY_TECHS, ALL_EXPLORATION_TECHS, ALL_MODERN_TECHS } from '@hex/engine';
+import type { TechnologyDef } from '@hex/engine';
+
+interface TechTreePanelProps {
+  onClose: () => void;
+}
+
+export function TechTreePanel({ onClose }: TechTreePanelProps) {
+  const { state, dispatch } = useGame();
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return null;
+
+  const currentAge = player.age;
+  const techs = currentAge === 'antiquity' ? ALL_ANTIQUITY_TECHS
+    : currentAge === 'exploration' ? ALL_EXPLORATION_TECHS
+    : ALL_MODERN_TECHS;
+
+  const researchedSet = new Set(player.researchedTechs);
+  const currentResearch = player.currentResearch;
+
+  // Group techs by column for layout
+  const maxCol = Math.max(...techs.map(t => t.treePosition.col));
+  const maxRow = Math.max(...techs.map(t => t.treePosition.row));
+
+  return (
+    <div className="absolute inset-x-0 top-12 bottom-14 overflow-auto"
+      style={{ backgroundColor: 'rgba(26, 26, 46, 0.95)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
+        style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-bold">Technology Tree</h2>
+          <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+            {currentAge} age
+          </span>
+          {currentResearch && (
+            <span className="text-xs" style={{ color: 'var(--color-science)' }}>
+              Researching: {currentResearch} ({player.researchProgress})
+            </span>
+          )}
+        </div>
+        <button onClick={onClose} className="text-sm px-2 py-1 cursor-pointer"
+          style={{ color: 'var(--color-text-muted)' }}>
+          X
+        </button>
+      </div>
+
+      {/* Tech tree grid */}
+      <div className="p-6">
+        <div className="relative" style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${maxCol + 1}, 180px)`,
+          gridTemplateRows: `repeat(${maxRow + 1}, 90px)`,
+          gap: '12px',
+        }}>
+          {techs.map(tech => {
+            const isResearched = researchedSet.has(tech.id);
+            const isActive = currentResearch === tech.id;
+            const prereqsMet = tech.prerequisites.every(p => researchedSet.has(p));
+            const canResearch = !isResearched && prereqsMet && !currentResearch;
+
+            return (
+              <TechCard
+                key={tech.id}
+                tech={tech}
+                isResearched={isResearched}
+                isActive={isActive}
+                canResearch={canResearch}
+                prereqsMet={prereqsMet}
+                onSelect={() => {
+                  if (canResearch || (!isResearched && prereqsMet)) {
+                    dispatch({ type: 'SET_RESEARCH', techId: tech.id });
+                  }
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TechCard({
+  tech,
+  isResearched,
+  isActive,
+  canResearch,
+  prereqsMet,
+  onSelect,
+}: {
+  tech: TechnologyDef;
+  isResearched: boolean;
+  isActive: boolean;
+  canResearch: boolean;
+  prereqsMet: boolean;
+  onSelect: () => void;
+}) {
+  const borderColor = isResearched
+    ? 'var(--color-science)'
+    : isActive
+    ? '#ffd54f'
+    : prereqsMet
+    ? 'var(--color-border)'
+    : 'rgba(42, 58, 92, 0.5)';
+
+  const bgColor = isResearched
+    ? 'rgba(66, 165, 245, 0.15)'
+    : isActive
+    ? 'rgba(255, 213, 79, 0.1)'
+    : 'var(--color-bg)';
+
+  const opacity = prereqsMet || isResearched ? 1 : 0.4;
+
+  return (
+    <button
+      className="rounded-lg p-2 text-left transition-all cursor-pointer"
+      style={{
+        gridColumn: tech.treePosition.col + 1,
+        gridRow: tech.treePosition.row + 1,
+        border: `2px solid ${borderColor}`,
+        backgroundColor: bgColor,
+        opacity,
+      }}
+      onClick={onSelect}
+      disabled={!canResearch && !isActive}
+    >
+      <div className="text-xs font-bold truncate" style={{ color: isResearched ? 'var(--color-science)' : 'var(--color-text)' }}>
+        {tech.name}
+      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+        Cost: {tech.cost}
+      </div>
+      <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }}>
+        {tech.unlocks.length > 0 ? `Unlocks: ${tech.unlocks.join(', ')}` : tech.description}
+      </div>
+      {isResearched && (
+        <div className="text-[10px] font-bold mt-0.5" style={{ color: 'var(--color-science)' }}>
+          RESEARCHED
+        </div>
+      )}
+      {isActive && (
+        <div className="text-[10px] font-bold mt-0.5" style={{ color: '#ffd54f' }}>
+          IN PROGRESS
+        </div>
+      )}
+    </button>
+  );
+}
