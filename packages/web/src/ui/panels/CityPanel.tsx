@@ -1,7 +1,9 @@
 import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, Registry } from '@hex/engine';
+import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS } from '@hex/engine';
 import type { UnitDef, BuildingDef } from '@hex/engine';
 import { useGame } from '../../providers/GameProvider';
+import { UnitCard } from '../components/UnitCard';
+import { BuildingCard } from '../components/BuildingCard';
 
 interface CityPanelProps {
   city: CityState;
@@ -93,61 +95,59 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         )}
       </div>
 
-      {/* Buildings */}
+      {/* Built Buildings */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Buildings</h3>
+        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>
+          Buildings ({city.buildings.length})
+        </h3>
         {city.buildings.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {city.buildings.map(b => (
-              <span key={b} className="text-xs px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
-                {b}
-              </span>
-            ))}
+          <div className="flex flex-col gap-1">
+            {city.buildings.map(bId => {
+              const bDef = ALL_BUILDINGS.find(b => b.id === bId);
+              return bDef ? (
+                <BuildingCard key={bId} building={bDef} isBuilt compact />
+              ) : (
+                <span key={bId} className="text-xs px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
+                  {bId}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>None</span>
         )}
       </div>
 
-      {/* Build queue options */}
+      {/* Build queue — Units */}
       <div className="px-4 py-2">
         <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
           Build
         </h3>
 
-        <div className="text-xs mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Units</div>
+        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Units</div>
         <div className="flex flex-col gap-1 mb-3">
           {availableUnits.map(u => (
-            <button
+            <UnitCard
               key={u.id}
-              className="text-left text-xs px-2 py-1.5 rounded cursor-pointer transition-colors"
-              style={{
-                backgroundColor: currentProduction?.id === u.id ? 'var(--color-accent)' : 'var(--color-bg)',
-                color: currentProduction?.id === u.id ? 'var(--color-bg)' : 'var(--color-text)',
-              }}
+              unit={u}
+              compact
+              isActive={currentProduction?.id === u.id}
               onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: u.id, itemType: 'unit' })}
-            >
-              {u.name} — {u.cost} prod | Str: {u.combat}
-            </button>
+            />
           ))}
         </div>
 
-        <div className="text-xs mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Buildings</div>
+        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Buildings</div>
         <div className="flex flex-col gap-1">
           {availableBuildings.map(b => (
-            <button
+            <BuildingCard
               key={b.id}
-              className="text-left text-xs px-2 py-1.5 rounded cursor-pointer transition-colors"
-              style={{
-                backgroundColor: currentProduction?.id === b.id ? 'var(--color-accent)' : 'var(--color-bg)',
-                color: currentProduction?.id === b.id ? 'var(--color-bg)' : 'var(--color-text)',
-              }}
+              building={b}
+              compact
+              isActive={currentProduction?.id === b.id}
               onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: b.id, itemType: 'building' })}
-            >
-              {b.name} — {b.cost} prod
-              {Object.entries(b.yields).filter(([, v]) => v > 0).map(([k, v]) => ` +${v} ${k}`).join('')}
-            </button>
+            />
           ))}
         </div>
       </div>
