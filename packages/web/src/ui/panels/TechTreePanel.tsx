@@ -36,10 +36,7 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
       <div className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
         style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-bold">Technology Tree</h2>
-          <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-            {currentAge} age
-          </span>
+          <h2 className="text-lg font-bold">{currentAge.charAt(0).toUpperCase() + currentAge.slice(1)} Age Technology Tree</h2>
           {currentResearch && (
             <span className="text-xs" style={{ color: 'var(--color-science)' }}>
               Researching: {currentResearch} ({player.researchProgress})

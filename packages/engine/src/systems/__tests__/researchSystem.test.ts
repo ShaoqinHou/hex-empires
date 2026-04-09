@@ -29,6 +29,22 @@ describe('researchSystem', () => {
       const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'pottery' });
       expect(next.players.get('p1')!.currentResearch).toBeNull();
     });
+
+    it('rejects researching a tech from a different age', () => {
+      // Player is in antiquity, trying to research an exploration tech
+      const player = createTestPlayer({ age: 'antiquity' });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'gunpowder' });
+      expect(next.players.get('p1')!.currentResearch).toBeNull();
+      expect(next).toBe(state); // state unchanged
+    });
+
+    it('allows researching a tech from the current age', () => {
+      const player = createTestPlayer({ age: 'exploration' });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'gunpowder' });
+      expect(next.players.get('p1')!.currentResearch).toBe('gunpowder');
+    });
   });
 
   describe('END_TURN research', () => {

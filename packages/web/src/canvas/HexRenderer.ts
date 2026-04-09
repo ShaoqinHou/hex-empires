@@ -1,5 +1,5 @@
 import type { HexCoord, HexMap, HexTile, GameState, UnitState, CityState } from '@hex/engine';
-import { coordToKey, distance } from '@hex/engine';
+import { coordToKey, distance, HEX_DIRECTIONS } from '@hex/engine';
 import type { Registry } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
 import type { Camera } from './Camera';
@@ -20,6 +20,7 @@ export interface RenderContext {
   hoveredHex: HexCoord | null;
   visibility: ReadonlySet<string> | null;  // currently visible tiles
   explored: ReadonlySet<string> | null;    // ever-seen tiles
+  showYields: boolean;
 }
 
 /** Convert axial hex coordinate to pixel position (center of hex) */
@@ -146,8 +147,10 @@ export class HexRenderer {
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
-      // Yield dots (small indicators)
-      this.drawYieldDots(tile, x, y, rc);
+      // Yield dots (small indicators) — only when lens is active
+      if (rc.showYields) {
+        this.drawYieldDots(tile, x, y, rc);
+      }
     }
   }
 
@@ -227,21 +230,61 @@ export class HexRenderer {
     const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
+    // Build a lookup: hexKey -> ownerPlayerId (for all cities' territory)
+    const ownerByHex = new Map<string, string>();
+    for (const city of rc.state.cities.values()) {
+      for (const hexKey of city.territory) {
+        ownerByHex.set(hexKey, city.owner);
+      }
+    }
+
     for (const city of rc.state.cities.values()) {
       const players = [...rc.state.players.keys()];
       const playerIndex = players.indexOf(city.owner);
       const color = playerColors[playerIndex % playerColors.length];
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.6;
 
+      // Subtle territory fill (10% opacity)
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
         const { x, y } = hexToPixel(tile.coord);
         drawHexPath(ctx, x, y);
-        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.1;
+        ctx.fill();
+        ctx.globalAlpha = 1;
       }
+
+      // Border edges: only draw edges adjacent to non-owned territory
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.7;
+
+      for (const hexKey of city.territory) {
+        const tile = rc.state.map.tiles.get(hexKey);
+        if (!tile) continue;
+        const { x, y } = hexToPixel(tile.coord);
+
+        for (let i = 0; i < 6; i++) {
+          const dir = HEX_DIRECTIONS[i];
+          const neighborCoord: HexCoord = { q: tile.coord.q + dir.q, r: tile.coord.r + dir.r };
+          const neighborKey = coordToKey(neighborCoord);
+          const neighborOwner = ownerByHex.get(neighborKey);
+
+          // Draw edge only if neighbor is not owned by the same player
+          if (neighborOwner === city.owner) continue;
+
+          // Pointy-top hex: vertex i is at angle (60*i - 30) degrees
+          const angle1 = (Math.PI / 180) * (60 * i - 30);
+          const angle2 = (Math.PI / 180) * (60 * ((i + 1) % 6) - 30);
+          ctx.beginPath();
+          ctx.moveTo(x + HEX_SIZE * Math.cos(angle1), y + HEX_SIZE * Math.sin(angle1));
+          ctx.lineTo(x + HEX_SIZE * Math.cos(angle2), y + HEX_SIZE * Math.sin(angle2));
+          ctx.stroke();
+        }
+      }
+
       ctx.globalAlpha = 1;
     }
   }
@@ -274,24 +317,76 @@ export class HexRenderer {
       const playerIndex = players.indexOf(city.owner);
       const color = playerColors[playerIndex % playerColors.length];
 
-      // City circle
+      // City circle (base marker on tile)
       ctx.beginPath();
-      ctx.arc(x, y, HEX_SIZE * 0.4, 0, Math.PI * 2);
+      ctx.arc(x, y, HEX_SIZE * 0.35, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // City name
+      // ── City banner (nameplate above the hex) ──
+      const bannerY = y - HEX_SIZE * 0.85;
+      const popText = `${city.population}`;
+      const nameText = city.name;
+
+      ctx.font = 'bold 10px sans-serif';
+      const nameWidth = ctx.measureText(nameText).width;
+      ctx.font = 'bold 9px sans-serif';
+      const popWidth = ctx.measureText(popText).width;
+
+      // Banner dimensions: [pop] gap [name]
+      const popBoxWidth = popWidth + 8;
+      const nameBoxWidth = nameWidth + 10;
+      const totalWidth = popBoxWidth + nameBoxWidth;
+      const bannerHeight = 16;
+      const bannerLeft = x - totalWidth / 2;
+
+      // Population box (darker shade)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(bannerLeft, bannerY - bannerHeight / 2, popBoxWidth, bannerHeight);
+
+      // Name box (player color with transparency)
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(bannerLeft + popBoxWidth, bannerY - bannerHeight / 2, nameBoxWidth, bannerHeight);
+      ctx.globalAlpha = 1;
+
+      // Thin white border around entire banner
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bannerLeft, bannerY - bannerHeight / 2, totalWidth, bannerHeight);
+
+      // Population number text
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(popText, bannerLeft + popBoxWidth / 2, bannerY + 3);
+
+      // City name text
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(city.name, x, y - HEX_SIZE * 0.55);
+      ctx.fillText(nameText, bannerLeft + popBoxWidth + nameBoxWidth / 2, bannerY + 3.5);
 
-      // Population
-      ctx.font = '9px sans-serif';
-      ctx.fillText(`${city.population}`, x, y + 4);
+      // ── Production indicator below banner ──
+      if (city.productionQueue.length > 0) {
+        const item = city.productionQueue[0];
+        const prodLabel = item.id;
+        ctx.font = '8px sans-serif';
+        const prodWidth = ctx.measureText(prodLabel).width;
+        const prodBoxWidth = prodWidth + 8;
+        const prodY = bannerY + bannerHeight / 2 + 2;
+
+        // Small production tag
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(x - prodBoxWidth / 2, prodY, prodBoxWidth, 11);
+        ctx.fillStyle = '#ff8a65'; // production orange
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(prodLabel, x, prodY + 8);
+      }
     }
   }
 

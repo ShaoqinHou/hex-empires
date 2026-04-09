@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { turnSystem } from '../turnSystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
+import type { CityState } from '../../types/GameState';
+import { coordToKey } from '../../hex/HexMath';
 
 describe('turnSystem', () => {
   describe('START_TURN', () => {
@@ -41,6 +43,75 @@ describe('turnSystem', () => {
       const next = turnSystem(state, { type: 'START_TURN' });
       expect(next.log.length).toBe(1);
       expect(next.log[0].message).toContain('Turn 1 started');
+    });
+  });
+
+  describe('healing', () => {
+    function createTestCity(overrides: Partial<CityState> = {}): CityState {
+      return {
+        id: 'c1', name: 'Rome', owner: 'p1', position: { q: 3, r: 3 },
+        population: 3, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 }), coordToKey({ q: 3, r: 4 })],
+        housing: 10, amenities: 1,
+        ...overrides,
+      };
+    }
+
+    it('heals unit in a city by 20 HP', () => {
+      const city = createTestCity({ position: { q: 3, r: 3 } });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, health: 50, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units, cities: new Map([['c1', city]]) });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(70);
+    });
+
+    it('heals unit in friendly territory by 15 HP', () => {
+      const city = createTestCity({ position: { q: 3, r: 3 } });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 4, r: 3 }, health: 60, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units, cities: new Map([['c1', city]]) });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(75);
+    });
+
+    it('heals unit in neutral territory by 5 HP', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 80, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(85);
+    });
+
+    it('caps healing at 100 HP', () => {
+      const city = createTestCity({ position: { q: 3, r: 3 } });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, health: 95, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units, cities: new Map([['c1', city]]) });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(100);
+    });
+
+    it('does not heal units already at 100 HP', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 100, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(100);
+    });
+
+    it('does not heal exhausted units (movementLeft === 0)', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 50, movementLeft: 0 })],
+      ]);
+      const state = createTestState({ phase: 'start', units });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(50);
     });
   });
 

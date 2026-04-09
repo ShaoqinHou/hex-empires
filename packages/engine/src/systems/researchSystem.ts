@@ -23,6 +23,10 @@ function handleSetResearch(state: GameState, techId: string): GameState {
   // Can't research already-known tech
   if (player.researchedTechs.includes(techId)) return state;
 
+  // Tech must belong to the player's current age
+  const techDef = state.config.technologies.get(techId);
+  if (!techDef || techDef.age !== player.age) return state;
+
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,

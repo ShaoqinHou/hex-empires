@@ -8,10 +8,12 @@ import { coordToKey, findPath, getMovementCost } from '@hex/engine';
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
   onToggleTechTree?: () => void;
+  onToggleYields?: () => void;
   cameraRef?: React.MutableRefObject<Camera | null>;
+  showYields?: boolean;
 }
 
-export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalCameraRef }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalCamera = useRef(new Camera());
 
@@ -91,6 +93,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalC
         hoveredHex,
         visibility: player?.visibility ?? null,
         explored: player?.explored ?? null,
+        showYields,
       });
 
       animFrame = requestAnimationFrame(render);
@@ -98,7 +101,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalC
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, reachableHexes]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, reachableHexes, showYields]);
 
   // Handle clicks — select units or move them
   const handleClick = useCallback((screenX: number, screenY: number) => {
@@ -278,6 +281,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalC
         onToggleTechTree?.();
       }
 
+      // Y — Toggle yield lens
+      if (key === 'y' || key === 'Y') {
+        onToggleYields?.();
+      }
+
       // F — Fortify selected unit
       if (key === 'f' || key === 'F') {
         if (selectedUnit) {
@@ -347,7 +355,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, cameraRef: externalC
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(scrollFrame);
     };
-  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree]);
+  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields]);
 
   // Edge-of-screen scrolling
   useEffect(() => {

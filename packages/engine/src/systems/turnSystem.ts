@@ -1,4 +1,5 @@
-import type { GameState, GameAction, PlayerState } from '../types/GameState';
+import type { GameState, GameAction, PlayerState, CityState } from '../types/GameState';
+import { coordToKey } from '../hex/HexMath';
 
 /**
  * TurnSystem manages turn phases and player order.
@@ -24,14 +25,36 @@ export function turnSystem(state: GameState, action: GameAction): GameState {
 }
 
 function handleStartTurn(state: GameState): GameState {
-  // Refresh all units' movement for the current player
+  // Collect cities owned by the current player for healing calculations
+  const ownedCities: CityState[] = [];
+  for (const city of state.cities.values()) {
+    if (city.owner === state.currentPlayerId) {
+      ownedCities.push(city);
+    }
+  }
+
+  // Refresh all units' movement for the current player + apply healing
   const updatedUnits = new Map(state.units);
   for (const [id, unit] of updatedUnits) {
     if (unit.owner === state.currentPlayerId) {
+      const baseMovement = getBaseMovement(state, unit.typeId);
+
+      // Healing logic: heal damaged units at start of turn
+      let health = unit.health;
+      if (health < 100) {
+        // Skip healing if unit used all movement last turn (attacked)
+        const wasExhausted = unit.movementLeft === 0;
+        if (!wasExhausted) {
+          const healAmount = getHealAmount(unit.position, ownedCities);
+          health = Math.min(100, health + healAmount);
+        }
+      }
+
       updatedUnits.set(id, {
         ...unit,
-        movementLeft: getBaseMovement(state, unit.typeId),
+        movementLeft: baseMovement,
         fortified: unit.fortified, // keep fortification status
+        health,
       });
     }
   }
@@ -47,6 +70,31 @@ function handleStartTurn(state: GameState): GameState {
       type: 'production',
     }],
   };
+}
+
+/** Determine healing amount based on unit position relative to owned cities */
+function getHealAmount(
+  position: { readonly q: number; readonly r: number },
+  ownedCities: ReadonlyArray<CityState>,
+): number {
+  const posKey = coordToKey(position);
+
+  // Check if in a city (unit position matches city position)
+  for (const city of ownedCities) {
+    if (coordToKey(city.position) === posKey) {
+      return 20;
+    }
+  }
+
+  // Check if in friendly territory (unit position is in any owned city's territory)
+  for (const city of ownedCities) {
+    if (city.territory.includes(posKey)) {
+      return 15;
+    }
+  }
+
+  // Neutral/enemy territory
+  return 5;
 }
 
 function handleEndTurn(state: GameState): GameState {

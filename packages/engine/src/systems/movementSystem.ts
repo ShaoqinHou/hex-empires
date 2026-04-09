@@ -1,10 +1,12 @@
-import type { GameState, GameAction } from '../types/GameState';
-import { coordToKey, distance } from '../hex/HexMath';
+import type { GameState, GameAction, UnitState } from '../types/GameState';
+import { coordToKey, distance, neighbors } from '../hex/HexMath';
+import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
 
 /**
  * MovementSystem handles unit movement actions.
  * Validates movement paths and deducts movement points.
+ * Enforces Zone of Control — entering a hex adjacent to an enemy unit stops movement.
  */
 export function movementSystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'MOVE_UNIT') return state;
@@ -14,7 +16,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   if (unit.owner !== state.currentPlayerId) return state;
   if (action.path.length === 0) return state;
 
-  // Validate and calculate total movement cost
+  // First pass: validate entire path for adjacency and passability
   let totalCost = 0;
   let prevCoord = unit.position;
 
@@ -36,12 +38,45 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   // Check unit has enough movement
   if (totalCost > unit.movementLeft) return state;
 
-  // Check destination isn't occupied by another unit of the same player
-  const destination = action.path[action.path.length - 1];
-  const destKey = coordToKey(destination);
+  // Check final destination isn't occupied by another unit of the same player
+  // (We'll also check intermediate ZoC stop positions below)
+  const finalDest = action.path[action.path.length - 1];
+  const finalDestKey = coordToKey(finalDest);
   for (const [id, other] of state.units) {
-    if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === destKey) {
+    if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === finalDestKey) {
       return state; // can't stack friendly units
+    }
+  }
+
+  // Determine if unit is cavalry (ignores ZoC)
+  const unitDef = state.config.units.get(unit.typeId);
+  const isCavalry = unitDef?.category === 'cavalry';
+
+  // Step-by-step movement with ZoC enforcement
+  let movementSpent = 0;
+  let currentPos = unit.position;
+  let stoppedByZoC = false;
+
+  for (const nextCoord of action.path) {
+    const tile = state.map.tiles.get(coordToKey(nextCoord));
+    const cost = getMovementCost(tile!);
+    movementSpent += cost!;
+    currentPos = nextCoord;
+
+    // After moving to this hex, check ZoC (unless cavalry)
+    if (!isCavalry && isInEnemyZoC(nextCoord, unit.owner, unit.id, state)) {
+      stoppedByZoC = true;
+      break;
+    }
+  }
+
+  // If ZoC stopped us at an intermediate position, check stacking there
+  if (stoppedByZoC && coordToKey(currentPos) !== finalDestKey) {
+    const stopKey = coordToKey(currentPos);
+    for (const [id, other] of state.units) {
+      if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === stopKey) {
+        return state; // can't stack friendly units at ZoC stop position
+      }
     }
   }
 
@@ -49,8 +84,8 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   const updatedUnits = new Map(state.units);
   updatedUnits.set(unit.id, {
     ...unit,
-    position: destination,
-    movementLeft: unit.movementLeft - totalCost,
+    position: currentPos,
+    movementLeft: stoppedByZoC ? 0 : unit.movementLeft - movementSpent,
     fortified: false, // moving breaks fortification
   });
 
@@ -60,10 +95,38 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,
-      message: `${unit.typeId} moved to (${destination.q}, ${destination.r})`,
+      message: `${unit.typeId} moved to (${currentPos.q}, ${currentPos.r})`,
       type: 'move',
     }],
   };
+}
+
+/**
+ * Check if a hex is in the Zone of Control of any enemy non-civilian unit.
+ * ZoC = the 6 hexes adjacent to each enemy military unit.
+ */
+function isInEnemyZoC(
+  hex: HexCoord,
+  unitOwner: string,
+  unitId: string,
+  state: GameState,
+): boolean {
+  const adjacentHexes = neighbors(hex);
+  for (const adj of adjacentHexes) {
+    const adjKey = coordToKey(adj);
+    // Check if any enemy non-civilian unit is on an adjacent hex
+    for (const [id, other] of state.units) {
+      if (id === unitId) continue; // skip self
+      if (other.owner === unitOwner) continue; // skip friendly units
+      if (coordToKey(other.position) !== adjKey) continue;
+      // Check if the enemy unit is non-civilian
+      const otherDef = state.config.units.get(other.typeId);
+      if (otherDef && otherDef.category !== 'civilian') {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // Re-export getMovementCost from shared utility for backward compatibility

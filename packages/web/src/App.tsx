@@ -12,6 +12,7 @@ import { EventLogPanel } from './ui/panels/EventLogPanel';
 import { AgeTransitionPanel } from './ui/panels/AgeTransitionPanel';
 import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
+import { YieldsToggle } from './ui/components/YieldsToggle';
 
 type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log' | 'age';
 
@@ -19,6 +20,7 @@ function GameUI() {
   const { state } = useGame();
   const [activePanel, setActivePanel] = useState<Panel>('none');
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const [showYields, setShowYields] = useState(false);
   const selectedCity = selectedCityId ? state.cities.get(selectedCityId) ?? null : null;
   const cameraRef = useRef<Camera | null>(null);
 
@@ -35,6 +37,8 @@ function GameUI() {
       <div className="flex-1 relative">
         <GameCanvas
           cameraRef={cameraRef}
+          showYields={showYields}
+          onToggleYields={() => setShowYields(v => !v)}
           onCityClick={(city) => {
             setSelectedCityId(city.id);
             setActivePanel('city');
@@ -56,6 +60,7 @@ function GameUI() {
         {activePanel === 'age' && (
           <AgeTransitionPanel onClose={() => setActivePanel('none')} />
         )}
+        <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />
         <CrisisPanel />
         <VictoryPanel />
