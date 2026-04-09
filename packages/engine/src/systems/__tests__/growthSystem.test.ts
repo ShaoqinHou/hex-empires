@@ -19,6 +19,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     settlementType: 'city',
     happiness: 10,
     isCapital: true,
+    defenseHP: 100,
     ...overrides,
   };
 }
@@ -69,6 +70,33 @@ describe('getGrowthThreshold', () => {
   it('increases with population', () => {
     expect(getGrowthThreshold(2)).toBeGreaterThan(getGrowthThreshold(1));
     expect(getGrowthThreshold(5)).toBeGreaterThan(getGrowthThreshold(3));
+  });
+
+  it('defaults to antiquity when no age provided', () => {
+    expect(getGrowthThreshold(1)).toBe(getGrowthThreshold(1, 'antiquity'));
+  });
+
+  it('antiquity has fast early growth', () => {
+    // At pop 1 (growthEvents=0): 30 + 0 + 0 = 30
+    expect(getGrowthThreshold(1, 'antiquity')).toBe(30);
+  });
+
+  it('exploration has moderate growth', () => {
+    // At pop 1 (growthEvents=0): 20 + 0 + 0 = 20
+    expect(getGrowthThreshold(1, 'exploration')).toBe(20);
+  });
+
+  it('modern has slow late growth', () => {
+    // At pop 1 (growthEvents=0): 20 + 0 + 0 = 20
+    expect(getGrowthThreshold(1, 'modern')).toBe(20);
+    // At pop 5 (growthEvents=4): modern should be harder than antiquity
+    expect(getGrowthThreshold(5, 'modern')).toBeGreaterThan(getGrowthThreshold(5, 'antiquity'));
+  });
+
+  it('higher population is harder across all ages', () => {
+    for (const age of ['antiquity', 'exploration', 'modern'] as const) {
+      expect(getGrowthThreshold(10, age)).toBeGreaterThan(getGrowthThreshold(5, age));
+    }
   });
 });
 

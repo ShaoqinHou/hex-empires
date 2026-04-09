@@ -62,6 +62,7 @@ export interface CityState {
   readonly settlementType: SettlementType;
   readonly happiness: number;
   readonly isCapital: boolean;
+  readonly defenseHP: number;      // city defense hit points (100 base, +100 with walls)
 }
 
 export interface ProductionItem {
@@ -227,6 +228,7 @@ export type GameAction =
   | { readonly type: 'END_TURN' }
   | { readonly type: 'MOVE_UNIT'; readonly unitId: UnitId; readonly path: ReadonlyArray<HexCoord> }
   | { readonly type: 'ATTACK_UNIT'; readonly attackerId: UnitId; readonly targetId: UnitId }
+  | { readonly type: 'ATTACK_CITY'; readonly attackerId: UnitId; readonly cityId: CityId }
   | { readonly type: 'FOUND_CITY'; readonly unitId: UnitId; readonly name: string }
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type'] }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }

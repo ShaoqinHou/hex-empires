@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age } from '../types/GameState';
 import { calculateCityYields } from '../state/YieldCalculator';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 
@@ -9,6 +9,12 @@ import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
  * 2. Subtracts food consumed by population (2 food per pop)
  * 3. Surplus food accumulates toward next population
  * 4. At threshold, population grows
+ *
+ * Growth threshold is age-dependent (Civ VII-style):
+ * - Antiquity: 30 + 3*g + g^3.3 (fast early growth)
+ * - Exploration: 20 + 20*g + g^3.0 (moderate growth)
+ * - Modern: 20 + 40*g + g^2.7 (slow late growth)
+ * where g = growthEvents = population - 1
  */
 export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -19,11 +25,15 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   for (const [cityId, city] of state.cities) {
     if (city.owner !== state.currentPlayerId) continue;
 
+    // Determine the player's current age for growth formula
+    const player = state.players.get(city.owner);
+    const age: Age = player?.age ?? state.age.currentAge;
+
     const yields = calculateCityYields(city, state);
     const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
     const newFood = city.food + foodSurplus;
-    const growthThreshold = getGrowthThreshold(city.population);
+    const growthThreshold = getGrowthThreshold(city.population, age);
 
     if (newFood < 0 && city.population > 1) {
       // Starvation — lose population
@@ -55,10 +65,28 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   return { ...state, cities: updatedCities };
 }
 
-/** Food needed for next population point */
-export function getGrowthThreshold(population: number): number {
-  // Civ-style formula: grows with each pop
-  return 15 + 8 * population;
+/**
+ * Food needed for next population point.
+ * Uses Civ VII age-dependent formula:
+ * - Antiquity: 30 + 3*g + g^3.3
+ * - Exploration: 20 + 20*g + g^3.0
+ * - Modern: 20 + 40*g + g^2.7
+ * where g = growthEvents = population - 1.
+ * Defaults to antiquity if age is not provided.
+ */
+export function getGrowthThreshold(population: number, age: Age = 'antiquity'): number {
+  const growthEvents = Math.max(0, population - 1);
+
+  switch (age) {
+    case 'antiquity':
+      return Math.round(30 + 3 * growthEvents + Math.pow(growthEvents, 3.3));
+    case 'exploration':
+      return Math.round(20 + 20 * growthEvents + Math.pow(growthEvents, 3.0));
+    case 'modern':
+      return Math.round(20 + 40 * growthEvents + Math.pow(growthEvents, 2.7));
+    default:
+      return Math.round(30 + 3 * growthEvents + Math.pow(growthEvents, 3.3));
+  }
 }
 
 /** Expand city borders by claiming one adjacent unclaimed tile */

@@ -1,16 +1,17 @@
-import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
+import type { GameState, GameAction, UnitState, HexTile, CityState } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
 
 /**
- * CombatSystem handles unit attacks.
+ * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
  * Combat formula (Civ-style):
  * - Damage = 30 * e^(strengthDiff / 25)
  * - strengthDiff = attacker effective strength - defender effective strength
  * - Modifiers: terrain defense, fortification, flanking, health penalty
  */
 export function combatSystem(state: GameState, action: GameAction): GameState {
+  if (action.type === 'ATTACK_CITY') return handleAttackCity(state, action);
   if (action.type !== 'ATTACK_UNIT') return state;
 
   const attacker = state.units.get(action.attackerId);
@@ -247,4 +248,153 @@ function checkAdjacentAlly(attacker: UnitState, defender: UnitState, state: Game
     }
   }
   return false;
+}
+
+// ── City Combat ──
+
+/**
+ * Get city defense strength.
+ * Base = 10, +15 if city has 'walls' building.
+ */
+function getCityDefenseStrength(city: CityState): number {
+  const base = 10;
+  const wallsBonus = city.buildings.includes('walls') ? 15 : 0;
+  return base + wallsBonus;
+}
+
+/**
+ * Handle ATTACK_CITY action.
+ * Units can attack cities to reduce their defenseHP.
+ * If defenseHP reaches 0 and a melee unit delivered the final blow, the city is conquered.
+ * Ranged/siege units can damage but not capture.
+ * City retaliates like a ranged attack (range 2, strength = defense strength).
+ */
+function handleAttackCity(
+  state: GameState,
+  action: { readonly type: 'ATTACK_CITY'; readonly attackerId: string; readonly cityId: string },
+): GameState {
+  const attacker = state.units.get(action.attackerId);
+  const city = state.cities.get(action.cityId);
+  if (!attacker || !city) return state;
+  if (attacker.owner !== state.currentPlayerId) return state;
+  if (attacker.owner === city.owner) return state; // can't attack own city
+  if (attacker.movementLeft <= 0) return state;
+
+  // Determine attacker range
+  const attackerRange = getUnitRange(state, attacker.typeId) + getPromotionRangeBonus(state, attacker);
+  const baseRange = getUnitRange(state, attacker.typeId);
+  const dist = distance(attacker.position, city.position);
+
+  if (baseRange === 0) {
+    // Melee: must be adjacent
+    if (dist !== 1) return state;
+  } else {
+    // Ranged/siege: must be within range
+    if (dist > attackerRange || dist === 0) return state;
+  }
+
+  const isMelee = baseRange === 0;
+  const cityDefense = getCityDefenseStrength(city);
+
+  // Attacker effective strength
+  const attackerPromoBonus = getPromotionCombatBonus(state, attacker, {
+    isAttacking: true,
+    targetWounded: city.defenseHP < (city.buildings.includes('walls') ? 200 : 100),
+    targetFortified: false,
+    adjacentAlly: false,
+    targetIsWalls: city.buildings.includes('walls'),
+  });
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true) + attackerPromoBonus;
+
+  // Calculate damage to city
+  const strengthDiff = attackerStrength - cityDefense;
+  const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
+  const modifier1 = 0.75 + randomFactor1 * 0.5;
+  const damageToCity = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1);
+
+  // City retaliates (ranged, range 2, strength = cityDefense)
+  const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
+  const modifier2 = 0.75 + randomFactor2 * 0.5;
+  const retaliationStrengthDiff = cityDefense - attackerStrength;
+  // Ranged retaliation: only hits melee attackers (adjacent), ranged attackers take no retaliation
+  const damageToAttacker = isMelee
+    ? Math.round(30 * Math.exp(retaliationStrengthDiff / 25) * modifier2)
+    : 0;
+
+  let currentRng = rng2;
+
+  const newCityHP = Math.max(0, city.defenseHP - damageToCity);
+  const newAttackerHealth = Math.max(0, attacker.health - damageToAttacker);
+
+  const updatedUnits = new Map(state.units);
+  const updatedCities = new Map(state.cities);
+  const updatedPlayers = new Map(state.players);
+  const logEntries = [...state.log];
+
+  // Update attacker
+  if (newAttackerHealth <= 0) {
+    updatedUnits.delete(attacker.id);
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} was destroyed attacking ${city.name}`,
+      type: 'combat',
+    });
+  } else {
+    updatedUnits.set(attacker.id, {
+      ...attacker,
+      health: newAttackerHealth,
+      movementLeft: 0, // attacking ends movement
+      experience: attacker.experience + 5,
+    });
+  }
+
+  // Update city
+  if (newCityHP <= 0 && isMelee && newAttackerHealth > 0) {
+    // City conquered — transfer ownership
+    const previousOwner = city.owner;
+    updatedCities.set(city.id, {
+      ...city,
+      owner: attacker.owner,
+      defenseHP: 0,
+    });
+
+    // Move melee attacker into city position
+    const movedAttacker = updatedUnits.get(attacker.id);
+    if (movedAttacker) {
+      updatedUnits.set(attacker.id, {
+        ...movedAttacker,
+        position: city.position,
+      });
+    }
+
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} conquered ${city.name}!`,
+      type: 'combat',
+    });
+  } else {
+    // City not captured — update defenseHP
+    updatedCities.set(city.id, {
+      ...city,
+      defenseHP: newCityHP,
+    });
+
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} attacked ${city.name} (${newCityHP} defense HP remaining)`,
+      type: 'combat',
+    });
+  }
+
+  return {
+    ...state,
+    units: updatedUnits,
+    cities: updatedCities,
+    players: updatedPlayers,
+    log: logEntries,
+    rng: currentRng,
+  };
 }
