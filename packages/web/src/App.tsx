@@ -1,36 +1,55 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { GameProvider, useGame } from './providers/GameProvider';
 import { GameCanvas } from './canvas/GameCanvas';
+import { Camera } from './canvas/Camera';
 import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
 import { CityPanel } from './ui/panels/CityPanel';
 import { TechTreePanel } from './ui/panels/TechTreePanel';
 import { VictoryPanel } from './ui/panels/VictoryPanel';
+import { DiplomacyPanel } from './ui/panels/DiplomacyPanel';
+import { EventLogPanel } from './ui/panels/EventLogPanel';
 import { Minimap } from './ui/components/Minimap';
 
-type Panel = 'none' | 'city' | 'tech';
+type Panel = 'none' | 'city' | 'tech' | 'diplomacy' | 'log';
 
 function GameUI() {
   const { state } = useGame();
   const [activePanel, setActivePanel] = useState<Panel>('none');
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const selectedCity = selectedCityId ? state.cities.get(selectedCityId) ?? null : null;
+  const cameraRef = useRef<Camera | null>(null);
+
+  const togglePanel = (panel: Panel) => setActivePanel(prev => prev === panel ? 'none' : panel);
 
   return (
     <div className="w-full h-full flex flex-col">
-      <TopBar onOpenTechTree={() => setActivePanel(activePanel === 'tech' ? 'none' : 'tech')} />
+      <TopBar
+        onOpenTechTree={() => togglePanel('tech')}
+        onOpenDiplomacy={() => togglePanel('diplomacy')}
+        onOpenLog={() => togglePanel('log')}
+      />
       <div className="flex-1 relative">
-        <GameCanvas onCityClick={(city) => {
-          setSelectedCityId(city.id);
-          setActivePanel('city');
-        }} />
+        <GameCanvas
+          cameraRef={cameraRef}
+          onCityClick={(city) => {
+            setSelectedCityId(city.id);
+            setActivePanel('city');
+          }}
+        />
         {activePanel === 'city' && selectedCity && (
           <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />
         )}
         {activePanel === 'tech' && (
           <TechTreePanel onClose={() => setActivePanel('none')} />
         )}
-        <Minimap />
+        {activePanel === 'diplomacy' && (
+          <DiplomacyPanel onClose={() => setActivePanel('none')} />
+        )}
+        {activePanel === 'log' && (
+          <EventLogPanel onClose={() => setActivePanel('none')} />
+        )}
+        <Minimap cameraRef={cameraRef} />
         <VictoryPanel />
       </div>
       <BottomBar />

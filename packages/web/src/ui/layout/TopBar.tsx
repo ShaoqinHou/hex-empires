@@ -2,9 +2,11 @@ import { useGame } from '../../providers/GameProvider';
 
 interface TopBarProps {
   onOpenTechTree?: () => void;
+  onOpenDiplomacy?: () => void;
+  onOpenLog?: () => void;
 }
 
-export function TopBar({ onOpenTechTree }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenDiplomacy, onOpenLog }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGame();
   const player = state.players.get(state.currentPlayerId);
 
@@ -57,6 +59,20 @@ export function TopBar({ onOpenTechTree }: TopBarProps) {
         onClick={onOpenTechTree}
       >
         Tech Tree
+      </button>
+      <button
+        className="px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer"
+        style={{ backgroundColor: 'var(--color-culture)', color: 'var(--color-bg)' }}
+        onClick={onOpenDiplomacy}
+      >
+        Diplo
+      </button>
+      <button
+        className="px-2 py-1 rounded text-[10px] cursor-pointer"
+        style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}
+        onClick={onOpenLog}
+      >
+        Log
       </button>
       <button
         className="px-4 py-1.5 rounded text-sm font-bold transition-colors cursor-pointer"

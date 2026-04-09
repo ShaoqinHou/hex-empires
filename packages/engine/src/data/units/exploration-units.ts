@@ -1,0 +1,164 @@
+import type { UnitDef } from './antiquity-units';
+
+export const SWORDSMAN: UnitDef = {
+  id: 'swordsman',
+  name: 'Swordsman',
+  age: 'exploration',
+  category: 'melee',
+  cost: 90,
+  combat: 35,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  requiredTech: 'iron_working',
+  upgradesTo: 'musketman',
+  abilities: [],
+} as const;
+
+export const CROSSBOWMAN: UnitDef = {
+  id: 'crossbowman',
+  name: 'Crossbowman',
+  age: 'exploration',
+  category: 'ranged',
+  cost: 100,
+  combat: 30,
+  rangedCombat: 40,
+  range: 2,
+  movement: 2,
+  requiredTech: 'education',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const PIKEMAN: UnitDef = {
+  id: 'pikeman',
+  name: 'Pikeman',
+  age: 'exploration',
+  category: 'melee',
+  cost: 100,
+  combat: 40,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  requiredTech: 'military_tactics',
+  upgradesTo: null,
+  abilities: ['anti_cavalry'],
+} as const;
+
+export const HORSEMAN: UnitDef = {
+  id: 'horseman',
+  name: 'Horseman',
+  age: 'exploration',
+  category: 'cavalry',
+  cost: 80,
+  combat: 35,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  requiredTech: 'archery',
+  upgradesTo: 'knight',
+  abilities: [],
+} as const;
+
+export const KNIGHT: UnitDef = {
+  id: 'knight',
+  name: 'Knight',
+  age: 'exploration',
+  category: 'cavalry',
+  cost: 150,
+  combat: 48,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  requiredTech: 'military_tactics',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const MUSKETMAN: UnitDef = {
+  id: 'musketman',
+  name: 'Musketman',
+  age: 'exploration',
+  category: 'melee',
+  cost: 160,
+  combat: 50,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  requiredTech: 'gunpowder',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const BOMBARD: UnitDef = {
+  id: 'bombard',
+  name: 'Bombard',
+  age: 'exploration',
+  category: 'siege',
+  cost: 150,
+  combat: 10,
+  rangedCombat: 45,
+  range: 2,
+  movement: 2,
+  requiredTech: 'metallurgy',
+  upgradesTo: 'cannon',
+  abilities: [],
+} as const;
+
+export const CANNON: UnitDef = {
+  id: 'cannon',
+  name: 'Cannon',
+  age: 'exploration',
+  category: 'siege',
+  cost: 200,
+  combat: 15,
+  rangedCombat: 55,
+  range: 2,
+  movement: 2,
+  requiredTech: 'siege_tactics',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const SIEGE_TOWER: UnitDef = {
+  id: 'siege_tower',
+  name: 'Siege Tower',
+  age: 'exploration',
+  category: 'siege',
+  cost: 100,
+  combat: 15,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  requiredTech: 'construction',
+  upgradesTo: null,
+  abilities: ['bonus_vs_walls'],
+} as const;
+
+export const CARAVEL: UnitDef = {
+  id: 'caravel',
+  name: 'Caravel',
+  age: 'exploration',
+  category: 'naval',
+  cost: 120,
+  combat: 35,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  requiredTech: 'cartography',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
+  SWORDSMAN,
+  CROSSBOWMAN,
+  PIKEMAN,
+  HORSEMAN,
+  KNIGHT,
+  MUSKETMAN,
+  BOMBARD,
+  CANNON,
+  SIEGE_TOWER,
+  CARAVEL,
+] as const;

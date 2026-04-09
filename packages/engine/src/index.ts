@@ -112,10 +112,18 @@ export { ALL_BUILDINGS, ALL_ANTIQUITY_BUILDINGS } from './data/buildings';
 
 // Unit data
 export type { UnitDef } from './data/units';
-export { ALL_UNITS, ALL_ANTIQUITY_UNITS } from './data/units';
+export { ALL_UNITS, ALL_ANTIQUITY_UNITS, ALL_EXPLORATION_UNITS, ALL_MODERN_UNITS } from './data/units';
 export {
   WARRIOR, SLINGER, ARCHER, SCOUT, SPEARMAN,
   CHARIOT, SETTLER, BUILDER, BATTERING_RAM, GALLEY,
+} from './data/units';
+export {
+  SWORDSMAN, CROSSBOWMAN, PIKEMAN, HORSEMAN, KNIGHT,
+  MUSKETMAN, BOMBARD, CANNON, SIEGE_TOWER, CARAVEL,
+} from './data/units';
+export {
+  INFANTRY, MACHINE_GUN, TANK, FIGHTER,
+  ROCKET_ARTILLERY, IRONCLAD, BIPLANE,
 } from './data/units';
 
 // Technology data

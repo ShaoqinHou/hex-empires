@@ -7,11 +7,21 @@ import { coordToKey, findPath, getMovementCost } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
+  cameraRef?: React.MutableRefObject<Camera | null>;
 }
 
-export function GameCanvas({ onCityClick }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, cameraRef: externalCameraRef }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cameraRef = useRef(new Camera());
+  const internalCamera = useRef(new Camera());
+
+  // Use external ref if provided, otherwise internal
+  const cameraRef = { current: externalCameraRef?.current ?? internalCamera.current };
+  // Sync external ref
+  if (externalCameraRef && !externalCameraRef.current) {
+    externalCameraRef.current = internalCamera.current;
+    cameraRef.current = internalCamera.current;
+  }
+
   const rendererRef = useRef<HexRenderer | null>(null);
   const {
     state, dispatch, terrainRegistry, featureRegistry,
