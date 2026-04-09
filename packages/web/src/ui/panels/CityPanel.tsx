@@ -23,10 +23,15 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const player = state.players.get(state.currentPlayerId);
   const currentAge = player?.age ?? 'antiquity';
 
-  // Available production items
-  const availableUnits = ALL_UNITS.filter(u => u.age === currentAge);
-  const availableBuildings = ALL_BUILDINGS.filter(
-    b => b.age === currentAge && !city.buildings.includes(b.id)
+  // Available production items — filter by age AND tech prerequisites
+  const researchedTechs = new Set(player?.researchedTechs ?? []);
+  const availableUnits = ALL_UNITS.filter(u =>
+    u.age === currentAge && (!u.requiredTech || researchedTechs.has(u.requiredTech))
+  );
+  const availableBuildings = ALL_BUILDINGS.filter(b =>
+    b.age === currentAge
+    && !city.buildings.includes(b.id)
+    && (!b.requiredTech || researchedTechs.has(b.requiredTech))
   );
 
   return (

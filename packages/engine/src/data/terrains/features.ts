@@ -7,7 +7,7 @@ export const HILLS: TerrainFeatureDef = {
   defenseBonusModifier: 0.3, // +30% defense
   yieldModifiers: { production: 1 },
   blocksMovement: false,
-  color: '#6b5b3a',
+  color: '#8a7a55',
 } as const;
 
 export const MOUNTAINS: TerrainFeatureDef = {
@@ -17,7 +17,7 @@ export const MOUNTAINS: TerrainFeatureDef = {
   defenseBonusModifier: 0,
   yieldModifiers: {},
   blocksMovement: true, // impassable
-  color: '#8a8a8a',
+  color: '#a0a0a0',
 } as const;
 
 export const FOREST: TerrainFeatureDef = {

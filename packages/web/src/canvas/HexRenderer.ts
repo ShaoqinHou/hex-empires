@@ -187,16 +187,16 @@ export class HexRenderer {
       const isExplored = rc.explored?.has(key) ?? true;
 
       if (!isExplored) {
-        // Completely unexplored — black
+        // Completely unexplored — heavy overlay but not pitch black
         const { x, y } = hexToPixel(tile.coord);
         drawHexPath(ctx, x, y);
-        ctx.fillStyle = 'rgba(10, 10, 20, 0.9)';
+        ctx.fillStyle = 'rgba(18, 22, 35, 0.8)';
         ctx.fill();
       } else if (!isVisible) {
-        // Explored but not currently visible — dim
+        // Explored but not currently visible — light desaturation
         const { x, y } = hexToPixel(tile.coord);
         drawHexPath(ctx, x, y);
-        ctx.fillStyle = 'rgba(10, 10, 20, 0.5)';
+        ctx.fillStyle = 'rgba(20, 25, 40, 0.3)';
         ctx.fill();
       }
     }
