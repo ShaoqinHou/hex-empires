@@ -14,6 +14,7 @@ export type {
   SettlementType,
   CityState,
   ProductionItem,
+  LegacyPaths,
   PlayerState,
   DiplomaticStatus,
   DiplomacyRelation,

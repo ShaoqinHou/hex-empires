@@ -118,12 +118,14 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       }
     }
 
+    const netGold = totalGold - maintenance;
     updatedPlayers.set(playerId, {
       ...player,
-      gold: player.gold + totalGold - maintenance,
+      gold: player.gold + netGold,
       science: player.science + totalScience,
       culture: player.culture + totalCulture,
       faith: player.faith + totalFaith,
+      totalGoldEarned: player.totalGoldEarned + Math.max(0, netGold),
     });
     changed = true;
   }

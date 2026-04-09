@@ -85,6 +85,9 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     });
   }
 
+  // Track kills for legacy milestones
+  let updatedPlayers = state.players;
+
   // Update defender
   if (newDefenderHealth <= 0) {
     updatedUnits.delete(defender.id);
@@ -94,6 +97,18 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
       message: `${attacker.typeId} destroyed ${defender.typeId}!`,
       type: 'combat',
     });
+
+    // Increment totalKills for the attacker's owner
+    if (newAttackerHealth > 0) {
+      const attackerPlayer = state.players.get(attacker.owner);
+      if (attackerPlayer) {
+        updatedPlayers = new Map(updatedPlayers);
+        updatedPlayers.set(attackerPlayer.id, {
+          ...attackerPlayer,
+          totalKills: attackerPlayer.totalKills + 1,
+        });
+      }
+    }
 
     // Melee attacker moves into defender's position if alive
     if (attackerRange === 0 && newAttackerHealth > 0) {
@@ -119,9 +134,22 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     });
   }
 
+  // Also increment kills if the attacker was killed (defender got the kill)
+  if (newAttackerHealth <= 0 && newDefenderHealth > 0) {
+    const defenderPlayer = state.players.get(defender.owner);
+    if (defenderPlayer) {
+      if (updatedPlayers === state.players) updatedPlayers = new Map(updatedPlayers);
+      updatedPlayers.set(defenderPlayer.id, {
+        ...defenderPlayer,
+        totalKills: defenderPlayer.totalKills + 1,
+      });
+    }
+  }
+
   return {
     ...state,
     units: updatedUnits,
+    players: updatedPlayers,
     log: logEntries,
   };
 }

@@ -17,3 +17,4 @@ export { victorySystem } from './victorySystem';
 export { effectSystem, getActiveEffects } from './effectSystem';
 export { visibilitySystem } from './visibilitySystem';
 export { crisisSystem } from './crisisSystem';
+export { civicSystem } from './civicSystem';

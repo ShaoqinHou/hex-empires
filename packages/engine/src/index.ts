@@ -27,6 +27,7 @@ export type {
   SettlementType,
   CityState,
   ProductionItem,
+  LegacyPaths,
   PlayerState,
   DiplomaticStatus,
   DiplomacyRelation,
@@ -99,6 +100,7 @@ export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
 export { crisisSystem } from './systems/crisisSystem';
+export { civicSystem } from './systems/civicSystem';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
@@ -163,6 +165,14 @@ export {
 export {
   AMERICA, GERMANY, RUSSIA, BRAZIL,
 } from './data/civilizations';
+
+// Civic data
+export type { CivicDef } from './data/civics';
+export { ALL_CIVICS, ALL_ANTIQUITY_CIVICS } from './data/civics';
+export {
+  CODE_OF_LAWS, CRAFTSMANSHIP, FOREIGN_TRADE, EARLY_EMPIRE,
+  MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
+} from './data/civics';
 
 // Crisis data
 export type { CrisisEventDef, CrisisTriggerCondition } from './data/crises';

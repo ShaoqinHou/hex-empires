@@ -71,6 +71,13 @@ export interface ProductionItem {
 
 // ── Players ──
 
+export interface LegacyPaths {
+  readonly military: number;   // milestones completed (0-3)
+  readonly economic: number;
+  readonly science: number;
+  readonly culture: number;
+}
+
 export interface PlayerState {
   readonly id: PlayerId;
   readonly name: string;
@@ -81,12 +88,19 @@ export interface PlayerState {
   readonly researchedTechs: ReadonlyArray<TechnologyId>;
   readonly currentResearch: TechnologyId | null;
   readonly researchProgress: number;
+  readonly researchedCivics: ReadonlyArray<string>;
+  readonly currentCivic: string | null;
+  readonly civicProgress: number;
   readonly gold: number;
   readonly science: number;
   readonly culture: number;
   readonly faith: number;
   readonly ageProgress: number; // points toward next age
   readonly legacyBonuses: ReadonlyArray<ActiveEffect>;
+  readonly legacyPaths: LegacyPaths;
+  readonly legacyPoints: number;
+  readonly totalGoldEarned: number;  // tracks cumulative gold for legacy milestones
+  readonly totalKills: number;       // tracks cumulative kills for legacy milestones
   readonly visibility: ReadonlySet<HexKey>; // currently visible tiles
   readonly explored: ReadonlySet<HexKey>;   // ever-seen tiles
 }
@@ -216,7 +230,8 @@ export type GameAction =
   | { readonly type: 'PURCHASE_TILE'; readonly cityId: CityId; readonly tile: HexCoord }
   | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
-  | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' };
+  | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
+  | { readonly type: 'SET_CIVIC'; readonly civicId: string };
 
 // ── Events ──
 
@@ -224,7 +239,7 @@ export interface GameEvent {
   readonly turn: number;
   readonly playerId: PlayerId;
   readonly message: string;
-  readonly type: 'move' | 'combat' | 'city' | 'research' | 'diplomacy' | 'age' | 'crisis' | 'victory' | 'production';
+  readonly type: 'move' | 'combat' | 'city' | 'research' | 'civic' | 'diplomacy' | 'age' | 'crisis' | 'victory' | 'production' | 'legacy';
 }
 
 // ── System type ──
