@@ -25,16 +25,22 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   const unit = state.units.get(unitId);
   if (!unit) return state;
   if (unit.owner !== state.currentPlayerId) return state;
-  if (unit.typeId !== 'settler') return state;
+  // Only units with 'found_city' ability can found cities
+  const unitDef = state.config.units.get(unit.typeId);
+  if (!unitDef || !unitDef.abilities.includes('found_city')) return state;
 
   const pos = unit.position;
   const posKey = coordToKey(pos);
 
-  // Can't found on water or mountains
+  // Can't found on water or impassable terrain
   const tile = state.map.tiles.get(posKey);
   if (!tile) return state;
-  if (tile.terrain === 'ocean' || tile.terrain === 'coast') return state;
-  if (tile.feature === 'mountains') return state;
+  const terrainDef = state.config.terrains.get(tile.terrain);
+  if (!terrainDef || terrainDef.isWater) return state;
+  if (tile.feature) {
+    const featureDef = state.config.features.get(tile.feature);
+    if (featureDef?.blocksMovement) return state;
+  }
 
   // Can't found too close to another city (minimum 4 hexes apart, Civ VII 3-tile buffer)
   for (const city of state.cities.values()) {

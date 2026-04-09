@@ -46,7 +46,13 @@ function processResearch(state: GameState): GameState {
   for (const city of state.cities.values()) {
     if (city.owner !== player.id) continue;
     sciencePerTurn += city.population; // 1 science per pop base
-    if (city.buildings.includes('library')) sciencePerTurn += 2;
+    // Add science from buildings (data-driven)
+    for (const buildingId of city.buildings) {
+      const buildingDef = state.config.buildings.get(buildingId);
+      if (buildingDef?.yields.science) {
+        sciencePerTurn += buildingDef.yields.science;
+      }
+    }
   }
 
   const newProgress = player.researchProgress + Math.max(1, sciencePerTurn);

@@ -48,8 +48,8 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     if (!unitDef) continue;
 
     if (unitDef.category === 'civilian') {
-      // Settler: move to good spot and found city
-      if (unit.typeId === 'settler' && ourCities.length < 4) {
+      // Units with found_city ability: move to good spot and found city
+      if (unitDef.abilities.includes('found_city') && ourCities.length < 4) {
         const founded = tryFoundCity(state, unit, ourCities, actions);
         if (!founded) {
           // Move toward a good city location
@@ -95,9 +95,11 @@ function pickBestTech(state: GameState): string | null {
 
 /** Pick what to produce based on game state */
 function pickProduction(state: GameState, city: CityState, cityCount: number, militaryCount: number): string {
-  // Priority: settler if few cities, then buildings, then military
-  if (cityCount < 3 && !hasUnitType(state, 'settler')) {
-    return 'settler';
+  // Priority: settler if few cities
+  if (cityCount < 3 && !hasUnitAbility(state, 'found_city')) {
+    // Find cheapest unit with found_city ability
+    const settler = findCheapestUnitByAbility(state, 'found_city');
+    if (settler) return settler;
   }
 
   // Check for useful buildings not yet built
@@ -112,19 +114,47 @@ function pickProduction(state: GameState, city: CityState, cityCount: number, mi
     if (building.yields.science && building.yields.science > 0) return buildingId;
   }
 
-  // Default: produce military
+  // Default: produce cheapest melee military unit for current age
   if (militaryCount < cityCount * 2) {
-    return age === 'antiquity' ? 'warrior' : age === 'exploration' ? 'musketman' : 'infantry';
+    const military = findCheapestMilitary(state, age);
+    if (military) return military;
   }
 
-  return 'warrior';
+  return findCheapestMilitary(state, age) ?? 'warrior';
 }
 
-function hasUnitType(state: GameState, typeId: string): boolean {
+function hasUnitAbility(state: GameState, ability: string): boolean {
   for (const unit of state.units.values()) {
-    if (unit.owner === state.currentPlayerId && unit.typeId === typeId) return true;
+    if (unit.owner !== state.currentPlayerId) continue;
+    const def = state.config.units.get(unit.typeId);
+    if (def?.abilities.includes(ability)) return true;
   }
   return false;
+}
+
+function findCheapestUnitByAbility(state: GameState, ability: string): string | null {
+  const player = state.players.get(state.currentPlayerId);
+  const age = player?.age ?? 'antiquity';
+  let cheapest: string | null = null;
+  let cheapestCost = Infinity;
+  for (const [id, def] of state.config.units) {
+    if (def.age !== age) continue;
+    if (!def.abilities.includes(ability)) continue;
+    if (def.cost < cheapestCost) { cheapestCost = def.cost; cheapest = id; }
+  }
+  return cheapest;
+}
+
+function findCheapestMilitary(state: GameState, age: string): string | null {
+  let cheapest: string | null = null;
+  let cheapestCost = Infinity;
+  for (const [id, def] of state.config.units) {
+    if (def.age !== age) continue;
+    if (def.category === 'civilian' || def.category === 'religious') continue;
+    if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+    if (def.cost < cheapestCost) { cheapestCost = def.cost; cheapest = id; }
+  }
+  return cheapest;
 }
 
 /** Try to found a city at current position */
@@ -136,7 +166,10 @@ function tryFoundCity(state: GameState, settler: UnitState, ourCities: CityState
   // Check terrain suitability
   const terrain = state.config.terrains.get(tile.terrain);
   if (!terrain || terrain.isWater) return false;
-  if (tile.feature === 'mountains') return false;
+  if (tile.feature) {
+    const featureDef = state.config.features.get(tile.feature);
+    if (featureDef?.blocksMovement) return false;
+  }
 
   // Check minimum distance from existing cities (hex distance >= 4)
   for (const city of state.cities.values()) {
@@ -161,7 +194,7 @@ function moveTowardGoodCitySpot(state: GameState, settler: UnitState, ourCities:
       if (!tile) continue;
       const terrain = state.config.terrains.get(tile.terrain);
       if (!terrain || terrain.isWater) continue;
-      if (tile.feature === 'mountains') continue;
+      if (tile.feature && state.config.features.get(tile.feature)?.blocksMovement) continue;
 
       // Score: prefer tiles far from existing cities, with good terrain
       let score = 0;
@@ -255,7 +288,7 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
     const ns = neighbors(unit.position);
     for (const n of ns) {
       const tile = state.map.tiles.get(coordToKey(n));
-      if (tile && !state.config.terrains.get(tile.terrain)?.isWater && tile.feature !== 'mountains') {
+      if (tile && !state.config.terrains.get(tile.terrain)?.isWater && !(tile.feature && state.config.features.get(tile.feature)?.blocksMovement)) {
         nearestEnemy = n;
         break;
       }
