@@ -48,6 +48,13 @@ export interface UnitState {
 
 export type SettlementType = 'town' | 'city';
 
+export type TownSpecialization =
+  | 'growing_town'   // +50% growth rate
+  | 'farming_town'   // +2 food
+  | 'mining_town'    // +2 production
+  | 'trade_outpost'  // +3 gold
+  | 'fort_town';     // +5 defense HP, +5 healing in territory
+
 export interface CityState {
   readonly id: CityId;
   readonly name: string;
@@ -63,6 +70,7 @@ export interface CityState {
   readonly happiness: number;
   readonly isCapital: boolean;
   readonly defenseHP: number;      // city defense hit points (100 base, +100 with walls)
+  readonly specialization: TownSpecialization | null; // towns only, requires pop >= 7
 }
 
 export interface ProductionItem {
@@ -264,7 +272,8 @@ export type GameAction =
   | { readonly type: 'SET_CIVIC'; readonly civicId: string }
   | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
   | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string }
-  | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId };
+  | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
+  | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization };
 
 // ── Events ──
 

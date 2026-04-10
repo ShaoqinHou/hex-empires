@@ -12,6 +12,7 @@ export type {
   UnitCategory,
   UnitState,
   SettlementType,
+  TownSpecialization,
   CityState,
   ProductionItem,
   LegacyPaths,

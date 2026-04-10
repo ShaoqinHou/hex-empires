@@ -1,6 +1,36 @@
-import type { GameState, GameAction, CityState, Age } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age, TownSpecialization } from '../types/GameState';
 import { calculateCityYields } from '../state/YieldCalculator';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
+
+/** Minimum population required to assign a town specialization */
+const SPECIALIZATION_POP_MINIMUM = 7;
+
+/**
+ * Attempt to assign a specialization to a town.
+ * Constraints:
+ * - Settlement must be a town (not a city)
+ * - Population must be >= 7
+ * - Specialization cannot be changed once set
+ */
+function handleSetSpecialization(
+  state: GameState,
+  cityId: string,
+  specialization: TownSpecialization,
+): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.owner !== state.currentPlayerId) return state;
+  if (city.settlementType !== 'town') return state;
+  if (city.population < SPECIALIZATION_POP_MINIMUM) return state;
+  if (city.specialization !== null) return state; // already specialized
+
+  // fort_town grants +5 defense HP immediately on specialization
+  const defenseHP = specialization === 'fort_town' ? city.defenseHP + 5 : city.defenseHP;
+  const updatedCity: CityState = { ...city, specialization, defenseHP };
+  const updatedCities = new Map(state.cities);
+  updatedCities.set(cityId, updatedCity);
+  return { ...state, cities: updatedCities };
+}
 
 /**
  * GrowthSystem processes city growth on END_TURN.
@@ -17,6 +47,9 @@ import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
  * where g = growthEvents = population - 1
  */
 export function growthSystem(state: GameState, action: GameAction): GameState {
+  if (action.type === 'SET_SPECIALIZATION') {
+    return handleSetSpecialization(state, action.cityId, action.specialization);
+  }
   if (action.type !== 'END_TURN') return state;
 
   const updatedCities = new Map(state.cities);
@@ -35,7 +68,11 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const newFood = city.food + foodSurplus;
     const baseThreshold = getGrowthThreshold(city.population, age);
     const totalGrowthRate = calculateTotalGrowthRate(city, state);
-    const growthThreshold = Math.max(1, Math.round(baseThreshold * (1 - totalGrowthRate)));
+    let growthThreshold = Math.max(1, Math.round(baseThreshold * (1 - totalGrowthRate)));
+    // growing_town specialization: +50% growth rate = -33% threshold
+    if (city.specialization === 'growing_town') {
+      growthThreshold = Math.round(growthThreshold / 1.5);
+    }
 
     if (newFood < 0 && city.population > 1) {
       // Starvation — lose population
