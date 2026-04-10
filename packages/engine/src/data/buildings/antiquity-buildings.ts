@@ -9,6 +9,7 @@ export interface BuildingDef {
   readonly yields: Partial<YieldSet>;
   readonly effects: ReadonlyArray<string>; // effect descriptions
   readonly requiredTech: string | null;
+  readonly growthRateBonus?: number; // 0-1 fraction; reduces growth threshold (e.g. 0.1 = -10% threshold)
 }
 
 export const GRANARY: BuildingDef = {
@@ -18,8 +19,9 @@ export const GRANARY: BuildingDef = {
   cost: 65,
   maintenance: 1,
   yields: { food: 2 },
-  effects: ['+2 Housing'],
+  effects: ['+2 Housing', '+10% Growth Rate'],
   requiredTech: 'pottery',
+  growthRateBonus: 0.1,
 } as const;
 
 export const MONUMENT: BuildingDef = {
@@ -84,8 +86,9 @@ export const WATERMILL: BuildingDef = {
   cost: 80,
   maintenance: 1,
   yields: { food: 1, production: 1 },
-  effects: [],
+  effects: ['+5% Growth Rate'],
   requiredTech: 'wheel',
+  growthRateBonus: 0.05,
 } as const;
 
 export const WORKSHOP: BuildingDef = {

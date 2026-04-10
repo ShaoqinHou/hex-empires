@@ -33,7 +33,9 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
     const newFood = city.food + foodSurplus;
-    const growthThreshold = getGrowthThreshold(city.population, age);
+    const baseThreshold = getGrowthThreshold(city.population, age);
+    const totalGrowthRate = calculateTotalGrowthRate(city, state);
+    const growthThreshold = Math.max(1, Math.round(baseThreshold * (1 - totalGrowthRate)));
 
     if (newFood < 0 && city.population > 1) {
       // Starvation — lose population
@@ -63,6 +65,22 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
 
   if (!changed) return state;
   return { ...state, cities: updatedCities };
+}
+
+/**
+ * Calculate the total growth rate bonus for a city from its buildings.
+ * Each building with a growthRateBonus contributes to the sum.
+ * Example: Granary (0.1) + Watermill (0.05) = 0.15 → threshold × 0.85.
+ */
+export function calculateTotalGrowthRate(city: CityState, state: GameState): number {
+  let total = 0;
+  for (const buildingId of city.buildings) {
+    const building = state.config.buildings.get(buildingId);
+    if (building?.growthRateBonus) {
+      total += building.growthRateBonus;
+    }
+  }
+  return total;
 }
 
 /**
