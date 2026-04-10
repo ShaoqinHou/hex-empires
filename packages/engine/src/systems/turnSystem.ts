@@ -45,7 +45,7 @@ function handleStartTurn(state: GameState): GameState {
         // Skip healing if unit used all movement last turn (attacked)
         const wasExhausted = unit.movementLeft === 0;
         if (!wasExhausted) {
-          const healAmount = getHealAmount(unit.position, ownedCities);
+          const healAmount = getHealAmount(unit.position, ownedCities, unit.owner, state);
           health = Math.min(100, health + healAmount);
         }
       }
@@ -72,10 +72,12 @@ function handleStartTurn(state: GameState): GameState {
   };
 }
 
-/** Determine healing amount based on unit position relative to owned cities */
+/** Determine healing amount based on unit position relative to owned cities and diplomacy */
 function getHealAmount(
   position: { readonly q: number; readonly r: number },
   ownedCities: ReadonlyArray<CityState>,
+  unitOwner: string,
+  state: GameState,
 ): number {
   const posKey = coordToKey(position);
 
@@ -93,7 +95,20 @@ function getHealAmount(
     }
   }
 
-  // Neutral/enemy territory
+  // Check if in enemy territory (owned by a player at war with the unit owner)
+  for (const city of state.cities.values()) {
+    if (city.owner === unitOwner) continue; // skip own cities (already handled above)
+    if (!city.territory.includes(posKey)) continue;
+    // This tile belongs to another player — check if at war
+    const enemyId = city.owner;
+    for (const [key, rel] of state.diplomacy.relations) {
+      if (rel.status === 'war' && key.includes(unitOwner) && key.includes(enemyId)) {
+        return 5; // enemy territory gives only 5 HP/turn
+      }
+    }
+  }
+
+  // Neutral territory
   return 10;
 }
 

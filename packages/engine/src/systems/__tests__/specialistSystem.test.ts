@@ -143,14 +143,16 @@ describe('specialistSystem', () => {
       expect(yieldsOne.culture).toBe(yieldsNone.culture + 2);
       expect(yieldsTwo.culture).toBe(yieldsNone.culture + 4);
 
-      // Food and production unaffected
-      expect(yieldsOne.food).toBe(yieldsNone.food);
+      // B3: each specialist costs -2 food
+      expect(yieldsOne.food).toBe(yieldsNone.food - 2);
+      expect(yieldsTwo.food).toBe(yieldsNone.food - 4);
+      // Production unaffected
       expect(yieldsOne.production).toBe(yieldsNone.production);
     });
   });
 
   describe('happiness penalty', () => {
-    it('each specialist reduces happiness by 1', () => {
+    it('each specialist reduces happiness by 2 (B2 fix: -2 per specialist)', () => {
       const cityNoSpec = createTestCity({ population: 4, specialists: 0 });
       const cityOneSpec = createTestCity({ population: 4, specialists: 1 });
       const cityTwoSpec = createTestCity({ population: 4, specialists: 2 });
@@ -160,8 +162,8 @@ describe('specialistSystem', () => {
       const happinessOne = calculateCityHappiness(cityOneSpec, state);
       const happinessTwo = calculateCityHappiness(cityTwoSpec, state);
 
-      expect(happinessOne).toBe(happinessNone - 1);
-      expect(happinessTwo).toBe(happinessNone - 2);
+      expect(happinessOne).toBe(happinessNone - 2);
+      expect(happinessTwo).toBe(happinessNone - 4);
     });
   });
 

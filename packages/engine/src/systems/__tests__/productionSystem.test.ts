@@ -134,8 +134,8 @@ describe('productionSystem', () => {
         itemId: 'warrior',
         itemType: 'unit',
       });
-      // Warrior cost = 40, gold cost = 160 (4x per Civ VII)
-      expect(next.players.get('p1')!.gold).toBe(40);
+      // Warrior cost = 30, gold cost = 120 (4x per Civ VII)
+      expect(next.players.get('p1')!.gold).toBe(80);
       const newUnits = [...next.units.values()].filter(u => u.typeId === 'warrior');
       expect(newUnits.length).toBe(1);
     });
@@ -152,8 +152,8 @@ describe('productionSystem', () => {
         itemId: 'granary',
         itemType: 'building',
       });
-      // Granary cost = 65, gold cost = 260 (4x per Civ VII)
-      expect(next.players.get('p1')!.gold).toBe(40);
+      // Granary cost = 55, gold cost = 220 (4x per Civ VII)
+      expect(next.players.get('p1')!.gold).toBe(80);
       expect(next.cities.get('c1')!.buildings).toContain('granary');
     });
 

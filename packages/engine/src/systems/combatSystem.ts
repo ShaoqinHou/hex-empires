@@ -46,6 +46,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   };
 
   // Calculate effective strengths (with promotion bonuses)
+  const attackerTile = state.map.tiles.get(coordToKey(attacker.position));
   const defenderTile = state.map.tiles.get(coordToKey(defender.position));
   const attackerPromoBonus = getPromotionCombatBonus(state, attacker, promotionContext);
   const defenderPromoBonus = getPromotionCombatBonus(state, defender, {
@@ -54,7 +55,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     adjacentAlly: false,
   });
   const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position) + attackerPromoBonus;
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile) + attackerPromoBonus;
   const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
   // Calculate damage with seeded randomness
@@ -166,36 +167,69 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   };
 }
 
-/** Get base combat strength, reduced by health percentage */
-function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord): number {
+/** Get base combat strength, reduced by health using discrete -1 CS per 10 HP lost */
+function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord, attackerTile?: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  const healthModifier = unit.health / 100; // damaged units fight worse
+  // B7: Discrete HP degradation — for every 10 HP lost, -1 CS (e.g. 90 HP = 0.9x, 50 HP = 0.5x)
+  const healthModifier = Math.floor(unit.health / 10) / 10;
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
-  return base * healthModifier + flankingBonus + firstStrikeBonus;
+  // B1: River penalty applies to ATTACKER crossing a river (not the defender)
+  const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? base * 0.15 : 0;
+  // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
+  const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
+  return base * healthModifier + flankingBonus + firstStrikeBonus - riverPenalty - warSupportPenalty;
+}
+
+/**
+ * Calculate the war support CS penalty for a player.
+ * If the player is losing in war support (i.e., the war is going badly for them),
+ * they receive -1 CS per negative war support point, capped at -10.
+ *
+ * warSupport > 0 means the declarer has advantage; < 0 means the defender has advantage.
+ * We look at the war from this player's perspective: if the number that reflects
+ * their disadvantage is negative, they are penalised.
+ */
+function calculateWarSupportPenalty(state: GameState, playerId: string): number {
+  let maxPenalty = 0;
+  for (const [key, rel] of state.diplomacy.relations) {
+    if (rel.status !== 'war') continue;
+    if (!key.includes(playerId)) continue;
+
+    // Key format: "p1:p2" where p1 is the war declarer
+    const [p1] = key.split(':');
+    const isAttacker = p1 === playerId;
+
+    // warSupport > 0 means attacker has advantage; warSupport < 0 means defender has advantage.
+    // If this player is the attacker and warSupport < 0, attacker is at disadvantage → penalise.
+    // If this player is the defender and warSupport > 0, defender is at disadvantage → penalise.
+    const negativeSupport = isAttacker
+      ? Math.max(0, -rel.warSupport)   // attacker: penalised when warSupport < 0
+      : Math.max(0, rel.warSupport);   // defender: penalised when warSupport > 0
+
+    const penalty = Math.min(10, negativeSupport);
+    if (penalty > maxPenalty) maxPenalty = penalty;
+  }
+  return maxPenalty;
 }
 
 /** Get effective defense strength with terrain and fortification bonuses */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  const healthModifier = unit.health / 100;
+  // B7: Discrete HP degradation — for every 10 HP lost, -1 CS
+  const healthModifier = Math.floor(unit.health / 10) / 10;
   let strength = base * healthModifier;
 
   // Terrain defense bonus
   if (tile) {
     const terrainBonus = getTerrainDefenseBonus(state, tile);
     strength *= (1 + terrainBonus);
-
-    // River penalty: defending on a tile with rivers gives -15% combat strength
-    if (tile.river.length > 0) {
-      strength *= 0.85;
-    }
   }
 
-  // Fortification bonus (+50% when fortified)
+  // B6: Fortification bonus is flat +5 CS additive (not +50% multiplicative)
   if (unit.fortified) {
-    strength *= 1.5;
+    strength += 5;
   }
 
   return strength;
@@ -311,7 +345,8 @@ function handleAttackCity(
     adjacentAlly: false,
     targetIsWalls: city.buildings.includes('walls'),
   });
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true) + attackerPromoBonus;
+  const attackerTileForCity = state.map.tiles.get(coordToKey(attacker.position));
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, undefined, attackerTileForCity) + attackerPromoBonus;
 
   // Calculate damage to city
   const strengthDiff = attackerStrength - cityDefense;

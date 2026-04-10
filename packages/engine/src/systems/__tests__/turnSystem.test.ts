@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { turnSystem } from '../turnSystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
-import type { CityState } from '../../types/GameState';
+import type { CityState, DiplomacyRelation } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
 
 describe('turnSystem', () => {
@@ -20,7 +20,7 @@ describe('turnSystem', () => {
       const state = createTestState({ phase: 'start', units });
       const next = turnSystem(state, { type: 'START_TURN' });
       expect(next.units.get('u1')!.movementLeft).toBe(2); // warrior = 2
-      expect(next.units.get('u2')!.movementLeft).toBe(3); // scout = 3
+      expect(next.units.get('u2')!.movementLeft).toBe(2); // scout = 2
     });
 
     it('does not refresh movement for other player units', () => {
@@ -113,6 +113,72 @@ describe('turnSystem', () => {
       const state = createTestState({ phase: 'start', units });
       const next = turnSystem(state, { type: 'START_TURN' });
       expect(next.units.get('u1')!.health).toBe(50);
+    });
+  });
+
+  describe('B4: enemy territory healing (5 HP/turn)', () => {
+    function createTestCity(overrides: Partial<CityState> = {}): CityState {
+      return {
+        id: 'ec1', name: 'Enemy City', owner: 'p2', position: { q: 10, r: 10 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: [coordToKey({ q: 10, r: 10 }), coordToKey({ q: 0, r: 0 })],
+        settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
+        specialization: null, specialists: 0,
+        ...overrides,
+      };
+    }
+
+    function makeWarRelation(): DiplomacyRelation {
+      return {
+        status: 'war',
+        relationship: -50,
+        warSupport: 0,
+        turnsAtPeace: 0,
+        turnsAtWar: 3,
+        hasAlliance: false,
+        hasFriendship: false,
+        hasDenounced: false,
+        warDeclarer: 'p1',
+        isSurpriseWar: false,
+        activeEndeavors: [],
+        activeSanctions: [],
+      };
+    }
+
+    it('heals unit in enemy territory at 5 HP/turn', () => {
+      // Unit at (0,0) which is in enemy city's territory
+      const enemyCity = createTestCity({
+        territory: [coordToKey({ q: 10, r: 10 }), coordToKey({ q: 0, r: 0 })],
+      });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 60, movementLeft: 1 })],
+      ]);
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const diplomacy = { relations: new Map([['p1:p2', makeWarRelation()]]) };
+      const state = createTestState({
+        phase: 'start', units,
+        cities: new Map([['ec1', enemyCity]]),
+        players,
+        diplomacy,
+        currentPlayerId: 'p1',
+      });
+
+      const next = turnSystem(state, { type: 'START_TURN' });
+      // Should heal 5 HP (enemy territory), not 10 (neutral)
+      expect(next.units.get('u1')!.health).toBe(65);
+    });
+
+    it('heals unit in neutral territory at 10 HP/turn when not at war', () => {
+      // No cities, no war = neutral territory
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 60, movementLeft: 1 })],
+      ]);
+      const state = createTestState({ phase: 'start', units, currentPlayerId: 'p1' });
+      const next = turnSystem(state, { type: 'START_TURN' });
+      expect(next.units.get('u1')!.health).toBe(70); // 10 HP neutral
     });
   });
 

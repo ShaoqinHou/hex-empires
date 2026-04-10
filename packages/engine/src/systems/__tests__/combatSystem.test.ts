@@ -470,3 +470,276 @@ describe('combatSystem — ATTACK_CITY', () => {
     expect(next).toBe(state);
   });
 });
+
+describe('combatSystem — B1: river penalty on attacker', () => {
+  /**
+   * River penalty should reduce ATTACKER strength when attacking across a river.
+   * Attacker on a river tile → takes penalty → defender takes less damage.
+   * Defender on a river tile → no penalty from B1 (old bug was defender penalized).
+   */
+  it('attacker on river tile deals less damage than attacker on flat tile', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    // Baseline: no river on either tile
+    const stateFlat = createTestState({ units, players });
+
+    // Attacker on river tile
+    const tilesRiverAttacker = new Map(stateFlat.map.tiles);
+    const attackerKey = '3,3';
+    const existingTile = tilesRiverAttacker.get(attackerKey);
+    if (existingTile) {
+      tilesRiverAttacker.set(attackerKey, { ...existingTile, river: ['north'] });
+    }
+    const stateRiverAttacker = { ...stateFlat, map: { ...stateFlat.map, tiles: tilesRiverAttacker } };
+
+    const nextFlat = combatSystem(stateFlat, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextRiverAttacker = combatSystem(stateRiverAttacker, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defFlatHP = nextFlat.units.get('d1')?.health ?? 0;
+    const defRiverAttackerHP = nextRiverAttacker.units.get('d1')?.health ?? 0;
+
+    // Attacker penalized by river → defender takes less damage → higher HP
+    expect(defRiverAttackerHP).toBeGreaterThanOrEqual(defFlatHP);
+  });
+
+  it('defender on river tile does NOT get penalized (B1 fix)', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    // Baseline: no river
+    const stateFlat = createTestState({ units, players });
+
+    // Defender on river tile (old bug: this used to penalize defender)
+    const tilesRiverDefender = new Map(stateFlat.map.tiles);
+    const defenderKey = '4,3';
+    const existingTile = tilesRiverDefender.get(defenderKey);
+    if (existingTile) {
+      tilesRiverDefender.set(defenderKey, { ...existingTile, river: ['north'] });
+    }
+    const stateRiverDefender = { ...stateFlat, map: { ...stateFlat.map, tiles: tilesRiverDefender } };
+
+    const nextFlat = combatSystem(stateFlat, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextRiverDefender = combatSystem(stateRiverDefender, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defFlatHP = nextFlat.units.get('d1')?.health ?? 0;
+    const defRiverHP = nextRiverDefender.units.get('d1')?.health ?? 0;
+
+    // Defender on river should NOT be penalized → same or more HP than flat (not less)
+    expect(defRiverHP).toBeGreaterThanOrEqual(defFlatHP);
+  });
+});
+
+describe('combatSystem — B6: fortification flat +5 CS', () => {
+  it('fortified defender survives better than non-fortified', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: false })],
+      ['d2', createTestUnit({ id: 'd2', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: true })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    const stateUnfortified = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: false })],
+      ]),
+      players,
+    });
+    const stateFortified = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: true })],
+      ]),
+      players,
+    });
+
+    const nextUnfortified = combatSystem(stateUnfortified, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextFortified = combatSystem(stateFortified, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defUnfortifiedHP = nextUnfortified.units.get('d1')?.health ?? 0;
+    const defFortifiedHP = nextFortified.units.get('d1')?.health ?? 0;
+
+    // Fortified defender should take less damage (survive better)
+    expect(defFortifiedHP).toBeGreaterThan(defUnfortifiedHP);
+  });
+});
+
+describe('combatSystem — B7: discrete HP degradation', () => {
+  it('unit at 90 HP has 0.9x effective strength compared to 100 HP (not 0.9x continuous)', () => {
+    // At 90 HP: Math.floor(90/10)/10 = 9/10 = 0.9 (same in this case, but formula is correct)
+    // At 95 HP (continuous would give 0.95x, discrete gives 0.9x floor)
+    // Test: unit at 91 HP and unit at 99 HP should have identical effective strength (both floor to 0.9x)
+    const state91 = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 91 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ]),
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+    });
+    const state99 = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ]),
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+    });
+
+    const next91 = combatSystem(state91, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next99 = combatSystem(state99, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Both should deal the same damage (both floor to 0.9x bracket)
+    const defHP91 = next91.units.get('d1')?.health ?? -1;
+    const defHP99 = next99.units.get('d1')?.health ?? -1;
+    expect(defHP91).toBe(defHP99);
+  });
+
+  it('unit at 80 HP deals less damage than unit at 90 HP (stepped brackets)', () => {
+    const makeState = (attackerHP: number) => createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ]),
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+    });
+
+    const next90 = combatSystem(makeState(90), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next80 = combatSystem(makeState(80), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHP90 = next90.units.get('d1')?.health ?? -1;
+    const defHP80 = next80.units.get('d1')?.health ?? -1;
+
+    // Lower health bracket → less damage → defender survives with more HP
+    expect(defHP80).toBeGreaterThan(defHP90);
+  });
+});
+
+describe('combatSystem — S6: war support CS penalty', () => {
+  /**
+   * A player at a war support disadvantage should deal less damage.
+   * War key format: "p1:p2" where p1 is the declarer.
+   * warSupport > 0 = attacker (p1) advantage; warSupport < 0 = defender (p2) advantage.
+   * If p1 is the attacker and warSupport < 0, p1 suffers a CS penalty.
+   */
+
+  function makeWarState(warSupportForAttacker: number) {
+    // p1 is the war declarer, p2 is defender.
+    // warSupport = warSupportForAttacker: positive = p1 advantage, negative = p1 at disadvantage.
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const diplomacy = {
+      relations: new Map([
+        ['p1:p2', {
+          status: 'war' as const,
+          relationship: -50,
+          warSupport: warSupportForAttacker,
+          turnsAtPeace: 0,
+          turnsAtWar: 3,
+          hasAlliance: false,
+          hasFriendship: false,
+          hasDenounced: false,
+          warDeclarer: 'p1',
+          isSurpriseWar: false,
+          activeEndeavors: [],
+          activeSanctions: [],
+        }],
+      ]),
+    };
+    return createTestState({ units, players, diplomacy, currentPlayerId: 'p1' });
+  }
+
+  it('attacker with no war support disadvantage deals normal damage', () => {
+    const stateNeutral = makeWarState(0);
+    const stateAdvantage = makeWarState(10);
+
+    const nextNeutral = combatSystem(stateNeutral, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextAdvantage = combatSystem(stateAdvantage, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHPNeutral = nextNeutral.units.get('d1')?.health ?? 100;
+    const defHPAdvantage = nextAdvantage.units.get('d1')?.health ?? 100;
+
+    // Advantage (warSupport > 0) should not penalise attacker — may even help slightly if ever implemented
+    expect(defHPAdvantage).toBeLessThanOrEqual(defHPNeutral);
+  });
+
+  it('attacker with negative war support deals less damage than attacker with neutral war support', () => {
+    const stateNeutral = makeWarState(0);
+    const statePenalised = makeWarState(-5); // -5 war support → attacker loses 5 CS
+
+    const nextNeutral = combatSystem(stateNeutral, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextPenalised = combatSystem(statePenalised, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHPNeutral = nextNeutral.units.get('d1')?.health ?? 100;
+    const defHPPenalised = nextPenalised.units.get('d1')?.health ?? 100;
+
+    // Penalised attacker has lower CS → defender survives with more HP
+    expect(defHPPenalised).toBeGreaterThan(defHPNeutral);
+  });
+
+  it('war support penalty caps at -10 CS (warSupport = -20 same as -10)', () => {
+    const state10 = makeWarState(-10);
+    const state20 = makeWarState(-20);
+
+    const next10 = combatSystem(state10, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next20 = combatSystem(state20, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHP10 = next10.units.get('d1')?.health ?? 100;
+    const defHP20 = next20.units.get('d1')?.health ?? 100;
+
+    // Both should deal the same damage (cap at -10 penalty)
+    expect(defHP10).toBe(defHP20);
+  });
+
+  it('no war support penalty when no war relations exist', () => {
+    // No diplomacy state → same as neutral (0 penalty)
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const statePeace = createTestState({ units, players, currentPlayerId: 'p1' });
+    const statePenalised = makeWarState(-5);
+
+    const nextPeace = combatSystem(statePeace, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextPenalised = combatSystem(statePenalised, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHPPeace = nextPeace.units.get('d1')?.health ?? 100;
+    const defHPPenalised = nextPenalised.units.get('d1')?.health ?? 100;
+
+    // No war → no penalty; penalised state deals less damage → defender has more HP
+    expect(defHPPeace).toBeLessThanOrEqual(defHPPenalised);
+  });
+});

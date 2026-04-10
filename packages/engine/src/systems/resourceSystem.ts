@@ -8,6 +8,29 @@ const FREE_SETTLEMENT_CAP = 4;
 const SETTLEMENT_CAP_PENALTY = 5;
 
 /**
+ * Calculate the effective settlement cap for a player.
+ * Base cap is 4. Ages grant additional capacity:
+ *   - Exploration age: +1 (total 5)
+ *   - Modern age: +2 (total 6)
+ * Additional cap increases can come from tech effects in the future.
+ */
+export function calculateEffectiveSettlementCap(state: GameState, playerId: string): number {
+  const player = state.players.get(playerId);
+  if (!player) return FREE_SETTLEMENT_CAP;
+
+  let cap = FREE_SETTLEMENT_CAP;
+
+  // Age-based bonuses: each age transition expands the cap
+  if (player.age === 'exploration') {
+    cap += 1;
+  } else if (player.age === 'modern') {
+    cap += 2;
+  }
+
+  return cap;
+}
+
+/**
  * Calculate happiness for a single city.
  * Base: +5 (town) or +10 (city)
  * -2 per population above 1
@@ -18,8 +41,9 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
   const base = city.settlementType === 'city' ? 10 : 5;
   const popPenalty = Math.max(0, city.population - 1) * 2;
 
-  // +1 happiness per building (buildings with positive effects)
+  // Building happiness: +1 per building with positive yields, minus each building's happinessCost
   let buildingBonus = 0;
+  let buildingHappinessCost = 0;
   for (const buildingId of city.buildings) {
     const def = state.config.buildings.get(buildingId);
     if (def) {
@@ -27,6 +51,7 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
         || (def.yields.gold ?? 0) > 0 || (def.yields.science ?? 0) > 0
         || (def.yields.culture ?? 0) > 0 || (def.yields.faith ?? 0) > 0;
       if (hasPositiveYield) buildingBonus += 1;
+      buildingHappinessCost += def.happinessCost ?? 0;
     }
   }
 
@@ -62,22 +87,25 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  // Specialist unhappiness: each specialist costs -1 happiness
-  const specialistPenalty = city.specialists;
+  // Specialist unhappiness: each specialist costs -2 happiness (Civ VII rulebook)
+  const specialistPenalty = city.specialists * 2;
 
-  return base - popPenalty + buildingBonus + luxuryBonus + freshWaterBonus - warWearinessPenalty - specialistPenalty;
+  return base - popPenalty + buildingBonus - buildingHappinessCost + luxuryBonus + freshWaterBonus - warWearinessPenalty - specialistPenalty;
 }
 
 /**
- * Calculate the global settlement cap penalty for a player.
- * Players get 3 free settlements; each beyond that costs -3 happiness globally.
+ * Calculate the per-settlement happiness penalty for a player.
+ * When over the cap, EACH settlement suffers -5 × excess happiness.
+ * Excess is capped at 7 (max penalty -35 per settlement).
+ * Returns the per-settlement penalty amount (applied to each city individually).
  */
 export function calculateSettlementCapPenalty(state: GameState, playerId: string): number {
   let count = 0;
   for (const city of state.cities.values()) {
     if (city.owner === playerId) count++;
   }
-  const excess = Math.max(0, count - FREE_SETTLEMENT_CAP);
+  const effectiveCap = calculateEffectiveSettlementCap(state, playerId);
+  const excess = Math.min(7, Math.max(0, count - effectiveCap));
   return excess * SETTLEMENT_CAP_PENALTY;
 }
 
@@ -101,9 +129,10 @@ const CELEBRATION_DURATION_TURNS = 10;
 /**
  * Calculate the next celebration threshold for a player.
  * First celebration: 50. Each subsequent: 50 * (celebrationCount + 1).
+ * Capped at the 8th multiplier (celebrationCount 7): threshold stops increasing after 7th celebration.
  */
 export function nextCelebrationThreshold(celebrationCount: number): number {
-  return CELEBRATION_BASE_THRESHOLD * (celebrationCount + 1);
+  return CELEBRATION_BASE_THRESHOLD * Math.min(celebrationCount + 1, 8);
 }
 
 /**
