@@ -1,4 +1,4 @@
-import type { GameState, CityState } from '../types/GameState';
+import type { GameState, CityState, TownSpecialization } from '../types/GameState';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 
@@ -37,7 +37,27 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
   // City center always produces at least 2 food, 1 production
   total = addYields(total, { food: 2, production: 1 });
 
+  // Town specialization yield bonuses
+  if (city.specialization !== null) {
+    total = addYields(total, getSpecializationYields(city.specialization));
+  }
+
   return total;
+}
+
+/**
+ * Yield bonuses granted by town specializations.
+ * growing_town growth rate is handled in growthSystem (threshold reduction).
+ */
+export function getSpecializationYields(specialization: TownSpecialization): Partial<YieldSet> {
+  switch (specialization) {
+    case 'farming_town':  return { food: 2 };
+    case 'mining_town':   return { production: 2 };
+    case 'trade_outpost': return { gold: 3 };
+    case 'growing_town':  return {}; // bonus is applied as growth threshold reduction
+    case 'fort_town':     return {}; // bonus is defense HP + healing, not yields
+    default:              return {};
+  }
 }
 
 function getTerrainYields(terrain: string): Partial<YieldSet> {

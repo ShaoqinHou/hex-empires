@@ -92,6 +92,7 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
     happiness: isFirstCity ? 15 : (settlementType === 'city' ? 10 : 5), // Palace adds +5 happiness
     isCapital: isFirstCity,
     defenseHP: 100, // base defense; walls add +100 when built
+    specialization: null,
   };
 
   // Remove settler unit

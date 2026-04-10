@@ -25,6 +25,7 @@ export type {
   UnitCategory,
   UnitState,
   SettlementType,
+  TownSpecialization,
   CityState,
   ProductionItem,
   LegacyPaths,
@@ -85,7 +86,7 @@ export { movementSystem } from './systems/movementSystem';
 export { getMovementCost } from './hex/TerrainCost';
 export { citySystem } from './systems/citySystem';
 export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
-export { calculateCityYields } from './state/YieldCalculator';
+export { calculateCityYields, getSpecializationYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';
 export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './systems/resourceSystem';
 export { researchSystem } from './systems/researchSystem';
