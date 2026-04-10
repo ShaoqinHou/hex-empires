@@ -74,6 +74,8 @@ export const SHIPYARD: BuildingDef = {
   yields: { gold: 2, production: 1 },
   effects: ['+25% naval unit production speed'],
   requiredTech: 'cartography',
+  category: 'military',
+  happinessCost: 3,
 } as const;
 
 export const CATHEDRAL: BuildingDef = {
@@ -85,6 +87,8 @@ export const CATHEDRAL: BuildingDef = {
   yields: { culture: 3, faith: 2 },
   effects: ['+2 Happiness'],
   requiredTech: 'printing',
+  category: 'culture',
+  happinessCost: 3,
 } as const;
 
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [

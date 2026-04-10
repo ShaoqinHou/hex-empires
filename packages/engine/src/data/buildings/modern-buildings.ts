@@ -74,6 +74,8 @@ export const HOSPITAL: BuildingDef = {
   yields: { food: 3 },
   effects: ['+15% city growth rate'],
   requiredTech: 'scientific_theory',
+  category: 'happiness',
+  happinessCost: 0,
 } as const;
 
 export const AIRPORT: BuildingDef = {
@@ -85,6 +87,8 @@ export const AIRPORT: BuildingDef = {
   yields: { production: 2, gold: 2 },
   effects: [],
   requiredTech: 'flight',
+  category: 'gold',
+  happinessCost: 0,
 } as const;
 
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [

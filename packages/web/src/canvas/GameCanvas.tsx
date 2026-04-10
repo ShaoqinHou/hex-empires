@@ -27,7 +27,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
   const rendererRef = useRef<HexRenderer | null>(null);
   const {
-    state, dispatch, terrainRegistry, featureRegistry, unitRegistry,
+    state, dispatch, terrainRegistry, featureRegistry, unitRegistry, resourceRegistry,
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
     reachableHexes,
   } = useGame();
@@ -87,6 +87,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         state,
         terrainRegistry,
         featureRegistry,
+        resourceRegistry,
         selectedHex,
         selectedUnit,
         reachableHexes: reachableSet,
@@ -101,7 +102,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, reachableHexes, showYields]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields]);
 
   // Handle clicks — select units or move them
   const handleClick = useCallback((screenX: number, screenY: number) => {

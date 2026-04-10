@@ -2,6 +2,7 @@ import type { HexCoord, HexMap, HexTile, GameState, UnitState, CityState } from 
 import { coordToKey, distance, HEX_DIRECTIONS } from '@hex/engine';
 import type { Registry } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
+import type { ResourceDef } from '@hex/engine';
 import type { Camera } from './Camera';
 import { drawUnitIcon } from './UnitIcons';
 
@@ -14,6 +15,7 @@ export interface RenderContext {
   state: GameState;
   terrainRegistry: Registry<TerrainDef>;
   featureRegistry: Registry<TerrainFeatureDef>;
+  resourceRegistry: Registry<ResourceDef>;
   selectedHex: HexCoord | null;
   selectedUnit: UnitState | null;
   reachableHexes: ReadonlySet<string> | null;
@@ -150,6 +152,10 @@ export class HexRenderer {
       // Yield dots (small indicators) — only when lens is active
       if (rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
+        // Resource icon — drawn after yield dots to appear above them
+        if (tile.resource) {
+          this.drawResourceIcon(tile, x, y, rc);
+        }
       }
     }
   }
@@ -178,6 +184,54 @@ export class HexRenderer {
         dotIndex++;
       }
     }
+  }
+
+  private drawResourceIcon(tile: HexTile, cx: number, cy: number, rc: RenderContext): void {
+    if (!tile.resource) return;
+    const resource = rc.resourceRegistry.get(tile.resource);
+    if (!resource) return;
+
+    const ctx = this.ctx;
+
+    // Pick circle color by resource type
+    let circleColor: string;
+    switch (resource.type) {
+      case 'luxury':   circleColor = '#ffd54f'; break; // gold
+      case 'strategic': circleColor = '#9e9e9e'; break; // gray
+      case 'bonus':    circleColor = '#66bb6a'; break; // green
+      default:         circleColor = '#ffffff';
+    }
+
+    // Position icon in upper-left area of the hex (doesn't overlap yield dots at bottom)
+    const iconX = cx - HEX_SIZE * 0.35;
+    const iconY = cy - HEX_SIZE * 0.35;
+    const radius = 5;
+
+    // Drop shadow for readability
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 3;
+
+    // Filled circle
+    ctx.beginPath();
+    ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = circleColor;
+    ctx.fill();
+
+    // Dark border
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // First letter of resource name
+    ctx.fillStyle = '#000';
+    ctx.font = `bold ${radius + 1}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(resource.name.charAt(0).toUpperCase(), iconX, iconY);
+    ctx.textBaseline = 'alphabetic'; // reset
   }
 
   private drawFogOfWar(rc: RenderContext): void {

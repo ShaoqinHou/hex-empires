@@ -289,6 +289,7 @@ export type GameAction =
   | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
   | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string }
   | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
+  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
   | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization }
   | { readonly type: 'ASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }

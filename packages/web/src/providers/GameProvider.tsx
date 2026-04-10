@@ -130,6 +130,9 @@ function createInitialState(): GameState {
     masteredTechs: [] as string[],
     currentMastery: null as string | null,
     masteryProgress: 0,
+    masteredCivics: [] as string[],
+    currentCivicMastery: null as string | null,
+    civicMasteryProgress: 0,
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
