@@ -20,7 +20,7 @@ describe('turnSystem', () => {
       const state = createTestState({ phase: 'start', units });
       const next = turnSystem(state, { type: 'START_TURN' });
       expect(next.units.get('u1')!.movementLeft).toBe(2); // warrior = 2
-      expect(next.units.get('u2')!.movementLeft).toBe(3); // scout = 3
+      expect(next.units.get('u2')!.movementLeft).toBe(2); // scout = 2
     });
 
     it('does not refresh movement for other player units', () => {

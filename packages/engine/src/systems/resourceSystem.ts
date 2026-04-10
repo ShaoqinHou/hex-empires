@@ -11,15 +11,16 @@ const SETTLEMENT_CAP_PENALTY = 5;
  * Calculate happiness for a single city.
  * Base: +5 (town) or +10 (city)
  * -2 per population above 1
- * +1 per building with positive effects
+ * +1 per building with positive yields, minus each building's happinessCost
  * Global settlement cap penalty applied separately
  */
 export function calculateCityHappiness(city: CityState, state: GameState): number {
   const base = city.settlementType === 'city' ? 10 : 5;
   const popPenalty = Math.max(0, city.population - 1) * 2;
 
-  // +1 happiness per building (buildings with positive effects)
+  // Building happiness: +1 per building with positive yields, minus each building's happinessCost
   let buildingBonus = 0;
+  let buildingHappinessCost = 0;
   for (const buildingId of city.buildings) {
     const def = state.config.buildings.get(buildingId);
     if (def) {
@@ -27,6 +28,7 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
         || (def.yields.gold ?? 0) > 0 || (def.yields.science ?? 0) > 0
         || (def.yields.culture ?? 0) > 0 || (def.yields.faith ?? 0) > 0;
       if (hasPositiveYield) buildingBonus += 1;
+      buildingHappinessCost += def.happinessCost ?? 0;
     }
   }
 
@@ -62,19 +64,20 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  return base - popPenalty + buildingBonus + luxuryBonus + freshWaterBonus - warWearinessPenalty;
+  return base - popPenalty + buildingBonus - buildingHappinessCost + luxuryBonus + freshWaterBonus - warWearinessPenalty;
 }
 
 /**
  * Calculate the global settlement cap penalty for a player.
- * Players get 3 free settlements; each beyond that costs -3 happiness globally.
+ * Each settlement above the cap suffers -5 × excess happiness.
+ * Excess is capped at 7 (max penalty -35 per settlement).
  */
 export function calculateSettlementCapPenalty(state: GameState, playerId: string): number {
   let count = 0;
   for (const city of state.cities.values()) {
     if (city.owner === playerId) count++;
   }
-  const excess = Math.max(0, count - FREE_SETTLEMENT_CAP);
+  const excess = Math.min(7, Math.max(0, count - FREE_SETTLEMENT_CAP));
   return excess * SETTLEMENT_CAP_PENALTY;
 }
 
