@@ -88,10 +88,30 @@ export function applyHappinessPenalty(value: number, happiness: number): number 
   return Math.floor(value * (100 - penaltyPct) / 100);
 }
 
+/** Threshold (excess happiness) required to trigger the Nth celebration (1-indexed). */
+const CELEBRATION_BASE_THRESHOLD = 50;
+/** Production bonus percent awarded per active celebration. */
+const CELEBRATION_BONUS_PERCENT = 10;
+/** Number of turns a celebration bonus lasts. */
+const CELEBRATION_DURATION_TURNS = 10;
+
+/**
+ * Calculate the next celebration threshold for a player.
+ * First celebration: 50. Each subsequent: 50 * (celebrationCount + 1).
+ */
+export function nextCelebrationThreshold(celebrationCount: number): number {
+  return CELEBRATION_BASE_THRESHOLD * (celebrationCount + 1);
+}
+
 /**
  * ResourceSystem accumulates per-turn yields (gold, science, culture, faith)
  * from all cities at END_TURN. Also updates city happiness and applies
  * happiness penalties to yields. Towns convert production to gold.
+ *
+ * Celebration mechanic: sum excess happiness (positive happiness only) across
+ * all cities. When it meets or exceeds the threshold, a celebration is triggered:
+ * +10% production bonus for 10 turns. Bonus is removed when celebrationTurnsLeft
+ * reaches 0. The threshold increases with each celebration earned.
  */
 export function resourceSystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -110,6 +130,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     let totalCulture = 0;
     let totalFaith = 0;
     let cityCount = 0;
+    let totalExcessHappiness = 0;
 
     for (const city of state.cities.values()) {
       if (city.owner !== playerId) continue;
@@ -120,6 +141,11 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
       if (cityHappiness !== city.happiness) {
         updatedCities.set(city.id, { ...city, happiness: cityHappiness });
+      }
+
+      // Accumulate excess happiness (only positive values contribute to celebrations)
+      if (cityHappiness > 0) {
+        totalExcessHappiness += cityHappiness;
       }
 
       // Towns convert all production to gold
@@ -162,6 +188,26 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     }
 
     const netGold = totalGold - maintenance;
+
+    // --- Celebration mechanic ---
+    let { celebrationCount, celebrationBonus, celebrationTurnsLeft } = player;
+
+    // Decrement celebration timer first
+    if (celebrationTurnsLeft > 0) {
+      celebrationTurnsLeft -= 1;
+      if (celebrationTurnsLeft === 0) {
+        celebrationBonus = 0;
+      }
+    }
+
+    // Check if excess happiness meets the next celebration threshold
+    const threshold = nextCelebrationThreshold(celebrationCount);
+    if (totalExcessHappiness >= threshold) {
+      celebrationCount += 1;
+      celebrationBonus = CELEBRATION_BONUS_PERCENT;
+      celebrationTurnsLeft = CELEBRATION_DURATION_TURNS;
+    }
+
     updatedPlayers.set(playerId, {
       ...player,
       gold: player.gold + netGold,
@@ -170,6 +216,9 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       faith: player.faith + totalFaith,
       influence: player.influence + totalInfluence,
       totalGoldEarned: player.totalGoldEarned + Math.max(0, netGold),
+      celebrationCount,
+      celebrationBonus,
+      celebrationTurnsLeft,
     });
     changed = true;
   }

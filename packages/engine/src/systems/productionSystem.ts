@@ -149,6 +149,12 @@ function processProduction(state: GameState): GameState {
       productionPerTurn = Math.floor(productionPerTurn * 1.1);
     }
 
+    // Celebration bonus: +celebrationBonus% production toward everything
+    const player = state.players.get(city.owner);
+    if (player && player.celebrationBonus > 0) {
+      productionPerTurn = Math.floor(productionPerTurn * (100 + player.celebrationBonus) / 100);
+    }
+
     const newProgress = city.productionProgress + productionPerTurn;
     const cost = getProductionCost(state, currentItem.id);
 
