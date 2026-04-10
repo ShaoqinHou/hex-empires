@@ -121,6 +121,9 @@ export interface PlayerState {
   readonly masteredTechs: ReadonlyArray<TechnologyId>; // techs that have been mastered (re-researched for a bonus)
   readonly currentMastery: TechnologyId | null;        // tech currently being mastered
   readonly masteryProgress: number;                    // accumulated science toward mastery
+  readonly masteredCivics: ReadonlyArray<string>;      // civics that have been mastered for a culture bonus
+  readonly currentCivicMastery: string | null;         // civic currently being mastered
+  readonly civicMasteryProgress: number;               // accumulated culture toward civic mastery
 }
 
 // ── Diplomacy ──
@@ -289,7 +292,8 @@ export type GameAction =
   | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization }
   | { readonly type: 'ASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
-  | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId };
+  | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
+  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string };
 
 // ── Events ──
 

@@ -68,6 +68,9 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     masteredTechs: [],
     currentMastery: null,
     masteryProgress: 0,
+    masteredCivics: [],
+    currentCivicMastery: null,
+    civicMasteryProgress: 0,
     ...overrides,
   };
 }

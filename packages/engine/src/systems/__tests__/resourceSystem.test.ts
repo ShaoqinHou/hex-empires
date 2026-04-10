@@ -401,9 +401,7 @@ describe('B5: settlement cap penalty applied per-settlement (not flat total)', (
     const state = createTestState({ cities, players: new Map([['p1', createTestPlayer()]]) });
     expect(calculateSettlementCapPenalty(state, 'p1')).toBe(35);
   });
-});
 
-describe('S1: settlement cap scaling with age', () => {
   it('base cap is 4 for antiquity players', () => {
     const player = createTestPlayer({ age: 'antiquity' });
     const state = createTestState({ players: new Map([['p1', player]]) });
@@ -424,21 +422,12 @@ describe('S1: settlement cap scaling with age', () => {
 
   it('exploration player has no penalty at 5 settlements (cap is 5)', () => {
     const player = createTestPlayer({ age: 'exploration' });
-    function makeCity2(id: string, owner: string): CityState {
-      return {
-        id, name: id, owner, position: { q: 0, r: 0 },
-        population: 1, food: 0, productionQueue: [], productionProgress: 0,
-        buildings: [], territory: [],
-        settlementType: 'city', happiness: 0, isCapital: false, defenseHP: 100,
-        specialization: null, specialists: 0,
-      };
-    }
     const cities = new Map([
-      ['c1', makeCity2('c1', 'p1')],
-      ['c2', makeCity2('c2', 'p1')],
-      ['c3', makeCity2('c3', 'p1')],
-      ['c4', makeCity2('c4', 'p1')],
-      ['c5', makeCity2('c5', 'p1')],
+      ['c1', makeCity('c1', 'p1')],
+      ['c2', makeCity('c2', 'p1')],
+      ['c3', makeCity('c3', 'p1')],
+      ['c4', makeCity('c4', 'p1')],
+      ['c5', makeCity('c5', 'p1')],
     ]);
     const state = createTestState({ cities, players: new Map([['p1', player]]) });
     expect(calculateSettlementCapPenalty(state, 'p1')).toBe(0);
@@ -446,21 +435,12 @@ describe('S1: settlement cap scaling with age', () => {
 
   it('antiquity player incurs penalty at 5 settlements (cap is 4)', () => {
     const player = createTestPlayer({ age: 'antiquity' });
-    function makeCity3(id: string, owner: string): CityState {
-      return {
-        id, name: id, owner, position: { q: 0, r: 0 },
-        population: 1, food: 0, productionQueue: [], productionProgress: 0,
-        buildings: [], territory: [],
-        settlementType: 'city', happiness: 0, isCapital: false, defenseHP: 100,
-        specialization: null, specialists: 0,
-      };
-    }
     const cities = new Map([
-      ['c1', makeCity3('c1', 'p1')],
-      ['c2', makeCity3('c2', 'p1')],
-      ['c3', makeCity3('c3', 'p1')],
-      ['c4', makeCity3('c4', 'p1')],
-      ['c5', makeCity3('c5', 'p1')],
+      ['c1', makeCity('c1', 'p1')],
+      ['c2', makeCity('c2', 'p1')],
+      ['c3', makeCity('c3', 'p1')],
+      ['c4', makeCity('c4', 'p1')],
+      ['c5', makeCity('c5', 'p1')],
     ]);
     const state = createTestState({ cities, players: new Map([['p1', player]]) });
     expect(calculateSettlementCapPenalty(state, 'p1')).toBe(5); // 1 over cap × 5 = 5

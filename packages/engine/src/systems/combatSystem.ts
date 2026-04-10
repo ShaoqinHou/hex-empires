@@ -187,9 +187,11 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
  * If the player is losing in war support (i.e., the war is going badly for them),
  * they receive -1 CS per negative war support point, capped at -10.
  *
- * warSupport > 0 means the declarer has advantage; < 0 means the defender has advantage.
- * We look at the war from this player's perspective: if the number that reflects
- * their disadvantage is negative, they are penalised.
+ * warSupport > 0 = attacker advantage; warSupport < 0 = defender advantage.
+ * Penalise the player who is at a disadvantage:
+ *   - Attacker (key prefix matches playerId): penalised when warSupport < 0
+ *   - Defender (key suffix matches playerId): penalised when warSupport > 0
+ * Cap at 10 CS penalty.
  */
 function calculateWarSupportPenalty(state: GameState, playerId: string): number {
   let maxPenalty = 0;

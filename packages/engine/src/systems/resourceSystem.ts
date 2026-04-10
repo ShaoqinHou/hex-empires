@@ -98,6 +98,7 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
  * When over the cap, EACH settlement suffers -5 × excess happiness.
  * Excess is capped at 7 (max penalty -35 per settlement).
  * Returns the per-settlement penalty amount (applied to each city individually).
+ * Uses the effective cap (base 4, scaling with age).
  */
 export function calculateSettlementCapPenalty(state: GameState, playerId: string): number {
   let count = 0;
