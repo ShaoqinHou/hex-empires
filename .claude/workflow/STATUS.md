@@ -1,69 +1,49 @@
 # Project Status
 
 ## Current State
-- **Phase:** Civ VII accuracy iterations (A-C complete, D in progress)
-- **Last verified:** 2026-04-09
-- **Tests:** 236 passing across 21 test files
-- **Commits:** 20
+- **Phase:** Post-audit — fixing critical bugs and doc alignment
+- **Last verified:** 2026-04-10
+- **Tests:** 400 passing across 23 test files
+- **Commits:** 38+
 
-## Civ VII Accuracy Plan Progress
+## Content Inventory (verified from code 2026-04-10)
+| Type | Count | Details |
+|------|-------|---------|
+| Units | 28 (3 ages) | 11 antiquity, 10 exploration, 7 modern |
+| Buildings | 23 (3 ages) | 10 antiquity, 7 exploration, 7 modern (note: ~40% of rulebook buildings missing) |
+| Technologies | 35 (3 ages) | 15 antiquity, 10 exploration, 10 modern |
+| Civics | 25 (3 ages) | 11 antiquity (3 civ-unique), 8 exploration, 6 modern |
+| Civilizations | 16 (3 ages) | 6 antiquity, 6 exploration, 4 modern |
+| Leaders | 9 | Augustus, Cleopatra, Pericles, Cyrus, Gandhi, Qin Shi Huang, Alexander, Hatshepsut, Genghis Khan |
+| Promotions | 14 (3 tiers) | 7 tier-1, 5 tier-2, 2 tier-3 |
+| Crisis events | 7 | Plague, Barbarian Invasion, Golden Age, Trade Opportunity, Natural Disaster, Religious Schism, Trade Disruption |
+| Resources | 13 | 4 bonus, 4 strategic, 5 luxury |
+| Independent Powers | 3 | Vilnius (scientific), Antananarivo (cultural), Zanzibar (economic) |
+| Terrains | 7 + 8 features | |
+| UI panels | 13 | |
+| Test files | 23 | |
 
-### Iteration A: Core Gameplay Accuracy - DONE
-- [x] Tech research locked to current age
-- [x] Unit healing system (territory-dependent rates)
-- [x] Zone of Control (cavalry ignores)
-- [x] Yield display toggle (Lens button)
-- [x] City banners with production indicator
-- [x] Proper territory border rendering
-
-### Iteration B: Town/City & Happiness - DONE
-- [x] Settlement types: Towns (gold) and Cities (production)
-- [x] Happiness system replacing housing+amenities
-- [x] Town gold purchasing (PURCHASE_ITEM action)
-- [x] Settlement upgrade (town to city, 100g)
-- [x] Settlement cap with happiness penalty
-- [x] Population cap (towns=5, cities=20)
-
-### Iteration C: Civic Tree & Legacy Paths - DONE
-- [x] Civic tree (parallel to tech, uses Culture yield)
-- [x] 8 antiquity civics with prerequisites
-- [x] civicSystem with SET_CIVIC action
-- [x] CivicTreePanel UI
-- [x] 4 Legacy paths (military/economic/science/culture)
-- [x] Legacy milestones (kills, gold, techs, civics)
-- [x] Legacy points spent on age transition bonuses
-- [x] totalKills and totalGoldEarned tracking
-
-### Iteration D: Diplomacy & Trade - IN PROGRESS
-- [ ] Influence yield
-- [ ] Relationship stages (helpful→hostile)
-- [ ] War Support replaces grievances
-- [ ] Formal vs Surprise war types
-- [ ] Trade routes (future)
-
-### Iteration E: Victory & Polish - PLANNED
-- [ ] Modern-age-only victories with projects
-- [ ] Unit banners/flags
-- [ ] AI diplomacy improvements
-- [ ] More exploration/modern civics
-
-## Content Inventory
-| Type | Count |
-|------|-------|
-| Units | 27 (3 ages) |
-| Buildings | 19 (3 ages) |
-| Technologies | 35 (3 ages) |
-| Civics | 8 (antiquity) |
-| Civilizations | 16 (3 ages) |
-| Leaders | 8 |
-| Promotions | 11 (3 tiers) |
-| Crisis events | 5 |
-| Terrains | 7 + 8 features |
-| UI panels | 13 |
-| Test files | 21 |
+## Systems Implemented
+1. turnSystem — turn phases, player order
+2. effectSystem — civ/leader/legacy ability effects
+3. movementSystem — pathfinding, ZoC
+4. citySystem — founding, territory, upgrade
+5. combatSystem — damage, flanking, first strike, walls
+6. fortifySystem — unit fortification
+7. growthSystem — quadratic formula, growth rate modifiers, town specialization, food sharing
+8. productionSystem — queues, overflow, rush buying, barracks/workshop bonuses, strategic resources
+9. resourceSystem — yields, happiness, celebrations, town gold conversion
+10. researchSystem — tech research, mastery
+11. civicSystem — civic research, civ-unique civics
+12. ageSystem — age transitions, legacy bonuses, golden/dark ages
+13. diplomacySystem — relationships, war support, formal/surprise war, endeavors, sanctions
+14. victorySystem — domination, science, culture, economic, diplomacy, military, score
+15. tradeSystem — merchant unit, trade routes, gold yields
+16. specialistSystem — citizen specialist assignment
+17. independentSystem — independent powers, envoys, suzerain
 
 ## Architecture
-- 20+ pure system functions in pipeline
+- 17 pure system functions in pipeline
 - Data-driven via GameConfig — zero hardcoded content IDs in systems
 - Single source of truth (GameState)
-- 236 tests, strict TypeScript, seeded RNG
+- 400 tests, strict TypeScript, seeded RNG
