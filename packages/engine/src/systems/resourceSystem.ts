@@ -170,6 +170,30 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       totalFaith += faithFromCity;
     }
 
+    // Endeavor bonuses: +2 gold and +2 science per active endeavor involving this player
+    // Both the initiator and the target benefit from active endeavors.
+    let endeavorGold = 0;
+    let endeavorScience = 0;
+    for (const [key, rel] of state.diplomacy.relations) {
+      if (!key.includes(playerId)) continue;
+      endeavorGold += rel.activeEndeavors.length * 2;
+      endeavorScience += rel.activeEndeavors.length * 2;
+    }
+    totalGold += endeavorGold;
+    totalScience += endeavorScience;
+
+    // Sanction penalties: -3 gold per active sanction whose targetId is this player
+    let sanctionGoldPenalty = 0;
+    for (const [key, rel] of state.diplomacy.relations) {
+      if (!key.includes(playerId)) continue;
+      for (const sanction of rel.activeSanctions) {
+        if (sanction.targetId === playerId) {
+          sanctionGoldPenalty += 3;
+        }
+      }
+    }
+    totalGold -= sanctionGoldPenalty;
+
     // Calculate influence: +1 per city, +2 per alliance
     let totalInfluence = cityCount;
     for (const [key, rel] of state.diplomacy.relations) {

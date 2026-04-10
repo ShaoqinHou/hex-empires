@@ -115,6 +115,18 @@ export interface PlayerState {
 
 export type DiplomaticStatus = 'helpful' | 'friendly' | 'neutral' | 'unfriendly' | 'hostile' | 'war';
 
+export interface DiplomaticEndeavor {
+  readonly type: string;
+  readonly turnsRemaining: number;
+  readonly sourceId: string; // the player who initiated the endeavor (both players benefit)
+}
+
+export interface DiplomaticSanction {
+  readonly type: string;
+  readonly turnsRemaining: number;
+  readonly targetId: string; // the player whose yields are penalized
+}
+
 export interface DiplomacyRelation {
   readonly status: DiplomaticStatus;
   readonly relationship: number;        // -100 to +100 drives status stage
@@ -126,6 +138,8 @@ export interface DiplomacyRelation {
   readonly hasDenounced: boolean;        // active denouncement
   readonly warDeclarer: string | null;   // player who declared war (for surprise war tracking)
   readonly isSurpriseWar: boolean;       // true if war was declared without hostile relationship
+  readonly activeEndeavors: ReadonlyArray<DiplomaticEndeavor>;
+  readonly activeSanctions: ReadonlyArray<DiplomaticSanction>;
 }
 
 export interface DiplomacyState {
@@ -244,7 +258,9 @@ export type GameAction =
   | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
-  | { readonly type: 'SET_CIVIC'; readonly civicId: string };
+  | { readonly type: 'SET_CIVIC'; readonly civicId: string }
+  | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
+  | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string };
 
 // ── Events ──
 

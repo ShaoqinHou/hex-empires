@@ -359,4 +359,199 @@ describe('updateDiplomacyCounters', () => {
     const state = stateWithRelation({ status: 'neutral' });
     expect(updateDiplomacyCounters(state, { type: 'START_TURN' })).toBe(state);
   });
+
+  describe('endeavor expiry on END_TURN', () => {
+    it('decrements endeavor turnsRemaining each END_TURN', () => {
+      const state = stateWithRelation({
+        activeEndeavors: [{ type: 'trade_mission', turnsRemaining: 5, sourceId: 'p1' }],
+      });
+      const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.activeEndeavors[0].turnsRemaining).toBe(4);
+    });
+
+    it('removes endeavor when turnsRemaining reaches 0', () => {
+      const state = stateWithRelation({
+        activeEndeavors: [{ type: 'trade_mission', turnsRemaining: 1, sourceId: 'p1' }],
+      });
+      const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.activeEndeavors).toHaveLength(0);
+    });
+
+    it('keeps endeavors with turnsRemaining > 1 and removes expired ones', () => {
+      const state = stateWithRelation({
+        activeEndeavors: [
+          { type: 'trade_mission', turnsRemaining: 3, sourceId: 'p1' },
+          { type: 'cultural_exchange', turnsRemaining: 1, sourceId: 'p1' },
+        ],
+      });
+      const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.activeEndeavors).toHaveLength(1);
+      expect(rel.activeEndeavors[0].type).toBe('trade_mission');
+      expect(rel.activeEndeavors[0].turnsRemaining).toBe(2);
+    });
+  });
+
+  describe('sanction expiry on END_TURN', () => {
+    it('decrements sanction turnsRemaining each END_TURN', () => {
+      const state = stateWithRelation({
+        activeSanctions: [{ type: 'trade_ban', turnsRemaining: 7, targetId: 'p2' }],
+      });
+      const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.activeSanctions[0].turnsRemaining).toBe(6);
+    });
+
+    it('removes sanction when turnsRemaining reaches 0', () => {
+      const state = stateWithRelation({
+        activeSanctions: [{ type: 'trade_ban', turnsRemaining: 1, targetId: 'p2' }],
+      });
+      const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.activeSanctions).toHaveLength(0);
+    });
+  });
+});
+
+describe('DIPLOMATIC_ENDEAVOR action', () => {
+  function twoPlayerStateWithInfluence(influence: number) {
+    return createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      currentPlayerId: 'p1',
+    });
+  }
+
+  it('adds an endeavor to the relation when player has enough influence', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_ENDEAVOR',
+      targetId: 'p2',
+      endeavorType: 'trade_mission',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.activeEndeavors).toHaveLength(1);
+    expect(rel.activeEndeavors[0].type).toBe('trade_mission');
+    expect(rel.activeEndeavors[0].turnsRemaining).toBe(10);
+    expect(rel.activeEndeavors[0].sourceId).toBe('p1');
+  });
+
+  it('deducts influence cost from the acting player', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_ENDEAVOR',
+      targetId: 'p2',
+      endeavorType: 'trade_mission',
+    });
+    expect(next.players.get('p1')!.influence).toBe(50); // 100 - 50 cost
+  });
+
+  it('rejects endeavor when player has insufficient influence', () => {
+    const state = twoPlayerStateWithInfluence(30);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_ENDEAVOR',
+      targetId: 'p2',
+      endeavorType: 'trade_mission',
+    });
+    // No relation created / no endeavors added
+    const rel = next.diplomacy.relations.get('p1:p2');
+    expect(rel?.activeEndeavors ?? []).toHaveLength(0);
+    // Influence unchanged
+    expect(next.players.get('p1')!.influence).toBe(30);
+    // Log entry explains rejection
+    expect(next.log.some(e => e.message.includes('insufficient Influence'))).toBe(true);
+  });
+
+  it('adds a log entry on success', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_ENDEAVOR',
+      targetId: 'p2',
+      endeavorType: 'cultural_exchange',
+    });
+    expect(next.log.some(e => e.message.includes('cultural_exchange') && e.message.includes('p2'))).toBe(true);
+  });
+
+  it('ignores endeavor targeting self', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_ENDEAVOR',
+      targetId: 'p1',
+      endeavorType: 'trade_mission',
+    });
+    expect(next).toBe(state);
+  });
+});
+
+describe('DIPLOMATIC_SANCTION action', () => {
+  function twoPlayerStateWithInfluence(influence: number) {
+    return createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      currentPlayerId: 'p1',
+    });
+  }
+
+  it('adds a sanction to the relation when player has enough influence', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p2',
+      sanctionType: 'trade_ban',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.activeSanctions).toHaveLength(1);
+    expect(rel.activeSanctions[0].type).toBe('trade_ban');
+    expect(rel.activeSanctions[0].turnsRemaining).toBe(10);
+    expect(rel.activeSanctions[0].targetId).toBe('p2');
+  });
+
+  it('deducts influence cost from the acting player', () => {
+    const state = twoPlayerStateWithInfluence(75);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p2',
+      sanctionType: 'trade_ban',
+    });
+    expect(next.players.get('p1')!.influence).toBe(25); // 75 - 50 cost
+  });
+
+  it('rejects sanction when player has insufficient influence', () => {
+    const state = twoPlayerStateWithInfluence(20);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p2',
+      sanctionType: 'trade_ban',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2');
+    expect(rel?.activeSanctions ?? []).toHaveLength(0);
+    expect(next.players.get('p1')!.influence).toBe(20);
+    expect(next.log.some(e => e.message.includes('insufficient Influence'))).toBe(true);
+  });
+
+  it('adds a log entry on success', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p2',
+      sanctionType: 'trade_ban',
+    });
+    expect(next.log.some(e => e.message.includes('trade_ban') && e.message.includes('p2'))).toBe(true);
+  });
+
+  it('ignores sanction targeting self', () => {
+    const state = twoPlayerStateWithInfluence(100);
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p1',
+      sanctionType: 'trade_ban',
+    });
+    expect(next).toBe(state);
+  });
 });

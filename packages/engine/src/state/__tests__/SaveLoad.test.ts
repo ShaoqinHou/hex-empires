@@ -27,6 +27,7 @@ function createMinimalState(): GameState {
       status: 'neutral' as const, relationship: 0, warSupport: 0, turnsAtPeace: 3, turnsAtWar: 0,
       hasAlliance: false, hasFriendship: false, hasDenounced: false,
       warDeclarer: null, isSurpriseWar: false,
+      activeEndeavors: [], activeSanctions: [],
     }]]) },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     crises: [],

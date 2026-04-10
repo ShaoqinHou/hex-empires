@@ -25,6 +25,8 @@ function makeAlliance(p1: string, p2: string): [string, DiplomacyRelation] {
     hasDenounced: false,
     warDeclarer: null,
     isSurpriseWar: false,
+    activeEndeavors: [],
+    activeSanctions: [],
   }];
 }
 

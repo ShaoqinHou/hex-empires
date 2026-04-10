@@ -1,4 +1,4 @@
-import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction } from '../types/GameState';
 
 /**
  * DiplomacySystem handles diplomatic proposals between players.
@@ -10,13 +10,35 @@ import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus } from 
  * - Formal war requires hostile relationship; surprise war gives defender war support
  * - Alliance requires helpful status (relationship > 60)
  */
+/** Cost in Influence for diplomatic endeavors and sanctions */
+const ENDEAVOR_INFLUENCE_COST = 50;
+const SANCTION_INFLUENCE_COST = 50;
+
+/** Duration in turns for endeavors and sanctions */
+const ENDEAVOR_DURATION = 10;
+const SANCTION_DURATION = 10;
+
 export function diplomacySystem(state: GameState, action: GameAction): GameState {
-  if (action.type !== 'PROPOSE_DIPLOMACY') return state;
+  if (
+    action.type !== 'PROPOSE_DIPLOMACY' &&
+    action.type !== 'DIPLOMATIC_ENDEAVOR' &&
+    action.type !== 'DIPLOMATIC_SANCTION'
+  ) return state;
 
   const sourceId = state.currentPlayerId;
   const targetId = action.targetId;
   if (sourceId === targetId) return state;
   if (!state.players.has(targetId)) return state;
+
+  // Handle DIPLOMATIC_ENDEAVOR
+  if (action.type === 'DIPLOMATIC_ENDEAVOR') {
+    return handleEndeavor(state, sourceId, targetId, action.endeavorType);
+  }
+
+  // Handle DIPLOMATIC_SANCTION
+  if (action.type === 'DIPLOMATIC_SANCTION') {
+    return handleSanction(state, sourceId, targetId, action.sanctionType);
+  }
 
   const relationKey = getRelationKey(sourceId, targetId);
   const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
@@ -204,6 +226,8 @@ export function defaultRelation(): DiplomacyRelation {
     hasDenounced: false,
     warDeclarer: null,
     isSurpriseWar: false,
+    activeEndeavors: [],
+    activeSanctions: [],
   };
 }
 
@@ -213,6 +237,94 @@ function clampRelationship(value: number): number {
 
 function clampWarSupport(value: number): number {
   return Math.max(-100, Math.min(100, value));
+}
+
+function handleEndeavor(state: GameState, sourceId: string, targetId: string, endeavorType: string): GameState {
+  const sourcePlayer = state.players.get(sourceId)!;
+
+  // Check influence cost
+  if (sourcePlayer.influence < ENDEAVOR_INFLUENCE_COST) {
+    return {
+      ...state,
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: sourceId,
+        message: `Cannot conduct ${endeavorType} endeavor with ${targetId} (insufficient Influence, need ${ENDEAVOR_INFLUENCE_COST})`,
+        type: 'diplomacy',
+      }],
+    };
+  }
+
+  const relationKey = getRelationKey(sourceId, targetId);
+  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+
+  const newEndeavor: DiplomaticEndeavor = { type: endeavorType, turnsRemaining: ENDEAVOR_DURATION, sourceId };
+  const updatedRelation: DiplomacyRelation = {
+    ...currentRelation,
+    activeEndeavors: [...currentRelation.activeEndeavors, newEndeavor],
+  };
+
+  const updatedRelations = new Map(state.diplomacy.relations);
+  updatedRelations.set(relationKey, updatedRelation);
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - ENDEAVOR_INFLUENCE_COST });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    diplomacy: { relations: updatedRelations },
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: sourceId,
+      message: `Conducted ${endeavorType} endeavor with ${targetId}`,
+      type: 'diplomacy',
+    }],
+  };
+}
+
+function handleSanction(state: GameState, sourceId: string, targetId: string, sanctionType: string): GameState {
+  const sourcePlayer = state.players.get(sourceId)!;
+
+  // Check influence cost
+  if (sourcePlayer.influence < SANCTION_INFLUENCE_COST) {
+    return {
+      ...state,
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: sourceId,
+        message: `Cannot impose ${sanctionType} sanction on ${targetId} (insufficient Influence, need ${SANCTION_INFLUENCE_COST})`,
+        type: 'diplomacy',
+      }],
+    };
+  }
+
+  const relationKey = getRelationKey(sourceId, targetId);
+  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+
+  const newSanction: DiplomaticSanction = { type: sanctionType, turnsRemaining: SANCTION_DURATION, targetId };
+  const updatedRelation: DiplomacyRelation = {
+    ...currentRelation,
+    activeSanctions: [...currentRelation.activeSanctions, newSanction],
+  };
+
+  const updatedRelations = new Map(state.diplomacy.relations);
+  updatedRelations.set(relationKey, updatedRelation);
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - SANCTION_INFLUENCE_COST });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    diplomacy: { relations: updatedRelations },
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: sourceId,
+      message: `Imposed ${sanctionType} sanction on ${targetId}`,
+      type: 'diplomacy',
+    }],
+  };
 }
 
 /** Update diplomacy turn counters (called on END_TURN by the system pipeline) */
@@ -251,6 +363,19 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
       // Update status based on new relationship
       updated.status = getStatusFromRelationship(updated.relationship);
     }
+
+    // Decrement endeavor turns and remove expired ones
+    const updatedEndeavors = rel.activeEndeavors
+      .map(e => ({ ...e, turnsRemaining: e.turnsRemaining - 1 }))
+      .filter(e => e.turnsRemaining > 0);
+    updated.activeEndeavors = updatedEndeavors;
+
+    // Decrement sanction turns and remove expired ones
+    const updatedSanctions = rel.activeSanctions
+      .map(s => ({ ...s, turnsRemaining: s.turnsRemaining - 1 }))
+      .filter(s => s.turnsRemaining > 0);
+    updated.activeSanctions = updatedSanctions;
+
     updatedRelations.set(key, updated);
     changed = true;
   }

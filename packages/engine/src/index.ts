@@ -30,6 +30,8 @@ export type {
   LegacyPaths,
   PlayerState,
   DiplomaticStatus,
+  DiplomaticEndeavor,
+  DiplomaticSanction,
   DiplomacyRelation,
   DiplomacyState,
   EffectTarget,
