@@ -128,6 +128,36 @@ export const ELITE: PromotionDef = {
   ],
 } as const;
 
+export const AMBUSH: PromotionDef = {
+  id: 'ambush',
+  name: 'Ambush',
+  description: '+7 combat strength when attacking from forest or jungle tiles',
+  category: 'melee',
+  tier: 1,
+  effects: [{ type: 'COMBAT_IN_FOREST', value: 7 }],
+} as const;
+
+export const SUPPRESSION: PromotionDef = {
+  id: 'suppression',
+  name: 'Suppression',
+  description: '+5 ranged combat vs units in the open (no terrain bonus)',
+  category: 'ranged',
+  tier: 2,
+  effects: [{ type: 'RANGED_VS_OPEN', value: 5 }],
+} as const;
+
+export const VANGUARD: PromotionDef = {
+  id: 'vanguard',
+  name: 'Vanguard',
+  description: '+10 combat strength, heals 20 HP after killing a unit',
+  category: 'all',
+  tier: 3,
+  effects: [
+    { type: 'COMBAT_BONUS', value: 10 },
+    { type: 'HEAL_ON_KILL', value: 20 },
+  ],
+} as const;
+
 export const ALL_PROMOTIONS: ReadonlyArray<PromotionDef> = [
   // Tier 1
   BATTLECRY,
@@ -136,11 +166,14 @@ export const ALL_PROMOTIONS: ReadonlyArray<PromotionDef> = [
   ARROWS,
   CHARGE,
   PURSUIT,
+  AMBUSH,
   // Tier 2
   BLITZ,
   LOGISTICS,
   FLANKING,
   BREAKTHROUGH,
+  SUPPRESSION,
   // Tier 3
   ELITE,
+  VANGUARD,
 ] as const;
