@@ -8,53 +8,42 @@ user_invocable: true
 
 ## File Locations
 ```
-packages/engine/src/systems/__tests__/{System}.test.ts
-packages/engine/src/hex/__tests__/{Module}.test.ts
-packages/engine/src/registry/__tests__/{Registry}.test.ts
-packages/engine/src/data/__tests__/content-validation.test.ts
-packages/web/src/__tests__/{Component}.test.tsx
+packages/engine/src/systems/__tests__/{systemName}.test.ts
+packages/engine/src/hex/__tests__/{module}.test.ts
+packages/engine/src/state/__tests__/{module}.test.ts
 ```
 
-## Engine Test Pattern
+## Test Helper
 
-Systems are pure functions — test with concrete states:
+Located at `packages/engine/src/systems/__tests__/helpers.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { movementSystem } from '../MovementSystem';
-import { createMinimalState } from '../../state/TestHelpers';
+import { createTestState, createTestPlayer, createTestUnit, createFlatMap, setTile } from './helpers';
 
-describe('MovementSystem', () => {
-  it('moves unit to adjacent hex', () => {
-    const state = createMinimalState({
-      units: new Map([['u1', {
-        id: 'u1', defId: 'unit_warrior',
-        ownerId: 'p1', position: { q: 0, r: 0 },
-        movementLeft: 2, health: 100,
-      }]]),
-    });
-    const action = { type: 'MOVE_UNIT' as const, unitId: 'u1', path: [{ q: 1, r: 0 }] };
-    const next = movementSystem(state, action);
-    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
-    expect(next.units.get('u1')!.movementLeft).toBe(1);
-  });
+const state = createTestState({ units: new Map([...]), players: new Map([...]) });
+const unit = createTestUnit({ id: 'u1', typeId: 'warrior', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 2 });
+const player = createTestPlayer({ id: 'p1', gold: 100, researchedTechs: ['pottery'] });
+```
 
-  it('rejects move beyond movement range', () => {
-    // ... test that state is unchanged for invalid moves
-  });
-});
+For cities, create inline:
+```typescript
+const city: CityState = {
+  id: 'c1', name: 'Rome', owner: 'p1', position: { q: 3, r: 3 },
+  population: 3, food: 0, productionQueue: [], productionProgress: 0,
+  buildings: [], territory: [coordToKey({ q: 3, r: 3 })],
+  settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
+};
 ```
 
 ## Assertion Rules
-- **Concrete coordinates:** `expect(pos).toEqual({ q: 3, r: -1 })`
-- **Exact resources:** `expect(gold).toBe(150)` not `expect(gold).toBeGreaterThan(0)`
-- **State immutability:** verify original state was not mutated
-- **Determinism:** use seeded RNG, never `Math.random()`
+- Concrete coordinates: `expect(pos).toEqual({ q: 3, r: -1 })`
+- Exact values: `expect(gold).toBe(150)`
+- State unchanged for invalid actions: `expect(next).toBe(state)`
+- Use seeded RNG, never `Math.random()`
 
 ## Running Tests
 ```bash
 npm run test:engine      # Engine only
-npm run test:web         # Web only
 npm test                 # Full suite
-bash .claude/hooks/run-tests.sh --module engine  # With marker
+npx tsc --noEmit -p packages/engine  # Type-check
 ```
