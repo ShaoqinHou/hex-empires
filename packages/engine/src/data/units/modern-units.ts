@@ -92,6 +92,7 @@ export const IRONCLAD: UnitDef = {
   movement: 5,
   sightRange: 2,
   requiredTech: 'steam_power',
+  requiredResource: 'coal',
   upgradesTo: null,
   abilities: [],
 } as const;

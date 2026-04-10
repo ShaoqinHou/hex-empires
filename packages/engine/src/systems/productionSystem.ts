@@ -37,6 +37,16 @@ function handleSetProduction(
   // Towns cannot use production queue — they must purchase with gold
   if (city.settlementType === 'town') return state;
 
+  // If producing a unit that requires a strategic resource, verify the player
+  // has access to it (any city's territory must contain that resource).
+  if (itemType === 'unit') {
+    const unitDef = state.config.units.get(itemId);
+    if (unitDef?.requiredResource) {
+      const hasResource = playerHasResource(state, state.currentPlayerId, unitDef.requiredResource);
+      if (!hasResource) return state;
+    }
+  }
+
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, {
     ...city,
@@ -46,6 +56,21 @@ function handleSetProduction(
   });
 
   return { ...state, cities: updatedCities };
+}
+
+/**
+ * Returns true if the player controls at least one tile with the given resource
+ * across all of their cities' territories.
+ */
+function playerHasResource(state: GameState, playerId: string, resourceId: string): boolean {
+  for (const city of state.cities.values()) {
+    if (city.owner !== playerId) continue;
+    for (const tileKey of city.territory) {
+      const tile = state.map.tiles.get(tileKey);
+      if (tile?.resource === resourceId) return true;
+    }
+  }
+  return false;
 }
 
 function handlePurchaseItem(

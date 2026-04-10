@@ -10,6 +10,7 @@ export interface UnitDef {
   readonly movement: number;   // base movement points
   readonly sightRange: number; // fog of war visibility radius (default 2)
   readonly requiredTech: string | null;
+  readonly requiredResource?: string; // strategic resource ID required to produce this unit
   readonly upgradesTo: string | null;
   readonly abilities: ReadonlyArray<string>;
 }
@@ -106,6 +107,7 @@ export const CHARIOT: UnitDef = {
   movement: 3,
   sightRange: 2,
   requiredTech: 'wheel',
+  requiredResource: 'horses',
   upgradesTo: 'horseman',
   abilities: [],
 } as const;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { productionSystem } from '../productionSystem';
 import { createTestState, createTestPlayer } from './helpers';
-import type { CityState } from '../../types/GameState';
+import type { CityState, HexTile } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
@@ -170,6 +170,63 @@ describe('productionSystem', () => {
         itemType: 'unit',
       });
       expect(next).toBe(state); // unchanged
+    });
+  });
+
+  describe('SET_PRODUCTION — strategic resource requirements', () => {
+    /** Build a map where one of the city territory tiles contains the given resource */
+    function stateWithResourceOnTerritory(resourceId: string): ReturnType<typeof createTestState> {
+      const city = createTestCity();
+      // The city territory includes coordToKey({ q: 4, r: 3 }) — put the resource there
+      const resourceTileKey = coordToKey({ q: 4, r: 3 });
+      const baseState = createTestState({ cities: new Map([['c1', city]]) });
+      // Patch the tile in the map to carry the resource
+      const newTiles = new Map(baseState.map.tiles);
+      const existing = newTiles.get(resourceTileKey)!;
+      const patchedTile: HexTile = { ...existing, resource: resourceId };
+      newTiles.set(resourceTileKey, patchedTile);
+      return {
+        ...baseState,
+        map: { ...baseState.map, tiles: newTiles },
+      };
+    }
+
+    it('allows SET_PRODUCTION for a unit with requiredResource when player has access', () => {
+      // swordsman requires 'iron' — put iron on a territory tile
+      const state = stateWithResourceOnTerritory('iron');
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'swordsman',
+        itemType: 'unit',
+      });
+      expect(next.cities.get('c1')!.productionQueue).toEqual([{ type: 'unit', id: 'swordsman' }]);
+    });
+
+    it('rejects SET_PRODUCTION for a unit with requiredResource when player lacks it', () => {
+      // swordsman requires 'iron' — no resource on any territory tile
+      const city = createTestCity();
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'swordsman',
+        itemType: 'unit',
+      });
+      expect(next).toBe(state); // unchanged — resource unavailable
+    });
+
+    it('allows SET_PRODUCTION for units without requiredResource regardless of resources', () => {
+      // warrior has no requiredResource — should always be allowed
+      const city = createTestCity();
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'warrior',
+        itemType: 'unit',
+      });
+      expect(next.cities.get('c1')!.productionQueue).toEqual([{ type: 'unit', id: 'warrior' }]);
     });
   });
 });

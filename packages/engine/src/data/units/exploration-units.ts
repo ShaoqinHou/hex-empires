@@ -12,6 +12,7 @@ export const SWORDSMAN: UnitDef = {
   movement: 2,
   sightRange: 2,
   requiredTech: 'iron_working',
+  requiredResource: 'iron',
   upgradesTo: 'musketman',
   abilities: [],
 } as const;
@@ -60,6 +61,7 @@ export const HORSEMAN: UnitDef = {
   movement: 4,
   sightRange: 2,
   requiredTech: 'archery',
+  requiredResource: 'horses',
   upgradesTo: 'knight',
   abilities: [],
 } as const;
@@ -92,6 +94,7 @@ export const MUSKETMAN: UnitDef = {
   movement: 2,
   sightRange: 2,
   requiredTech: 'gunpowder',
+  requiredResource: 'niter',
   upgradesTo: null,
   abilities: [],
 } as const;
