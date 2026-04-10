@@ -105,6 +105,9 @@ export interface PlayerState {
   readonly totalKills: number;       // tracks cumulative kills for legacy milestones
   readonly visibility: ReadonlySet<HexKey>; // currently visible tiles
   readonly explored: ReadonlySet<HexKey>;   // ever-seen tiles
+  readonly masteredCivics: ReadonlyArray<string>;      // civics that have been mastered for a culture bonus
+  readonly currentCivicMastery: string | null;         // civic currently being mastered
+  readonly civicMasteryProgress: number;               // accumulated culture toward civic mastery
 }
 
 // ── Diplomacy ──
@@ -240,7 +243,8 @@ export type GameAction =
   | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
-  | { readonly type: 'SET_CIVIC'; readonly civicId: string };
+  | { readonly type: 'SET_CIVIC'; readonly civicId: string }
+  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string };
 
 // ── Events ──
 

@@ -8,6 +8,26 @@ const FREE_SETTLEMENT_CAP = 4;
 const SETTLEMENT_CAP_PENALTY = 5;
 
 /**
+ * Calculate the effective settlement cap for a player.
+ * Base cap is 4. Ages grant additional capacity:
+ *   - Exploration age: +1 (total 5)
+ *   - Modern age: +2 (total 6)
+ */
+export function calculateEffectiveSettlementCap(state: GameState, playerId: string): number {
+  const player = state.players.get(playerId);
+  if (!player) return FREE_SETTLEMENT_CAP;
+
+  let cap = FREE_SETTLEMENT_CAP;
+  if (player.age === 'exploration') {
+    cap += 1;
+  } else if (player.age === 'modern') {
+    cap += 2;
+  }
+
+  return cap;
+}
+
+/**
  * Calculate happiness for a single city.
  * Base: +5 (town) or +10 (city)
  * -2 per population above 1
@@ -67,14 +87,15 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
 
 /**
  * Calculate the global settlement cap penalty for a player.
- * Players get 3 free settlements; each beyond that costs -3 happiness globally.
+ * Uses the effective cap (base 4, scaling with age).
  */
 export function calculateSettlementCapPenalty(state: GameState, playerId: string): number {
   let count = 0;
   for (const city of state.cities.values()) {
     if (city.owner === playerId) count++;
   }
-  const excess = Math.max(0, count - FREE_SETTLEMENT_CAP);
+  const effectiveCap = calculateEffectiveSettlementCap(state, playerId);
+  const excess = Math.max(0, count - effectiveCap);
   return excess * SETTLEMENT_CAP_PENALTY;
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resourceSystem } from '../resourceSystem';
+import { resourceSystem, calculateEffectiveSettlementCap, calculateSettlementCapPenalty } from '../resourceSystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
 import type { CityState } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
@@ -89,5 +89,60 @@ describe('resourceSystem', () => {
     const next = resourceSystem(state, { type: 'END_TURN' });
     // p1 has no cities so resources shouldn't increase much
     expect(next.players.get('p1')!.gold).toBe(100);
+  });
+});
+
+describe('S1: settlement cap scaling with age', () => {
+  function makeCity(id: string, owner: string): CityState {
+    return {
+      id, name: id, owner, position: { q: 0, r: 0 },
+      population: 1, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [],
+      settlementType: 'city', happiness: 0, isCapital: false, defenseHP: 100,
+    };
+  }
+
+  it('base cap is 4 for antiquity players', () => {
+    const player = createTestPlayer({ age: 'antiquity' });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(4);
+  });
+
+  it('exploration age increases cap to 5', () => {
+    const player = createTestPlayer({ age: 'exploration' });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(5);
+  });
+
+  it('modern age increases cap to 6', () => {
+    const player = createTestPlayer({ age: 'modern' });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(6);
+  });
+
+  it('exploration player has no penalty at 5 settlements (cap is 5)', () => {
+    const player = createTestPlayer({ age: 'exploration' });
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1')],
+      ['c2', makeCity('c2', 'p1')],
+      ['c3', makeCity('c3', 'p1')],
+      ['c4', makeCity('c4', 'p1')],
+      ['c5', makeCity('c5', 'p1')],
+    ]);
+    const state = createTestState({ cities, players: new Map([['p1', player]]) });
+    expect(calculateSettlementCapPenalty(state, 'p1')).toBe(0);
+  });
+
+  it('antiquity player incurs penalty at 5 settlements (cap is 4)', () => {
+    const player = createTestPlayer({ age: 'antiquity' });
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1')],
+      ['c2', makeCity('c2', 'p1')],
+      ['c3', makeCity('c3', 'p1')],
+      ['c4', makeCity('c4', 'p1')],
+      ['c5', makeCity('c5', 'p1')],
+    ]);
+    const state = createTestState({ cities, players: new Map([['p1', player]]) });
+    expect(calculateSettlementCapPenalty(state, 'p1')).toBe(5); // 1 over cap × 5 = 5
   });
 });

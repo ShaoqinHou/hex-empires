@@ -90,5 +90,36 @@ describe('researchSystem', () => {
       const next = researchSystem(state, { type: 'END_TURN' });
       expect(next).toBe(state);
     });
+
+    it('S2: carries overflow science to next research on completion', () => {
+      // Pottery costs 25. Player at 20 progress.
+      // sciencePerTurn = 1 (base min, science=0) + population.
+      // Population 10 → sciencePerTurn = 1 + 10 = 11. 20 + 11 = 31 >= 25 → completes, overflow = 6.
+      const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 20 });
+      const city = createTestCity({ population: 10 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.researchedTechs).toContain('pottery');
+      expect(next.players.get('p1')!.currentResearch).toBeNull();
+      // Overflow: 31 - 25 = 6 should carry to researchProgress
+      expect(next.players.get('p1')!.researchProgress).toBe(6);
+    });
+
+    it('S2: no overflow when research completes exactly at cost', () => {
+      // Pottery costs 25. 20 progress. sciencePerTurn = 1 (min) + pop.
+      // pop=4 → 1 + 4 = 5. 20 + 5 = 25 = cost → overflow = 0.
+      const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 20 });
+      const city = createTestCity({ population: 4 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.researchedTechs).toContain('pottery');
+      expect(next.players.get('p1')!.researchProgress).toBe(0);
+    });
   });
 });

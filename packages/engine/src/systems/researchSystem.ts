@@ -115,12 +115,13 @@ function processResearch(state: GameState): GameState {
       };
     }
 
-    // Normal tech complete!
+    // Normal tech complete! Carry overflow science to the next research.
+    const overflow = newProgress - techCost;
     updatedPlayers.set(player.id, {
       ...player,
       researchedTechs: [...player.researchedTechs, player.currentResearch],
       currentResearch: null,
-      researchProgress: 0,
+      researchProgress: overflow, // overflow carries to next tech
       ageProgress: player.ageProgress + 5, // +5 age progress per tech
     });
 

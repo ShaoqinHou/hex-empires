@@ -172,7 +172,36 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const flankingBonus = isAttacking ? calculateFlankingBonus(unit, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
-  return base * healthModifier + flankingBonus + firstStrikeBonus;
+  // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
+  const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
+  return base * healthModifier + flankingBonus + firstStrikeBonus - warSupportPenalty;
+}
+
+/**
+ * Calculate the war support CS penalty for a player.
+ * warSupport > 0 = attacker advantage; warSupport < 0 = defender advantage.
+ * Penalise the player who is at a disadvantage:
+ *   - Attacker (key prefix matches playerId): penalised when warSupport < 0
+ *   - Defender (key suffix matches playerId): penalised when warSupport > 0
+ * Cap at 10 CS penalty.
+ */
+function calculateWarSupportPenalty(state: GameState, playerId: string): number {
+  let maxPenalty = 0;
+  for (const [key, rel] of state.diplomacy.relations) {
+    if (rel.status !== 'war') continue;
+    if (!key.includes(playerId)) continue;
+
+    const [p1] = key.split(':');
+    const isAttacker = p1 === playerId;
+
+    const negativeSupport = isAttacker
+      ? Math.max(0, -rel.warSupport)   // attacker: penalised when warSupport < 0
+      : Math.max(0, rel.warSupport);   // defender: penalised when warSupport > 0
+
+    const penalty = Math.min(10, negativeSupport);
+    if (penalty > maxPenalty) maxPenalty = penalty;
+  }
+  return maxPenalty;
 }
 
 /** Get effective defense strength with terrain and fortification bonuses */
