@@ -105,18 +105,48 @@ export const WINE: ResourceDef = {
   happinessBonus: 1,
 } as const;
 
+export const COAL: ResourceDef = {
+  id: 'coal',
+  name: 'Coal',
+  type: 'strategic',
+  yieldBonus: { production: 2 },
+  validTerrains: ['plains', 'grassland'],
+  happinessBonus: 0,
+} as const;
+
+export const WHALES: ResourceDef = {
+  id: 'whales',
+  name: 'Whales',
+  type: 'bonus',
+  yieldBonus: { food: 2, gold: 1 },
+  validTerrains: ['ocean', 'coast'],
+  happinessBonus: 0,
+} as const;
+
+export const IVORY: ResourceDef = {
+  id: 'ivory',
+  name: 'Ivory',
+  type: 'luxury',
+  yieldBonus: { gold: 2, production: 1 },
+  validTerrains: ['plains', 'grassland'],
+  happinessBonus: 2,
+} as const;
+
 export const ALL_RESOURCES: ReadonlyArray<ResourceDef> = [
   // Bonus
   WHEAT,
   CATTLE,
   STONE,
+  WHALES,
   // Strategic
   IRON,
   HORSES,
   NITER,
+  COAL,
   // Luxury
   SILK,
   GEMS,
   SPICES,
   WINE,
+  IVORY,
 ] as const;
