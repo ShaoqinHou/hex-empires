@@ -61,6 +61,9 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     totalKills: 0,
     visibility: new Set(),
     explored: new Set(),
+    celebrationCount: 0,
+    celebrationBonus: 0,
+    celebrationTurnsLeft: 0,
     ...overrides,
   };
 }

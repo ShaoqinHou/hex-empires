@@ -105,6 +105,10 @@ export interface PlayerState {
   readonly totalKills: number;       // tracks cumulative kills for legacy milestones
   readonly visibility: ReadonlySet<HexKey>; // currently visible tiles
   readonly explored: ReadonlySet<HexKey>;   // ever-seen tiles
+  // Celebration mechanic: bonus production when excess happiness crosses threshold
+  readonly celebrationCount: number;      // total celebrations earned so far
+  readonly celebrationBonus: number;      // current bonus percent (10 per active celebration)
+  readonly celebrationTurnsLeft: number;  // turns remaining on active celebration
 }
 
 // ── Diplomacy ──
