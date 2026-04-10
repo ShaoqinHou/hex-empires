@@ -55,6 +55,28 @@ export const STAR_FORT: BuildingDef = {
   requiredTech: 'siege_tactics',
 } as const;
 
+export const SHIPYARD: BuildingDef = {
+  id: 'shipyard',
+  name: 'Shipyard',
+  age: 'exploration',
+  cost: 220,
+  maintenance: 2,
+  yields: { gold: 2, production: 1 },
+  effects: ['+25% naval unit production speed'],
+  requiredTech: 'cartography',
+} as const;
+
+export const CATHEDRAL: BuildingDef = {
+  id: 'cathedral',
+  name: 'Cathedral',
+  age: 'exploration',
+  cost: 240,
+  maintenance: 2,
+  yields: { culture: 3, faith: 2 },
+  effects: ['+2 Happiness'],
+  requiredTech: 'printing',
+} as const;
+
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
-  BANK, UNIVERSITY, STOCK_EXCHANGE, ARMORY, STAR_FORT,
+  BANK, UNIVERSITY, STOCK_EXCHANGE, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
 ] as const;

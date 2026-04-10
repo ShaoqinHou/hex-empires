@@ -55,6 +55,28 @@ export const BROADCAST_TOWER: BuildingDef = {
   requiredTech: 'flight',
 } as const;
 
+export const HOSPITAL: BuildingDef = {
+  id: 'hospital',
+  name: 'Hospital',
+  age: 'modern',
+  cost: 350,
+  maintenance: 3,
+  yields: { food: 3 },
+  effects: ['+15% city growth rate'],
+  requiredTech: 'scientific_theory',
+} as const;
+
+export const AIRPORT: BuildingDef = {
+  id: 'airport',
+  name: 'Airport',
+  age: 'modern',
+  cost: 450,
+  maintenance: 4,
+  yields: { production: 2, gold: 2 },
+  effects: [],
+  requiredTech: 'flight',
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
-  FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER,
+  FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT,
 ] as const;
