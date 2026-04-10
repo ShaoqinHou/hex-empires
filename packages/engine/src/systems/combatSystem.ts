@@ -1,4 +1,5 @@
 import type { GameState, GameAction, UnitState, HexTile, CityState } from '../types/GameState';
+import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
@@ -53,7 +54,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     adjacentAlly: false,
   });
   const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true) + attackerPromoBonus;
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position) + attackerPromoBonus;
   const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
   // Calculate damage with seeded randomness
@@ -166,10 +167,10 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
 }
 
 /** Get base combat strength, reduced by health percentage */
-function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean): number {
+function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
   const healthModifier = unit.health / 100; // damaged units fight worse
-  const flankingBonus = isAttacking ? calculateFlankingBonus(unit, state) : 0;
+  const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
   return base * healthModifier + flankingBonus + firstStrikeBonus;
@@ -230,13 +231,17 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): number {
   return bonus;
 }
 
-/** Flanking bonus: +2 strength per friendly unit adjacent to the defender */
-function calculateFlankingBonus(attacker: UnitState, state: GameState): number {
-  // Find the defender — get all enemy units adjacent to attacker's target
-  // For simplicity, check friendly units adjacent to any enemy
-  let bonus = 0;
-  // This is simplified — in a real implementation we'd look at the specific target
-  return bonus;
+/** Flanking bonus: +2 strength per friendly unit adjacent to the defender, capped at +6 */
+function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
+  const defNeighbors = neighbors(defenderPosition);
+  let flankingCount = 0;
+  for (const [, u] of state.units) {
+    if (u.id === attacker.id) continue;           // exclude the attacker itself
+    if (u.owner !== attacker.owner) continue;      // only count friendly units
+    const isAdjacent = defNeighbors.some(n => n.q === u.position.q && n.r === u.position.r);
+    if (isAdjacent) flankingCount++;
+  }
+  return Math.min(flankingCount * 2, 6);
 }
 
 /** Check if the attacker has a friendly unit adjacent to the defender */
