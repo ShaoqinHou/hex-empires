@@ -96,7 +96,19 @@ export const HATSHEPSUT: LeaderDef = {
   compatibleAges: ['antiquity', 'exploration', 'modern'],
 };
 
+export const GENGHIS_KHAN: LeaderDef = {
+  id: 'genghis_khan',
+  name: 'Genghis Khan',
+  ability: {
+    name: 'Mongol Horde',
+    description: '+10 combat strength for cavalry units. Cavalry units ignore movement penalties from terrain.',
+    effects: [{ type: 'MODIFY_COMBAT', target: 'cavalry', value: 10 }],
+  },
+  agendas: ['conqueror', 'expansionist'],
+  compatibleAges: ['antiquity', 'exploration', 'modern'],
+};
+
 export const ALL_LEADERS: ReadonlyArray<LeaderDef> = [
   AUGUSTUS, CLEOPATRA, PERICLES, CYRUS, GANDHI,
-  QIN_SHI_HUANG, ALEXANDER, HATSHEPSUT,
+  QIN_SHI_HUANG, ALEXANDER, HATSHEPSUT, GENGHIS_KHAN,
 ];

@@ -100,10 +100,64 @@ export const NATURAL_DISASTER: CrisisEventDef = {
   ],
 } as const;
 
+export const RELIGIOUS_SCHISM: CrisisEventDef = {
+  id: 'religious_schism',
+  name: 'Religious Schism',
+  description: 'Theological disputes have split your population. Competing factions demand that you take a side or risk cultural collapse.',
+  triggerCondition: 'turn_reached',
+  triggerValue: 30,
+  choices: [
+    {
+      id: 'tolerance',
+      text: 'Preach tolerance and freedom of belief (+3 culture, -1 faith)',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: -1 },
+      ],
+    },
+    {
+      id: 'suppression',
+      text: 'Suppress the heretical faction (+2 loyalty, -2 culture)',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: -2 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 },
+      ],
+    },
+  ],
+} as const;
+
+export const TRADE_DISRUPTION: CrisisEventDef = {
+  id: 'trade_disruption',
+  name: 'Trade Disruption',
+  description: 'Bandit raids and hostile neighbors have cut off your trade routes. Your merchants are demanding action to restore commerce.',
+  triggerCondition: 'turn_reached',
+  triggerValue: 18,
+  choices: [
+    {
+      id: 'new_routes',
+      text: 'Invest in establishing new trade routes (-30 gold, +3 gold per turn)',
+      effects: [
+        { type: 'MODIFY_GOLD', target: 'player', value: -30 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+      ],
+    },
+    {
+      id: 'isolate',
+      text: 'Turn inward and focus on domestic production (-2 gold per turn, +2 production)',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: -2 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+      ],
+    },
+  ],
+} as const;
+
 export const ALL_CRISES: ReadonlyArray<CrisisEventDef> = [
   PLAGUE,
   BARBARIAN_INVASION,
   GOLDEN_AGE,
   TRADE_OPPORTUNITY,
   NATURAL_DISASTER,
+  RELIGIOUS_SCHISM,
+  TRADE_DISRUPTION,
 ];
