@@ -109,6 +109,9 @@ export interface PlayerState {
   readonly celebrationCount: number;      // total celebrations earned so far
   readonly celebrationBonus: number;      // current bonus percent (10 per active celebration)
   readonly celebrationTurnsLeft: number;  // turns remaining on active celebration
+  readonly masteredTechs: ReadonlyArray<TechnologyId>; // techs that have been mastered (re-researched for a bonus)
+  readonly currentMastery: TechnologyId | null;        // tech currently being mastered
+  readonly masteryProgress: number;                    // accumulated science toward mastery
 }
 
 // ── Diplomacy ──
@@ -260,7 +263,8 @@ export type GameAction =
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
   | { readonly type: 'SET_CIVIC'; readonly civicId: string }
   | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
-  | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string };
+  | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string }
+  | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId };
 
 // ── Events ──
 

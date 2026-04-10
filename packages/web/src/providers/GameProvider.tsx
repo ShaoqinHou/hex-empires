@@ -111,6 +111,9 @@ function createInitialState(): GameState {
     totalGoldEarned: 0,
     visibility: new Set<string>(),
     explored: new Set<string>(),
+    masteredTechs: [] as string[],
+    currentMastery: null as string | null,
+    masteryProgress: 0,
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({

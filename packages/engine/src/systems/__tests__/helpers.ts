@@ -64,6 +64,9 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     celebrationCount: 0,
     celebrationBonus: 0,
     celebrationTurnsLeft: 0,
+    masteredTechs: [],
+    currentMastery: null,
+    masteryProgress: 0,
     ...overrides,
   };
 }

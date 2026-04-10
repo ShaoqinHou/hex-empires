@@ -91,4 +91,158 @@ describe('researchSystem', () => {
       expect(next).toBe(state);
     });
   });
+
+  describe('SET_MASTERY', () => {
+    it('begins mastery for a researched tech', () => {
+      const player = createTestPlayer({ researchedTechs: ['pottery'], masteredTechs: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_MASTERY', techId: 'pottery' });
+      expect(next.players.get('p1')!.currentMastery).toBe('pottery');
+      expect(next.players.get('p1')!.masteryProgress).toBe(0);
+    });
+
+    it('rejects mastery for a tech not yet researched', () => {
+      const player = createTestPlayer({ researchedTechs: [], masteredTechs: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_MASTERY', techId: 'pottery' });
+      expect(next).toBe(state);
+      expect(next.players.get('p1')!.currentMastery).toBeNull();
+    });
+
+    it('rejects mastery for a tech already mastered', () => {
+      const player = createTestPlayer({ researchedTechs: ['pottery'], masteredTechs: ['pottery'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_MASTERY', techId: 'pottery' });
+      expect(next).toBe(state);
+      expect(next.players.get('p1')!.currentMastery).toBeNull();
+    });
+
+    it('rejects mastery when another mastery is already in progress', () => {
+      const player = createTestPlayer({
+        researchedTechs: ['pottery', 'mining'],
+        masteredTechs: [],
+        currentMastery: 'mining',
+        masteryProgress: 5,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_MASTERY', techId: 'pottery' });
+      // Should not change existing mastery
+      expect(next.players.get('p1')!.currentMastery).toBe('mining');
+    });
+  });
+
+  describe('END_TURN mastery', () => {
+    it('accumulates mastery progress each turn', () => {
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 0,
+      });
+      const city = createTestCity({ population: 3 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.masteryProgress).toBeGreaterThan(0);
+    });
+
+    it('mastery costs 80% of the original tech cost', () => {
+      // Pottery costs 25. 80% = ceil(20) = 20. Player needs masteryProgress >= 20 to complete.
+      // sciencePerTurn with science=0 and pop=1 = 1 (min) + 1 (pop) = 2.
+      // Set progress to 17 so 17 + 2 = 19 < 20 — mastery does NOT complete this turn.
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 17,
+      });
+      const city = createTestCity({ population: 1 }); // 2 science per turn total
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      // 17 + 2 science = 19, still < 20 mastery cost
+      expect(next.players.get('p1')!.currentMastery).toBe('pottery');
+      expect(next.players.get('p1')!.masteryProgress).toBe(19);
+      expect(next.players.get('p1')!.masteredTechs).toEqual([]);
+    });
+
+    it('completes mastery when progress reaches 80% of tech cost', () => {
+      // Pottery costs 25. 80% = ceil(20) = 20.
+      // Start at 19, add 1 science → 20 >= 20 → complete
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 19,
+      });
+      const city = createTestCity({ population: 1 }); // 1 science per turn
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.masteredTechs).toContain('pottery');
+      expect(next.players.get('p1')!.currentMastery).toBeNull();
+      expect(next.players.get('p1')!.masteryProgress).toBe(0);
+    });
+
+    it('grants +1 science empire yield bonus on mastery completion', () => {
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 19,
+        legacyBonuses: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const bonuses = next.players.get('p1')!.legacyBonuses;
+      const masteryBonus = bonuses.find(b => b.source === 'mastery:pottery');
+      expect(masteryBonus).toBeDefined();
+      expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
+      if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
+        expect(masteryBonus!.effect.yield).toBe('science');
+        expect(masteryBonus!.effect.value).toBe(1);
+        expect(masteryBonus!.effect.target).toBe('empire');
+      }
+    });
+
+    it('logs a message on mastery completion', () => {
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 19,
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const masteryLog = next.log.find(e => e.type === 'research' && e.message.includes('Mastered'));
+      expect(masteryLog).toBeDefined();
+    });
+
+    it('does not progress mastery when no mastery is set', () => {
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: null,
+        masteryProgress: 0,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.masteryProgress).toBe(0);
+      expect(next.players.get('p1')!.masteredTechs).toEqual([]);
+    });
+  });
 });
