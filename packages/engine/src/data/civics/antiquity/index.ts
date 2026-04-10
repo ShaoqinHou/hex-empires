@@ -88,7 +88,49 @@ export const RECORDED_HISTORY: CivicDef = {
   treePosition: { row: 0, col: 4 },
 };
 
+// ── Civ-Unique Civics ──
+
+/** Rome-only: Reflects Roman senatorial government — unique to the Roman civilization. */
+export const ROMAN_SENATE: CivicDef = {
+  id: 'roman_senate',
+  name: 'Roman Senate',
+  age: 'antiquity',
+  cost: 70,
+  prerequisites: ['early_empire'],
+  unlocks: [],
+  description: '+2 influence per turn and +1 gold per trade route (Rome only)',
+  treePosition: { row: 1, col: 2 },
+  civId: 'rome',
+};
+
+/** Egypt-only: Reflects Egyptian divine kingship and monument culture. */
+export const DIVINE_KINGSHIP: CivicDef = {
+  id: 'divine_kingship',
+  name: 'Divine Kingship',
+  age: 'antiquity',
+  cost: 70,
+  prerequisites: ['mysticism'],
+  unlocks: ['sphinx'],
+  description: '+3 culture in the capital and -50% wonder production cost (Egypt only)',
+  treePosition: { row: 3, col: 2 },
+  civId: 'egypt',
+};
+
+/** Greece-only: Reflects Athenian democracy and civic participation. */
+export const ATHENIAN_DEMOCRACY: CivicDef = {
+  id: 'athenian_democracy',
+  name: 'Athenian Democracy',
+  age: 'antiquity',
+  cost: 90,
+  prerequisites: ['early_empire'],
+  unlocks: ['acropolis'],
+  description: '+2 science in every city and +1 culture for each civic researched (Greece only)',
+  treePosition: { row: 1, col: 3 },
+  civId: 'greece',
+};
+
 export const ALL_ANTIQUITY_CIVICS: ReadonlyArray<CivicDef> = [
   CODE_OF_LAWS, CRAFTSMANSHIP, FOREIGN_TRADE, EARLY_EMPIRE,
   MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
+  ROMAN_SENATE, DIVINE_KINGSHIP, ATHENIAN_DEMOCRACY,
 ];

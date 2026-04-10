@@ -134,4 +134,73 @@ describe('civicSystem', () => {
     const state = createTestState();
     expect(civicSystem(state, { type: 'START_TURN' })).toBe(state);
   });
+
+  describe('civ-unique civics', () => {
+    it('universal civic is available to any civilization', () => {
+      // craftsmanship has no civId — should be available to rome (default civ)
+      const player = createTestPlayer({ civilizationId: 'rome', researchedCivics: ['code_of_laws'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'SET_CIVIC', civicId: 'craftsmanship' });
+      expect(next.players.get('p1')!.currentCivic).toBe('craftsmanship');
+    });
+
+    it('universal civic is also available to a different civilization', () => {
+      // craftsmanship has no civId — should be available to egypt too
+      const player = createTestPlayer({ civilizationId: 'egypt', researchedCivics: ['code_of_laws'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'SET_CIVIC', civicId: 'craftsmanship' });
+      expect(next.players.get('p1')!.currentCivic).toBe('craftsmanship');
+    });
+
+    it('civ-unique civic is available to its matching civilization', () => {
+      // roman_senate is civId: 'rome' — available to rome
+      const player = createTestPlayer({ civilizationId: 'rome', researchedCivics: ['early_empire'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'SET_CIVIC', civicId: 'roman_senate' });
+      expect(next.players.get('p1')!.currentCivic).toBe('roman_senate');
+    });
+
+    it('civ-unique civic is rejected for a non-matching civilization', () => {
+      // roman_senate is civId: 'rome' — must be rejected for egypt
+      const player = createTestPlayer({ civilizationId: 'egypt', researchedCivics: ['early_empire'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'SET_CIVIC', civicId: 'roman_senate' });
+      expect(next).toBe(state);
+      expect(next.players.get('p1')!.currentCivic).toBeNull();
+    });
+
+    it('egypt-unique civic is available only to egypt', () => {
+      // divine_kingship is civId: 'egypt'
+      const egyptPlayer = createTestPlayer({ civilizationId: 'egypt', researchedCivics: ['mysticism'] });
+      const egyptState = createTestState({ players: new Map([['p1', egyptPlayer]]) });
+      const egyptNext = civicSystem(egyptState, { type: 'SET_CIVIC', civicId: 'divine_kingship' });
+      expect(egyptNext.players.get('p1')!.currentCivic).toBe('divine_kingship');
+
+      const romePlayer = createTestPlayer({ civilizationId: 'rome', researchedCivics: ['mysticism'] });
+      const romeState = createTestState({ players: new Map([['p1', romePlayer]]) });
+      const romeNext = civicSystem(romeState, { type: 'SET_CIVIC', civicId: 'divine_kingship' });
+      expect(romeNext).toBe(romeState);
+    });
+
+    it('greece-unique civic is available only to greece', () => {
+      // athenian_democracy is civId: 'greece'
+      const greecePlayer = createTestPlayer({ civilizationId: 'greece', researchedCivics: ['early_empire'] });
+      const greeceState = createTestState({ players: new Map([['p1', greecePlayer]]) });
+      const greeceNext = civicSystem(greeceState, { type: 'SET_CIVIC', civicId: 'athenian_democracy' });
+      expect(greeceNext.players.get('p1')!.currentCivic).toBe('athenian_democracy');
+
+      const persiaPlayer = createTestPlayer({ civilizationId: 'persia', researchedCivics: ['early_empire'] });
+      const persiaState = createTestState({ players: new Map([['p1', persiaPlayer]]) });
+      const persiaNext = civicSystem(persiaState, { type: 'SET_CIVIC', civicId: 'athenian_democracy' });
+      expect(persiaNext).toBe(persiaState);
+    });
+
+    it('civ-unique civic still requires prerequisites', () => {
+      // roman_senate requires early_empire — rome without early_empire should be rejected
+      const player = createTestPlayer({ civilizationId: 'rome', researchedCivics: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'SET_CIVIC', civicId: 'roman_senate' });
+      expect(next).toBe(state);
+    });
+  });
 });

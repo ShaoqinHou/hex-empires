@@ -30,6 +30,9 @@ function handleSetCivic(state: GameState, civicId: string): GameState {
   // Civic must belong to the player's current age
   if (civicDef.age !== player.age) return state;
 
+  // Civ-specific civics are only available to the matching civilization
+  if (civicDef.civId !== undefined && civicDef.civId !== player.civilizationId) return state;
+
   // All prerequisites must be researched
   const allPrereqsMet = civicDef.prerequisites.every(
     prereq => player.researchedCivics.includes(prereq)
