@@ -1,10 +1,16 @@
 # Project Status
 
 ## Current State
-- **Phase:** Post-audit — fixing critical bugs and doc alignment
-- **Last verified:** 2026-04-10
-- **Tests:** 400 passing across 23 test files
-- **Commits:** 38+
+- **Phase:** Rulebook-aligned — all audit items resolved
+- **Last verified:** 2026-04-10 (E2E + re-audit)
+- **Tests:** 442 passing across 24 test files
+- **Commits:** 42+
+
+## Rulebook Alignment (post-audit, verified 2026-04-10)
+- ✓ All 7 critical bugs fixed (river penalty, specialist costs, healing, cap penalty, fortification, HP degradation)
+- ✓ All 10 missing systems implemented (settlement cap scaling, research/civic mastery, endeavor/sanction yields, war support CS penalty, building categories/maintenance, cap limits)
+- ✓ Unit and building stat corrections applied to match rulebook
+- ✓ Intentionally simplified systems documented in `.claude/workflow/design/gap-analysis-v3.md`
 
 ## Content Inventory (verified from code 2026-04-10)
 | Type | Count | Details |
@@ -21,7 +27,7 @@
 | Independent Powers | 3 | Vilnius (scientific), Antananarivo (cultural), Zanzibar (economic) |
 | Terrains | 7 + 8 features | |
 | UI panels | 13 | |
-| Test files | 23 | |
+| Test files | 24 | |
 
 ## Systems Implemented
 1. turnSystem — turn phases, player order
@@ -46,4 +52,4 @@
 - 17 pure system functions in pipeline
 - Data-driven via GameConfig — zero hardcoded content IDs in systems
 - Single source of truth (GameState)
-- 400 tests, strict TypeScript, seeded RNG
+- 442 tests, strict TypeScript, seeded RNG
