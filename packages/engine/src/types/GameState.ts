@@ -105,6 +105,9 @@ export interface PlayerState {
   readonly totalKills: number;       // tracks cumulative kills for legacy milestones
   readonly visibility: ReadonlySet<HexKey>; // currently visible tiles
   readonly explored: ReadonlySet<HexKey>;   // ever-seen tiles
+  readonly masteredTechs: ReadonlyArray<TechnologyId>; // techs that have been mastered (re-researched for a bonus)
+  readonly currentMastery: TechnologyId | null;        // tech currently being mastered
+  readonly masteryProgress: number;                    // accumulated science toward mastery
 }
 
 // ── Diplomacy ──
@@ -240,7 +243,8 @@ export type GameAction =
   | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
-  | { readonly type: 'SET_CIVIC'; readonly civicId: string };
+  | { readonly type: 'SET_CIVIC'; readonly civicId: string }
+  | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId };
 
 // ── Events ──
 

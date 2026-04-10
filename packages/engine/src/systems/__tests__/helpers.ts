@@ -61,6 +61,9 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     totalKills: 0,
     visibility: new Set(),
     explored: new Set(),
+    masteredTechs: [],
+    currentMastery: null,
+    masteryProgress: 0,
     ...overrides,
   };
 }
