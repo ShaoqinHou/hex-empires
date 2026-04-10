@@ -9,6 +9,8 @@ export const FACTORY: BuildingDef = {
   yields: { production: 5 },
   effects: [],
   requiredTech: 'industrialization',
+  category: 'military',
+  happinessCost: 4,
 } as const;
 
 export const RESEARCH_LAB: BuildingDef = {
@@ -20,6 +22,8 @@ export const RESEARCH_LAB: BuildingDef = {
   yields: { science: 6 },
   effects: [],
   requiredTech: 'scientific_theory',
+  category: 'science',
+  happinessCost: 4,
 } as const;
 
 export const POWER_PLANT: BuildingDef = {
@@ -31,6 +35,8 @@ export const POWER_PLANT: BuildingDef = {
   yields: { production: 4 },
   effects: [],
   requiredTech: 'electricity',
+  category: 'military',
+  happinessCost: 4,
 } as const;
 
 export const NUCLEAR_PLANT: BuildingDef = {
@@ -42,6 +48,8 @@ export const NUCLEAR_PLANT: BuildingDef = {
   yields: { production: 8, science: 3 },
   effects: [],
   requiredTech: 'nuclear_fission',
+  category: 'military',
+  happinessCost: 4,
 } as const;
 
 export const BROADCAST_TOWER: BuildingDef = {
@@ -53,6 +61,8 @@ export const BROADCAST_TOWER: BuildingDef = {
   yields: { culture: 6 },
   effects: [],
   requiredTech: 'flight',
+  category: 'culture',
+  happinessCost: 4,
 } as const;
 
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [

@@ -9,6 +9,8 @@ export const BANK: BuildingDef = {
   yields: { gold: 5 },
   effects: [],
   requiredTech: 'banking',
+  category: 'gold',
+  happinessCost: 0,
 } as const;
 
 export const UNIVERSITY: BuildingDef = {
@@ -20,6 +22,8 @@ export const UNIVERSITY: BuildingDef = {
   yields: { science: 4 },
   effects: [],
   requiredTech: 'education',
+  category: 'science',
+  happinessCost: 3,
 } as const;
 
 export const STOCK_EXCHANGE: BuildingDef = {
@@ -31,6 +35,8 @@ export const STOCK_EXCHANGE: BuildingDef = {
   yields: { gold: 7 },
   effects: [],
   requiredTech: 'economics',
+  category: 'gold',
+  happinessCost: 0,
 } as const;
 
 export const ARMORY: BuildingDef = {
@@ -42,6 +48,8 @@ export const ARMORY: BuildingDef = {
   yields: {},
   effects: ['+25% military XP'],
   requiredTech: 'military_tactics',
+  category: 'military',
+  happinessCost: 3,
 } as const;
 
 export const STAR_FORT: BuildingDef = {
@@ -53,6 +61,8 @@ export const STAR_FORT: BuildingDef = {
   yields: {},
   effects: ['+100 City Defense'],
   requiredTech: 'siege_tactics',
+  category: 'military',
+  happinessCost: 3,
 } as const;
 
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
