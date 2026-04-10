@@ -174,6 +174,22 @@ export const GALLEY: UnitDef = {
   abilities: [],
 } as const;
 
+export const MERCHANT: UnitDef = {
+  id: 'merchant',
+  name: 'Merchant',
+  age: 'antiquity',
+  category: 'civilian',
+  cost: 60,
+  combat: 0,
+  rangedCombat: 0,
+  range: 0,
+  movement: 3,
+  sightRange: 2,
+  requiredTech: 'foreign_trade',
+  upgradesTo: null,
+  abilities: ['create_trade_route'],
+} as const;
+
 export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   WARRIOR,
   SLINGER,
@@ -185,4 +201,5 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   BUILDER,
   BATTERING_RAM,
   GALLEY,
+  MERCHANT,
 ] as const;

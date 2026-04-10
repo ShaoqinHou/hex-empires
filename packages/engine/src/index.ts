@@ -41,6 +41,7 @@ export type {
   VictoryType,
   VictoryProgress,
   VictoryState,
+  TradeRoute,
   CrisisState,
   CrisisChoice,
   AgeState,
@@ -104,6 +105,8 @@ export { effectSystem, getActiveEffects } from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
 export { crisisSystem } from './systems/crisisSystem';
 export { civicSystem } from './systems/civicSystem';
+export { tradeSystem } from './systems/tradeSystem';
+export { specialistSystem } from './systems/specialistSystem';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
@@ -141,7 +144,7 @@ export {
 export { ALL_UNITS, ALL_ANTIQUITY_UNITS, ALL_EXPLORATION_UNITS, ALL_MODERN_UNITS } from './data/units';
 export {
   WARRIOR, SLINGER, ARCHER, SCOUT, SPEARMAN,
-  CHARIOT, SETTLER, BUILDER, BATTERING_RAM, GALLEY,
+  CHARIOT, SETTLER, BUILDER, BATTERING_RAM, GALLEY, MERCHANT,
 } from './data/units';
 export {
   SWORDSMAN, CROSSBOWMAN, PIKEMAN, HORSEMAN, KNIGHT,

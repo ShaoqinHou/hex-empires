@@ -23,6 +23,7 @@ export function createTestState(overrides: Partial<GameState> = {}): GameState {
     },
     units: new Map(),
     cities: new Map(),
+    tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     crises: [],

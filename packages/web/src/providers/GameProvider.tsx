@@ -27,6 +27,7 @@ import {
   visibilitySystem,
   crisisSystem,
   civicSystem,
+  tradeSystem,
   serializeState,
   deserializeState,
   createGameConfig,
@@ -36,6 +37,8 @@ import {
   getMovementCost,
 } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState, SettlementType } from '@hex/engine';
+import type { ResourceDef } from '@hex/engine';
+import { ALL_RESOURCES } from '@hex/engine';
 
 // ── Engine singleton ──
 
@@ -56,6 +59,7 @@ const engine = new GameEngine([
   ageSystem,
   diplomacySystem,
   updateDiplomacyCounters,
+  tradeSystem,
   crisisSystem,
   victorySystem,
 ]);
@@ -65,6 +69,13 @@ const engine = new GameEngine([
 const unitRegistry = new Registry<UnitDef>();
 for (const u of ALL_UNITS) {
   unitRegistry.register(u);
+}
+
+// ── Resource registry ──
+
+const resourceRegistry = new Registry<ResourceDef>();
+for (const r of ALL_RESOURCES) {
+  resourceRegistry.register(r);
 }
 
 // ── Initial state factory ──
@@ -111,6 +122,9 @@ function createInitialState(): GameState {
     totalGoldEarned: 0,
     visibility: new Set<string>(),
     explored: new Set<string>(),
+    celebrationCount: 0,
+    celebrationBonus: 0,
+    celebrationTurnsLeft: 0,
     masteredTechs: [] as string[],
     currentMastery: null as string | null,
     masteryProgress: 0,
@@ -139,6 +153,7 @@ function createInitialState(): GameState {
       ['ai_warrior1', makeUnit('ai_warrior1', 'warrior', aiPlayerId, { q: aiStartCoord.q + 1, r: aiStartCoord.r }, 2)],
     ]),
     cities: new Map(),
+    tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     crises: [],
@@ -159,6 +174,7 @@ interface GameContextValue {
   terrainRegistry: Registry<TerrainDef>;
   featureRegistry: Registry<TerrainFeatureDef>;
   unitRegistry: Registry<UnitDef>;
+  resourceRegistry: Registry<ResourceDef>;
   // Selection state (managed here so canvas and UI can share)
   selectedUnit: UnitState | null;
   setSelectedUnit: (unit: UnitState | null) => void;
@@ -252,6 +268,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     terrainRegistry: registries.terrainRegistry,
     featureRegistry: registries.featureRegistry,
     unitRegistry,
+    resourceRegistry,
     selectedUnit,
     setSelectedUnit,
     selectedHex,

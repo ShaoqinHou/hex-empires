@@ -18,3 +18,4 @@ export { effectSystem, getActiveEffects } from './effectSystem';
 export { visibilitySystem } from './visibilitySystem';
 export { crisisSystem } from './crisisSystem';
 export { civicSystem } from './civicSystem';
+export { tradeSystem } from './tradeSystem';

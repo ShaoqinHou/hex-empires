@@ -23,6 +23,7 @@ function createMinimalState(): GameState {
       movementLeft: 2, health: 100, experience: 5, promotions: [], fortified: false,
     }]]),
     cities: new Map(),
+    tradeRoutes: new Map(),
     diplomacy: { relations: new Map([['p1:p2', {
       status: 'neutral' as const, relationship: 0, warSupport: 0, turnsAtPeace: 3, turnsAtWar: 0,
       hasAlliance: false, hasFriendship: false, hasDenounced: false,

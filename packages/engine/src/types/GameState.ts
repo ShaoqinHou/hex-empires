@@ -71,6 +71,7 @@ export interface CityState {
   readonly isCapital: boolean;
   readonly defenseHP: number;      // city defense hit points (100 base, +100 with walls)
   readonly specialization: TownSpecialization | null; // towns only, requires pop >= 7
+  readonly specialists: number;    // population assigned as specialists (each: +2 sci, +2 culture, -1 happiness)
 }
 
 export interface ProductionItem {
@@ -192,6 +193,17 @@ export interface VictoryState {
   readonly progress: ReadonlyMap<PlayerId, ReadonlyArray<VictoryProgress>>;
 }
 
+// ── Trade Routes ──
+
+export interface TradeRoute {
+  readonly id: string;
+  readonly from: CityId;         // home city of the route owner
+  readonly to: CityId;           // foreign target city
+  readonly owner: PlayerId;      // player who created the route
+  readonly turnsRemaining: number;
+  readonly goldPerTurn: number;
+}
+
 // ── Crisis ──
 
 export interface CrisisState {
@@ -234,6 +246,7 @@ export interface GameState {
   readonly map: HexMap;
   readonly units: ReadonlyMap<UnitId, UnitState>;
   readonly cities: ReadonlyMap<CityId, CityState>;
+  readonly tradeRoutes: ReadonlyMap<string, TradeRoute>;
   readonly diplomacy: DiplomacyState;
   readonly age: AgeState;
   readonly crises: ReadonlyArray<CrisisState>;
@@ -273,7 +286,10 @@ export type GameAction =
   | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
   | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string }
   | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
-  | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization };
+  | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization }
+  | { readonly type: 'ASSIGN_SPECIALIST'; readonly cityId: CityId }
+  | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
+  | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId };
 
 // ── Events ──
 
