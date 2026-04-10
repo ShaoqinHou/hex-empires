@@ -274,6 +274,8 @@ describe('combatSystem — ATTACK_CITY', () => {
       happiness: 10,
       isCapital: true,
       defenseHP: 100,
+      specialization: null,
+      specialists: 0,
       ...overrides,
     };
   }

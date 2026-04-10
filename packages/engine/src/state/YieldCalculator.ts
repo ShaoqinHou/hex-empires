@@ -42,6 +42,14 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     total = addYields(total, getSpecializationYields(city.specialization));
   }
 
+  // Specialist yields: each specialist produces +2 science and +2 culture
+  if (city.specialists > 0) {
+    total = addYields(total, {
+      science: city.specialists * 2,
+      culture: city.specialists * 2,
+    });
+  }
+
   return total;
 }
 

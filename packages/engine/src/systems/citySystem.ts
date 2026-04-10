@@ -93,6 +93,7 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
     isCapital: isFirstCity,
     defenseHP: 100, // base defense; walls add +100 when built
     specialization: null,
+    specialists: 0,
   };
 
   // Remove settler unit

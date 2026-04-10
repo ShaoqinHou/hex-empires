@@ -10,6 +10,7 @@ function makeCity(id: string, owner: string, position = { q: 0, r: 0 }): CitySta
     population: 1, food: 0, productionQueue: [], productionProgress: 0,
     buildings: [], territory: [coordToKey(position)],
     settlementType: 'city', happiness: 10, isCapital: false, defenseHP: 100,
+    specialization: null, specialists: 0,
   };
 }
 

@@ -62,7 +62,10 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  return base - popPenalty + buildingBonus + luxuryBonus + freshWaterBonus - warWearinessPenalty;
+  // Specialist unhappiness: each specialist costs -1 happiness
+  const specialistPenalty = city.specialists;
+
+  return base - popPenalty + buildingBonus + luxuryBonus + freshWaterBonus - warWearinessPenalty - specialistPenalty;
 }
 
 /**

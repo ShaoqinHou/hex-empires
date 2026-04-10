@@ -22,6 +22,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     isCapital: true,
     defenseHP: 100,
     specialization: null,
+    specialists: 0,
     ...overrides,
   };
 }
@@ -330,7 +331,7 @@ describe('specialization yield effects', () => {
       population: 7, food: 0, productionQueue: [], productionProgress: 0,
       buildings: [], territory,
       settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 100,
-      specialization,
+      specialization, specialists: 0,
     };
     const state = createTestState({ cities: new Map([['c1', town]]) });
     const yields = calculateCityYields(town, state);
@@ -389,7 +390,7 @@ describe('growing_town growth threshold reduction', () => {
       population: 7, food: expectedReduced - 1, productionQueue: [], productionProgress: 0,
       buildings: [], territory,
       settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 100,
-      specialization: 'growing_town',
+      specialization: 'growing_town', specialists: 0,
     };
     const state = createTestState({ cities: new Map([['c1', town]]) });
 
