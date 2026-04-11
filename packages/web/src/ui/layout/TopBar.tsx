@@ -4,6 +4,7 @@ import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState } from 'react';
 import { AudioSettings } from '../components/AudioSettings';
+import { VictoryProgressPanel } from '../panels/VictoryProgressPanel';
 
 interface TopBarProps {
   onOpenTechTree?: () => void;
@@ -17,6 +18,7 @@ interface TopBarProps {
 export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGame();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const player = state.players.get(state.currentPlayerId);
 
   // Recent log entries for the current player (from previous turn)
@@ -275,6 +277,19 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
         📊 Summary
       </button>
       <button
+        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
+        style={{
+          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+          color: '#0d1117',
+          border: '1px solid #fde047',
+          boxShadow: '0 1px 3px rgba(251, 191, 36, 0.4)'
+        }}
+        onClick={() => setShowVictoryProgress(true)}
+        title="View victory progress"
+      >
+        🏆 Victory
+      </button>
+      <button
         className="px-5 py-2 rounded text-base font-bold transition-all"
         style={{
           background: hasActionsAvailable
@@ -330,6 +345,11 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           </div>
           <AudioSettings />
         </div>
+      )}
+
+      {/* Victory Progress Panel */}
+      {showVictoryProgress && (
+        <VictoryProgressPanel onClose={() => setShowVictoryProgress(false)} />
       )}
     </div>
   );
