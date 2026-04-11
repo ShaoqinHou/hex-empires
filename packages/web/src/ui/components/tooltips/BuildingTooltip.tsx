@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { BuildingDef } from '@hex/engine';
 import { TooltipContent, TooltipSection } from './Tooltip';

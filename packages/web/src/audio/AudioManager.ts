@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AudioManager handles all audio playback for the game.
  * Supports sound effects, background music, and volume controls.

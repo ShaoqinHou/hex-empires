@@ -38,4 +38,5 @@ export type {
   GameAction,
   GameEvent,
   System,
+  ValidationResult,
 } from './GameState';

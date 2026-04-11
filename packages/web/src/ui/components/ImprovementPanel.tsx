@@ -118,9 +118,11 @@ export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelPro
           <div className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
             🏗️ Build Improvement
           </div>
-          <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Location: ({selectedHex.q}, {selectedHex.r})
-          </div>
+          {selectedHex && (
+            <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Location: ({selectedHex.q}, {selectedHex.r})
+            </div>
+          )}
         </div>
         <button
           className="text-2xl font-bold cursor-pointer hover:scale-110 transition-transform"

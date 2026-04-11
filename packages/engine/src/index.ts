@@ -51,6 +51,7 @@ export type {
   GameAction,
   GameEvent,
   System,
+  ValidationResult,
 } from './types';
 export { EMPTY_YIELDS, addYields } from './types';
 

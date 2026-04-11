@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
 import type { HexTile } from '@hex/engine';

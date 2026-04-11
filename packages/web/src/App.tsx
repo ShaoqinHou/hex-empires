@@ -120,9 +120,9 @@ function GameUI() {
         )}
 
         {/* Tooltip overlay for canvas elements (Alt + hover) */}
-        {cameraRef && (
+        {cameraRef.current && (
           <TooltipOverlay
-            camera={cameraRef}
+            camera={cameraRef.current}
             hoveredHex={hoveredHex}
             isAltPressed={isAltPressed}
             state={state}

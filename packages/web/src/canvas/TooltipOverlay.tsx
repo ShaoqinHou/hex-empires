@@ -12,10 +12,10 @@ interface TooltipOverlayProps {
   hoveredHex: HexCoord | null;
   isAltPressed: boolean;
   state: {
-    units: import('@hex/engine').ReadonlyMap<string, UnitState>;
-    cities: import('@hex/engine').ReadonlyMap<string, CityState>;
+    units: ReadonlyMap<string, UnitState>;
+    cities: ReadonlyMap<string, CityState>;
     map: {
-      tiles: import('@hex/engine').ReadonlyMap<string, import('@hex/engine').HexTile>;
+      tiles: ReadonlyMap<string, import('@hex/engine').HexTile>;
     };
   };
 }

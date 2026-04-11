@@ -58,6 +58,14 @@ export class Camera {
     };
   }
 
+  /** Convert world coords to screen coords */
+  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
+    return {
+      x: (worldX - this.x) * this.zoom + this.canvasWidth / 2,
+      y: (worldY - this.y) * this.zoom + this.canvasHeight / 2,
+    };
+  }
+
   /** Apply camera transform to a canvas context */
   applyTransform(ctx: CanvasRenderingContext2D): void {
     ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
