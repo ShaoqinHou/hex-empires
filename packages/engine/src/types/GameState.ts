@@ -1,9 +1,10 @@
 import type { HexCoord, HexKey } from './HexCoord';
 import type { GameConfig } from './GameConfig';
-import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, ImprovementId, DistrictId } from './Ids';
+import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, ImprovementId, DistrictId, GovernorId } from './Ids';
 import type { YieldSet, YieldType } from './Yields';
 import type { TerrainId, FeatureId } from './Terrain';
 import type { DistrictSlot } from './District';
+import type { Governor } from './Governor';
 
 // ── Turn ──
 
@@ -128,6 +129,7 @@ export interface PlayerState {
   readonly masteredCivics: ReadonlyArray<string>;      // civics that have been mastered for a culture bonus
   readonly currentCivicMastery: string | null;         // civic currently being mastered
   readonly civicMasteryProgress: number;               // accumulated culture toward civic mastery
+  readonly governors: ReadonlyArray<GovernorId>;       // IDs of recruited governors
 }
 
 // ── Diplomacy ──
@@ -254,6 +256,7 @@ export interface GameState {
   readonly units: ReadonlyMap<UnitId, UnitState>;
   readonly cities: ReadonlyMap<CityId, CityState>;
   readonly districts: ReadonlyMap<DistrictId, DistrictSlot>; // All placed districts on the map
+  readonly governors: ReadonlyMap<GovernorId, Governor>; // All recruited governors
   readonly tradeRoutes: ReadonlyMap<string, TradeRoute>;
   readonly diplomacy: DiplomacyState;
   readonly age: AgeState;
@@ -305,7 +308,11 @@ export type GameAction =
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
   | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
   | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
-  | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId };
+  | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId }
+  | { readonly type: 'RECRUIT_GOVERNOR'; readonly governorId: GovernorId }
+  | { readonly type: 'ASSIGN_GOVERNOR'; readonly governorId: GovernorId; readonly cityId: CityId }
+  | { readonly type: 'UNASSIGN_GOVERNOR'; readonly governorId: GovernorId }
+  | { readonly type: 'PROMOTE_GOVERNOR'; readonly governorId: GovernorId; readonly abilityId: string };
 
 // ── Events ──
 

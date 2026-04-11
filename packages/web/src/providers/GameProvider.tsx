@@ -140,6 +140,7 @@ function createInitialState(): GameState {
     masteredCivics: [] as string[],
     currentCivicMastery: null as string | null,
     civicMasteryProgress: 0,
+    governors: [] as string[],
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
@@ -168,6 +169,7 @@ function createInitialState(): GameState {
     ]),
     cities: new Map(),
     districts: new Map(),
+    governors: new Map(),
     tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
