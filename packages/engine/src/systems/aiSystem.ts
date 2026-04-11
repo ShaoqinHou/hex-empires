@@ -97,27 +97,81 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
   return actions;
 }
 
-/** Pick the cheapest available tech with met prerequisites */
+/** Pick the best tech based on strategic needs, not just cost */
 function pickBestTech(state: GameState): string | null {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 
   const researched = new Set(player.researchedTechs);
-  let bestTech: string | null = null;
-  let bestCost = Infinity;
+  const availableTechs: Array<{id: string, cost: number, score: number}> = [];
+
+  // Analyze current situation
+  const cityCount = [...state.cities.values()].filter(c => c.owner === player.id).length;
+  const militaryCount = [...state.units.values()].filter(
+    u => u.owner === player.id && u.typeId !== 'settler' && u.typeId !== 'builder'
+  ).length;
+  const atWar = checkAtWar(state, player.id);
 
   for (const [techId, tech] of state.config.technologies) {
     if (researched.has(techId)) continue;
-    if (tech.age !== player.age) continue; // only research current age techs
+    if (tech.age !== player.age) continue;
     const prereqsMet = tech.prerequisites.every(p => researched.has(p));
     if (!prereqsMet) continue;
-    if (tech.cost < bestCost) {
-      bestCost = tech.cost;
-      bestTech = techId;
+
+    let score = 0;
+
+    // Base score from tech (cheaper is slightly better)
+    score += (200 - tech.cost);
+
+    // Check what this tech unlocks
+    for (const unlockId of tech.unlocks) {
+      // Check if it's a unit
+      const unit = state.config.units.get(unlockId);
+      if (unit) {
+        if (atWar || militaryCount < cityCount * 2) {
+          if (unit.combat > 0 || unit.rangedCombat > 0) {
+            score += 50; // Military units valuable when needed
+          }
+        }
+        if (unit.abilities.includes('found_city') && cityCount < 4) {
+          score += 40; // Settlers valuable early game
+        }
+      }
+
+      // Check if it's a building
+      const building = state.config.buildings.get(unlockId);
+      if (building) {
+        if (building.yields.food && cityCount < 4) score += 30; // Food early game
+        if (building.yields.production) score += 40; // Production always good
+        if (building.yields.gold) score += 30;
+        if (building.yields.science) score += 50; // Science accelerates research
+      }
+
+      // Check if it's an improvement
+      const improvement = ALL_IMPROVEMENTS.find(i => i.id === unlockId);
+      if (improvement) {
+        score += 40; // Improvements are very valuable
+      }
     }
+
+    availableTechs.push({ id: techId, cost: tech.cost, score });
   }
 
-  return bestTech;
+  // Sort by score and pick best
+  availableTechs.sort((a, b) => b.score - a.score);
+  return availableTechs[0]?.id ?? null;
+}
+
+/** Check if player is at war with anyone */
+function checkAtWar(state: GameState, playerId: string): boolean {
+  for (const [key, relation] of state.diplomacy.relations) {
+    if (relation.status === 'war') {
+      if (key.includes(playerId)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** Pick what to produce based on game state */
