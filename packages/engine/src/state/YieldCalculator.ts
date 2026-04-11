@@ -1,6 +1,7 @@
 import type { GameState, CityState, TownSpecialization } from '../types/GameState';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
+import { ALL_IMPROVEMENTS } from '../data/improvements';
 
 /** Calculate total yields for a city from its territory tiles */
 export function calculateCityYields(city: CityState, state: GameState): YieldSet {
@@ -26,6 +27,12 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
       if (resourceDef) {
         total = addYields(total, resourceDef.yieldBonus);
       }
+    }
+
+    // Improvement yields (NEW)
+    if (tile.improvement) {
+      const improvementYields = getImprovementYields(tile.improvement);
+      total = addYields(total, improvementYields);
     }
 
     // River bonus
@@ -93,4 +100,9 @@ function getFeatureYieldModifiers(feature: string): Partial<YieldSet> {
     reef: { food: 1, production: 1 },
   };
   return table[feature] ?? {};
+}
+
+function getImprovementYields(improvementId: string): Partial<YieldSet> {
+  const improvement = ALL_IMPROVEMENTS.find(i => i.id === improvementId);
+  return improvement?.yields ?? {};
 }

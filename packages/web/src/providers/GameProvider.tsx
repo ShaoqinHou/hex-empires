@@ -155,9 +155,11 @@ function createInitialState(): GameState {
     map,
     units: new Map([
       ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
+      ['builder1', makeUnit('builder1', 'builder', playerId, { q: startCoord.q, r: startCoord.r - 1 }, 2)],
       ['warrior1', makeUnit('warrior1', 'warrior', playerId, { q: startCoord.q + 1, r: startCoord.r }, 2)],
       ['scout1', makeUnit('scout1', 'scout', playerId, { q: startCoord.q - 1, r: startCoord.r + 1 }, 3)],
       ['ai_settler1', makeUnit('ai_settler1', 'settler', aiPlayerId, aiStartCoord, 2)],
+      ['ai_builder1', makeUnit('ai_builder1', 'builder', aiPlayerId, { q: aiStartCoord.q, r: aiStartCoord.r - 1 }, 2)],
       ['ai_warrior1', makeUnit('ai_warrior1', 'warrior', aiPlayerId, { q: aiStartCoord.q + 1, r: aiStartCoord.r }, 2)],
     ]),
     cities: new Map(),
