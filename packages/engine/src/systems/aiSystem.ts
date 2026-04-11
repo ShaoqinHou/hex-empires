@@ -1,4 +1,4 @@
-import type { GameState, GameAction, UnitState, CityState } from '../types/GameState';
+import type { GameState, GameAction, UnitState, CityState, TownSpecialization } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
@@ -42,6 +42,14 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       const cost = (state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100) * 2;
       if (player.gold >= cost) {
         actions.push({ type: 'PURCHASE_ITEM', cityId: city.id, itemId, itemType });
+      }
+
+      // Set town specialization if not set
+      if (!city.specialization) {
+        const specialization = pickTownSpecialization(state, city, player);
+        if (specialization) {
+          actions.push({ type: 'SET_SPECIALIZATION', cityId: city.id, specialization });
+        }
       }
     } else if (city.productionQueue.length === 0) {
       const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
@@ -516,4 +524,102 @@ function moveTowardImprovementSpot(state: GameState, builder: UnitState, player:
       actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [step] });
     }
   }
+}
+
+/** Pick the best town specialization based on tile yields and strategic needs */
+function pickTownSpecialization(state: GameState, city: CityState, player: any): TownSpecialization | null {
+  // Analyze territory tiles
+  let foodScore = 0;
+  let productionScore = 0;
+  let goldScore = 0;
+
+  for (const hexKey of city.territory) {
+    const tile = state.map.tiles.get(hexKey);
+    if (!tile) continue;
+
+    const terrain = state.config.terrains.get(tile.terrain);
+    if (!terrain) continue;
+
+    foodScore += terrain.baseYields.food ?? 0;
+    productionScore += terrain.baseYields.production ?? 0;
+    goldScore += terrain.baseYields.gold ?? 0;
+
+    // Check for features
+    if (tile.feature) {
+      const feature = state.config.features.get(tile.feature);
+      if (feature) {
+        const featureYields = feature.yieldModifiers ?? {};
+        foodScore += featureYields.food ?? 0;
+        productionScore += featureYields.production ?? 0;
+        goldScore += featureYields.gold ?? 0;
+      }
+    }
+
+    // Check for improvements
+    if (tile.improvement) {
+      const imp = ALL_IMPROVEMENTS.find(i => i.id === tile.improvement);
+      if (imp) {
+        foodScore += imp.yields.food ?? 0;
+        productionScore += imp.yields.production ?? 0;
+        goldScore += imp.yields.gold ?? 0;
+      }
+    }
+  }
+
+  // Calculate resource needs based on game state
+  const cityCount = [...state.cities.values()].filter(c => c.owner === player.id).length;
+  const militaryCount = [...state.units.values()].filter(u => u.owner === player.id && u.typeId !== 'settler' && u.typeId !== 'builder').length;
+
+  // Priority: food if growing, production if need military, gold if wealthy
+  let bestSpecialization: TownSpecialization | null = null;
+  let bestScore = 0;
+
+  // farming_town: prioritize if low food
+  const farmingScore = foodScore * 2 + (city.population < 5 ? 10 : 0);
+  if (farmingScore > bestScore) {
+    bestScore = farmingScore;
+    bestSpecialization = 'farming_town';
+  }
+
+  // mining_town: prioritize if need military
+  const miningScore = productionScore * 2 + (militaryCount < cityCount * 2 ? 10 : 0);
+  if (miningScore > bestScore) {
+    bestScore = miningScore;
+    bestSpecialization = 'mining_town';
+  }
+
+  // trade_outpost: prioritize if high gold potential
+  const tradeScore = goldScore * 2 + (player.gold > 200 ? 10 : 0);
+  if (tradeScore > bestScore) {
+    bestScore = tradeScore;
+    bestSpecialization = 'trade_outpost';
+  }
+
+  // growing_town: for fast population growth
+  const growingScore = city.population < 3 ? 20 : 0;
+  if (growingScore > bestScore) {
+    bestScore = growingScore;
+    bestSpecialization = 'growing_town';
+  }
+
+  // fort_town: for defense if near enemy
+  const nearEnemy = isNearEnemyCity(state, city.position, player.id);
+  const fortScore = nearEnemy ? 30 : 0;
+  if (fortScore > bestScore) {
+    bestScore = fortScore;
+    bestSpecialization = 'fort_town';
+  }
+
+  return bestSpecialization;
+}
+
+/** Check if a position is near an enemy city */
+function isNearEnemyCity(state: GameState, pos: HexCoord, playerId: string): boolean {
+  for (const city of state.cities.values()) {
+    if (city.owner === playerId) continue;
+    if (distance(pos, city.position) <= 5) {
+      return true;
+    }
+  }
+  return false;
 }
