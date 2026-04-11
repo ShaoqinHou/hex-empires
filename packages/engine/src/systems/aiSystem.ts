@@ -2,6 +2,7 @@ import type { GameState, GameAction, UnitState, CityState } from '../types/GameS
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
+import { ALL_IMPROVEMENTS } from '../data/improvements';
 
 /**
  * AISystem generates actions for non-human players.
@@ -64,7 +65,14 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
           moveTowardGoodCitySpot(state, unit, ourCities, actions);
         }
       }
-      // Builders: skip for now (no improvements system)
+      // Builders: build improvements on nearby tiles
+      else if (unitDef.abilities.includes('build_improvement')) {
+        const built = tryBuildImprovement(state, unit, player, ourCities, actions);
+        if (!built) {
+          // Move toward tiles that need improvements
+          moveTowardImprovementSpot(state, unit, player, ourCities, actions);
+        }
+      }
     } else {
       // Military: attack nearby enemy units first, then enemy cities, or explore
       const attacked = tryAttackNearby(state, unit, actions);
@@ -372,4 +380,140 @@ function getOneStepToward(from: HexCoord, target: HexCoord, state: GameState): H
   }
 
   return bestHex;
+}
+
+/** Try to build an improvement on current or adjacent tile */
+function tryBuildImprovement(state: GameState, builder: UnitState, player: any, ourCities: CityState[], actions: GameAction[]): boolean {
+  // Check current tile first
+  const currentTile = state.map.tiles.get(coordToKey(builder.position));
+  if (!currentTile || currentTile.improvement) {
+    // Current tile already has improvement or is invalid, try adjacent tiles
+    const adjacentTiles = neighbors(builder.position);
+    for (const adj of adjacentTiles) {
+      const tile = state.map.tiles.get(coordToKey(adj));
+      if (!tile || tile.improvement) continue;
+
+      const improvement = pickBestImprovement(state, tile, player);
+      if (improvement) {
+        // Need to move to this tile first
+        actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [adj] });
+        actions.push({ type: 'BUILD_IMPROVEMENT', unitId: builder.id, tile: adj, improvementId: improvement });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Try to build on current tile
+  const improvement = pickBestImprovement(state, currentTile, player);
+  if (improvement) {
+    actions.push({ type: 'BUILD_IMPROVEMENT', unitId: builder.id, tile: builder.position, improvementId: improvement });
+    return true;
+  }
+
+  return false;
+}
+
+/** Pick the best improvement for a tile based on its features/resources */
+function pickBestImprovement(state: GameState, tile: any, player: any): string | null {
+  let bestImprovement: string | null = null;
+  let bestPriority = 0;
+
+  for (const imp of ALL_IMPROVEMENTS) {
+    // Check tech prerequisite
+    if (imp.requiredTech && !player.researchedTechs.includes(imp.requiredTech)) {
+      continue;
+    }
+
+    // Check terrain prerequisite
+    if (imp.prerequisites.terrain && !imp.prerequisites.terrain.includes(tile.terrain)) {
+      continue;
+    }
+
+    // Check feature prerequisite
+    if (imp.prerequisites.feature) {
+      if (!tile.feature || !imp.prerequisites.feature.includes(tile.feature)) {
+        continue;
+      }
+    }
+
+    // Check resource prerequisite
+    if (imp.prerequisites.resource) {
+      if (!tile.resource || !imp.prerequisites.resource.includes(tile.resource)) {
+        continue;
+      }
+    }
+
+    // Calculate priority based on yields
+    let priority = 0;
+    if (imp.yields.food) priority += imp.yields.food * 3;
+    if (imp.yields.production) priority += imp.yields.production * 2;
+    if (imp.yields.gold) priority += imp.yields.gold * 2;
+    if (imp.yields.science) priority += imp.yields.science * 4;
+
+    // Resource improvements have highest priority
+    if (imp.prerequisites.resource) {
+      priority += 20;
+    }
+
+    if (priority > bestPriority) {
+      bestPriority = priority;
+      bestImprovement = imp.id;
+    }
+  }
+
+  return bestImprovement;
+}
+
+/** Move builder toward tiles that need improvements */
+function moveTowardImprovementSpot(state: GameState, builder: UnitState, player: any, ourCities: CityState[], actions: GameAction[]): void {
+  let bestTarget: HexCoord | null = null;
+  let bestScore = -Infinity;
+
+  // Look at tiles within 2 hex range
+  const range = 2;
+  const nearbyHexes = [builder.position];
+  for (let i = 0; i < range; i++) {
+    const currentLength = nearbyHexes.length;
+    for (let j = 0; j < currentLength; j++) {
+      const ns = neighbors(nearbyHexes[j]);
+      for (const n of ns) {
+        if (!nearbyHexes.some(h => h.q === n.q && h.r === n.r)) {
+          nearbyHexes.push(n);
+        }
+      }
+    }
+  }
+
+  // Score each tile
+  for (const hex of nearbyHexes) {
+    const tile = state.map.tiles.get(coordToKey(hex));
+    if (!tile || tile.improvement) continue;
+
+    const improvement = pickBestImprovement(state, tile, player);
+    if (!improvement) continue;
+
+    // Score: prioritize by distance and improvement value
+    const dist = distance(builder.position, hex);
+    let score = 100 - dist * 10;
+
+    // Bonus for tiles near cities
+    for (const city of ourCities) {
+      if (distance(hex, city.position) <= 3) {
+        score += 20;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestTarget = hex;
+    }
+  }
+
+  if (bestTarget) {
+    const step = getOneStepToward(builder.position, bestTarget, state);
+    if (step) {
+      actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [step] });
+    }
+  }
 }
