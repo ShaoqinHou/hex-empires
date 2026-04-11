@@ -184,12 +184,21 @@ export class HexRenderer {
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
+      // Improvement icon - always visible
+      if (tile.improvement) {
+        this.drawImprovementIcon(tile, x, y, rc);
+      }
+
       // Yield dots (small indicators) — only when lens is active
       if (rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
         // Resource icon — drawn after yield dots to appear above them
         if (tile.resource) {
           this.drawResourceIcon(tile, x, y, rc);
+        }
+        // Improvement icon
+        if (tile.improvement) {
+          this.drawImprovementIcon(tile, x, y, rc);
         }
       }
     }
@@ -267,6 +276,39 @@ export class HexRenderer {
     ctx.textBaseline = 'middle';
     ctx.fillText(resource.name.charAt(0).toUpperCase(), iconX, iconY);
     ctx.textBaseline = 'alphabetic'; // reset
+  }
+
+  private drawImprovementIcon(tile: HexTile, cx: number, cy: number, rc: RenderContext): void {
+    if (!tile.improvement) return;
+
+    const ctx = this.ctx;
+
+    // Improvement icons map
+    const icons: Record<string, string> = {
+      farm: '🌾',
+      mine: '⛏️',
+      pasture: '🐄',
+      plantation: '🌿',
+      quarry: '🪨',
+      camp: '⛺',
+      road: '🛤️',
+    };
+
+    const icon = icons[tile.improvement] || '❓';
+
+    // Position icon in upper-right area of the hex (opposite to resources)
+    const iconX = cx + HEX_SIZE * 0.35;
+    const iconY = cy - HEX_SIZE * 0.35;
+
+    // Draw improvement icon
+    ctx.save();
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(icon, iconX, iconY);
+    ctx.restore();
   }
 
   private drawFogOfWar(rc: RenderContext, viewport: ViewportBounds): void {
