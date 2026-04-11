@@ -130,6 +130,99 @@ export const MILITARY_BASE: BuildingDef = {
   happinessCost: 3,
 } as const;
 
+// ── World Wonders (Modern) ──
+
+export const EIFFEL_TOWER: BuildingDef = {
+  id: 'eiffel_tower',
+  name: 'Eiffel Tower',
+  age: 'modern',
+  cost: 700,
+  maintenance: 0,
+  yields: { culture: 8 },
+  effects: ['+2 Culture adjacency', '+1 Great Artist point per turn', 'Double tourism from all museums'],
+  requiredTech: 'steel',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
+export const STATUE_OF_LIBERTY: BuildingDef = {
+  id: 'statue_of_liberty',
+  name: 'Statue of Liberty',
+  age: 'modern',
+  cost: 650,
+  maintenance: 0,
+  yields: { culture: 5 },
+  effects: ['+1 Great Person point per turn', '+25% great person generation', 'Immigrate 1 population to each city upon completion'],
+  requiredTech: 'mass_media',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
+export const OXFORD_UNIVERSITY: BuildingDef = {
+  id: 'oxford_university',
+  name: 'Oxford University',
+  age: 'modern',
+  cost: 600,
+  maintenance: 0,
+  yields: { science: 8 },
+  effects: ['+2 Science adjacency', '+1 Great Scientist point per turn', 'Instantly grant 2 random free technologies'],
+  requiredTech: 'scientific_theory',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'scientist', amount: 1 },
+} as const;
+
+export const BIG_BEN: BuildingDef = {
+  id: 'big_ben',
+  name: 'Big Ben',
+  age: 'modern',
+  cost: 550,
+  maintenance: 0,
+  yields: { gold: 6 },
+  effects: ['+1 Great Merchant point per turn', '+5 gold from all trade routes', 'Gain 1 free trader'],
+  requiredTech: 'economics',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'merchant', amount: 1 },
+} as const;
+
+export const PENTAGON: BuildingDef = {
+  id: 'pentagon',
+  name: 'The Pentagon',
+  age: 'modern',
+  cost: 800,
+  maintenance: 0,
+  yields: { production: 5 },
+  effects: ['+1 Great General point per turn', 'All land units start with +1 promotion', '+50% military policy slot capacity'],
+  requiredTech: 'combined_arms',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'general', amount: 1 },
+} as const;
+
+export const UN_HEDQUARTERS: BuildingDef = {
+  id: 'un_headquarters',
+  name: 'United Nations',
+  age: 'modern',
+  cost: 1000,
+  maintenance: 0,
+  yields: { diplomacy: 10 },
+  effects: ['+1 Diplomatic Victory point per turn', '+2 diplomatic envoy slots', 'All civilizations declare peace on completion'],
+  requiredTech: 'globalization',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'diplomat', amount: 1 },
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
+  EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
 ] as const;

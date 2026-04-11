@@ -52,6 +52,13 @@ function handleSetProduction(
   // Towns cannot use production queue — they must purchase with gold
   if (city.settlementType === 'town') return createInvalidResult(state, 'Towns cannot produce - must purchase with gold', 'production');
 
+  // Check if wonder is already built globally (for SET_PRODUCTION)
+  const buildingDef = itemType === 'wonder' || itemType === 'building' ? state.config.buildings.get(itemId) : undefined;
+  const isWonder = buildingDef?.isWonder === true;
+  if (isWonder && state.builtWonders.includes(itemId)) {
+    return createInvalidResult(state, 'This wonder has already been built', 'production');
+  }
+
   // If producing a unit that requires a strategic resource, verify the player
   // has access to it (any city's territory must contain that resource).
   if (itemType === 'unit') {
@@ -65,6 +72,11 @@ function handleSetProduction(
   // Check if building is already built
   if (itemType === 'building' && city.buildings.includes(itemId)) {
     return createInvalidResult(state, 'Building already constructed', 'production');
+  }
+
+  // Check if wonder is unique and already built globally
+  if (itemType === 'wonder' && state.builtWonders.includes(itemId)) {
+    return createInvalidResult(state, 'This wonder has already been built', 'production');
   }
 
   const updatedCities = new Map(state.cities);
@@ -144,6 +156,15 @@ function handlePurchaseItem(
       type: 'production',
     });
   } else if (itemType === 'building') {
+    // Check if this is a wonder (has isWonder flag)
+    const buildingDef = state.config.buildings.get(itemId);
+    const isWonder = buildingDef?.isWonder === true;
+
+    // Check if wonder is already built
+    if (isWonder && state.builtWonders.includes(itemId)) {
+      return createInvalidResult(state, 'This wonder has already been built', 'production');
+    }
+
     const wallsBonus = itemId === 'walls' ? 100 : 0;
     updatedCities.set(cityId, {
       ...city,
@@ -153,9 +174,22 @@ function handlePurchaseItem(
     newLog.push({
       turn: state.turn,
       playerId: city.owner,
-      message: `${city.name} purchased ${itemId}`,
+      message: `${city.name} purchased ${itemId}${isWonder ? ' 🏆' : ''}`,
       type: 'production',
     });
+
+    // If it's a wonder, add to global builtWonders
+    if (isWonder) {
+      return {
+        ...state,
+        players: updatedPlayers,
+        cities: updatedCities,
+        units: updatedUnits,
+        log: newLog,
+        lastValidation: null,
+        builtWonders: [...state.builtWonders, itemId],
+      };
+    }
   }
 
   return {
@@ -232,12 +266,18 @@ function processProduction(state: GameState): GameState {
           type: 'production',
         });
       } else if (currentItem.type === 'building') {
+        // Check if this is a wonder (has isWonder flag)
+        const buildingDef = state.config.buildings.get(currentItem.id);
+        const isWonder = buildingDef?.isWonder === true;
+
         // Add building to city
         const wallsBonus = currentItem.id === 'walls' ? 100 : 0;
+        const updatedBuildings = [...city.buildings, currentItem.id];
+
         // Production overflow carries to next project (Civ VII rule)
         updatedCities.set(cityId, {
           ...city,
-          buildings: [...city.buildings, currentItem.id],
+          buildings: updatedBuildings,
           productionQueue: city.productionQueue.slice(1),
           productionProgress: newProgress - cost,
           defenseHP: city.defenseHP + wallsBonus,
@@ -247,9 +287,20 @@ function processProduction(state: GameState): GameState {
         newLog.push({
           turn: state.turn,
           playerId: city.owner,
-          message: `${city.name} built ${currentItem.id}`,
+          message: `${city.name} built ${currentItem.id}${isWonder ? ' 🏆' : ''}`,
           type: 'production',
         });
+
+        // If it's a wonder, add to global builtWonders
+        if (isWonder) {
+          return {
+            ...state,
+            cities: updatedCities,
+            units: updatedUnits,
+            log: [...state.log, ...newLog],
+            builtWonders: [...state.builtWonders, currentItem.id],
+          };
+        }
         continue;
       }
 

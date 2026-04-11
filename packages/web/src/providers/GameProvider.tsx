@@ -168,6 +168,7 @@ function createInitialState(): GameState {
     tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    builtWonders: [],
     crises: [],
     victory: { winner: null, winType: null, progress: new Map() },
     log: [],

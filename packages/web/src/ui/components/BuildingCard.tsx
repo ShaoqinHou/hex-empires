@@ -21,19 +21,35 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
   const yieldEntries = Object.entries(building.yields).filter(([, v]) => v && v > 0);
 
   if (compact) {
+    const isWonder = building.isWonder === true;
     return (
       <button
-        className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all text-left w-full"
+        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all text-left w-full ${
+          isWonder ? 'shadow-md' : ''
+        }`}
         style={{
-          backgroundColor: isActive ? 'var(--color-accent)' : isBuilt ? 'rgba(66, 165, 245, 0.1)' : 'var(--color-bg)',
-          color: isActive ? 'var(--color-bg)' : 'var(--color-text)',
-          border: `1px solid ${isActive ? 'var(--color-accent)' : isBuilt ? 'var(--color-science)' : 'var(--color-border)'}`,
+          backgroundColor: isActive
+            ? 'var(--color-accent)'
+            : isWonder
+            ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)'
+            : isBuilt
+            ? 'rgba(66, 165, 245, 0.1)'
+            : 'var(--color-bg)',
+          color: isActive
+            ? 'var(--color-bg)'
+            : isWonder
+            ? '#fbbf24'
+            : 'var(--color-text)',
+          border: isWonder
+            ? '2px solid #fbbf24'
+            : `1px solid ${isActive ? 'var(--color-accent)' : isBuilt ? 'var(--color-science)' : 'var(--color-border)'}`,
           opacity: isBuilt && !isActive ? 0.7 : 1,
+          boxShadow: isWonder ? '0 2px 8px rgba(251, 191, 36, 0.3)' : 'none',
         }}
         onClick={onClick}
         disabled={isBuilt}
       >
-        <span className="text-sm">{'\u{1F3DB}'}</span>
+        <span className="text-sm">{isWonder ? '🏆' : '🏛️'}</span>
         <div className="flex-1 min-w-0">
           <div className="text-xs font-bold truncate">
             {building.name}

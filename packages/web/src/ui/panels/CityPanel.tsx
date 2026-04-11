@@ -212,22 +212,33 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
             {city.buildings.map(bId => {
               const bDef = ALL_BUILDINGS.find(b => b.id === bId);
               const isPlaced = placedBuildings.has(bId);
+              const isWonder = bDef?.isWonder === true;
               return bDef ? (
                 <div
                   key={bId}
                   className={`flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer transition-all ${
                     !isPlaced ? 'hover:bg-slate-700/50' : ''
-                  }`}
+                  } ${isWonder ? 'shadow-lg' : ''}`}
                   style={{
                     backgroundColor: isPlaced ? 'var(--color-bg)' : 'var(--color-surface)',
-                    border: isPlaced ? '1px solid var(--color-border)' : '1px dashed var(--color-amber)',
+                    border: isPlaced
+                      ? isWonder
+                        ? '2px solid #fbbf24'
+                        : '1px solid var(--color-border)'
+                      : '1px dashed var(--color-amber)',
+                    background: isWonder
+                      ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)'
+                      : 'var(--color-surface)',
                   }}
                   onClick={() => !isPlaced && setPlacementMode({ buildingId: bId })}
                   title={isPlaced ? 'Placed on map' : 'Click to place on map'}
                 >
                   <div className="flex items-center gap-2">
                     <span>{isPlaced ? '✓' : '⏳'}</span>
-                    <span className={isPlaced ? '' : 'text-amber-400'}>{bDef.name}</span>
+                    <span className={isPlaced ? '' : 'text-amber-400'}>
+                      {isWonder && '🏆 '}
+                      {bDef.name}
+                    </span>
                   </div>
                   <BuildingCard building={bDef} isBuilt compact />
                 </div>

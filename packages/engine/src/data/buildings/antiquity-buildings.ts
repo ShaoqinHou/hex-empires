@@ -11,9 +11,13 @@ export interface BuildingDef {
   readonly requiredTech: string | null;
   readonly growthRateBonus?: number; // 0-1 fraction; reduces growth threshold (e.g. 0.1 = -10% threshold)
   /** Building category for maintenance cost grouping */
-  readonly category?: 'warehouse' | 'science' | 'culture' | 'gold' | 'happiness' | 'military' | 'food';
+  readonly category?: 'warehouse' | 'science' | 'culture' | 'gold' | 'happiness' | 'military' | 'food' | 'wonder';
   /** Happiness maintenance cost per turn (default 0). Science/culture/military buildings cost 2-4 by age. */
   readonly happinessCost?: number;
+  /** Whether this is a world wonder (only one can be built per game) */
+  readonly isWonder?: boolean;
+  /** Great person points generated per turn */
+  readonly greatPersonPoints?: { type: string; amount: number };
 }
 
 export const GRANARY: BuildingDef = {
@@ -148,7 +152,85 @@ export const PALACE: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+// ── World Wonders (Antiquity) ──
+
+export const PYRAMIDS: BuildingDef = {
+  id: 'pyramids',
+  name: 'The Pyramids',
+  age: 'antiquity',
+  cost: 400,
+  maintenance: 0,
+  yields: { food: 5, culture: 3 },
+  effects: ['+2 Builder charges', '+15% production toward Districts', '+1 Great Engineer point per turn'],
+  requiredTech: 'masonry',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'engineer', amount: 1 },
+} as const;
+
+export const HANGING_GARDENS: BuildingDef = {
+  id: 'hanging_gardens',
+  name: 'Hanging Gardens',
+  age: 'antiquity',
+  cost: 350,
+  maintenance: 0,
+  yields: { food: 8, housing: 2 },
+  effects: ['+25% growth rate in all cities', '+1 Housing per district'],
+  requiredTech: 'irrigation',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'merchant', amount: 1 },
+} as const;
+
+export const COLOSSUS: BuildingDef = {
+  id: 'colossus',
+  name: 'Colossus',
+  age: 'antiquity',
+  cost: 300,
+  maintenance: 0,
+  yields: { gold: 8 },
+  effects: ['+1 trade route capacity', '+2 gold from all trade routes'],
+  requiredTech: 'currency',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'merchant', amount: 1 },
+} as const;
+
+export const STONEHENGE: BuildingDef = {
+  id: 'stonehenge',
+  name: 'Stonehenge',
+  age: 'antiquity',
+  cost: 250,
+  maintenance: 0,
+  yields: { faith: 5 },
+  effects: ['+1 faith from each unimproved wonder tile', '+1 Great Prophet point per turn'],
+  requiredTech: 'astrology',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
+export const ORACLE: BuildingDef = {
+  id: 'oracle',
+  name: 'The Oracle',
+  age: 'antiquity',
+  cost: 280,
+  maintenance: 0,
+  yields: { culture: 8 },
+  effects: ['+1 Great Writer point per turn', '+25% great person generation'],
+  requiredTech: 'drama_poetry',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'writer', amount: 1 },
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
+  PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
 ] as const;

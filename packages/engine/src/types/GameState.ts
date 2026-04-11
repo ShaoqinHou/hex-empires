@@ -254,6 +254,7 @@ export interface GameState {
   readonly tradeRoutes: ReadonlyMap<string, TradeRoute>;
   readonly diplomacy: DiplomacyState;
   readonly age: AgeState;
+  readonly builtWonders: ReadonlyArray<BuildingId>; // Global tracking of constructed world wonders
   readonly crises: ReadonlyArray<CrisisState>;
   readonly victory: VictoryState;
   readonly log: ReadonlyArray<GameEvent>;
