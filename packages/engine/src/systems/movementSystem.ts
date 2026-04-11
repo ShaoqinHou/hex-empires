@@ -12,9 +12,10 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   if (action.type !== 'MOVE_UNIT') return state;
 
   const unit = state.units.get(action.unitId);
-  if (!unit) return state;
-  if (unit.owner !== state.currentPlayerId) return state;
-  if (action.path.length === 0) return state;
+  if (!unit) return createInvalidResult(state, 'Unit not found', 'movement');
+  if (unit.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your turn or unit', 'movement');
+  if (action.path.length === 0) return createInvalidResult(state, 'Empty movement path', 'movement');
+  if (unit.movementLeft <= 0) return createInvalidResult(state, 'Unit has no movement left', 'movement');
 
   // First pass: validate entire path for adjacency and passability
   let totalCost = 0;
@@ -22,21 +23,25 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
 
   for (const nextCoord of action.path) {
     // Each step must be adjacent
-    if (distance(prevCoord, nextCoord) !== 1) return state;
+    if (distance(prevCoord, nextCoord) !== 1) {
+      return createInvalidResult(state, 'Movement path must be adjacent hexes', 'movement');
+    }
 
     // Check target tile exists and is passable
     const tile = state.map.tiles.get(coordToKey(nextCoord));
-    if (!tile) return state;
+    if (!tile) return createInvalidResult(state, 'Target tile does not exist', 'movement');
 
     const cost = getMovementCost(tile);
-    if (cost === null) return state; // impassable
+    if (cost === null) return createInvalidResult(state, 'Terrain is impassable', 'movement');
 
     totalCost += cost;
     prevCoord = nextCoord;
   }
 
   // Check unit has enough movement
-  if (totalCost > unit.movementLeft) return state;
+  if (totalCost > unit.movementLeft) {
+    return createInvalidResult(state, 'Not enough movement points', 'movement');
+  }
 
   // Check final destination isn't occupied by another unit of the same player
   // (We'll also check intermediate ZoC stop positions below)
@@ -44,7 +49,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   const finalDestKey = coordToKey(finalDest);
   for (const [id, other] of state.units) {
     if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === finalDestKey) {
-      return state; // can't stack friendly units
+      return createInvalidResult(state, 'Cannot stack friendly units', 'movement');
     }
   }
 
@@ -75,7 +80,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     const stopKey = coordToKey(currentPos);
     for (const [id, other] of state.units) {
       if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === stopKey) {
-        return state; // can't stack friendly units at ZoC stop position
+        return createInvalidResult(state, 'Cannot stack at Zone of Control stop position', 'movement');
       }
     }
   }
@@ -98,6 +103,22 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
       message: `${unit.typeId} moved to (${currentPos.q}, ${currentPos.r})`,
       type: 'move',
     }],
+    lastValidation: null, // Clear validation after successful action
+  };
+}
+
+/**
+ * Helper function to create an invalid result with validation reason
+ */
+function createInvalidResult(
+  state: GameState,
+  reason: string,
+  category: 'movement' | 'combat' | 'production' | 'general',
+): GameState {
+  return {
+    ...state,
+    lastValidation: { valid: false, reason, category },
+    log: state.log, // Keep log unchanged
   };
 }
 

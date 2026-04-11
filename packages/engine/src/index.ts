@@ -79,6 +79,13 @@ export { Registry } from './registry';
 
 // State utilities
 export { nextRandom, randomInt, shuffle, createRng, noise2D, smoothNoise2D, fractalNoise2D } from './state';
+export {
+  calculateCombatPreview,
+  calculateCityCombatPreview,
+  getAttackableUnits,
+  getAttackableCities,
+} from './state/CombatPreview';
+export type { CombatPreview, CombatOdds, CombatModifiers, CombatTarget, AttackableTarget } from './state/CombatPreview';
 
 // Engine
 export { GameEngine } from './GameEngine';
@@ -92,6 +99,8 @@ export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
 export { calculateCityYields, getSpecializationYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';
 export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './systems/resourceSystem';
+export { calculateResourceChanges } from './state/ResourceChangeCalculator';
+export type { ResourceChangeSummary } from './state/ResourceChangeCalculator';
 export { researchSystem } from './systems/researchSystem';
 export { ageSystem } from './systems/ageSystem';
 export { combatSystem } from './systems/combatSystem';
@@ -99,6 +108,7 @@ export { promotionSystem } from './systems/promotionSystem';
 export { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus, getPromotionMovementBonus } from './state/PromotionUtils';
 export { diplomacySystem, updateDiplomacyCounters, getStatusFromRelationship, getRelationKey, defaultRelation } from './systems/diplomacySystem';
 export { fortifySystem } from './systems/fortifySystem';
+export { improvementSystem } from './systems/improvementSystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';
@@ -118,6 +128,10 @@ export {
   GRASSLAND, PLAINS, DESERT, TUNDRA, SNOW, COAST, OCEAN,
   HILLS, MOUNTAINS, FOREST, JUNGLE, MARSH, FLOODPLAINS, OASIS, REEF,
 } from './data/terrains';
+
+// Improvement data
+export type { ImprovementDef } from './types/Improvement';
+export { ALL_IMPROVEMENTS } from './data/improvements';
 
 // Building data
 export type { BuildingDef } from './data/buildings';

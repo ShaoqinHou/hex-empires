@@ -110,7 +110,12 @@ describe('movementSystem', () => {
       unitId: 'nonexistent',
       path: [{ q: 1, r: 0 }],
     });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Unit not found',
+      category: 'movement',
+    });
+    expect(next.units).toEqual(state.units);
   });
 
   it('rejects movement of enemy unit', () => {
@@ -170,7 +175,8 @@ describe('movementSystem', () => {
   it('ignores non-MOVE_UNIT actions', () => {
     const state = createTestState();
     const next = movementSystem(state, { type: 'END_TURN' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toBeNull();
+    expect(next.units).toEqual(state.units);
   });
 
   describe('Zone of Control', () => {

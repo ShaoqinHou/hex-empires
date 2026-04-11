@@ -5,6 +5,7 @@ import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
 import type { ResourceDef } from '@hex/engine';
 import type { Camera } from './Camera';
 import { drawUnitIcon } from './UnitIcons';
+import { RenderCache, calculateViewportBounds, type ViewportBounds } from './RenderCache';
 
 /** Hex sizing — pointy-top orientation */
 const HEX_SIZE = 32; // outer radius (center to vertex)
@@ -23,6 +24,7 @@ export interface RenderContext {
   visibility: ReadonlySet<string> | null;  // currently visible tiles
   explored: ReadonlySet<string> | null;    // ever-seen tiles
   showYields: boolean;
+  turnNumber: number;  // Track turn changes for glow effects
 }
 
 /** Convert axial hex coordinate to pixel position (center of hex) */
@@ -71,9 +73,12 @@ function drawHexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
 
 export class HexRenderer {
   private ctx: CanvasRenderingContext2D;
+  private cache: RenderCache;
+  private lastTurnNumber = -1;
 
-  constructor(ctx: CanvasRenderingContext2D) {
+  constructor(ctx: CanvasRenderingContext2D, cache: RenderCache) {
     this.ctx = ctx;
+    this.cache = cache;
   }
 
   render(camera: Camera, rc: RenderContext): void {
@@ -84,28 +89,48 @@ export class HexRenderer {
     ctx.save();
     camera.applyTransform(ctx);
 
-    // Draw terrain tiles
-    this.drawTerrain(rc);
+    // Calculate viewport bounds for culling
+    const viewport = calculateViewportBounds(
+      camera.x,
+      camera.y,
+      camera.zoom,
+      canvas.width,
+      canvas.height
+    );
+
+    // Rebuild terrain cache on turn change or if invalidated
+    if (rc.turnNumber !== this.lastTurnNumber || !this.cache.getTerrainCanvas()) {
+      this.cache.renderStaticTerrain(
+        rc.state.map,
+        rc.terrainRegistry,
+        rc.featureRegistry,
+        rc.resourceRegistry
+      );
+      this.lastTurnNumber = rc.turnNumber;
+    }
+
+    // Draw terrain tiles (with viewport culling)
+    this.drawTerrain(rc, viewport);
 
     // Draw rivers
-    this.drawRivers(rc);
+    this.drawRivers(rc, viewport);
 
     // Draw territory borders
-    this.drawTerritoryBorders(rc);
+    this.drawTerritoryBorders(rc, viewport);
 
     // Draw reachable hex overlay
     if (rc.reachableHexes) {
-      this.drawReachableOverlay(rc);
+      this.drawReachableOverlay(rc, viewport);
     }
 
     // Draw fog of war overlay
-    this.drawFogOfWar(rc);
+    this.drawFogOfWar(rc, viewport);
 
-    // Draw cities (only visible/explored)
-    this.drawCities(rc);
+    // Draw cities (only visible/explored, viewport culled)
+    this.drawCities(rc, viewport);
 
-    // Draw units (only visible)
-    this.drawUnits(rc);
+    // Draw units (only visible, viewport culled)
+    this.drawUnits(rc, viewport);
 
     // Draw selection highlight
     if (rc.selectedHex) {
@@ -123,10 +148,20 @@ export class HexRenderer {
     this.drawCoordinateOverlay(camera, rc);
   }
 
-  private drawTerrain(rc: RenderContext): void {
+  private drawTerrain(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
 
     for (const tile of rc.state.map.tiles.values()) {
+      // Viewport culling - skip tiles outside viewport
+      if (
+        tile.coord.q < viewport.minQ ||
+        tile.coord.q > viewport.maxQ ||
+        tile.coord.r < viewport.minR ||
+        tile.coord.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       const { x, y } = hexToPixel(tile.coord);
       const terrain = rc.terrainRegistry.get(tile.terrain);
       const feature = tile.feature ? rc.featureRegistry.get(tile.feature) : null;
@@ -234,11 +269,21 @@ export class HexRenderer {
     ctx.textBaseline = 'alphabetic'; // reset
   }
 
-  private drawFogOfWar(rc: RenderContext): void {
+  private drawFogOfWar(rc: RenderContext, viewport: ViewportBounds): void {
     if (!rc.visibility && !rc.explored) return; // no fog data, show everything
 
     const ctx = this.ctx;
     for (const tile of rc.state.map.tiles.values()) {
+      // Viewport culling
+      if (
+        tile.coord.q < viewport.minQ ||
+        tile.coord.q > viewport.maxQ ||
+        tile.coord.r < viewport.minR ||
+        tile.coord.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       const key = coordToKey(tile.coord);
       const isVisible = rc.visibility?.has(key) ?? true;
       const isExplored = rc.explored?.has(key) ?? true;
@@ -259,13 +304,23 @@ export class HexRenderer {
     }
   }
 
-  private drawRivers(rc: RenderContext): void {
+  private drawRivers(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
     ctx.strokeStyle = '#4a90b8';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
 
     for (const tile of rc.state.map.tiles.values()) {
+      // Viewport culling
+      if (
+        tile.coord.q < viewport.minQ ||
+        tile.coord.q > viewport.maxQ ||
+        tile.coord.r < viewport.minR ||
+        tile.coord.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       if (tile.river.length === 0) continue;
       const { x, y } = hexToPixel(tile.coord);
 
@@ -280,7 +335,7 @@ export class HexRenderer {
     }
   }
 
-  private drawTerritoryBorders(rc: RenderContext): void {
+  private drawTerritoryBorders(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
@@ -301,6 +356,17 @@ export class HexRenderer {
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
+
+        // Viewport culling
+        if (
+          tile.coord.q < viewport.minQ ||
+          tile.coord.q > viewport.maxQ ||
+          tile.coord.r < viewport.minR ||
+          tile.coord.r > viewport.maxR
+        ) {
+          continue;
+        }
+
         const { x, y } = hexToPixel(tile.coord);
         drawHexPath(ctx, x, y);
         ctx.fillStyle = color;
@@ -318,6 +384,17 @@ export class HexRenderer {
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
+
+        // Viewport culling for borders (more lenient - include neighbors)
+        if (
+          tile.coord.q < viewport.minQ - 1 ||
+          tile.coord.q > viewport.maxQ + 1 ||
+          tile.coord.r < viewport.minR - 1 ||
+          tile.coord.r > viewport.maxR + 1
+        ) {
+          continue;
+        }
+
         const { x, y } = hexToPixel(tile.coord);
 
         for (let i = 0; i < 6; i++) {
@@ -343,13 +420,24 @@ export class HexRenderer {
     }
   }
 
-  private drawReachableOverlay(rc: RenderContext): void {
+  private drawReachableOverlay(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
     if (!rc.reachableHexes) return;
 
     for (const key of rc.reachableHexes) {
       const tile = rc.state.map.tiles.get(key);
       if (!tile) continue;
+
+      // Viewport culling
+      if (
+        tile.coord.q < viewport.minQ ||
+        tile.coord.q > viewport.maxQ ||
+        tile.coord.r < viewport.minR ||
+        tile.coord.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       const { x, y } = hexToPixel(tile.coord);
       drawHexPath(ctx, x, y);
       ctx.fillStyle = 'rgba(100, 181, 246, 0.25)';
@@ -361,11 +449,21 @@ export class HexRenderer {
     }
   }
 
-  private drawCities(rc: RenderContext): void {
+  private drawCities(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
     for (const city of rc.state.cities.values()) {
+      // Viewport culling
+      if (
+        city.position.q < viewport.minQ ||
+        city.position.q > viewport.maxQ ||
+        city.position.r < viewport.minR ||
+        city.position.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       const { x, y } = hexToPixel(city.position);
       const players = [...rc.state.players.keys()];
       const playerIndex = players.indexOf(city.owner);
@@ -444,7 +542,7 @@ export class HexRenderer {
     }
   }
 
-  private drawUnits(rc: RenderContext): void {
+  private drawUnits(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
@@ -455,16 +553,42 @@ export class HexRenderer {
     }
 
     for (const unit of rc.state.units.values()) {
+      // Viewport culling
+      if (
+        unit.position.q < viewport.minQ ||
+        unit.position.q > viewport.maxQ ||
+        unit.position.r < viewport.minR ||
+        unit.position.r > viewport.maxR
+      ) {
+        continue;
+      }
+
       const { x: baseX, y: baseY } = hexToPixel(unit.position);
       const players = [...rc.state.players.keys()];
       const playerIndex = players.indexOf(unit.owner);
-      const color = playerColors[playerIndex % playerColors.length];
+      const color = playerColors[playerIndex % players.length];
       const isSelected = rc.selectedUnit?.id === unit.id;
 
       // Offset unit when on a city tile so both are visible
       const onCity = cityPositionKeys.has(coordToKey(unit.position));
       const x = onCity ? baseX - 10 : baseX;
       const y = onCity ? baseY - 10 : baseY;
+
+      // Check if unit is freshly ready (has full movement and belongs to current player)
+      const isReady = unit.owner === rc.state.currentPlayerId && unit.movementLeft > 0;
+
+      // Draw glow effect for newly available units
+      if (isReady) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(100, 181, 246, 0.9)';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(x, y, HEX_SIZE * 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(100, 181, 246, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Unit icon (distinct per type)
       drawUnitIcon(ctx, unit.typeId, x, y - 2, color, isSelected);
@@ -500,10 +624,31 @@ export class HexRenderer {
   private drawHexHighlight(coord: HexCoord, color: string, lineWidth: number): void {
     const ctx = this.ctx;
     const { x, y } = hexToPixel(coord);
-    drawHexPath(ctx, x, y);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
+
+    // Add glow effect for selected hex
+    if (lineWidth >= 3) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      drawHexPath(ctx, x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+      ctx.restore();
+
+      // Add second outer ring for extra visibility
+      drawHexPath(ctx, x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth + 2;
+      ctx.globalAlpha = 0.3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else {
+      drawHexPath(ctx, x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
   }
 
   private drawCoordinateOverlay(camera: Camera, rc: RenderContext): void {

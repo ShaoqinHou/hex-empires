@@ -1,6 +1,6 @@
 import type { HexCoord, HexKey } from './HexCoord';
 import type { GameConfig } from './GameConfig';
-import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId } from './Ids';
+import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, ImprovementId } from './Ids';
 import type { YieldSet, YieldType } from './Yields';
 import type { TerrainId, FeatureId } from './Terrain';
 
@@ -16,6 +16,7 @@ export interface HexTile {
   readonly terrain: TerrainId;
   readonly feature: FeatureId | null;
   readonly resource: ResourceId | null;
+  readonly improvement: ImprovementId | null; // Tile improvement (farm, mine, etc.)
   readonly river: ReadonlyArray<number>; // edge indices (0-5) that have rivers
   readonly elevation: number; // 0-1 normalized
   readonly continent: number; // continent id
@@ -257,6 +258,7 @@ export interface GameState {
   readonly log: ReadonlyArray<GameEvent>;
   readonly rng: RngState;
   readonly config: GameConfig;
+  readonly lastValidation: ValidationResult | null;
 }
 
 // ── Actions ──
@@ -294,6 +296,7 @@ export type GameAction =
   | { readonly type: 'ASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
+  | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
   | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string };
 
 // ── Events ──
@@ -304,6 +307,14 @@ export interface GameEvent {
   readonly message: string;
   readonly type: 'move' | 'combat' | 'city' | 'research' | 'civic' | 'diplomacy' | 'age' | 'crisis' | 'victory' | 'production' | 'legacy';
 }
+
+// ── Validation ──
+
+export type ValidationErrorCategory = 'movement' | 'combat' | 'production' | 'general';
+
+export type ValidationResult =
+  | { readonly valid: true }
+  | { readonly valid: false; readonly reason: string; readonly category: ValidationErrorCategory };
 
 // ── System type ──
 

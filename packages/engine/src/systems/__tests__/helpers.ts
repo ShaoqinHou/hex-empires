@@ -31,6 +31,7 @@ export function createTestState(overrides: Partial<GameState> = {}): GameState {
     log: [],
     rng: { seed: 42, counter: 0 },
     config: createGameConfig(),
+    lastValidation: null,
     ...overrides,
   };
 }

@@ -8,6 +8,21 @@ function nextUnitId(state: GameState, cityId: string): string {
 }
 
 /**
+ * Helper function to create an invalid result with validation reason
+ */
+function createInvalidResult(
+  state: GameState,
+  reason: string,
+  category: 'movement' | 'combat' | 'production' | 'general',
+): GameState {
+  return {
+    ...state,
+    lastValidation: { valid: false, reason, category },
+    log: state.log, // Keep log unchanged
+  };
+}
+
+/**
  * ProductionSystem processes production queues on END_TURN.
  * Also handles SET_PRODUCTION and PURCHASE_ITEM actions.
  * Towns cannot produce via production queue — they must use PURCHASE_ITEM.
@@ -32,10 +47,10 @@ function handleSetProduction(
   itemType: 'unit' | 'building' | 'wonder',
 ): GameState {
   const city = state.cities.get(cityId);
-  if (!city) return state;
-  if (city.owner !== state.currentPlayerId) return state;
+  if (!city) return createInvalidResult(state, 'City not found', 'production');
+  if (city.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your city', 'production');
   // Towns cannot use production queue — they must purchase with gold
-  if (city.settlementType === 'town') return state;
+  if (city.settlementType === 'town') return createInvalidResult(state, 'Towns cannot produce - must purchase with gold', 'production');
 
   // If producing a unit that requires a strategic resource, verify the player
   // has access to it (any city's territory must contain that resource).
@@ -43,8 +58,13 @@ function handleSetProduction(
     const unitDef = state.config.units.get(itemId);
     if (unitDef?.requiredResource) {
       const hasResource = playerHasResource(state, state.currentPlayerId, unitDef.requiredResource);
-      if (!hasResource) return state;
+      if (!hasResource) return createInvalidResult(state, `Requires resource: ${unitDef.requiredResource}`, 'production');
     }
+  }
+
+  // Check if building is already built
+  if (itemType === 'building' && city.buildings.includes(itemId)) {
+    return createInvalidResult(state, 'Building already constructed', 'production');
   }
 
   const updatedCities = new Map(state.cities);
@@ -55,7 +75,7 @@ function handleSetProduction(
     productionProgress: city.productionProgress,
   });
 
-  return { ...state, cities: updatedCities };
+  return { ...state, cities: updatedCities, lastValidation: null };
 }
 
 /**
@@ -80,8 +100,13 @@ function handlePurchaseItem(
   itemType: 'unit' | 'building',
 ): GameState {
   const city = state.cities.get(cityId);
-  if (!city) return state;
-  if (city.owner !== state.currentPlayerId) return state;
+  if (!city) return createInvalidResult(state, 'City not found', 'production');
+  if (city.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your city', 'production');
+
+  // Check if building is already built
+  if (itemType === 'building' && city.buildings.includes(itemId)) {
+    return createInvalidResult(state, 'Building already constructed', 'production');
+  }
 
   let goldCost = getGoldCost(state, itemId);
   // Market: 10% discount on all unit gold purchases
@@ -89,7 +114,7 @@ function handlePurchaseItem(
     goldCost = Math.floor(goldCost * 0.9);
   }
   const player = state.players.get(state.currentPlayerId);
-  if (!player || player.gold < goldCost) return state;
+  if (!player || player.gold < goldCost) return createInvalidResult(state, `Not enough gold (need ${goldCost})`, 'production');
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, { ...player, gold: player.gold - goldCost });
@@ -119,7 +144,6 @@ function handlePurchaseItem(
       type: 'production',
     });
   } else if (itemType === 'building') {
-    if (city.buildings.includes(itemId)) return state; // already built
     const wallsBonus = itemId === 'walls' ? 100 : 0;
     updatedCities.set(cityId, {
       ...city,
@@ -140,6 +164,7 @@ function handlePurchaseItem(
     cities: updatedCities,
     units: updatedUnits,
     log: newLog,
+    lastValidation: null,
   };
 }
 
@@ -251,6 +276,7 @@ function processProduction(state: GameState): GameState {
     cities: updatedCities,
     units: updatedUnits,
     log: newLog,
+    lastValidation: null,
   };
 }
 

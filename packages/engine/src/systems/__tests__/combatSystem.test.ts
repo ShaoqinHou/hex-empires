@@ -45,7 +45,12 @@ describe('combatSystem', () => {
     ]);
     const state = createTestState({ units });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Friendly fire - cannot attack own units',
+      category: 'combat',
+    });
+    expect(next.units).toEqual(state.units);
   });
 
   it('rejects attack from non-adjacent melee unit', () => {
@@ -59,7 +64,12 @@ describe('combatSystem', () => {
     ]);
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Target out of melee range',
+      category: 'combat',
+    });
+    expect(next.units).toEqual(state.units);
   });
 
   it('ranged unit does not take damage when attacking', () => {
@@ -164,7 +174,9 @@ describe('combatSystem', () => {
 
   it('ignores non-ATTACK_UNIT actions', () => {
     const state = createTestState();
-    expect(combatSystem(state, { type: 'END_TURN' })).toBe(state);
+    const next = combatSystem(state, { type: 'END_TURN' });
+    expect(next.lastValidation).toBeNull();
+    expect(next.units).toEqual(state.units);
   });
 });
 
@@ -405,7 +417,13 @@ describe('combatSystem — ATTACK_CITY', () => {
     const state = createTestState({ units, cities: new Map([['c1', city]]) });
 
     const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Cannot attack own city',
+      category: 'combat',
+    });
+    expect(next.units).toEqual(state.units);
+    expect(next.cities).toEqual(state.cities);
   });
 
   it('rejects attack from non-adjacent melee unit', () => {
@@ -420,7 +438,13 @@ describe('combatSystem — ATTACK_CITY', () => {
     const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
 
     const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Target out of melee range',
+      category: 'combat',
+    });
+    expect(next.units).toEqual(state.units);
+    expect(next.cities).toEqual(state.cities);
   });
 
   it('attacker movement goes to 0 after attacking city', () => {
@@ -467,7 +491,13 @@ describe('combatSystem — ATTACK_CITY', () => {
     const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
 
     const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
-    expect(next).toBe(state);
+    expect(next.lastValidation).toEqual({
+      valid: false,
+      reason: 'Unit has already attacked this turn',
+      category: 'combat',
+    });
+    expect(next.units).toEqual(state.units);
+    expect(next.cities).toEqual(state.cities);
   });
 });
 

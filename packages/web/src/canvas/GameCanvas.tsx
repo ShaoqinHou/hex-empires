@@ -2,8 +2,14 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGame } from '../providers/GameProvider';
 import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
+import { RenderCache } from './RenderCache';
+import { CombatPreviewPanel } from '../ui/components/CombatPreview';
+import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
+import { ImprovementPanel } from '../ui/components/ImprovementPanel';
+import { AnimationManager } from './AnimationManager';
+import { AnimationRenderer } from './AnimationRenderer';
 import type { HexCoord, UnitState, CityState } from '@hex/engine';
-import { coordToKey, findPath, getMovementCost } from '@hex/engine';
+import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
@@ -26,13 +32,75 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }
 
   const rendererRef = useRef<HexRenderer | null>(null);
+  const renderCacheRef = useRef<RenderCache | null>(null);
+  const animationManagerRef = useRef<AnimationManager | null>(null);
+  const animationRendererRef = useRef<AnimationRenderer | null>(null);
   const {
     state, dispatch, terrainRegistry, featureRegistry, unitRegistry, resourceRegistry,
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
-    reachableHexes,
+    reachableHexes, animationManager, setHoveredHex: setGlobalHoveredHex,
+    combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
   } = useGame();
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
+  const [showImprovementPanel, setShowImprovementPanel] = useState(false);
+
+  // Sync local hover state to global state for combat preview
+  useEffect(() => {
+    setGlobalHoveredHex(hoveredHex);
+  }, [hoveredHex, setGlobalHoveredHex]);
+
+  // Calculate combat preview when hovering over attackable targets
+  useEffect(() => {
+    if (!selectedUnit || !hoveredHex) {
+      setCombatPreview(null);
+      setCombatPreviewPosition(null);
+      return;
+    }
+
+    // Check if hovering over an enemy unit
+    let enemyUnitId: string | null = null;
+    for (const [id, unit] of state.units) {
+      if (unit.owner !== selectedUnit.owner && coordToKey(unit.position) === coordToKey(hoveredHex)) {
+        enemyUnitId = id;
+        break;
+      }
+    }
+
+    // Check if hovering over an enemy city
+    let enemyCityId: string | null = null;
+    for (const [id, city] of state.cities) {
+      if (city.owner !== selectedUnit.owner && coordToKey(city.position) === coordToKey(hoveredHex)) {
+        enemyCityId = id;
+        break;
+      }
+    }
+
+    // Calculate preview if hovering over attackable target
+    if (enemyUnitId) {
+      const preview = calculateCombatPreview(state, selectedUnit.id, enemyUnitId);
+      if (preview.canAttack) {
+        setCombatPreview(preview);
+        setCombatPreviewPosition(null); // Position will be set by mouse move
+      } else {
+        setCombatPreview(null);
+        setCombatPreviewPosition(null);
+      }
+    } else if (enemyCityId) {
+      // Use city combat preview
+      const preview = calculateCityCombatPreview(state, selectedUnit.id, enemyCityId);
+      if (preview.canAttack) {
+        setCombatPreview(preview);
+        setCombatPreviewPosition(null); // Position will be set by mouse move
+      } else {
+        setCombatPreview(null);
+        setCombatPreviewPosition(null);
+      }
+    } else {
+      setCombatPreview(null);
+      setCombatPreviewPosition(null);
+    }
+  }, [selectedUnit, hoveredHex, state, setCombatPreview, setCombatPreviewPosition]);
 
   // Track drag state
   const isDraggingRef = useRef(false);
@@ -47,7 +115,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    rendererRef.current = new HexRenderer(ctx);
+    // Initialize render cache for performance optimization
+    renderCacheRef.current = new RenderCache();
+    rendererRef.current = new HexRenderer(ctx, renderCacheRef.current);
+    animationManagerRef.current = animationManager ?? new AnimationManager();
+    animationRendererRef.current = new AnimationRenderer(ctx);
 
     const resize = () => {
       const parent = canvas.parentElement;
@@ -76,7 +148,16 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
     const render = () => {
       const renderer = rendererRef.current;
+      const animationManager = animationManagerRef.current;
+      const animationRenderer = animationRendererRef.current;
       if (!renderer) return;
+
+      const currentTime = performance.now();
+
+      // Update animations
+      if (animationManager) {
+        animationManager.update(currentTime);
+      }
 
       const reachableSet = reachableHexes
         ? new Set(reachableHexes.keys())
@@ -95,14 +176,20 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         visibility: player?.visibility ?? null,
         explored: player?.explored ?? null,
         showYields,
+        turnNumber: state.turn,
       });
+
+      // Render animations on top
+      if (animationRenderer && animationManager) {
+        animationRenderer.render(cameraRef.current, animationManager, currentTime);
+      }
 
       animFrame = requestAnimationFrame(render);
     };
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, animationManager]);
 
   // Handle clicks — select units or move them
   const handleClick = useCallback((screenX: number, screenY: number) => {
@@ -143,46 +230,58 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       // Select the unit
       setSelectedUnit(clickedUnit);
       setSelectedHex(hex);
+      setShowImprovementPanel(false);
     } else if (selectedUnit && selectedUnit.movementLeft > 0) {
-      // Check if clicking on an enemy unit (attack)
-      let enemyUnit: UnitState | null = null;
-      for (const unit of state.units.values()) {
-        if (coordToKey(unit.position) === key && unit.owner !== state.currentPlayerId) {
-          enemyUnit = unit;
-          break;
-        }
-      }
+      // Check if selected unit is a Builder
+      const unitDef = unitRegistry.get(selectedUnit.typeId);
+      const isBuilder = unitDef?.abilities.includes('build_improvement');
 
-      if (enemyUnit) {
-        // Attack the enemy
-        dispatch({
-          type: 'ATTACK_UNIT',
-          attackerId: selectedUnit.id,
-          targetId: enemyUnit.id,
-        });
-        // Keep unit selected but it will have 0 movement after attack
+      if (isBuilder) {
+        // Builder: show improvement panel for the clicked tile
         setSelectedHex(hex);
-      } else if (reachableHexes && reachableHexes.has(key)) {
-        // Move selected unit to clicked hex
-        const costFn = (from: HexCoord, to: HexCoord) => {
-          const tile = state.map.tiles.get(coordToKey(to));
-          if (!tile) return null;
-          return getMovementCost(tile);
-        };
-        const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
-        if (path && path.length > 0) {
+        setShowImprovementPanel(true);
+      } else {
+        // Regular unit: check for attack or move
+        // Check if clicking on an enemy unit (attack)
+        let enemyUnit: UnitState | null = null;
+        for (const unit of state.units.values()) {
+          if (coordToKey(unit.position) === key && unit.owner !== state.currentPlayerId) {
+            enemyUnit = unit;
+            break;
+          }
+        }
+
+        if (enemyUnit) {
+          // Attack the enemy
           dispatch({
-            type: 'MOVE_UNIT',
-            unitId: selectedUnit.id,
-            path,
+            type: 'ATTACK_UNIT',
+            attackerId: selectedUnit.id,
+            targetId: enemyUnit.id,
           });
-          // Keep unit selected at new position (will re-read from state via effect below)
+          // Keep unit selected but it will have 0 movement after attack
+          setSelectedHex(hex);
+        } else if (reachableHexes && reachableHexes.has(key)) {
+          // Move selected unit to clicked hex
+          const costFn = (from: HexCoord, to: HexCoord) => {
+            const tile = state.map.tiles.get(coordToKey(to));
+            if (!tile) return null;
+            return getMovementCost(tile);
+          };
+          const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
+          if (path && path.length > 0) {
+            dispatch({
+              type: 'MOVE_UNIT',
+              unitId: selectedUnit.id,
+              path,
+            });
+            // Keep unit selected at new position (will re-read from state via effect below)
+            setSelectedHex(hex);
+          }
+        } else {
+          // Clicked unreachable hex — deselect
+          setSelectedUnit(null);
           setSelectedHex(hex);
         }
-      } else {
-        // Clicked unreachable hex — deselect
-        setSelectedUnit(null);
-        setSelectedHex(hex);
       }
     } else {
       // Deselect
@@ -213,6 +312,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       return hex;
     });
 
+    // Update combat preview position if showing
+    if (combatPreview) {
+      setCombatPreviewPosition({ x: e.clientX, y: e.clientY });
+    }
+
     // Always track mouse position for edge scrolling
     const prevMouse = lastMouseRef.current;
 
@@ -224,7 +328,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       cameraRef.current.pan(dx, dy);
     }
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
-  }, []);
+  }, [combatPreview, setCombatPreviewPosition]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (dragDistRef.current < 5) {
@@ -386,15 +490,37 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={() => { isDraggingRef.current = false; }}
-      onWheel={handleWheel}
-      onContextMenu={handleContextMenu}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => {
+          isDraggingRef.current = false;
+          setCombatPreview(null);
+          setCombatPreviewPosition(null);
+        }}
+        onWheel={handleWheel}
+        onContextMenu={handleContextMenu}
+      />
+      {combatPreview && (
+        <CombatHoverPreview
+          preview={combatPreview}
+          position={combatPreviewPosition}
+        />
+      )}
+      {showImprovementPanel && selectedUnit && (
+        <ImprovementPanel
+          builderUnitId={selectedUnit.id}
+          onClose={() => {
+            setShowImprovementPanel(false);
+            setSelectedUnit(null);
+            setSelectedHex(null);
+          }}
+        />
+      )}
+    </>
   );
 }

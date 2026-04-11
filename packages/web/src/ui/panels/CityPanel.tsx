@@ -1,5 +1,5 @@
 import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS } from '@hex/engine';
+import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
 import type { UnitDef, BuildingDef } from '@hex/engine';
 import { useGame } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
@@ -15,8 +15,16 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const yields = calculateCityYields(city, state);
   const growthThreshold = getGrowthThreshold(city.population);
   const foodConsumed = city.population * 2;
+  const settlementCapPenalty = calculateSettlementCapPenalty(state, state.currentPlayerId);
+  const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
+  const effectiveFoodSurplus = applyHappinessPenalty(yields.food, cityHappiness) - foodConsumed;
   const foodSurplus = yields.food - foodConsumed;
   const isTown = city.settlementType === 'town';
+
+  // Calculate city-specific resource changes for warnings
+  const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
+  const isStarving = effectiveFoodSurplus < 0 && city.food < growthThreshold * 0.2;
+  const hasGoldDeficit = isTown && (applyHappinessPenalty(yields.gold + yields.production, cityHappiness)) < 0;
 
   const currentProduction = city.productionQueue[0];
 
@@ -101,11 +109,38 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
       {/* Yields */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Yields</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>Yields</h3>
+          {/* Warning icons for critical issues */}
+          <div className="flex items-center gap-1">
+            {isStarving && (
+              <div className="flex items-center gap-0.5" title="Starving! City will lose population">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-health-low)' }}>
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                  <line x1="6" y1="1" x2="6" y2="4" />
+                  <line x1="10" y1="1" x2="10" y2="4" />
+                  <line x1="14" y1="1" x2="14" y2="4" />
+                </svg>
+                <span className="text-[10px] font-bold" style={{ color: 'var(--color-health-low)' }}>STARVING</span>
+              </div>
+            )}
+            {hasGoldDeficit && (
+              <div className="flex items-center gap-0.5" title="Gold deficit - town not profitable">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-gold)' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span className="text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>DEFICIT</span>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-1 text-xs">
-          <YieldDisplay label="Food" value={yields.food} surplus={foodSurplus} color="var(--color-food)" />
+          <YieldDisplay label="Food" value={yields.food} surplus={effectiveFoodSurplus} color="var(--color-food)" showWarning={isStarving} />
           <YieldDisplay label="Production" value={isTown ? 0 : yields.production} color="var(--color-production)" />
-          <YieldDisplay label="Gold" value={yields.gold + (isTown ? yields.production : 0)} color="var(--color-gold)" />
+          <YieldDisplay label="Gold" value={yields.gold + (isTown ? yields.production : 0)} color="var(--color-gold)" showWarning={hasGoldDeficit} />
           <YieldDisplay label="Science" value={yields.science} color="var(--color-science)" />
           <YieldDisplay label="Culture" value={yields.culture} color="var(--color-culture)" />
           <YieldDisplay label="Faith" value={yields.faith} color="var(--color-faith)" />
@@ -121,9 +156,12 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Growth</h3>
         <div className="text-xs">
-          <ProgressBar value={city.food} max={growthThreshold} color="var(--color-food)" />
-          <span style={{ color: 'var(--color-text-muted)' }}>
-            {city.food}/{growthThreshold} ({foodSurplus >= 0 ? '+' : ''}{foodSurplus}/turn)
+          <ProgressBar value={city.food} max={growthThreshold} color={isStarving ? 'var(--color-health-low)' : 'var(--color-food)'} />
+          <span style={{ color: isStarving ? 'var(--color-health-low)' : 'var(--color-text-muted)' }}>
+            {city.food}/{growthThreshold} ({effectiveFoodSurplus >= 0 ? '+' : ''}{effectiveFoodSurplus}/turn)
+            {isStarving && (
+              <span className="ml-1 font-bold">⚠️ Starving!</span>
+            )}
           </span>
         </div>
       </div>
@@ -249,7 +287,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   );
 }
 
-function YieldDisplay({ label, value, surplus, color }: { label: string; value: number; surplus?: number; color: string }) {
+function YieldDisplay({ label, value, surplus, color, showWarning }: { label: string; value: number; surplus?: number; color: string; showWarning?: boolean }) {
   return (
     <div className="flex items-center gap-1">
       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -258,6 +296,13 @@ function YieldDisplay({ label, value, surplus, color }: { label: string; value: 
         <span style={{ color: surplus >= 0 ? 'var(--color-food)' : 'var(--color-health-low)', fontSize: '10px' }}>
           ({surplus >= 0 ? '+' : ''}{surplus})
         </span>
+      )}
+      {showWarning && (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-health-low)' }}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
       )}
     </div>
   );

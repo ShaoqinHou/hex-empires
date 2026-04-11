@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #1a1a2e;
-  --color-surface: #16213e;
-  --color-surface-hover: #1e2d4d;
-  --color-border: #2a3a5c;
-  --color-text: #e0e0e0;
-  --color-text-muted: #8892b0;
-  --color-accent: #64b5f6;
-  --color-accent-hover: #90caf9;
-  --color-gold: #ffd54f;
-  --color-food: #66bb6a;
-  --color-production: #ff8a65;
-  --color-science: #42a5f5;
-  --color-culture: #ab47bc;
-  --color-faith: #78909c;
-  --color-health-high: #4caf50;
-  --color-health-low: #f44336;
+  /* Richer, deeper colors for game-like feel */
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-hover: #21262d;
+  --color-border: #30363d;
+  --color-text: #f0f6fc;
+  --color-text-muted: #8b949e;
+  --color-accent: #58a6ff;
+  --color-accent-hover: #79c0ff;
+
+  /* Resource colors - more vibrant */
+  --color-gold: #ffd700;
+  --color-food: #7cfc00;
+  --color-production: #ff6b6b;
+  --color-science: #4dabf7;
+  --color-culture: #cc5de8;
+  --color-faith: #a0aec0;
+  --color-health-high: #51cf66;
+  --color-health-low: #ff6b6b;
+
+  /* Game UI enhancement colors */
+  --color-glow: rgba(88, 166, 255, 0.15);
+  --color-glow-strong: rgba(88, 166, 255, 0.3);
+  --color-panel-bg: rgba(22, 27, 34, 0.95);
+  --color-panel-border: rgba(48, 54, 61, 0.8);
 }
 
 * {
@@ -32,4 +41,44 @@ html, body, #root {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom animations for validation feedback */
+@keyframes slide-down {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 3s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
 }

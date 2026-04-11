@@ -17,10 +17,10 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
 
   const attacker = state.units.get(action.attackerId);
   const defender = state.units.get(action.targetId);
-  if (!attacker || !defender) return state;
-  if (attacker.owner !== state.currentPlayerId) return state;
-  if (attacker.owner === defender.owner) return state; // can't attack own units
-  if (attacker.movementLeft <= 0) return state;
+  if (!attacker || !defender) return createInvalidResult(state, 'Unit not found', 'combat');
+  if (attacker.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your unit or turn', 'combat');
+  if (attacker.owner === defender.owner) return createInvalidResult(state, 'Friendly fire - cannot attack own units', 'combat');
+  if (attacker.movementLeft <= 0) return createInvalidResult(state, 'Unit has already attacked this turn', 'combat');
 
   // Check range (includes promotion range bonus)
   const dist = distance(attacker.position, defender.position);
@@ -29,10 +29,10 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
 
   if (baseRange === 0) {
     // Melee: must be adjacent (range bonuses don't apply to melee)
-    if (dist !== 1) return state;
+    if (dist !== 1) return createInvalidResult(state, 'Target out of melee range', 'combat');
   } else {
     // Ranged: must be within range
-    if (dist > attackerRange || dist === 0) return state;
+    if (dist > attackerRange || dist === 0) return createInvalidResult(state, 'Target out of attack range', 'combat');
   }
 
   // Build promotion context for bonus calculations
@@ -164,6 +164,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     players: updatedPlayers,
     log: logEntries,
     rng: currentRng,
+    lastValidation: null,
   };
 }
 
@@ -318,10 +319,10 @@ function handleAttackCity(
 ): GameState {
   const attacker = state.units.get(action.attackerId);
   const city = state.cities.get(action.cityId);
-  if (!attacker || !city) return state;
-  if (attacker.owner !== state.currentPlayerId) return state;
-  if (attacker.owner === city.owner) return state; // can't attack own city
-  if (attacker.movementLeft <= 0) return state;
+  if (!attacker || !city) return createInvalidResult(state, 'Attacker or city not found', 'combat');
+  if (attacker.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your unit or turn', 'combat');
+  if (attacker.owner === city.owner) return createInvalidResult(state, 'Cannot attack own city', 'combat');
+  if (attacker.movementLeft <= 0) return createInvalidResult(state, 'Unit has already attacked this turn', 'combat');
 
   // Determine attacker range
   const attackerRange = getUnitRange(state, attacker.typeId) + getPromotionRangeBonus(state, attacker);
@@ -330,10 +331,10 @@ function handleAttackCity(
 
   if (baseRange === 0) {
     // Melee: must be adjacent
-    if (dist !== 1) return state;
+    if (dist !== 1) return createInvalidResult(state, 'Target out of melee range', 'combat');
   } else {
     // Ranged/siege: must be within range
-    if (dist > attackerRange || dist === 0) return state;
+    if (dist > attackerRange || dist === 0) return createInvalidResult(state, 'Target out of attack range', 'combat');
   }
 
   const isMelee = baseRange === 0;
@@ -440,5 +441,21 @@ function handleAttackCity(
     players: updatedPlayers,
     log: logEntries,
     rng: currentRng,
+    lastValidation: null,
+  };
+}
+
+/**
+ * Helper function to create an invalid result with validation reason
+ */
+function createInvalidResult(
+  state: GameState,
+  reason: string,
+  category: 'movement' | 'combat' | 'production' | 'general',
+): GameState {
+  return {
+    ...state,
+    lastValidation: { valid: false, reason, category },
+    log: state.log, // Keep log unchanged
   };
 }

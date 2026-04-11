@@ -89,6 +89,7 @@ describe('productionSystem', () => {
       const city = createTestCity({ productionQueue: [] });
       const state = createTestState({ cities: new Map([['c1', city]]) });
       const next = productionSystem(state, { type: 'END_TURN' });
+      // When no changes occur, returns same state reference
       expect(next).toBe(state);
     });
 
@@ -117,7 +118,14 @@ describe('productionSystem', () => {
         itemId: 'warrior',
         itemType: 'unit',
       });
-      expect(next).toBe(state); // unchanged
+      // Should return validation error
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Towns cannot produce - must purchase with gold',
+        category: 'production',
+      });
+      // Production queue should be unchanged
+      expect(next.cities.get('c1')!.productionQueue).toEqual([]);
     });
   });
 
@@ -169,7 +177,15 @@ describe('productionSystem', () => {
         itemId: 'warrior',
         itemType: 'unit',
       });
-      expect(next).toBe(state); // unchanged
+      // State should have validation error, not be unchanged
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Not enough gold (need 120)',
+        category: 'production',
+      });
+      // Units and cities should be unchanged
+      expect(next.units).toEqual(state.units);
+      expect(next.cities).toEqual(state.cities);
     });
   });
 
@@ -213,7 +229,14 @@ describe('productionSystem', () => {
         itemId: 'swordsman',
         itemType: 'unit',
       });
-      expect(next).toBe(state); // unchanged — resource unavailable
+      // State should include validation error
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires resource: iron',
+        category: 'production',
+      });
+      // Production queue should be unchanged
+      expect(next.cities.get('c1')!.productionQueue).toEqual([]);
     });
 
     it('allows SET_PRODUCTION for units without requiredResource regardless of resources', () => {

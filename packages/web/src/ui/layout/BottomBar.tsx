@@ -15,34 +15,51 @@ export function BottomBar() {
   return (
     <div className="h-16 flex items-center px-4 gap-4 select-none"
       style={{
-        backgroundColor: 'var(--color-surface)',
-        borderTop: '1px solid var(--color-border)',
+        background: 'linear-gradient(0deg, var(--color-bg) 0%, var(--color-surface) 100%)',
+        borderTop: '2px solid var(--color-border)',
+        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
+        zIndex: 100
       }}>
       {/* Selected unit info */}
       {selectedUnit && (
         <div className="flex items-center gap-3 flex-1">
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
-              {unitRegistry.get(selectedUnit.typeId)?.name ?? selectedUnit.typeId}
-            </span>
-            <div className="flex gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              <span>HP: <span style={{ color: selectedUnit.health > 66 ? 'var(--color-health-high)' : 'var(--color-health-low)' }}>{selectedUnit.health}</span>/100</span>
-              <span>Move: <span style={{ color: selectedUnit.movementLeft > 0 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>{selectedUnit.movementLeft}</span></span>
-              {selectedUnit.fortified && <span style={{ color: 'var(--color-science)' }}>Fortified</span>}
-              {selectedUnit.experience > 0 && <span>XP: {selectedUnit.experience}</span>}
+          <div
+            className="px-3 py-1.5 rounded"
+            style={{
+              background: 'linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%)',
+              border: '1px solid rgba(88, 166, 255, 0.3)',
+            }}
+          >
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
+                {unitRegistry.get(selectedUnit.typeId)?.name ?? selectedUnit.typeId}
+              </span>
+              <div className="flex gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                <span>❤️ <span style={{ color: selectedUnit.health > 66 ? 'var(--color-health-high)' : 'var(--color-health-low)' }}>{selectedUnit.health}</span>/100</span>
+                <span>🚀 <span style={{ color: selectedUnit.movementLeft > 0 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>{selectedUnit.movementLeft}</span></span>
+                {selectedUnit.fortified && <span>🛡️ Fortified</span>}
+                {selectedUnit.experience > 0 && <span>⭐ XP: {selectedUnit.experience}</span>}
+              </div>
             </div>
           </div>
 
           {/* Combat stats */}
           {!isCivilian && (
-            <div className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
+            <div
+              className="text-xs px-3 py-1.5 rounded font-mono"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%)',
+                border: '1px solid rgba(255, 107, 107, 0.3)',
+                color: 'var(--color-text-muted)'
+              }}
+            >
               {(() => {
                 const def = unitRegistry.get(selectedUnit.typeId);
                 if (!def) return null;
                 return (
                   <>
-                    <span style={{ color: 'var(--color-production)' }}>Str {def.combat}</span>
-                    {def.rangedCombat > 0 && <span style={{ color: 'var(--color-science)' }}> | Rng {def.rangedCombat} ({def.range})</span>}
+                    <span style={{ color: 'var(--color-production)' }}>⚔️ {def.combat}</span>
+                    {def.rangedCombat > 0 && <span style={{ color: 'var(--color-science)' }}> | 🎯 {def.rangedCombat} ({def.range})</span>}
                   </>
                 );
               })()}
@@ -50,12 +67,13 @@ export function BottomBar() {
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-1.5 ml-auto">
+          <div className="flex gap-2 ml-auto">
             {canFoundCity && (
               <ActionButton
                 label="Found City"
                 shortcut="B"
                 color="var(--color-food)"
+                icon="🏰"
                 onClick={() => {
                   const name = `City ${state.cities.size + 1}`;
                   dispatch({ type: 'FOUND_CITY', unitId: selectedUnit.id, name });
@@ -66,9 +84,11 @@ export function BottomBar() {
               <ActionButton
                 label={selectedUnit.fortified ? 'Unfortify' : 'Fortify'}
                 shortcut="F"
-                color="var(--color-bg)"
-                textColor="var(--color-text-muted)"
-                onClick={() => dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id })}
+                color="var(--color-science)"
+                icon="🛡️"
+                onClick={() => {
+                  dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id });
+                }}
               />
             )}
           </div>
@@ -110,30 +130,52 @@ export function BottomBar() {
 
       {/* Instructions with shortcuts */}
       {!selectedUnit && !selectedHex && (
-        <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          <span>Click unit to select | Click blue hex to move | Click enemy to attack</span>
-          <span className="opacity-60">WASD/Arrows: pan | Scroll: zoom | Enter: end turn | T: tech | Space: next unit</span>
+        <div className="flex items-center gap-4 text-xs px-3 py-1.5 rounded" style={{
+          color: 'var(--color-text-muted)',
+          background: 'rgba(139, 148, 158, 0.1)',
+          border: '1px solid rgba(139, 148, 158, 0.2)'
+        }}>
+          <span style={{ color: 'var(--color-accent)' }}>🖱️ Click unit to select</span>
+          <span style={{ color: 'var(--color-accent)' }}>🟦 Click blue hex to move</span>
+          <span style={{ color: 'var(--color-production)' }}>⚔️ Click enemy to attack</span>
+          <span className="opacity-60">| WASD/Arrows: pan | Scroll: zoom | Enter: end turn | Space: next unit</span>
         </div>
       )}
     </div>
   );
 }
 
-function ActionButton({ label, shortcut, color, textColor, onClick }: {
+function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
   label: string;
   shortcut: string;
   color: string;
+  icon?: string;
   textColor?: string;
   onClick: () => void;
 }) {
   return (
     <button
-      className="px-3 py-1 text-xs rounded font-bold cursor-pointer flex items-center gap-1"
-      style={{ backgroundColor: color, color: textColor ?? 'var(--color-bg)' }}
+      className="px-3 py-1.5 text-xs rounded font-bold cursor-pointer flex items-center gap-1.5 transition-all hover:scale-105"
+      style={{
+        background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+        color: textColor ?? '#0d1117',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+      }}
       onClick={onClick}
     >
+      {icon && <span>{icon}</span>}
       {label}
-      <span className="opacity-50 text-[10px]">[{shortcut}]</span>
+      <span
+        className="text-[10px] px-1.5 py-0.5 rounded ml-1"
+        style={{
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          fontWeight: 'normal',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        [{shortcut}]
+      </span>
     </button>
   );
 }
