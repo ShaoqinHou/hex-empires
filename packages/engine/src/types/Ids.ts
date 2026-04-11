@@ -8,3 +8,4 @@ export type TechnologyId = string;
 export type BuildingId = string;
 export type ResourceId = string;
 export type ImprovementId = string;
+export type DistrictId = string;

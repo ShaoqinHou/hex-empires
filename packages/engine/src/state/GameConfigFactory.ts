@@ -1,6 +1,7 @@
 import type { GameConfig } from '../types/GameConfig';
 import type { UnitDef } from '../data/units/antiquity-units';
 import type { BuildingDef } from '../data/buildings/antiquity-buildings';
+import type { DistrictDef } from '../types/District';
 import type { TechnologyDef } from '../data/technologies/types';
 import type { CivicDef } from '../data/civics/types';
 import type { PromotionDef } from '../data/units/promotions';
@@ -8,6 +9,7 @@ import type { ResourceDef } from '../data/resources';
 import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
 import { ALL_UNITS } from '../data/units';
 import { ALL_BUILDINGS } from '../data/buildings';
+import { ALL_DISTRICTS } from '../data/districts';
 import { ALL_TECHNOLOGIES } from '../data/technologies';
 import { ALL_CIVICS } from '../data/civics';
 import { ALL_BASE_TERRAINS } from '../data/terrains/base-terrains';
@@ -22,6 +24,9 @@ export function createGameConfig(): GameConfig {
 
   const buildings = new Map<string, BuildingDef>();
   for (const b of ALL_BUILDINGS) buildings.set(b.id, b);
+
+  const districts = new Map<string, DistrictDef>();
+  for (const d of ALL_DISTRICTS) districts.set(d.id, d);
 
   const technologies = new Map<string, TechnologyDef>();
   for (const t of ALL_TECHNOLOGIES) technologies.set(t.id, t);
@@ -41,5 +46,5 @@ export function createGameConfig(): GameConfig {
   const resources = new Map<string, ResourceDef>();
   for (const r of ALL_RESOURCES) resources.set(r.id, r);
 
-  return { units, buildings, technologies, civics, terrains, features, promotions, resources };
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources };
 }

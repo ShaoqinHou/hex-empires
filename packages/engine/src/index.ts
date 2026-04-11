@@ -18,6 +18,7 @@ export type {
   TechnologyId,
   BuildingId,
   ResourceId,
+  DistrictId,
   TurnPhase,
   Age,
   HexTile,
@@ -53,6 +54,7 @@ export type {
   System,
   ValidationResult,
 } from './types';
+export type { DistrictDef, DistrictSlot, DistrictType, AdjacencyResult } from './types/District';
 export { EMPTY_YIELDS, addYields } from './types';
 
 // Hex math
@@ -111,6 +113,7 @@ export { diplomacySystem, updateDiplomacyCounters, getStatusFromRelationship, ge
 export { fortifySystem } from './systems/fortifySystem';
 export { improvementSystem } from './systems/improvementSystem';
 export { buildingPlacementSystem } from './systems/buildingPlacementSystem';
+export { districtSystem } from './systems/districtSystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';
@@ -134,6 +137,9 @@ export {
 // Improvement data
 export type { ImprovementDef } from './types/Improvement';
 export { ALL_IMPROVEMENTS } from './data/improvements';
+
+// District data
+export { ALL_DISTRICTS } from './data/districts';
 
 // Building data
 export type { BuildingDef } from './data/buildings';

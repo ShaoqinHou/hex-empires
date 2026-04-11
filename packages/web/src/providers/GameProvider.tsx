@@ -24,6 +24,7 @@ import {
   fortifySystem,
   improvementSystem,
   buildingPlacementSystem,
+  districtSystem,
   generateAIActions,
   victorySystem,
   effectSystem,
@@ -57,6 +58,7 @@ const engine = new GameEngine([
   fortifySystem,
   improvementSystem,
   buildingPlacementSystem,
+  districtSystem,
   growthSystem,
   productionSystem,
   resourceSystem,
@@ -165,6 +167,7 @@ function createInitialState(): GameState {
       ['ai_warrior1', makeUnit('ai_warrior1', 'warrior', aiPlayerId, { q: aiStartCoord.q + 1, r: aiStartCoord.r }, 2)],
     ]),
     cities: new Map(),
+    districts: new Map(),
     tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
@@ -218,13 +221,12 @@ function detectAndTriggerTurnAnimations(
       if (!currentItem) continue;
 
       const itemDef = next.config.units.get(currentItem.id);
-      let itemType: 'unit' | 'building' | 'wonder' = currentItem.type; // Use the type from ProductionItem
 
       const prodAnim = animationManager.createProductionCompleteAnimation(
         cityId,
         city.position,
         currentItem.id,
-        itemType,
+        currentItem.type,
         800
       );
       animationManager.add(prodAnim);

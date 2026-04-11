@@ -3,7 +3,8 @@ export type { GameConfig } from './GameConfig';
 export type { TerrainId, TerrainDef, FeatureId, TerrainFeatureDef } from './Terrain';
 export type { YieldType, YieldSet } from './Yields';
 export { EMPTY_YIELDS, addYields } from './Yields';
-export type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId } from './Ids';
+export type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, DistrictId } from './Ids';
+export type { DistrictDef, DistrictSlot, DistrictType, AdjacencyResult } from './District';
 export type {
   TurnPhase,
   Age,

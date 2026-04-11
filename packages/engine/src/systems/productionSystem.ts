@@ -44,7 +44,7 @@ function handleSetProduction(
   state: GameState,
   cityId: string,
   itemId: string,
-  itemType: 'unit' | 'building' | 'wonder',
+  itemType: 'unit' | 'building' | 'wonder' | 'district',
 ): GameState {
   const city = state.cities.get(cityId);
   if (!city) return createInvalidResult(state, 'City not found', 'production');
@@ -77,6 +77,15 @@ function handleSetProduction(
   // Check if wonder is unique and already built globally
   if (itemType === 'wonder' && state.builtWonders.includes(itemId)) {
     return createInvalidResult(state, 'This wonder has already been built', 'production');
+  }
+
+  // Check if district is already built by this city
+  if (itemType === 'district') {
+    const cityDistricts = city.districts.map(did => state.districts.get(did)).filter((d): d is any => d !== undefined);
+    const districtDef = state.config.districts.get(itemId);
+    if (districtDef && cityDistricts.some(d => d.type === districtDef.type)) {
+      return createInvalidResult(state, 'City already has this district type', 'production');
+    }
   }
 
   const updatedCities = new Map(state.cities);
@@ -302,6 +311,24 @@ function processProduction(state: GameState): GameState {
           };
         }
         continue;
+      } else if (currentItem.type === 'district') {
+        // District production complete - trigger placement mode
+        // For now, we'll just log it and remove from queue
+        // The actual placement will be handled by PLACE_DISTRICT action
+        updatedCities.set(cityId, {
+          ...city,
+          productionQueue: city.productionQueue.slice(1),
+          productionProgress: newProgress - cost,
+        });
+        changed = true;
+
+        newLog.push({
+          turn: state.turn,
+          playerId: city.owner,
+          message: `${city.name} completed ${currentItem.id} - ready to place`,
+          type: 'production',
+        });
+        continue;
       }
 
       // Production overflow carries to next project (Civ VII rule)
@@ -331,10 +358,11 @@ function processProduction(state: GameState): GameState {
   };
 }
 
-/** Production cost for items — driven by state.config.units and state.config.buildings */
+/** Production cost for items — driven by state.config.units, state.config.buildings, and state.config.districts */
 function getProductionCost(state: GameState, itemId: string): number {
   return state.config.units.get(itemId)?.cost
     ?? state.config.buildings.get(itemId)?.cost
+    ?? state.config.districts.get(itemId)?.cost
     ?? 100;
 }
 

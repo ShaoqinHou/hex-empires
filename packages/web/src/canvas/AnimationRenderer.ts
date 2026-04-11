@@ -359,6 +359,10 @@ export class AnimationRenderer {
         bgColor = '#ffd54f';
         icon = '✨';
         break;
+      case 'district':
+        bgColor = '#9575cd';
+        icon = '🏛';
+        break;
     }
 
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';

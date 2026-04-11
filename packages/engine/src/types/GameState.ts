@@ -1,8 +1,9 @@
 import type { HexCoord, HexKey } from './HexCoord';
 import type { GameConfig } from './GameConfig';
-import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, ImprovementId } from './Ids';
+import type { PlayerId, UnitId, CityId, CivilizationId, LeaderId, TechnologyId, BuildingId, ResourceId, ImprovementId, DistrictId } from './Ids';
 import type { YieldSet, YieldType } from './Yields';
 import type { TerrainId, FeatureId } from './Terrain';
+import type { DistrictSlot } from './District';
 
 // ── Turn ──
 
@@ -74,10 +75,11 @@ export interface CityState {
   readonly defenseHP: number;      // city defense hit points (100 base, +100 with walls)
   readonly specialization: TownSpecialization | null; // towns only, requires pop >= 7
   readonly specialists: number;    // population assigned as specialists (each: +2 sci, +2 culture, -1 happiness)
+  readonly districts: ReadonlyArray<DistrictId>; // IDs of districts this city has constructed
 }
 
 export interface ProductionItem {
-  readonly type: 'unit' | 'building' | 'wonder';
+  readonly type: 'unit' | 'building' | 'wonder' | 'district';
   readonly id: string;
 }
 
@@ -251,6 +253,7 @@ export interface GameState {
   readonly map: HexMap;
   readonly units: ReadonlyMap<UnitId, UnitState>;
   readonly cities: ReadonlyMap<CityId, CityState>;
+  readonly districts: ReadonlyMap<DistrictId, DistrictSlot>; // All placed districts on the map
   readonly tradeRoutes: ReadonlyMap<string, TradeRoute>;
   readonly diplomacy: DiplomacyState;
   readonly age: AgeState;
@@ -281,6 +284,7 @@ export type GameAction =
   | { readonly type: 'FOUND_CITY'; readonly unitId: UnitId; readonly name: string }
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type'] }
   | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }
+  | { readonly type: 'PLACE_DISTRICT'; readonly cityId: CityId; readonly districtId: DistrictId; readonly tile: HexCoord }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }
   | { readonly type: 'PROPOSE_DIPLOMACY'; readonly targetId: PlayerId; readonly proposal: DiplomacyProposal }
   | { readonly type: 'TRANSITION_AGE'; readonly newCivId: CivilizationId }
@@ -300,7 +304,8 @@ export type GameAction =
   | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
   | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
-  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string };
+  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
+  | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId };
 
 // ── Events ──
 

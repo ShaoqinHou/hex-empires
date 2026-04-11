@@ -77,6 +77,19 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   const cityId = nextCityId(state);
   const isFirstCity = !playerHasCity(state, unit.owner);
   const settlementType: SettlementType = isFirstCity ? 'city' : 'town';
+
+  // Create city_center district automatically
+  const districtId = `district_city_center_${cityId}`;
+  const newDistrict = {
+    id: districtId,
+    type: 'city_center' as const,
+    position: pos,
+    cityId: cityId,
+    level: 1,
+    buildings: isFirstCity ? ['palace'] : [],
+    adjacencyBonus: 0,
+  };
+
   const newCity: CityState = {
     id: cityId,
     name: cityName,
@@ -94,6 +107,7 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
     defenseHP: 100, // base defense; walls add +100 when built
     specialization: null,
     specialists: 0,
+    districts: [districtId], // Start with city center district
   };
 
   // Remove settler unit
@@ -104,10 +118,15 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, newCity);
 
+  // Add district
+  const updatedDistricts = new Map(state.districts);
+  updatedDistricts.set(districtId, newDistrict);
+
   return {
     ...state,
     units: updatedUnits,
     cities: updatedCities,
+    districts: updatedDistricts,
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,

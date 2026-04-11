@@ -131,7 +131,7 @@ export interface ProductionCompleteAnimation extends Animation {
   readonly cityId: string;
   readonly position: HexCoord;
   readonly itemName: string;
-  readonly itemType: 'unit' | 'building' | 'wonder';
+  readonly itemType: 'unit' | 'building' | 'wonder' | 'district';
 }
 
 /** City growth animation */
@@ -448,7 +448,7 @@ export class AnimationManager {
     cityId: string,
     position: HexCoord,
     itemName: string,
-    itemType: 'unit' | 'building' | 'wonder',
+    itemType: 'unit' | 'building' | 'wonder' | 'district',
     duration: number = 800,
   ): ProductionCompleteAnimation {
     return {

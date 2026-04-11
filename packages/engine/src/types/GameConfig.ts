@@ -5,6 +5,7 @@ import type { CivicDef } from '../data/civics/types';
 import type { PromotionDef } from '../data/units/promotions';
 import type { ResourceDef } from '../data/resources';
 import type { TerrainDef, TerrainFeatureDef } from './Terrain';
+import type { DistrictDef } from './District';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -14,6 +15,7 @@ import type { TerrainDef, TerrainFeatureDef } from './Terrain';
 export interface GameConfig {
   readonly units: ReadonlyMap<string, UnitDef>;
   readonly buildings: ReadonlyMap<string, BuildingDef>;
+  readonly districts: ReadonlyMap<string, DistrictDef>;
   readonly technologies: ReadonlyMap<string, TechnologyDef>;
   readonly civics: ReadonlyMap<string, CivicDef>;
   readonly terrains: ReadonlyMap<string, TerrainDef>;
