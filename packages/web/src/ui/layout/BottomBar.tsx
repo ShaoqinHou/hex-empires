@@ -1,6 +1,8 @@
 import { useGame } from '../../providers/GameProvider';
 import { coordToKey } from '@hex/engine';
 import type { YieldSet } from '@hex/engine';
+import { ALL_IMPROVEMENTS } from '@hex/engine';
+import { useMemo } from 'react';
 
 export function BottomBar() {
   const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGame();
@@ -11,6 +13,58 @@ export function BottomBar() {
   const isCivilian = selectedUnit
     ? state.config.units.get(selectedUnit.typeId)?.category === 'civilian'
     : false;
+
+  // Check if selected unit is a builder and show improvement hints
+  const isBuilder = selectedUnit
+    ? state.config.units.get(selectedUnit.typeId)?.abilities.includes('build_improvement') ?? false
+    : false;
+
+  // Calculate available improvements for selected tile
+  const availableImprovements = useMemo(() => {
+    if (!isBuilder || !selectedHex) return [];
+
+    const player = state.players.get(state.currentPlayerId);
+    if (!player) return [];
+
+    const tileKey = coordToKey(selectedHex);
+    const currentTile = state.map.tiles.get(tileKey);
+    if (!currentTile) return [];
+
+    return ALL_IMPROVEMENTS.filter(improvement => {
+      // Check tech prerequisite
+      if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) {
+        return false;
+      }
+
+      // Check terrain prerequisite
+      if (improvement.prerequisites.terrain) {
+        if (!improvement.prerequisites.terrain.includes(currentTile.terrain)) {
+          return false;
+        }
+      }
+
+      // Check feature prerequisite
+      if (improvement.prerequisites.feature) {
+        if (!currentTile.feature || !improvement.prerequisites.feature.includes(currentTile.feature)) {
+          return false;
+        }
+      }
+
+      // Check resource prerequisite
+      if (improvement.prerequisites.resource) {
+        if (!currentTile.resource || !improvement.prerequisites.resource.includes(currentTile.resource)) {
+          return false;
+        }
+      }
+
+      // Check if improvement already exists
+      if (currentTile.improvement) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [isBuilder, selectedHex, state, state.currentPlayerId]);
 
   return (
     <div className="h-16 flex items-center px-4 gap-4 select-none"
@@ -125,6 +179,36 @@ export function BottomBar() {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* Builder improvement hints */}
+      {isBuilder && selectedHex && availableImprovements.length > 0 && (
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded"
+          style={{
+            background: 'linear-gradient(135deg, rgba(124, 252, 0, 0.1) 0%, rgba(124, 252, 0, 0.05) 100%)',
+            border: '1px solid rgba(124, 252, 0, 0.3)',
+          }}
+        >
+          <span style={{ color: 'var(--color-accent)' }}>🏗️ Can build:</span>
+          {availableImprovements.slice(0, 3).map(imp => (
+            <span
+              key={imp.id}
+              className="px-2 py-0.5 rounded font-semibold"
+              style={{
+                background: 'rgba(124, 252, 0, 0.1)',
+                color: 'var(--color-text)',
+                border: '1px solid rgba(124, 252, 0, 0.2)',
+              }}
+            >
+              {imp.name}
+            </span>
+          ))}
+          {availableImprovements.length > 3 && (
+            <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>
+              +{availableImprovements.length - 3} more
+            </span>
+          )}
         </div>
       )}
 
