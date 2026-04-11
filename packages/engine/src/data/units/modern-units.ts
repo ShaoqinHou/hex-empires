@@ -113,12 +113,46 @@ export const BIPLANE: UnitDef = {
   abilities: [],
 } as const;
 
+export const MARINE: UnitDef = {
+  id: 'marine',
+  name: 'Marine',
+  age: 'modern',
+  category: 'melee',
+  cost: 280,
+  combat: 60,
+  rangedCombat: 0,
+  range: 0,
+  movement: 3,
+  sightRange: 2,
+  requiredTech: 'amphibious_warfare',
+  upgradesTo: null,
+  abilities: ['amphibious'],
+} as const;
+
+export const SAM: UnitDef = {
+  id: 'sam',
+  name: 'SAM Battery',
+  age: 'modern',
+  category: 'siege',
+  cost: 200,
+  combat: 25,
+  rangedCombat: 70,
+  range: 2,
+  movement: 2,
+  sightRange: 3,
+  requiredTech: 'radar',
+  upgradesTo: null,
+  abilities: ['interception'],
+} as const;
+
 export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   INFANTRY,
   MACHINE_GUN,
   TANK,
+  MARINE,
   FIGHTER,
   ROCKET_ARTILLERY,
+  SAM,
   IRONCLAD,
   BIPLANE,
 ] as const;

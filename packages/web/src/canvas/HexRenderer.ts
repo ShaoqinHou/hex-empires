@@ -189,6 +189,11 @@ export class HexRenderer {
         this.drawImprovementIcon(tile, x, y, rc);
       }
 
+      // Building icon - always visible if present
+      if (tile.building) {
+        this.drawBuildingIcon(tile, x, y, rc);
+      }
+
       // Yield dots (small indicators) — only when lens is active
       if (rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
@@ -199,6 +204,11 @@ export class HexRenderer {
         // Improvement icon
         if (tile.improvement) {
           this.drawImprovementIcon(tile, x, y, rc);
+        }
+
+        // Building icon
+        if (tile.building) {
+          this.drawBuildingIcon(tile, x, y, rc);
         }
       }
     }
@@ -307,6 +317,74 @@ export class HexRenderer {
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 3;
+    ctx.fillText(icon, iconX, iconY);
+    ctx.restore();
+  }
+
+  private drawBuildingIcon(tile: HexTile, cx: number, cy: number, rc: RenderContext): void {
+    if (!tile.building) return;
+
+    const ctx = this.ctx;
+    const building = rc.state.config.buildings.get(tile.building);
+    if (!building) return;
+
+    // Building icons map - use emojis for visual clarity
+    const getBuildingIcon = (buildingId: string): string => {
+      const iconMap: Record<string, string> = {
+        // Military
+        barracks: '🏰',
+        armory: '🛡️',
+        walls: '🏰',
+        star_fort: '⭐',
+        military_base: '🎖️',
+
+        // Science
+        library: '📚',
+        university: '🎓',
+        research_lab: '🔬',
+        observatory: '🔭',
+
+        // Economy/Production
+        granary: '🌾',
+        market: '💰',
+        bank: '🏦',
+        stock_exchange: '📈',
+        workshop: '🔨',
+        factory: '🏭',
+        watermill: '💧',
+        power_plant: '⚡',
+        nuclear_plant: '☢️',
+
+        // Culture
+        monument: '🗿',
+        shrine: '⛩️',
+        temple: '🏛️',
+        cathedral: '⛪',
+        stadium: '🏟️',
+        broadcast_tower: '📡',
+        mall: '🏬',
+
+        // Gold
+        airport: '✈️',
+        shipyard: '⚓',
+      };
+
+      return iconMap[buildingId] || '🏠';
+    };
+
+    const icon = getBuildingIcon(tile.building);
+
+    // Position building icon in lower-right area of the hex
+    const iconX = cx + HEX_SIZE * 0.35;
+    const iconY = cy + HEX_SIZE * 0.35;
+
+    // Draw building icon with background for visibility
+    ctx.save();
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
     ctx.fillText(icon, iconX, iconY);
     ctx.restore();
   }

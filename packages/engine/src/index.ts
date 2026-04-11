@@ -110,6 +110,7 @@ export { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBon
 export { diplomacySystem, updateDiplomacyCounters, getStatusFromRelationship, getRelationKey, defaultRelation } from './systems/diplomacySystem';
 export { fortifySystem } from './systems/fortifySystem';
 export { improvementSystem } from './systems/improvementSystem';
+export { buildingPlacementSystem } from './systems/buildingPlacementSystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
 export { effectSystem, getActiveEffects } from './systems/effectSystem';

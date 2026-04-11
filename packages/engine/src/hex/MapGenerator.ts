@@ -77,6 +77,7 @@ export function generateMap(
         feature,
         resource: null, // resources assigned in the spawning pass below
         improvement: null,
+        building: null,
         river,
         elevation,
         continent,

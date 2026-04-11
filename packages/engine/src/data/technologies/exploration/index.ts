@@ -110,7 +110,30 @@ export const SIEGE_TACTICS: TechnologyDef = {
   treePosition: { row: 2, col: 3 },
 };
 
+export const APPRENTICESHIP: TechnologyDef = {
+  id: 'apprenticeship',
+  name: 'Apprenticeship',
+  age: 'exploration',
+  cost: 250,
+  prerequisites: ['printing'],
+  unlocks: ['workshop'],
+  description: 'Enables Workshop building',
+  treePosition: { row: 1, col: 1 },
+};
+
+export const MILITARY_SCIENCE: TechnologyDef = {
+  id: 'military_science',
+  name: 'Military Science',
+  age: 'exploration',
+  cost: 450,
+  prerequisites: ['military_tactics', 'education'],
+  unlocks: ['barracks'],
+  description: 'Enables Barracks building',
+  treePosition: { row: 1, col: 3 },
+};
+
 export const ALL_EXPLORATION_TECHS: ReadonlyArray<TechnologyDef> = [
-  CARTOGRAPHY, GUNPOWDER, PRINTING, BANKING, ASTRONOMY,
-  METALLURGY, EDUCATION, MILITARY_TACTICS, ECONOMICS, SIEGE_TACTICS,
+  PRINTING, APPRENTICESHIP, GUNPOWDER, BANKING,
+  EDUCATION, ASTRONOMY, MILITARY_TACTICS, METALLURGY,
+  CARTOGRAPHY, ECONOMICS, MILITARY_SCIENCE, SIEGE_TACTICS,
 ];

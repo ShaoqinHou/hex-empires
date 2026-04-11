@@ -1,9 +1,11 @@
 import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
+import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges, coordToKey } from '@hex/engine';
 import type { UnitDef, BuildingDef } from '@hex/engine';
 import { useGame } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
+import { BuildingPlacementPanel } from '../components/BuildingPlacementPanel';
+import { useState } from 'react';
 
 interface CityPanelProps {
   city: CityState;
@@ -12,6 +14,8 @@ interface CityPanelProps {
 
 export function CityPanel({ city, onClose }: CityPanelProps) {
   const { state, dispatch } = useGame();
+  const [placementMode, setPlacementMode] = useState<{ buildingId: string } | null>(null);
+
   const yields = calculateCityYields(city, state);
   const growthThreshold = getGrowthThreshold(city.population);
   const foodConsumed = city.population * 2;
@@ -20,6 +24,15 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const effectiveFoodSurplus = applyHappinessPenalty(yields.food, cityHappiness) - foodConsumed;
   const foodSurplus = yields.food - foodConsumed;
   const isTown = city.settlementType === 'town';
+
+  // Check which buildings are placed on tiles
+  const placedBuildings = new Set<string>();
+  for (const tileKey of city.territory) {
+    const tile = state.map.tiles.get(tileKey);
+    if (tile?.building) {
+      placedBuildings.add(tile.building);
+    }
+  }
 
   // Calculate city-specific resource changes for warnings
   const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
@@ -198,8 +211,26 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
           <div className="flex flex-col gap-1">
             {city.buildings.map(bId => {
               const bDef = ALL_BUILDINGS.find(b => b.id === bId);
+              const isPlaced = placedBuildings.has(bId);
               return bDef ? (
-                <BuildingCard key={bId} building={bDef} isBuilt compact />
+                <div
+                  key={bId}
+                  className={`flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer transition-all ${
+                    !isPlaced ? 'hover:bg-slate-700/50' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isPlaced ? 'var(--color-bg)' : 'var(--color-surface)',
+                    border: isPlaced ? '1px solid var(--color-border)' : '1px dashed var(--color-amber)',
+                  }}
+                  onClick={() => !isPlaced && setPlacementMode({ buildingId: bId })}
+                  title={isPlaced ? 'Placed on map' : 'Click to place on map'}
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{isPlaced ? '✓' : '⏳'}</span>
+                    <span className={isPlaced ? '' : 'text-amber-400'}>{bDef.name}</span>
+                  </div>
+                  <BuildingCard building={bDef} isBuilt compact />
+                </div>
               ) : (
                 <span key={bId} className="text-xs px-1.5 py-0.5 rounded"
                   style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
@@ -283,6 +314,18 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
           })}
         </div>
       </div>
+
+      {/* Building Placement Panel */}
+      {placementMode && (
+        <BuildingPlacementPanel
+          cityId={city.id}
+          buildingId={placementMode.buildingId}
+          onClose={() => setPlacementMode(null)}
+          onTileSelect={(tile) => {
+            dispatch({ type: 'PLACE_BUILDING', cityId: city.id, buildingId: placementMode.buildingId, tile });
+          }}
+        />
+      )}
     </div>
   );
 }

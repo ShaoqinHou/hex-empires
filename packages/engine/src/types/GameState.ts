@@ -17,6 +17,7 @@ export interface HexTile {
   readonly feature: FeatureId | null;
   readonly resource: ResourceId | null;
   readonly improvement: ImprovementId | null; // Tile improvement (farm, mine, etc.)
+  readonly building: BuildingId | null; // Placed building (from city construction)
   readonly river: ReadonlyArray<number>; // edge indices (0-5) that have rivers
   readonly elevation: number; // 0-1 normalized
   readonly continent: number; // continent id
@@ -278,6 +279,7 @@ export type GameAction =
   | { readonly type: 'ATTACK_CITY'; readonly attackerId: UnitId; readonly cityId: CityId }
   | { readonly type: 'FOUND_CITY'; readonly unitId: UnitId; readonly name: string }
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type'] }
+  | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }
   | { readonly type: 'PROPOSE_DIPLOMACY'; readonly targetId: PlayerId; readonly proposal: DiplomacyProposal }
   | { readonly type: 'TRANSITION_AGE'; readonly newCivId: CivilizationId }

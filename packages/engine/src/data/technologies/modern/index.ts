@@ -110,8 +110,53 @@ export const ROCKETRY: TechnologyDef = {
   treePosition: { row: 1, col: 3 },
 };
 
+export const MASS_CONSUMPTION: TechnologyDef = {
+  id: 'mass_consumption',
+  name: 'Mass Consumption',
+  age: 'modern',
+  cost: 700,
+  prerequisites: ['industrialization'],
+  unlocks: ['mall'],
+  description: 'Enables Mall and consumer economy',
+  treePosition: { row: 3, col: 2 },
+};
+
+export const MASS_MEDIA: TechnologyDef = {
+  id: 'mass_media',
+  name: 'Mass Media',
+  age: 'modern',
+  cost: 750,
+  prerequisites: ['scientific_theory'],
+  unlocks: ['stadium'],
+  description: 'Enables Stadium and cultural influence',
+  treePosition: { row: 4, col: 1 },
+};
+
+export const AMPHIBIOUS_WARFARE: TechnologyDef = {
+  id: 'amphibious_warfare',
+  name: 'Amphibious Warfare',
+  age: 'modern',
+  cost: 800,
+  prerequisites: ['rifling'],
+  unlocks: ['marine'],
+  description: 'Enables Marine unit',
+  treePosition: { row: 2, col: 3 },
+};
+
+export const RADAR: TechnologyDef = {
+  id: 'radar',
+  name: 'Radar',
+  age: 'modern',
+  cost: 650,
+  prerequisites: ['electricity'],
+  unlocks: ['sam'],
+  description: 'Enables SAM Battery',
+  treePosition: { row: 0, col: 3 },
+};
+
 export const ALL_MODERN_TECHS: ReadonlyArray<TechnologyDef> = [
-  INDUSTRIALIZATION, SCIENTIFIC_THEORY, RIFLING,
+  SCIENTIFIC_THEORY, RIFLING, INDUSTRIALIZATION,
   STEAM_POWER, ELECTRICITY, REPLACEABLE_PARTS,
   FLIGHT, NUCLEAR_FISSION, COMBINED_ARMS, ROCKETRY,
+  MASS_CONSUMPTION, MASS_MEDIA, AMPHIBIOUS_WARFARE, RADAR,
 ];

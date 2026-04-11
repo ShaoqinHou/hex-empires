@@ -91,6 +91,72 @@ export const CATHEDRAL: BuildingDef = {
   happinessCost: 3,
 } as const;
 
+export const MARKET: BuildingDef = {
+  id: 'market',
+  name: 'Market',
+  age: 'exploration',
+  cost: 120,
+  maintenance: 1,
+  yields: { gold: 3 },
+  effects: [],
+  requiredTech: 'banking',
+  category: 'gold',
+  happinessCost: 2,
+} as const;
+
+export const WORKSHOP: BuildingDef = {
+  id: 'workshop',
+  name: 'Workshop',
+  age: 'exploration',
+  cost: 150,
+  maintenance: 2,
+  yields: { production: 3 },
+  effects: [],
+  requiredTech: 'military_tactics',
+  category: 'military',
+  happinessCost: 3,
+} as const;
+
+export const OBSERVATORY: BuildingDef = {
+  id: 'observatory',
+  name: 'Observatory',
+  age: 'exploration',
+  cost: 180,
+  maintenance: 2,
+  yields: { science: 5 },
+  effects: [],
+  requiredTech: 'astronomy',
+  category: 'science',
+  happinessCost: 3,
+} as const;
+
+export const MONASTERY: BuildingDef = {
+  id: 'monastery',
+  name: 'Monastery',
+  age: 'exploration',
+  cost: 160,
+  maintenance: 1,
+  yields: { faith: 3, culture: 2 },
+  effects: ['+1 Happiness'],
+  requiredTech: 'printing',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const BARRACKS: BuildingDef = {
+  id: 'barracks',
+  name: 'Barracks',
+  age: 'exploration',
+  cost: 140,
+  maintenance: 2,
+  yields: { production: 2 },
+  effects: ['+15% land unit production speed'],
+  requiredTech: 'military_tactics',
+  category: 'military',
+  happinessCost: 2,
+} as const;
+
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
-  BANK, UNIVERSITY, STOCK_EXCHANGE, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
+  MARKET, WORKSHOP, MONASTERY, UNIVERSITY, OBSERVATORY,
+  BANK, STOCK_EXCHANGE, BARRACKS, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
 ] as const;

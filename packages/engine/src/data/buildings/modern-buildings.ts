@@ -91,6 +91,45 @@ export const AIRPORT: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+export const MALL: BuildingDef = {
+  id: 'mall',
+  name: 'Mall',
+  age: 'modern',
+  cost: 350,
+  maintenance: 2,
+  yields: { gold: 5 },
+  effects: [],
+  requiredTech: 'mass_consumption',
+  category: 'gold',
+  happinessCost: 2,
+} as const;
+
+export const STADIUM: BuildingDef = {
+  id: 'stadium',
+  name: 'Stadium',
+  age: 'modern',
+  cost: 400,
+  maintenance: 3,
+  yields: { culture: 7 },
+  effects: [],
+  requiredTech: 'mass_media',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const MILITARY_BASE: BuildingDef = {
+  id: 'military_base',
+  name: 'Military Base',
+  age: 'modern',
+  cost: 380,
+  maintenance: 4,
+  yields: { production: 3 },
+  effects: ['+20% unit production cost'],
+  requiredTech: 'combined_arms',
+  category: 'military',
+  happinessCost: 3,
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
-  FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT,
+  FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
 ] as const;
