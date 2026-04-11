@@ -187,6 +187,21 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
         Load
       </button>
       <button
+        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
+        style={{
+          background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
+          color: '#0d1117',
+          border: '1px solid rgba(88, 166, 255, 0.3)',
+          boxShadow: '0 1px 3px rgba(88, 166, 255, 0.2)'
+        }}
+        onClick={() => {
+          window.open('/QUICK_START.md', '_blank');
+        }}
+        title="Quick Start Guide"
+      >
+        ❓ Help
+      </button>
+      <button
         className="px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer hover:scale-105"
         style={{
           background: 'linear-gradient(135deg, var(--color-science) 0%, #3b8dbd 100%)',
