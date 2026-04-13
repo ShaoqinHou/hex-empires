@@ -1,6 +1,6 @@
 import type { GameState, GameAction, PlayerState, CityState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
-import { getMovementBonus } from './effectSystem';
+import { getMovementBonus } from '../state/EffectUtils';
 
 /**
  * TurnSystem manages turn phases and player order.

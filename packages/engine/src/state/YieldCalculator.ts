@@ -2,7 +2,7 @@ import type { GameState, CityState, TownSpecialization } from '../types/GameStat
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 import { ALL_IMPROVEMENTS } from '../data/improvements';
-import { getYieldBonus } from '../systems/effectSystem';
+import { getYieldBonus } from './EffectUtils';
 
 /** Calculate total yields for a city from its territory tiles */
 export function calculateCityYields(city: CityState, state: GameState): YieldSet {

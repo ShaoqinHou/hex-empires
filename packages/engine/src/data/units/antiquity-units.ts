@@ -222,7 +222,7 @@ export const MERCHANT: UnitDef = {
   range: 0,
   movement: 3,
   sightRange: 2,
-  requiredTech: 'foreign_trade',
+  requiredTech: 'currency',
   upgradesTo: null,
   abilities: ['create_trade_route'],
 } as const;

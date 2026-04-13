@@ -203,7 +203,7 @@ export const ORACLE: BuildingDef = {
   maintenance: 0,
   yields: { culture: 8 },
   effects: ['+1 Great Writer point per turn', '+25% great person generation'],
-  requiredTech: 'drama_poetry',
+  requiredTech: 'construction',
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,

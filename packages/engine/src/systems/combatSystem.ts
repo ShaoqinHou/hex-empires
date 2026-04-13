@@ -3,7 +3,7 @@ import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
-import { getCombatBonus } from './effectSystem';
+import { getCombatBonus } from '../state/EffectUtils';
 
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
