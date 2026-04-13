@@ -7,6 +7,7 @@ import {
   ALL_FEATURES,
   generateMap,
   coordToKey,
+  neighbors,
   Registry,
   GameEngine,
   turnSystem,
@@ -182,12 +183,31 @@ function createInitialState(config: GameSetupConfig, seed?: number): GameState {
     playersArr.push([aiId, makePlayer(aiId, `AI Empire ${i + 1}`, false, aiCiv, aiLeader)]);
   }
 
+  // Find valid adjacent tiles for placing starting units near a position
+  const findNearbyLandTiles = (center: HexCoord, count: number): HexCoord[] => {
+    const result: HexCoord[] = [];
+    const adjacentHexes = neighbors(center);
+    for (const hex of adjacentHexes) {
+      const key = coordToKey(hex);
+      const tile = map.tiles.get(key);
+      if (tile) {
+        const t = terrainRegistry.get(tile.terrain);
+        if (t && !t.isWater && tile.feature !== 'mountains') {
+          result.push(hex);
+          if (result.length >= count) break;
+        }
+      }
+    }
+    return result;
+  };
+
   // Spread AI start positions evenly across remaining land tiles
+  const nearbyPlayer = findNearbyLandTiles(startCoord, 3);
   const unitsEntries: [string, ReturnType<typeof makeUnit>][] = [
     ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
-    ['builder1', makeUnit('builder1', 'builder', playerId, { q: startCoord.q, r: startCoord.r - 1 }, 2)],
-    ['warrior1', makeUnit('warrior1', 'warrior', playerId, { q: startCoord.q + 1, r: startCoord.r }, 2)],
-    ['scout1', makeUnit('scout1', 'scout', playerId, { q: startCoord.q - 1, r: startCoord.r + 1 }, 3)],
+    ['builder1', makeUnit('builder1', 'builder', playerId, nearbyPlayer[0] ?? startCoord, 2)],
+    ['warrior1', makeUnit('warrior1', 'warrior', playerId, nearbyPlayer[1] ?? startCoord, 2)],
+    ['scout1', makeUnit('scout1', 'scout', playerId, nearbyPlayer[2] ?? startCoord, 3)],
   ];
 
   for (let i = 0; i < aiCount; i++) {
@@ -195,10 +215,11 @@ function createInitialState(config: GameSetupConfig, seed?: number): GameState {
     const fraction = (i + 1) / (aiCount + 1);
     const aiStart = landTiles[Math.min(landTiles.length - 1, Math.floor(landTiles.length * (0.4 + fraction * 0.5)))]?.coord
       ?? { q: Math.floor(mapWidth * fraction), r: Math.floor(mapHeight * 0.5) };
+    const nearbyAI = findNearbyLandTiles(aiStart, 2);
     unitsEntries.push(
       [`ai${i + 1}_settler1`, makeUnit(`ai${i + 1}_settler1`, 'settler', aiId, aiStart, 2)],
-      [`ai${i + 1}_builder1`, makeUnit(`ai${i + 1}_builder1`, 'builder', aiId, { q: aiStart.q, r: aiStart.r - 1 }, 2)],
-      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, { q: aiStart.q + 1, r: aiStart.r }, 2)],
+      [`ai${i + 1}_builder1`, makeUnit(`ai${i + 1}_builder1`, 'builder', aiId, nearbyAI[0] ?? aiStart, 2)],
+      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, nearbyAI[1] ?? aiStart, 2)],
     );
   }
 
