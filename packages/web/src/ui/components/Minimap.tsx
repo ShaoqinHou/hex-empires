@@ -83,9 +83,9 @@ export function Minimap({ cameraRef }: MinimapProps) {
     // Draw camera viewport rectangle
     if (cameraRef?.current) {
       const cam = cameraRef.current;
-      // Approximate viewport in world coords (assuming ~800x500 screen at current zoom)
-      const vpHalfW = 400 / cam.zoom;
-      const vpHalfH = 250 / cam.zoom;
+      // Use actual window dimensions for viewport calculation
+      const vpHalfW = (window.innerWidth / 2) / cam.zoom;
+      const vpHalfH = (window.innerHeight / 2) / cam.zoom;
       const vpLeft = (cam.x - vpHalfW - minX) * scaleX;
       const vpTop = (cam.y - vpHalfH - minY) * scaleY;
       const vpW = (vpHalfW * 2) * scaleX;

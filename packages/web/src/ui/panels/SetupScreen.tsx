@@ -52,7 +52,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
       {/* Setup card */}
       <div
-        className="w-full max-w-2xl rounded-lg overflow-hidden"
+        className="w-full max-w-4xl rounded-lg overflow-hidden"
         style={{
           backgroundColor: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
@@ -127,7 +127,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                   <button
                     key={size.label}
                     onClick={() => setMapSizeIndex(idx)}
-                    className="flex items-center justify-between px-3 py-2 rounded text-sm transition-colors cursor-pointer"
+                    className="flex items-center justify-between px-4 py-3 rounded text-sm transition-colors cursor-pointer"
                     style={{
                       backgroundColor: mapSizeIndex === idx ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
                       border: `1px solid ${mapSizeIndex === idx ? 'var(--color-gold, #d4a853)' : 'var(--color-border)'}`,
@@ -149,7 +149,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                   <button
                     key={count}
                     onClick={() => setNumAI(count)}
-                    className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors cursor-pointer"
+                    className="flex items-center gap-3 px-4 py-3 rounded text-sm transition-colors cursor-pointer"
                     style={{
                       backgroundColor: numAI === count ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
                       border: `1px solid ${numAI === count ? 'var(--color-gold, #d4a853)' : 'var(--color-border)'}`,
@@ -170,16 +170,19 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         <Divider />
 
         {/* Start button */}
-        <div className="px-6 py-5 flex justify-end">
+        <div className="px-6 py-5 flex justify-center">
           <button
             onClick={handleStart}
-            className="px-8 py-3 rounded font-bold text-base tracking-wide uppercase transition-opacity cursor-pointer hover:opacity-90"
+            className="px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
             style={{
-              backgroundColor: 'var(--color-gold, #d4a853)',
-              color: 'var(--color-bg)',
+              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+              color: '#fff',
+              boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              minWidth: '240px',
             }}
           >
-            Start Game
+            Start Game →
           </button>
         </div>
       </div>
@@ -227,6 +230,7 @@ function LeaderCard({
     >
       {/* Avatar placeholder */}
       <div
+        aria-hidden="true"
         className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
         style={{
           backgroundColor: selected ? 'var(--color-gold, #d4a853)' : 'var(--color-border)',
@@ -265,6 +269,7 @@ function CivCard({
     >
       {/* Color swatch */}
       <div
+        aria-hidden="true"
         className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
         style={{
           backgroundColor: civ.color ?? 'var(--color-border)',

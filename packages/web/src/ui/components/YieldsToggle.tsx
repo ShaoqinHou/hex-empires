@@ -5,7 +5,7 @@ interface YieldsToggleProps {
 
 export function YieldsToggle({ showYields, onToggle }: YieldsToggleProps) {
   return (
-    <div className="absolute left-2 select-none" style={{ bottom: '10.5rem' }}>
+    <div className="absolute left-2 select-none" style={{ bottom: '14rem', zIndex: 20 }}>
       <button
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer"
         style={{

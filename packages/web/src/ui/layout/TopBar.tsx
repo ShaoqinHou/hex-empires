@@ -64,11 +64,12 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
       </div>
 
       {/* Center: Resources */}
-      <div className="flex items-center gap-4">
-        <ResourcePill label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
-        <ResourcePill label="Science" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
-        <ResourcePill label="Culture" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
-        <ResourcePill label="Faith" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" />
+      <div className="flex items-center gap-3">
+        <ResourcePill icon="💰" label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
+        <ResourcePill icon="🔬" label="Sci" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
+        <ResourcePill icon="🎭" label="Cul" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
+        <ResourcePill icon="⛪" label="Fai" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" />
+        <ResourcePill icon="🤝" label="Inf" value={player?.influence ?? 0} perTurn={0} color="rgba(186, 104, 200, 0.9)" />
 
         {/* Research progress */}
         {currentResearchTech && (
@@ -90,8 +91,8 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
         {/* More menu for secondary actions */}
         <div className="relative">
           <button
-            className="px-2 py-1 rounded text-xs cursor-pointer hover:opacity-80"
-            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
+            className="px-2.5 py-1.5 rounded text-xs cursor-pointer hover:opacity-80"
+            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', minHeight: '28px' }}
             onClick={() => setShowMoreMenu(!showMoreMenu)}
           >
             ⋯
@@ -113,18 +114,19 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
 
         {/* End Turn — always clickable */}
         <button
-          className="px-4 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1"
+          className="px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1"
           style={{
             background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             color: '#fff',
             boxShadow: '0 2px 8px rgba(34, 197, 94, 0.4)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
+            minHeight: '32px',
           }}
           onClick={() => dispatch({ type: 'END_TURN' })}
         >
           End Turn →
           {unitsWithMovement > 0 && (
-            <span className="ml-1.5 text-xs opacity-75">({unitsWithMovement} idle)</span>
+            <span className="ml-1.5 text-xs opacity-75">({unitsWithMovement} unmoved)</span>
           )}
         </button>
       </div>
@@ -148,10 +150,10 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
   );
 }
 
-function ResourcePill({ label, value, perTurn, color }: { label: string; value: number; perTurn: number; color: string }) {
+function ResourcePill({ icon, label, value, perTurn, color }: { icon: string; label: string; value: number; perTurn: number; color: string }) {
   return (
     <div className="flex items-center gap-1" title={`${label}: ${value} (${perTurn >= 0 ? '+' : ''}${perTurn}/turn)`}>
-      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-xs">{icon}</span>
       <span className="font-mono text-xs font-bold" style={{ color }}>{value}</span>
       {perTurn !== 0 && (
         <span className="text-xs" style={{ color: perTurn >= 0 ? 'var(--color-food)' : 'var(--color-health-low)' }}>
@@ -165,11 +167,12 @@ function ResourcePill({ label, value, perTurn, color }: { label: string; value: 
 function PanelButton({ label, color, dark, onClick }: { label: string; color: string; dark?: boolean; onClick?: () => void }) {
   return (
     <button
-      className="px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
+      className="px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
       style={{
         background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
         color: dark ? '#0d1117' : '#fff',
         border: `1px solid ${color}80`,
+        minHeight: '28px',
       }}
       onClick={onClick}
     >
