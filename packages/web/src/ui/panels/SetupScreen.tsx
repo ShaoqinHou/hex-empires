@@ -34,19 +34,26 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
   return (
     <div
-      className="fixed inset-0 flex flex-col items-center justify-center overflow-y-auto py-8"
-      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
+      className="fixed inset-0 flex flex-col items-center overflow-y-auto py-8"
+      style={{
+        backgroundColor: 'var(--color-bg)',
+        color: 'var(--color-text)',
+        backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(212, 168, 83, 0.08) 0%, transparent 50%)',
+      }}
     >
       {/* Title */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center pt-8">
         <h1
-          className="text-4xl font-bold tracking-widest uppercase mb-1"
-          style={{ color: 'var(--color-gold, #d4a853)' }}
+          className="text-5xl font-bold tracking-[0.25em] uppercase mb-2"
+          style={{
+            color: 'var(--color-gold, #d4a853)',
+            textShadow: '0 0 40px rgba(212, 168, 83, 0.3)',
+          }}
         >
           Hex Empires
         </h1>
-        <p className="text-sm tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-          Configure your empire before the age begins
+        <p className="text-sm tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>
+          A new age awaits
         </p>
       </div>
 
@@ -60,7 +67,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       >
         {/* Leader selection */}
         <Section title="Choose Your Leader">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
             {ALL_LEADERS.map(leader => (
               <LeaderCard
                 key={leader.id}
@@ -90,7 +97,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
         {/* Civilization selection */}
         <Section title="Choose Your Civilization">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             {ALL_ANTIQUITY_CIVS.map(civ => (
               <CivCard
                 key={civ.id}
