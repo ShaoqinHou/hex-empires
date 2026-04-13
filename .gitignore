@@ -20,3 +20,6 @@ Thumbs.db
 .claude/workflow/verify-marker.txt
 .claude/workflow/.issues.lockdir/
 .claude/worktrees/
+test-results/
+packages/web/test-results/
+packages/web/e2e/screenshot-*.png
