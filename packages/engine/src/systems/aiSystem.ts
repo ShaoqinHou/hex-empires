@@ -146,6 +146,21 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
+  // 1b. Age transition — if we've earned enough age progress, transition to next age
+  const nextAge = player.age === 'antiquity' ? 'exploration' : player.age === 'exploration' ? 'modern' : null;
+  if (nextAge) {
+    const threshold = state.age.ageThresholds[nextAge];
+    if (player.ageProgress >= threshold) {
+      // Pick a civilization from the next age
+      const nextAgeCivs = [...state.config.civilizations.values()].filter(c => c.age === nextAge);
+      if (nextAgeCivs.length > 0) {
+        // Pick a random civ (deterministic based on turn + player id)
+        const civIndex = (state.turn + player.id.charCodeAt(player.id.length - 1)) % nextAgeCivs.length;
+        actions.push({ type: 'TRANSITION_AGE', newCivId: nextAgeCivs[civIndex].id });
+      }
+    }
+  }
+
   // 2. City production — based on current needs, adjusted for threat level
   for (const city of ourCities) {
     if (city.settlementType === 'town') {
