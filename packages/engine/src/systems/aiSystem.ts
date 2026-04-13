@@ -6,14 +6,99 @@ import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
 
+/** Threat level returned by assessThreats */
+export type ThreatLevel = 'safe' | 'cautious' | 'danger' | 'critical';
+
+/** Result of threat assessment */
+export interface ThreatAssessment {
+  readonly threatLevel: ThreatLevel;
+  readonly enemyMilitaryStrength: number;
+  readonly ownMilitaryStrength: number;
+  readonly visibleEnemyCities: number;
+  readonly visibleEnemyUnits: number;
+}
+
+/**
+ * Assess the threat level facing the current AI player.
+ * Counts visible enemy military units, estimates their total combat strength,
+ * and compares against our own military strength.
+ */
+export function assessThreats(
+  state: GameState,
+  playerId: string,
+  visibility: ReadonlySet<string>,
+): ThreatAssessment {
+  let enemyMilitaryStrength = 0;
+  let visibleEnemyUnits = 0;
+  let visibleEnemyCities = 0;
+  let ownMilitaryStrength = 0;
+
+  // Count visible enemy military units and estimate their strength
+  for (const unit of state.units.values()) {
+    if (unit.owner === playerId) {
+      const def = state.config.units.get(unit.typeId);
+      if (def && def.category !== 'civilian' && def.category !== 'religious') {
+        const strength = Math.max(def.combat, def.rangedCombat);
+        // Scale by current health percentage
+        ownMilitaryStrength += Math.round(strength * unit.health / 100);
+      }
+    } else {
+      if (!canSee(visibility, unit.position)) continue;
+      const def = state.config.units.get(unit.typeId);
+      if (def && def.category !== 'civilian' && def.category !== 'religious') {
+        const strength = Math.max(def.combat, def.rangedCombat);
+        enemyMilitaryStrength += Math.round(strength * unit.health / 100);
+        visibleEnemyUnits++;
+      }
+    }
+  }
+
+  // Count visible enemy cities
+  for (const city of state.cities.values()) {
+    if (city.owner !== playerId && canSee(visibility, city.position)) {
+      visibleEnemyCities++;
+    }
+  }
+
+  // Determine threat level by comparing enemy vs own strength
+  let threatLevel: ThreatLevel;
+  if (ownMilitaryStrength === 0) {
+    // No army at all — always at least cautious when enemies are visible
+    threatLevel = enemyMilitaryStrength > 0 ? 'danger' : 'safe';
+  } else {
+    const ratio = enemyMilitaryStrength / ownMilitaryStrength;
+    if (ratio < 0.5) {
+      threatLevel = 'safe';
+    } else if (ratio < 1.0) {
+      threatLevel = 'cautious';
+    } else if (ratio < 2.0) {
+      threatLevel = 'danger';
+    } else {
+      threatLevel = 'critical';
+    }
+  }
+
+  return { threatLevel, enemyMilitaryStrength, ownMilitaryStrength, visibleEnemyCities, visibleEnemyUnits };
+}
+
+/** Check if a unit is a scout (high movement civilian or has scout ability) */
+function isScout(unitDef: { category: string; movement: number; abilities: ReadonlyArray<string> }): boolean {
+  // Settlers are not scouts even though they're fast civilians
+  if (unitDef.abilities.includes('found_city')) return false;
+  if (unitDef.abilities.includes('build_improvement')) return false;
+  return unitDef.abilities.includes('scout') ||
+    (unitDef.category === 'civilian' && unitDef.movement >= 3);
+}
+
 /**
  * AISystem generates actions for non-human players.
  * Uses priority-based decision making:
- * 1. Research (always pick the cheapest available tech)
- * 2. City management (set production based on needs)
- * 3. Settler movement and city founding
- * 4. Military movement and combat
- * 5. Exploration
+ * 1. Threat assessment
+ * 2. Research (always pick the cheapest available tech)
+ * 3. City management (set production based on needs + threat level)
+ * 4. Settler movement and city founding
+ * 5. Scout exploration (independent of military strategy)
+ * 6. Military movement and combat
  */
 export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
   const player = state.players.get(state.currentPlayerId);
@@ -30,6 +115,9 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     return def && def.category !== 'civilian';
   });
 
+  // 0. Threat assessment — informs all subsequent decisions
+  const threat = assessThreats(state, player.id, visibility);
+
   // 1. Research — pick cheapest unresearched tech with met prerequisites
   if (!player.currentResearch) {
     const techId = pickBestTech(state, personality);
@@ -38,7 +126,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
-  // 2. City production — based on current needs
+  // 2. City production — based on current needs, adjusted for threat level
   for (const city of ourCities) {
     if (city.settlementType === 'town') {
       // Set town specialization first (always — this is free and gives passive bonuses)
@@ -50,7 +138,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
 
       // Towns must purchase with gold — only purchase if we can actually afford it
-      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality);
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality, threat.threatLevel);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
       const baseCost = state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100;
       const purchaseCost = baseCost * 2; // towns pay double
@@ -59,9 +147,19 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
       // else: town remains idle this turn — no IDLE production action needed (engine handles it)
     } else if (city.productionQueue.length === 0) {
-      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality);
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality, threat.threatLevel);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
       actions.push({ type: 'SET_PRODUCTION', cityId: city.id, itemId, itemType });
+    } else if (threat.threatLevel === 'critical') {
+      // Critical threat: override any non-military production in the queue
+      const currentItemId = city.productionQueue[0]?.id;
+      if (currentItemId && state.config.buildings.has(currentItemId)) {
+        const age = player.age ?? 'antiquity';
+        const military = findCheapestMilitary(state, age);
+        if (military) {
+          actions.push({ type: 'SET_PRODUCTION', cityId: city.id, itemId: military, itemType: 'unit' });
+        }
+      }
     }
   }
 
@@ -72,6 +170,12 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     if (!unitDef) continue;
 
     if (unitDef.category === 'civilian') {
+      // Scouts: explore independently, flee from enemies
+      if (isScout(unitDef)) {
+        moveScout(state, unit, player.explored, visibility, actions);
+        continue;
+      }
+
       // Units with found_city ability: move to good spot and found city
       if (unitDef.abilities.includes('found_city') && ourCities.length < 4) {
         const founded = tryFoundCity(state, unit, ourCities, actions);
@@ -89,7 +193,18 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
         }
       }
     } else {
-      // Military: attack nearby enemy units first, then enemy cities, or explore
+      // Military: when threatened, pull back defenders to cities first
+      if (threat.threatLevel === 'danger' || threat.threatLevel === 'critical') {
+        if (shouldDefendCity(state, unit, ourCities, visibility)) {
+          const step = moveTowardNearestCity(state, unit, ourCities);
+          if (step) {
+            actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
+          }
+          continue;
+        }
+      }
+
+      // Attack nearby enemy units first, then enemy cities, or move strategically
       const attacked = tryAttackNearby(state, unit, visibility, actions);
       if (!attacked) {
         const attackedCity = tryAttackNearbyCity(state, unit, visibility, actions);
@@ -190,16 +305,28 @@ function checkAtWar(state: GameState, playerId: string): boolean {
   return false;
 }
 
-/** Pick what to produce based on game state */
+/** Pick what to produce based on game state and threat level */
 function pickProduction(
   state: GameState,
   city: CityState,
   cityCount: number,
   militaryCount: number,
   personality: AIPersonality,
+  threatLevel: ThreatLevel = 'safe',
 ): string {
   const player = state.players.get(state.currentPlayerId);
   const age = player?.age ?? 'antiquity';
+
+  // Under critical threat: produce military units only
+  if (threatLevel === 'critical') {
+    return findCheapestMilitary(state, age) ?? 'warrior';
+  }
+
+  // Under danger: prioritize military over buildings regardless of personality
+  if (threatLevel === 'danger') {
+    const military = findCheapestMilitary(state, age);
+    if (military) return military;
+  }
 
   // Personality-driven targets
   const targetMilitaryPerCity = personality.militaryRatio;
@@ -213,17 +340,19 @@ function pickProduction(
     if (military) return military;
   }
 
-  // Priority 2: First food building (granary) if city has none
-  const hasFoodBuilding = city.buildings.some(bId => {
-    const b = state.config.buildings.get(bId);
-    return b && (b.yields.food ?? 0) > 0;
-  });
-  if (!hasFoodBuilding) {
-    for (const [buildingId, building] of state.config.buildings) {
-      if (building.age !== age) continue;
-      if (city.buildings.includes(buildingId)) continue;
-      if (building.requiredTech && !player?.researchedTechs.includes(building.requiredTech)) continue;
-      if ((building.yields.food ?? 0) > 0) return buildingId;
+  // Priority 2: First food building (granary) if city has none — only when not threatened
+  if (threatLevel === 'safe' || threatLevel === 'cautious') {
+    const hasFoodBuilding = city.buildings.some(bId => {
+      const b = state.config.buildings.get(bId);
+      return b && (b.yields.food ?? 0) > 0;
+    });
+    if (!hasFoodBuilding) {
+      for (const [buildingId, building] of state.config.buildings) {
+        if (building.age !== age) continue;
+        if (city.buildings.includes(buildingId)) continue;
+        if (building.requiredTech && !player?.researchedTechs.includes(building.requiredTech)) continue;
+        if ((building.yields.food ?? 0) > 0) return buildingId;
+      }
     }
   }
 
@@ -233,7 +362,8 @@ function pickProduction(
     if (military) return military;
   }
 
-  // Priority 4: Settler — high-expansion civs want more cities
+  // Priority 4: Settler — high-expansion civs want more cities (only when safe/cautious)
+  // Note: 'danger' and 'critical' already returned early above, so here we are safe/cautious
   if (cityCount < maxCitiesBeforeSettle && !hasUnitAbility(state, 'found_city') && militaryCount >= cityCount) {
     const settler = findCheapestUnitByAbility(state, 'found_city');
     if (settler) return settler;
@@ -458,6 +588,150 @@ function tryAttackNearbyCity(
     return true;
   }
   return false;
+}
+
+/**
+ * Move a scout unit toward unexplored territory.
+ * Scouts flee from adjacent enemies instead of fighting.
+ */
+function moveScout(
+  state: GameState,
+  unit: UnitState,
+  explored: ReadonlySet<string>,
+  visibility: ReadonlySet<string>,
+  actions: GameAction[],
+): void {
+  // Check if any enemies are adjacent — if so, flee
+  const ns = neighbors(unit.position);
+  for (const n of ns) {
+    for (const other of state.units.values()) {
+      if (other.owner === unit.owner) continue;
+      if (coordToKey(other.position) === coordToKey(n)) {
+        // Enemy adjacent — flee in the opposite direction
+        const fleeStep = getFleeStep(unit.position, other.position, state);
+        if (fleeStep) {
+          actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [fleeStep] });
+        }
+        return;
+      }
+    }
+  }
+
+  // Find the direction with the most unexplored tiles in a 3-hex radius
+  // Count unexplored neighbors for each adjacent passable hex
+  let bestStep: HexCoord | null = null;
+  let bestUnexploredCount = -1;
+
+  for (const n of ns) {
+    const tile = state.map.tiles.get(coordToKey(n));
+    if (!tile) continue;
+    if (state.config.terrains.get(tile.terrain)?.isWater) continue;
+    if (tile.feature && state.config.features.get(tile.feature)?.blocksMovement) continue;
+
+    // Skip tiles occupied by units
+    let occupied = false;
+    for (const u of state.units.values()) {
+      if (coordToKey(u.position) === coordToKey(n)) { occupied = true; break; }
+    }
+    if (occupied) continue;
+
+    // Count unexplored tiles reachable from n (2-hex look-ahead)
+    let unexploredCount = 0;
+    for (const nn of neighbors(n)) {
+      if (!explored.has(coordToKey(nn))) unexploredCount++;
+    }
+    // Heavily prefer tiles that are themselves unexplored
+    if (!explored.has(coordToKey(n))) unexploredCount += 3;
+
+    if (unexploredCount > bestUnexploredCount) {
+      bestUnexploredCount = unexploredCount;
+      bestStep = n;
+    }
+  }
+
+  if (bestStep) {
+    actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [bestStep] });
+  }
+}
+
+/** Get a step that moves away from a threat position */
+function getFleeStep(from: HexCoord, threat: HexCoord, state: GameState): HexCoord | null {
+  const ns = neighbors(from);
+  let bestDist = distance(from, threat);
+  let bestHex: HexCoord | null = null;
+
+  for (const n of ns) {
+    const tile = state.map.tiles.get(coordToKey(n));
+    if (!tile) continue;
+    const cost = getMovementCost(tile);
+    if (cost === null) continue;
+
+    let occupied = false;
+    for (const u of state.units.values()) {
+      if (coordToKey(u.position) === coordToKey(n)) { occupied = true; break; }
+    }
+    if (occupied) continue;
+
+    const d = distance(n, threat);
+    if (d > bestDist) {
+      bestDist = d;
+      bestHex = n;
+    }
+  }
+
+  return bestHex;
+}
+
+/**
+ * Determine whether a military unit should pull back toward a city.
+ * Returns true when the unit is far from any friendly city while enemies are nearby.
+ */
+function shouldDefendCity(
+  state: GameState,
+  unit: UnitState,
+  ourCities: CityState[],
+  visibility: ReadonlySet<string>,
+): boolean {
+  if (ourCities.length === 0) return false;
+
+  // Find nearest friendly city
+  let nearestCityDist = Infinity;
+  for (const city of ourCities) {
+    const d = distance(unit.position, city.position);
+    if (d < nearestCityDist) nearestCityDist = d;
+  }
+
+  // Only pull back if not already at the city
+  if (nearestCityDist <= 2) return false;
+
+  // Check if there's a visible enemy within 4 hexes of any of our cities
+  for (const city of ourCities) {
+    for (const enemy of state.units.values()) {
+      if (enemy.owner === unit.owner) continue;
+      if (!canSee(visibility, enemy.position)) continue;
+      if (distance(enemy.position, city.position) <= 4) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/** Move one step toward the nearest friendly city */
+function moveTowardNearestCity(
+  state: GameState,
+  unit: UnitState,
+  ourCities: CityState[],
+): HexCoord | null {
+  let nearestCity: CityState | null = null;
+  let nearestDist = Infinity;
+  for (const city of ourCities) {
+    const d = distance(unit.position, city.position);
+    if (d < nearestDist) { nearestDist = d; nearestCity = city; }
+  }
+  if (!nearestCity) return null;
+  return getOneStepToward(unit.position, nearestCity.position, state);
 }
 
 /** Move military units strategically */
