@@ -19,7 +19,20 @@ import type {
 } from './AnimationManager';
 import { AnimationManager } from './AnimationManager';
 import type { Camera } from './Camera';
-import { drawUnitIcon } from './UnitIcons';
+import { drawUnitIcon, type UnitIconOptions } from './UnitIcons';
+
+/** Minimal options for animated unit icons — no overlay indicators */
+function animOpts(playerColor: string): UnitIconOptions {
+  return {
+    playerColor,
+    isSelected: false,
+    isFortified: false,
+    health: 100,
+    movementLeft: 0,
+    maxMovement: 0,
+    pulseFraction: 0,
+  };
+}
 import { hexToPixel, HEX_SIZE } from './HexRenderer';
 
 const PLAYER_COLORS = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
@@ -103,7 +116,7 @@ export class AnimationRenderer {
 
     // Draw unit icon with unit type from animation data
     // For now, use a generic unit icon - in a full implementation, you'd pass unit type
-    drawUnitIcon(this.ctx, 'warrior', 0, 0, color, false);
+    drawUnitIcon(this.ctx, 'warrior', 0, 0, animOpts(color));
 
     // Movement trail (fading dots behind)
     const trailLength = 3;
@@ -138,7 +151,7 @@ export class AnimationRenderer {
     this.ctx.translate(pos.x, pos.y);
 
     // Draw attacker unit
-    drawUnitIcon(this.ctx, anim.attackerTypeId, 0, 0, attackerColor, false);
+    drawUnitIcon(this.ctx, anim.attackerTypeId, 0, 0, animOpts(attackerColor));
 
     // Draw attack slash effect
     if (progress > 0.3 && progress < 0.7) {
@@ -160,7 +173,7 @@ export class AnimationRenderer {
         (Math.random() - 0.5) * shakeAmount,
         (Math.random() - 0.5) * shakeAmount
       );
-      drawUnitIcon(this.ctx, anim.targetTypeId, HEX_SIZE, 0, targetColor, false);
+      drawUnitIcon(this.ctx, anim.targetTypeId, HEX_SIZE, 0, animOpts(targetColor));
     }
 
     this.ctx.restore();
@@ -259,7 +272,7 @@ export class AnimationRenderer {
     this.ctx.scale(scale, scale);
 
     // Draw unit icon fading
-    drawUnitIcon(this.ctx, anim.unitTypeId, 0, 0, color, false);
+    drawUnitIcon(this.ctx, anim.unitTypeId, 0, 0, animOpts(color));
 
     // Death particles exploding outward
     const particleCount = 8;

@@ -984,8 +984,10 @@ export class HexRenderer {
   }
 
   private drawUnits(rc: RenderContext, viewport: ViewportBounds): void {
-    const ctx = this.ctx;
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
+
+    // Pulse fraction: 0→1→0 over a 1.5-second cycle, used for selected unit animation
+    const pulseFraction = (Math.sin((performance.now() / 750) * Math.PI) + 1) / 2;
 
     // Build a set of city position keys for quick lookup
     const cityPositionKeys = new Set<string>();
@@ -1007,7 +1009,7 @@ export class HexRenderer {
       const { x: baseX, y: baseY } = hexToPixel(unit.position);
       const players = [...rc.state.players.keys()];
       const playerIndex = players.indexOf(unit.owner);
-      const color = playerColors[playerIndex % players.length];
+      const playerColor = playerColors[playerIndex % playerColors.length];
       const isSelected = rc.selectedUnit?.id === unit.id;
 
       // Offset unit when on a city tile so both are visible
@@ -1015,50 +1017,20 @@ export class HexRenderer {
       const x = onCity ? baseX - 10 : baseX;
       const y = onCity ? baseY - 10 : baseY;
 
-      // Check if unit is freshly ready (has full movement and belongs to current player)
-      const isReady = unit.owner === rc.state.currentPlayerId && unit.movementLeft > 0;
+      // Get base movement from config for dot rendering
+      const unitDef = rc.state.config.units.get(unit.typeId);
+      const maxMovement = unitDef?.movement ?? 2;
 
-      // Draw glow effect for newly available units
-      if (isReady) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(100, 181, 246, 0.9)';
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(x, y, HEX_SIZE * 0.5, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(100, 181, 246, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // Unit icon (distinct per type)
-      drawUnitIcon(ctx, unit.typeId, x, y - 2, color, isSelected);
-
-      // Unit type label
-      ctx.fillStyle = '#fff';
-      ctx.font = '7px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(unit.typeId.charAt(0).toUpperCase(), x, y + HEX_SIZE * 0.4);
-
-      // Health bar (always visible)
-      const barWidth = HEX_SIZE * 0.5;
-      const barHeight = 3;
-      const bx = x - barWidth / 2;
-      const by = y + HEX_SIZE * 0.45;
-      ctx.fillStyle = '#222';
-      ctx.fillRect(bx, by, barWidth, barHeight);
-      ctx.fillStyle = unit.health > 66 ? '#4caf50' : unit.health > 33 ? '#ff9800' : '#f44336';
-      ctx.fillRect(bx, by, barWidth * (unit.health / 100), barHeight);
-
-      // Movement dots
-      if (unit.movementLeft > 0 && unit.owner === rc.state.currentPlayerId) {
-        for (let i = 0; i < Math.min(unit.movementLeft, 4); i++) {
-          ctx.fillStyle = '#64b5f6';
-          ctx.beginPath();
-          ctx.arc(x - barWidth / 2 + 3 + i * 5, by + 6, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+      // Unit icon with all enhanced indicators
+      drawUnitIcon(this.ctx, unit.typeId, x, y, {
+        playerColor,
+        isSelected,
+        isFortified: unit.fortified,
+        health: unit.health,
+        movementLeft: unit.movementLeft,
+        maxMovement,
+        pulseFraction: isSelected ? pulseFraction : 0,
+      });
     }
   }
 
