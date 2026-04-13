@@ -9,7 +9,8 @@
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(E2E 7/7, engine 616\\)\")",
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(26/26 gameplay E2E, 616 engine\\)\")",
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(48 E2E, 616 engine, spawn fix verified\\)\")",
-      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(48 E2E, 616 engine, AI strategy verified\\)\")"
+      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(48 E2E, 616 engine, AI strategy verified\\)\")",
+      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(terrain visuals improved\\)\")"
     ]
   }
 }
