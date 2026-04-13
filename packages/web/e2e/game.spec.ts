@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 /** Navigate to the app and click Start Game to get past the setup screen */
 async function startGame(page: Page) {
-  await page.goto('/');
+  await page.goto('http://localhost:5174');
   // Suppress auto-help overlay in tests
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   // Wait for setup screen to render
@@ -15,7 +15,7 @@ async function startGame(page: Page) {
 
 test.describe('Setup screen', () => {
   test('shows leader and civ selection before game starts', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('http://localhost:5174');
     const text = await page.locator('body').innerText();
     expect(text).toMatch(/leader|civilization|start game/i);
   });
