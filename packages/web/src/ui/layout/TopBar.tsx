@@ -91,8 +91,8 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
         {/* More menu for secondary actions */}
         <div className="relative">
           <button
-            className="px-2.5 py-1.5 rounded text-xs cursor-pointer hover:opacity-80"
-            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', minHeight: '28px' }}
+            className="px-3 py-1.5 rounded text-xs cursor-pointer hover:opacity-80"
+            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', minHeight: '28px', minWidth: '28px' }}
             onClick={() => setShowMoreMenu(!showMoreMenu)}
           >
             ⋯
