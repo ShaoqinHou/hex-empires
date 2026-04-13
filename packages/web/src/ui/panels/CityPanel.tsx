@@ -172,9 +172,13 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
           <ProgressBar value={city.food} max={growthThreshold} color={isStarving ? 'var(--color-health-low)' : 'var(--color-food)'} />
           <span style={{ color: isStarving ? 'var(--color-health-low)' : 'var(--color-text-muted)' }}>
             {city.food}/{growthThreshold} ({effectiveFoodSurplus >= 0 ? '+' : ''}{effectiveFoodSurplus}/turn)
-            {isStarving && (
+            {isStarving ? (
               <span className="ml-1 font-bold">⚠️ Starving!</span>
-            )}
+            ) : effectiveFoodSurplus > 0 ? (
+              <span className="ml-2 font-bold" style={{ color: 'var(--color-food)' }}>
+                {Math.ceil((growthThreshold - city.food) / effectiveFoodSurplus)} turns to grow
+              </span>
+            ) : null}
           </span>
         </div>
       </div>
@@ -204,9 +208,16 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
       {/* Built Buildings */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          Buildings ({city.buildings.length})
-        </h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+            Buildings ({city.buildings.length})
+          </h3>
+          {city.buildings.some(bId => !placedBuildings.has(bId)) && (
+            <span className="text-[10px] font-bold animate-pulse" style={{ color: '#f59e0b' }}>
+              NEEDS PLACEMENT
+            </span>
+          )}
+        </div>
         {city.buildings.length > 0 ? (
           <div className="flex flex-col gap-1">
             {city.buildings.map(bId => {
@@ -216,31 +227,40 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
               return bDef ? (
                 <div
                   key={bId}
-                  className={`flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer transition-all ${
-                    !isPlaced ? 'hover:bg-slate-700/50' : ''
+                  className={`flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer transition-all ${
+                    !isPlaced ? 'hover:opacity-90' : ''
                   } ${isWonder ? 'shadow-lg' : ''}`}
                   style={{
-                    backgroundColor: isPlaced ? 'var(--color-bg)' : 'var(--color-surface)',
-                    border: isPlaced
-                      ? isWonder
-                        ? '2px solid #fbbf24'
-                        : '1px solid var(--color-border)'
-                      : '1px dashed var(--color-amber)',
-                    background: isWonder
+                    backgroundColor: !isPlaced
+                      ? 'rgba(245, 158, 11, 0.12)'
+                      : isWonder
+                      ? 'transparent'
+                      : 'var(--color-bg)',
+                    border: !isPlaced
+                      ? '1px solid #f59e0b'
+                      : isWonder
+                      ? '2px solid #fbbf24'
+                      : '1px solid var(--color-border)',
+                    background: isWonder && isPlaced
                       ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)'
-                      : 'var(--color-surface)',
+                      : undefined,
                   }}
                   onClick={() => !isPlaced && setPlacementMode({ buildingId: bId })}
                   title={isPlaced ? 'Placed on map' : 'Click to place on map'}
                 >
-                  <div className="flex items-center gap-2">
-                    <span>{isPlaced ? '✓' : '⏳'}</span>
-                    <span className={isPlaced ? '' : 'text-amber-400'}>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className={!isPlaced ? 'animate-pulse' : ''}>{isPlaced ? '✓' : '📍'}</span>
+                    <span className="truncate" style={{ color: !isPlaced ? '#f59e0b' : isWonder ? '#fbbf24' : 'var(--color-text)' }}>
                       {isWonder && '🏆 '}
                       {bDef.name}
                     </span>
+                    {!isPlaced && (
+                      <span className="ml-auto text-[9px] font-bold shrink-0 animate-pulse" style={{ color: '#f59e0b' }}>
+                        PLACE!
+                      </span>
+                    )}
                   </div>
-                  <BuildingCard building={bDef} isBuilt compact />
+                  {isPlaced && <BuildingCard building={bDef} isBuilt compact />}
                 </div>
               ) : (
                 <span key={bId} className="text-xs px-1.5 py-0.5 rounded"
@@ -255,6 +275,68 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         )}
       </div>
 
+      {/* Specialist section — only for cities with population > 1 */}
+      {!isTown && city.population > 1 && (
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Specialists</h3>
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {city.specialists}/{city.population - 1} assigned
+            </div>
+            <div className="text-[10px]" style={{ color: 'var(--color-science)' }}>
+              +2🔬 +2🎭 per specialist
+            </div>
+          </div>
+          <div className="text-[10px] mb-2" style={{ color: 'var(--color-health-low)' }}>
+            Each specialist: -1 happiness
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-2 py-1 rounded text-xs font-bold cursor-pointer"
+              style={{
+                backgroundColor: city.specialists > 0 ? 'var(--color-bg)' : 'var(--color-surface)',
+                color: city.specialists > 0 ? 'var(--color-text)' : 'var(--color-text-muted)',
+                border: '1px solid var(--color-border)',
+                opacity: city.specialists > 0 ? 1 : 0.4,
+              }}
+              disabled={city.specialists === 0}
+              onClick={() => dispatch({ type: 'UNASSIGN_SPECIALIST', cityId: city.id })}
+            >
+              − Remove
+            </button>
+            <div className="flex-1 flex items-center justify-center gap-1">
+              {Array.from({ length: city.population - 1 }, (_, i) => (
+                <span
+                  key={i}
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: i < city.specialists ? 'var(--color-science)' : 'var(--color-border)',
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              className="px-2 py-1 rounded text-xs font-bold cursor-pointer"
+              style={{
+                backgroundColor: city.specialists < city.population - 1 ? 'var(--color-bg)' : 'var(--color-surface)',
+                color: city.specialists < city.population - 1 ? 'var(--color-text)' : 'var(--color-text-muted)',
+                border: '1px solid var(--color-border)',
+                opacity: city.specialists < city.population - 1 ? 1 : 0.4,
+              }}
+              disabled={city.specialists >= city.population - 1}
+              onClick={() => dispatch({ type: 'ASSIGN_SPECIALIST', cityId: city.id })}
+            >
+              + Assign
+            </button>
+          </div>
+          {city.specialists > 0 && (
+            <div className="mt-1.5 text-[10px] text-center" style={{ color: 'var(--color-science)' }}>
+              Bonus: +{city.specialists * 2} science, +{city.specialists * 2} culture, {city.specialists * -1} happiness
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Build/Purchase section */}
       <div className="px-4 py-2">
         <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
@@ -265,6 +347,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         <div className="flex flex-col gap-1 mb-3">
           {availableUnits.map(u => {
             const goldCost = u.cost * 2;
+            const turnsEstimate = yields.production > 0 ? Math.ceil(u.cost / yields.production) : null;
             return isTown ? (
               <button
                 key={u.id}
@@ -282,13 +365,20 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 <span style={{ color: 'var(--color-gold)' }}>{goldCost}g</span>
               </button>
             ) : (
-              <UnitCard
-                key={u.id}
-                unit={u}
-                compact
-                isActive={currentProduction?.id === u.id}
-                onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: u.id, itemType: 'unit' })}
-              />
+              <div key={u.id} className="relative">
+                <UnitCard
+                  unit={u}
+                  compact
+                  isActive={currentProduction?.id === u.id}
+                  onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: u.id, itemType: 'unit' })}
+                />
+                {turnsEstimate !== null && currentProduction?.id !== u.id && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold pointer-events-none"
+                    style={{ color: 'var(--color-production)' }}>
+                    ~{turnsEstimate}t
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>
@@ -297,6 +387,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         <div className="flex flex-col gap-1">
           {availableBuildings.map(b => {
             const goldCost = b.cost * 2;
+            const turnsEstimate = yields.production > 0 ? Math.ceil(b.cost / yields.production) : null;
             return isTown ? (
               <button
                 key={b.id}
@@ -314,13 +405,20 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 <span style={{ color: 'var(--color-gold)' }}>{goldCost}g</span>
               </button>
             ) : (
-              <BuildingCard
-                key={b.id}
-                building={b}
-                compact
-                isActive={currentProduction?.id === b.id}
-                onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: b.id, itemType: 'building' })}
-              />
+              <div key={b.id} className="relative">
+                <BuildingCard
+                  building={b}
+                  compact
+                  isActive={currentProduction?.id === b.id}
+                  onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: b.id, itemType: 'building' })}
+                />
+                {turnsEstimate !== null && currentProduction?.id !== b.id && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold pointer-events-none"
+                    style={{ color: 'var(--color-production)' }}>
+                    ~{turnsEstimate}t
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>
