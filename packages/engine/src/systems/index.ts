@@ -20,3 +20,7 @@ export { crisisSystem } from './crisisSystem';
 export { civicSystem } from './civicSystem';
 export { tradeSystem } from './tradeSystem';
 export { governorSystem } from './governorSystem';
+export { specialistSystem } from './specialistSystem';
+export { improvementSystem } from './improvementSystem';
+export { buildingPlacementSystem } from './buildingPlacementSystem';
+export { districtSystem } from './districtSystem';
