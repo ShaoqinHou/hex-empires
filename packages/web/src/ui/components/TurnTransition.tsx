@@ -25,11 +25,11 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
       const eventMessages = playerEvents.map(e => e.message);
       setNotifications(eventMessages);
 
-      // Auto-dismiss after 1 second (reduced from 2 seconds for less annoyance)
+      // Auto-dismiss quickly so it doesn't block gameplay
       const timer = setTimeout(() => {
         setShowOverlay(false);
         onComplete?.();
-      }, 1000);
+      }, 600);
 
       setPreviousTurn(state.turn);
 
@@ -54,7 +54,7 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
       <div
         className="absolute inset-0 bg-black transition-opacity duration-300"
         style={{
-          opacity: showOverlay ? 0.2 : 0,
+          opacity: showOverlay ? 0.15 : 0,
         }}
       />
 
