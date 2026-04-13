@@ -7,11 +7,12 @@ export function YieldsToggle({ showYields, onToggle }: YieldsToggleProps) {
   return (
     <div className="absolute left-2 select-none" style={{ bottom: '14rem', zIndex: 20 }}>
       <button
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer"
+        className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold cursor-pointer"
         style={{
           backgroundColor: showYields ? 'var(--color-accent)' : 'var(--color-surface)',
           color: showYields ? 'var(--color-bg)' : 'var(--color-text-muted)',
           border: '1px solid var(--color-border)',
+          minHeight: '28px',
         }}
         onClick={onToggle}
         title="Toggle yield display (Y)"
