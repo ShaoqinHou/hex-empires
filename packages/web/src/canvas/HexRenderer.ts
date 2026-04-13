@@ -42,6 +42,30 @@ function drawHexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
   ctx.closePath();
 }
 
+// ── Improved terrain color overrides ─────────────────────────────────────────
+// These override the colors stored in the data registry for better visual contrast.
+const TERRAIN_COLOR_OVERRIDES: Record<string, string> = {
+  grassland: '#5da84e',   // rich green
+  plains:    '#d4b85a',   // golden wheat
+  desert:    '#e8d5a3',   // warm sandy
+  tundra:    '#b0c4ce',   // pale blue-grey
+  snow:      '#eaf4f4',   // crisp white with blue tint
+  coast:     '#5ba0d0',   // clear coastal blue
+  ocean:     '#1e4d7a',   // deep dark blue
+};
+
+// Feature color overrides for better visual quality
+const FEATURE_COLOR_OVERRIDES: Record<string, string> = {
+  hills:       '#8a7560',   // warm earthy brown (overlay)
+  mountains:   '#7a7a82',   // cool grey
+  forest:      '#2a5c1a',   // rich dark green
+  jungle:      '#1a4510',   // very dark jungle green
+  marsh:       '#4a5c30',   // murky green-brown
+  floodplains: '#6a9a40',   // fertile green
+  oasis:       '#38b068',   // vivid oasis green
+  reef:        '#2e7aa8',   // reef blue
+};
+
 export class HexRenderer {
   private ctx: CanvasRenderingContext2D;
   private cache: RenderCache;
@@ -140,16 +164,96 @@ export class HexRenderer {
       const terrain = rc.terrainRegistry.get(tile.terrain);
       const feature = tile.feature ? rc.featureRegistry.get(tile.feature) : null;
 
-      // Base terrain color
+      // Base terrain color (use override if available, else registry color)
+      const baseColor = (terrain?.id && TERRAIN_COLOR_OVERRIDES[terrain.id])
+        ? TERRAIN_COLOR_OVERRIDES[terrain.id]
+        : (terrain?.color ?? '#333');
       drawHexPath(ctx, x, y);
-      ctx.fillStyle = terrain?.color ?? '#333';
+      ctx.fillStyle = baseColor;
       ctx.fill();
 
-      // Feature overlay
+      // Feature overlay — special rendering for hills/mountains, else semi-transparent tint
       if (feature) {
-        drawHexPath(ctx, x, y);
-        ctx.fillStyle = feature.color + '88'; // semi-transparent
-        ctx.fill();
+        const featureColor = FEATURE_COLOR_OVERRIDES[feature.id] ?? feature.color;
+
+        if (feature.id === 'hills') {
+          // Hills: darker diagonal-stripe overlay for topographic feel
+          drawHexPath(ctx, x, y);
+          ctx.fillStyle = featureColor + 'aa'; // ~67% opacity
+          ctx.fill();
+          // Subtle highlight ridge lines
+          ctx.save();
+          ctx.globalAlpha = 0.18;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1;
+          for (let offset = -HEX_SIZE * 0.4; offset <= HEX_SIZE * 0.4; offset += HEX_SIZE * 0.22) {
+            ctx.beginPath();
+            ctx.moveTo(x - HEX_SIZE * 0.6, y + offset - HEX_SIZE * 0.15);
+            ctx.lineTo(x + HEX_SIZE * 0.6, y + offset + HEX_SIZE * 0.15);
+            ctx.stroke();
+          }
+          ctx.restore();
+        } else if (feature.id === 'mountains') {
+          // Mountains: grey base + snow cap triangle
+          drawHexPath(ctx, x, y);
+          ctx.fillStyle = featureColor + 'cc'; // 80% opacity
+          ctx.fill();
+          // Snow cap (white triangle at top of hex)
+          ctx.save();
+          ctx.globalAlpha = 0.85;
+          ctx.fillStyle = '#e8f0f0';
+          ctx.beginPath();
+          ctx.moveTo(x, y - HEX_SIZE * 0.72);           // peak
+          ctx.lineTo(x - HEX_SIZE * 0.38, y - HEX_SIZE * 0.18); // left
+          ctx.lineTo(x + HEX_SIZE * 0.38, y - HEX_SIZE * 0.18); // right
+          ctx.closePath();
+          ctx.fill();
+          // Dark outline for definition
+          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = '#6a6a72';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          // Forest, jungle, marsh, etc. — semi-transparent colour wash
+          drawHexPath(ctx, x, y);
+          ctx.fillStyle = featureColor + 'a0'; // ~63% opacity
+          ctx.fill();
+          // Add subtle texture dots for forest/jungle
+          if (feature.id === 'forest' || feature.id === 'jungle') {
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = feature.id === 'forest' ? '#1a4010' : '#0f2e08';
+            const dotPositions = [
+              { dx: -HEX_SIZE * 0.22, dy: -HEX_SIZE * 0.18 },
+              { dx:  HEX_SIZE * 0.22, dy: -HEX_SIZE * 0.18 },
+              { dx:  0,               dy:  HEX_SIZE * 0.1  },
+              { dx: -HEX_SIZE * 0.3,  dy:  HEX_SIZE * 0.28 },
+              { dx:  HEX_SIZE * 0.3,  dy:  HEX_SIZE * 0.28 },
+            ];
+            for (const dp of dotPositions) {
+              ctx.beginPath();
+              ctx.arc(x + dp.dx, y + dp.dy, HEX_SIZE * 0.1, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          } else if (feature.id === 'marsh') {
+            // Marsh: wavy horizontal lines
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = '#2a3a18';
+            ctx.lineWidth = 1;
+            for (let row = -1; row <= 1; row++) {
+              ctx.beginPath();
+              ctx.moveTo(x - HEX_SIZE * 0.45, y + row * HEX_SIZE * 0.25);
+              for (let wx = -HEX_SIZE * 0.45; wx <= HEX_SIZE * 0.45; wx += 5) {
+                ctx.lineTo(x + wx, y + row * HEX_SIZE * 0.25 + Math.sin(wx * 0.5) * 2.5);
+              }
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
       }
 
       // Hex border
@@ -168,13 +272,14 @@ export class HexRenderer {
         this.drawBuildingIcon(tile, x, y, rc);
       }
 
-      // Yield dots and resource icon — only when lens is active
+      // Resource icon — always visible (outside yield lens gate)
+      if (tile.resource) {
+        this.drawResourceIcon(tile, x, y, rc);
+      }
+
+      // Yield dots — only when lens is active
       if (rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
-        // Resource icon — drawn after yield dots to appear above them
-        if (tile.resource) {
-          this.drawResourceIcon(tile, x, y, rc);
-        }
       }
     }
   }
@@ -482,9 +587,8 @@ export class HexRenderer {
 
   private drawRivers(rc: RenderContext, viewport: ViewportBounds): void {
     const ctx = this.ctx;
-    ctx.strokeStyle = '#4a90b8';
-    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     for (const tile of rc.state.map.tiles.values()) {
       // Viewport culling
@@ -503,12 +607,42 @@ export class HexRenderer {
       for (const edge of tile.river) {
         const angle1 = (Math.PI / 180) * (60 * edge - 30);
         const angle2 = (Math.PI / 180) * (60 * ((edge + 1) % 6) - 30);
+        const x1 = x + HEX_SIZE * Math.cos(angle1);
+        const y1 = y + HEX_SIZE * Math.sin(angle1);
+        const x2 = x + HEX_SIZE * Math.cos(angle2);
+        const y2 = y + HEX_SIZE * Math.sin(angle2);
+
+        // Outer glow pass — wider, more transparent
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = '#4a9eff';
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.moveTo(x + HEX_SIZE * Math.cos(angle1), y + HEX_SIZE * Math.sin(angle1));
-        ctx.lineTo(x + HEX_SIZE * Math.cos(angle2), y + HEX_SIZE * Math.sin(angle2));
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Main river line — bright blue, semi-transparent
+        ctx.globalAlpha = 0.75;
+        ctx.strokeStyle = '#4a9eff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Inner highlight — thin bright core
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#a0d4ff';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
         ctx.stroke();
       }
     }
+
+    // Reset alpha
+    ctx.globalAlpha = 1;
   }
 
   private drawTerritoryBorders(rc: RenderContext, viewport: ViewportBounds): void {

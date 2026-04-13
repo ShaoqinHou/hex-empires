@@ -186,12 +186,12 @@ Map generation: Procedural via seeded noise. Reads terrain definitions from regi
 packages/engine/src/
   index.ts              — barrel export
   GameEngine.ts         — system pipeline orchestrator
-  state/                — GameState type, immutable update helpers, YieldCalculator, CombatPreview, SaveLoad
+  state/                — GameState type, YieldCalculator, CombatPreview, SaveLoad, EffectUtils, GameInitializer
   hex/                  — HexCoord, HexGrid, Pathfinding, MapGenerator, TerrainCost
-  systems/              — pure function systems (23 systems, one file per system)
+  systems/              — pure function systems (24 systems, one file per system) + aiSystem
   effects/              — EffectDef types, effect evaluation (minimal — most logic in effectSystem)
   registry/             — Generic Registry<T>
-  types/                — all TypeScript interfaces (GameState, District, Governor, Improvement, etc.)
+  types/                — all TypeScript interfaces (GameState, District, Governor, Improvement, AIPersonality, etc.)
   data/                 — game content (data files only, grouped by age)
     civilizations/      — grouped by age: antiquity-civs.ts, exploration-civs.ts, modern-civs.ts
     leaders/            — all-leaders.ts (single file)
