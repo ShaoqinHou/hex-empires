@@ -132,6 +132,10 @@ export { ALL_GOVERNORS } from './data/governors';
 export { serializeState, deserializeState } from './state/SaveLoad';
 export { createGameConfig } from './state/GameConfigFactory';
 
+// Game initialization
+export { createInitialState } from './state/GameInitializer';
+export type { GameSetupConfig } from './state/GameInitializer';
+
 // Terrain data
 export { ALL_BASE_TERRAINS, ALL_FEATURES } from './data/terrains';
 export {

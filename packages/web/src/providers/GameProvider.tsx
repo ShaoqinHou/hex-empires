@@ -5,9 +5,7 @@ import {
   createTerrainRegistries,
   ALL_BASE_TERRAINS,
   ALL_FEATURES,
-  generateMap,
   coordToKey,
-  neighbors,
   Registry,
   GameEngine,
   turnSystem,
@@ -38,11 +36,12 @@ import {
   serializeState,
   deserializeState,
   createGameConfig,
+  createInitialState,
   ALL_UNITS,
-  findPath,
   getReachable,
   getMovementCost,
 } from '@hex/engine';
+import type { GameSetupConfig } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState, SettlementType } from '@hex/engine';
 import type { ResourceDef } from '@hex/engine';
 import { ALL_RESOURCES } from '@hex/engine';
@@ -90,162 +89,38 @@ for (const r of ALL_RESOURCES) {
   resourceRegistry.register(r);
 }
 
-// ── Setup config type ──
+// Re-export GameSetupConfig so consumers that previously imported it from here still work
+export type { GameSetupConfig };
 
-export interface GameSetupConfig {
-  civId: string;
-  leaderId: string;
-  mapWidth: number;
-  mapHeight: number;
-  numAI: number;
-}
+// ── AI turn processing helper ──
 
-// AI civilization/leader pool (different from player defaults)
-const AI_CIVS = ['greece', 'egypt', 'persia', 'india', 'china'];
-const AI_LEADERS = ['pericles', 'cleopatra', 'cyrus', 'gandhi', 'qin_shi_huang'];
-
-// ── Initial state factory ──
-
-function createInitialState(config: GameSetupConfig, seed?: number): GameState {
-  const gameSeed = seed ?? Date.now();
-  const { terrainRegistry } = createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES);
-
-  const { mapWidth, mapHeight, civId, leaderId, numAI } = config;
-  const rowMargin = Math.floor(mapHeight * 0.13);
-
-  const map = generateMap(
-    terrainRegistry,
-    createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES).featureRegistry,
-    { width: mapWidth, height: mapHeight, seed: gameSeed, waterRatio: 0.35, wrapX: false },
-  );
-
-  const playerId = 'player1';
-
-  // Find land tiles away from edges for start positions
-  const landTiles = [...map.tiles.values()].filter(tile => {
-    const t = terrainRegistry.get(tile.terrain);
-    return t && !t.isWater && tile.feature !== 'mountains' && tile.feature !== 'marsh'
-      && tile.coord.r > rowMargin && tile.coord.r < mapHeight - rowMargin;
-  });
-
-  const startCoord = landTiles[0]?.coord ?? { q: Math.floor(mapWidth * 0.25), r: Math.floor(mapHeight * 0.5) };
-
-  const makePlayer = (id: string, name: string, isHuman: boolean, pCivId: string, pLeaderId: string) => ({
-    id, name, isHuman, civilizationId: pCivId, leaderId: pLeaderId,
-    age: 'antiquity' as const,
-    researchedTechs: [] as string[],
-    currentResearch: null,
-    researchProgress: 0,
-    researchedCivics: [] as string[],
-    currentCivic: null as string | null,
-    civicProgress: 0,
-    gold: 100, science: 0, culture: 0, faith: 0, influence: 0,
-    ageProgress: 0,
-    legacyBonuses: [] as any[],
-    legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
-    legacyPoints: 0,
-    totalKills: 0,
-    totalGoldEarned: 0,
-    visibility: new Set<string>(),
-    explored: new Set<string>(),
-    celebrationCount: 0,
-    celebrationBonus: 0,
-    celebrationTurnsLeft: 0,
-    masteredTechs: [] as string[],
-    currentMastery: null as string | null,
-    masteryProgress: 0,
-    masteredCivics: [] as string[],
-    currentCivicMastery: null as string | null,
-    civicMasteryProgress: 0,
-    governors: [] as string[],
-  });
-
-  const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
-    id, typeId, owner, position: pos,
-    movementLeft: movement, health: 100, experience: 0,
-    promotions: [] as string[], fortified: false,
-  });
-
-  // Build players map — human + N AI
-  const playersArr: [string, ReturnType<typeof makePlayer>][] = [
-    [playerId, makePlayer(playerId, 'Player 1', true, civId, leaderId)],
-  ];
-
-  // AI players get spread positions and distinct civs/leaders
-  const aiCount = Math.min(numAI, 3);
-  for (let i = 0; i < aiCount; i++) {
-    const aiId = `ai${i + 1}`;
-    // Pick civ/leader that isn't the player's (cycle through pool)
-    const aiCivPool = AI_CIVS.filter(c => c !== civId);
-    const aiLeaderPool = AI_LEADERS.filter(l => l !== leaderId);
-    const aiCiv = aiCivPool[i % aiCivPool.length];
-    const aiLeader = aiLeaderPool[i % aiLeaderPool.length];
-    playersArr.push([aiId, makePlayer(aiId, `AI Empire ${i + 1}`, false, aiCiv, aiLeader)]);
-  }
-
-  // Find valid adjacent tiles for placing starting units near a position
-  const findNearbyLandTiles = (center: HexCoord, count: number): HexCoord[] => {
-    const result: HexCoord[] = [];
-    const adjacentHexes = neighbors(center);
-    for (const hex of adjacentHexes) {
-      const key = coordToKey(hex);
-      const tile = map.tiles.get(key);
-      if (tile) {
-        const t = terrainRegistry.get(tile.terrain);
-        if (t && !t.isWater && tile.feature !== 'mountains') {
-          result.push(hex);
-          if (result.length >= count) break;
-        }
+/**
+ * After a human END_TURN, loop through AI players:
+ * START_TURN → generate AI actions → apply → END_TURN, until we reach a human player.
+ * Returns the final state ready for the human's next turn.
+ */
+function processAITurns(eng: GameEngine, state: GameState): GameState {
+  let next = state;
+  let safety = 0;
+  while (next.phase === 'start' && safety < 20) {
+    safety++;
+    next = eng.applyAction(next, { type: 'START_TURN' });
+    const currentPlayer = next.players.get(next.currentPlayerId);
+    if (currentPlayer && !currentPlayer.isHuman) {
+      // AI turn: generate and apply actions
+      const aiActions = generateAIActions(next);
+      for (const aiAction of aiActions) {
+        next = eng.applyAction(next, aiAction);
       }
+      // If AI didn't end turn, force it
+      if (next.currentPlayerId === currentPlayer.id && next.phase === 'actions') {
+        next = eng.applyAction(next, { type: 'END_TURN' });
+      }
+    } else {
+      break; // human player — stop and let them play
     }
-    return result;
-  };
-
-  // Spread AI start positions evenly across remaining land tiles
-  const nearbyPlayer = findNearbyLandTiles(startCoord, 3);
-  const unitsEntries: [string, ReturnType<typeof makeUnit>][] = [
-    ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
-    ['builder1', makeUnit('builder1', 'builder', playerId, nearbyPlayer[0] ?? startCoord, 2)],
-    ['warrior1', makeUnit('warrior1', 'warrior', playerId, nearbyPlayer[1] ?? startCoord, 2)],
-    ['scout1', makeUnit('scout1', 'scout', playerId, nearbyPlayer[2] ?? startCoord, 3)],
-  ];
-
-  for (let i = 0; i < aiCount; i++) {
-    const aiId = `ai${i + 1}`;
-    const fraction = (i + 1) / (aiCount + 1);
-    const aiStart = landTiles[Math.min(landTiles.length - 1, Math.floor(landTiles.length * (0.4 + fraction * 0.5)))]?.coord
-      ?? { q: Math.floor(mapWidth * fraction), r: Math.floor(mapHeight * 0.5) };
-    const nearbyAI = findNearbyLandTiles(aiStart, 2);
-    unitsEntries.push(
-      [`ai${i + 1}_settler1`, makeUnit(`ai${i + 1}_settler1`, 'settler', aiId, aiStart, 2)],
-      [`ai${i + 1}_builder1`, makeUnit(`ai${i + 1}_builder1`, 'builder', aiId, nearbyAI[0] ?? aiStart, 2)],
-      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, nearbyAI[1] ?? aiStart, 2)],
-    );
   }
-
-  const state: GameState = {
-    turn: 1,
-    currentPlayerId: playerId,
-    phase: 'actions',
-    players: new Map(playersArr),
-    map,
-    units: new Map(unitsEntries),
-    cities: new Map(),
-    districts: new Map(),
-    governors: new Map(),
-    tradeRoutes: new Map(),
-    diplomacy: { relations: new Map() },
-    age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
-    builtWonders: [],
-    crises: [],
-    victory: { winner: null, winType: null, progress: new Map() },
-    log: [],
-    rng: { seed: gameSeed, counter: 0 },
-    config: createGameConfig(),
-    lastValidation: null,
-  };
-
-  return state;
+  return next;
 }
 
 // ── Animation Detection Helper ──
@@ -446,26 +321,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         // After END_TURN, process AI players, then start human turn
         if (action.type === 'END_TURN') {
-          // Loop: start next player's turn, if AI then play and end
-          let safety = 0;
-          while (next.phase === 'start' && safety < 20) {
-            safety++;
-            next = engine.applyAction(next, { type: 'START_TURN' });
-            const currentPlayer = next.players.get(next.currentPlayerId);
-            if (currentPlayer && !currentPlayer.isHuman) {
-              // AI turn: generate and apply actions
-              const aiActions = generateAIActions(next);
-              for (const aiAction of aiActions) {
-                next = engine.applyAction(next, aiAction);
-              }
-              // If AI didn't end turn, force it
-              if (next.currentPlayerId === currentPlayer.id && next.phase === 'actions') {
-                next = engine.applyAction(next, { type: 'END_TURN' });
-              }
-            } else {
-              break; // human player — stop and let them play
-            }
-          }
+          next = processAITurns(engine, next);
         }
 
         return next;
@@ -634,26 +490,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       // After END_TURN, process AI players, then start human turn
       if (action.type === 'END_TURN') {
-        // Loop: start next player's turn, if AI then play and end
-        let safety = 0;
-        while (next.phase === 'start' && safety < 20) {
-          safety++;
-          next = engine.applyAction(next, { type: 'START_TURN' });
-          const currentPlayer = next.players.get(next.currentPlayerId);
-          if (currentPlayer && !currentPlayer.isHuman) {
-            // AI turn: generate and apply actions
-            const aiActions = generateAIActions(next);
-            for (const aiAction of aiActions) {
-              next = engine.applyAction(next, aiAction);
-            }
-            // If AI didn't end turn, force it
-            if (next.currentPlayerId === currentPlayer.id && next.phase === 'actions') {
-              next = engine.applyAction(next, { type: 'END_TURN' });
-            }
-          } else {
-            break; // human player — stop and let them play
-          }
-        }
+        next = processAITurns(engine, next);
       }
 
       return next;
