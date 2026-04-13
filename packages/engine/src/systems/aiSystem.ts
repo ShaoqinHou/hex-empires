@@ -36,21 +36,23 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
   // 2. City production — based on current needs
   for (const city of ourCities) {
     if (city.settlementType === 'town') {
-      // Towns must purchase with gold — pick something affordable
-      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
-      const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
-      const cost = (state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100) * 2;
-      if (player.gold >= cost) {
-        actions.push({ type: 'PURCHASE_ITEM', cityId: city.id, itemId, itemType });
-      }
-
-      // Set town specialization if not set
+      // Set town specialization first (always — this is free and gives passive bonuses)
       if (!city.specialization) {
         const specialization = pickTownSpecialization(state, city, player);
         if (specialization) {
           actions.push({ type: 'SET_SPECIALIZATION', cityId: city.id, specialization });
         }
       }
+
+      // Towns must purchase with gold — only purchase if we can actually afford it
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
+      const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
+      const baseCost = state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100;
+      const purchaseCost = baseCost * 2; // towns pay double
+      if (player.gold >= purchaseCost) {
+        actions.push({ type: 'PURCHASE_ITEM', cityId: city.id, itemId, itemType });
+      }
+      // else: town remains idle this turn — no IDLE production action needed (engine handles it)
     } else if (city.productionQueue.length === 0) {
       const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
@@ -176,29 +178,69 @@ function checkAtWar(state: GameState, playerId: string): boolean {
 
 /** Pick what to produce based on game state */
 function pickProduction(state: GameState, city: CityState, cityCount: number, militaryCount: number): string {
-  // Priority: settler if few cities
-  if (cityCount < 3 && !hasUnitAbility(state, 'found_city')) {
-    // Find cheapest unit with found_city ability
+  const player = state.players.get(state.currentPlayerId);
+  const age = player?.age ?? 'antiquity';
+
+  // Priority 1: Ensure at least 1 defender per city before expanding
+  // Settle: produce warrior first, then another before a settler
+  const minMilitary = Math.max(cityCount, 1); // at least 1 unit per city
+  if (militaryCount < minMilitary) {
+    const military = findCheapestMilitary(state, age);
+    if (military) return military;
+  }
+
+  // Priority 2: First food building (granary) if city has none
+  const hasFoodBuilding = city.buildings.some(bId => {
+    const b = state.config.buildings.get(bId);
+    return b && (b.yields.food ?? 0) > 0;
+  });
+  if (!hasFoodBuilding) {
+    for (const [buildingId, building] of state.config.buildings) {
+      if (building.age !== age) continue;
+      if (city.buildings.includes(buildingId)) continue;
+      if (building.requiredTech && !player?.researchedTechs.includes(building.requiredTech)) continue;
+      if ((building.yields.food ?? 0) > 0) return buildingId;
+    }
+  }
+
+  // Priority 3: Build up to 2 military per city before expanding
+  if (militaryCount < cityCount * 2) {
+    const military = findCheapestMilitary(state, age);
+    if (military) return military;
+  }
+
+  // Priority 4: Settler — only if we have military protection and few cities
+  if (cityCount < 3 && !hasUnitAbility(state, 'found_city') && militaryCount >= cityCount) {
     const settler = findCheapestUnitByAbility(state, 'found_city');
     if (settler) return settler;
   }
 
-  // Check for useful buildings not yet built
-  const player = state.players.get(state.currentPlayerId);
-  const age = player?.age ?? 'antiquity';
+  // Priority 5: Production building, then science building (one of each)
+  const hasProductionBuilding = city.buildings.some(bId => {
+    const b = state.config.buildings.get(bId);
+    return b && (b.yields.production ?? 0) > 0;
+  });
+  if (!hasProductionBuilding) {
+    for (const [buildingId, building] of state.config.buildings) {
+      if (building.age !== age) continue;
+      if (city.buildings.includes(buildingId)) continue;
+      if (building.requiredTech && !player?.researchedTechs.includes(building.requiredTech)) continue;
+      if ((building.yields.production ?? 0) > 0) return buildingId;
+    }
+  }
+
+  // Priority 6: More military (maintain army)
+  if (militaryCount < cityCount * 3) {
+    const military = findCheapestMilitary(state, age);
+    if (military) return military;
+  }
+
+  // Priority 7: Any remaining building
   for (const [buildingId, building] of state.config.buildings) {
     if (building.age !== age) continue;
     if (city.buildings.includes(buildingId)) continue;
-    // Prioritize economy buildings
-    if (building.yields.food && building.yields.food > 0) return buildingId;
-    if (building.yields.production && building.yields.production > 0) return buildingId;
-    if (building.yields.science && building.yields.science > 0) return buildingId;
-  }
-
-  // Default: produce cheapest melee military unit for current age
-  if (militaryCount < cityCount * 2) {
-    const military = findCheapestMilitary(state, age);
-    if (military) return military;
+    if (building.requiredTech && !player?.researchedTechs.includes(building.requiredTech)) continue;
+    return buildingId;
   }
 
   return findCheapestMilitary(state, age) ?? 'warrior';
@@ -360,7 +402,7 @@ function tryAttackNearbyCity(state: GameState, unit: UnitState, actions: GameAct
 
 /** Move military units strategically */
 function moveStrategically(state: GameState, unit: UnitState, ourCities: CityState[], actions: GameAction[]): void {
-  // Priority 1: Move toward nearest enemy
+  // Priority 1: Move toward nearest enemy (within 10 hexes)
   let nearestEnemy: HexCoord | null = null;
   let nearestDist = Infinity;
   for (const enemy of state.units.values()) {
@@ -372,44 +414,72 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
     }
   }
 
-  // Priority 2: If no nearby enemy, defend cities
-  if (!nearestEnemy || nearestDist > 10) {
-    if (ourCities.length > 0) {
-      // Move toward least-defended city
-      let leastDefended: CityState | null = null;
-      let fewestDefenders = Infinity;
-      for (const city of ourCities) {
-        const defenders = [...state.units.values()].filter(
-          u => u.owner === unit.owner && distance(u.position, city.position) <= 2
-        ).length;
-        if (defenders < fewestDefenders) {
-          fewestDefenders = defenders;
-          leastDefended = city;
-        }
-      }
-      if (leastDefended && distance(unit.position, leastDefended.position) > 2) {
-        nearestEnemy = leastDefended.position;
-      }
-    }
-  }
-
-  // Priority 3: Explore — move away from known territory
-  if (!nearestEnemy) {
-    const ns = neighbors(unit.position);
-    for (const n of ns) {
-      const tile = state.map.tiles.get(coordToKey(n));
-      if (tile && !state.config.terrains.get(tile.terrain)?.isWater && !(tile.feature && state.config.features.get(tile.feature)?.blocksMovement)) {
-        nearestEnemy = n;
-        break;
-      }
-    }
-  }
-
-  if (nearestEnemy) {
+  if (nearestEnemy && nearestDist <= 10) {
     const step = getOneStepToward(unit.position, nearestEnemy, state);
     if (step) {
       actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
     }
+    return;
+  }
+
+  // Priority 2: If no nearby enemy, defend cities
+  if (ourCities.length > 0) {
+    // Find least-defended city
+    let leastDefended: CityState | null = null;
+    let fewestDefenders = Infinity;
+    for (const city of ourCities) {
+      const defenders = [...state.units.values()].filter(
+        u => u.owner === unit.owner && distance(u.position, city.position) <= 2
+      ).length;
+      if (defenders < fewestDefenders) {
+        fewestDefenders = defenders;
+        leastDefended = city;
+      }
+    }
+
+    if (leastDefended) {
+      const distToCity = distance(unit.position, leastDefended.position);
+
+      // Already within guard range — fortify to get defense bonus and stop moving
+      if (distToCity <= 2) {
+        if (!unit.fortified) {
+          actions.push({ type: 'FORTIFY_UNIT', unitId: unit.id });
+        }
+        // else: stay fortified, no action needed
+        return;
+      }
+
+      // Not yet at city — move toward it
+      const step = getOneStepToward(unit.position, leastDefended.position, state);
+      if (step) {
+        actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
+      }
+      return;
+    }
+  }
+
+  // Priority 3: Explore — pick a passable neighbor we haven't just come from
+  // Use unit position hash to vary the chosen neighbor so we don't always pick the same one
+  const ns = neighbors(unit.position);
+  const passable: HexCoord[] = [];
+  for (const n of ns) {
+    const tile = state.map.tiles.get(coordToKey(n));
+    if (!tile) continue;
+    if (state.config.terrains.get(tile.terrain)?.isWater) continue;
+    if (tile.feature && state.config.features.get(tile.feature)?.blocksMovement) continue;
+    // Skip tiles occupied by any unit
+    let occupied = false;
+    for (const u of state.units.values()) {
+      if (coordToKey(u.position) === coordToKey(n)) { occupied = true; break; }
+    }
+    if (!occupied) passable.push(n);
+  }
+
+  if (passable.length > 0) {
+    // Use a simple deterministic offset based on unit id + turn so we rotate through neighbors
+    const turnSeed = (state.turn + unit.id.charCodeAt(unit.id.length - 1)) % passable.length;
+    const exploreTarget = passable[turnSeed];
+    actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [exploreTarget] });
   }
 }
 
