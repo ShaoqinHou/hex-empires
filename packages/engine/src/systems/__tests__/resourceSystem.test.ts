@@ -81,6 +81,42 @@ describe('resourceSystem', () => {
     expect(resourceSystem(state, { type: 'START_TURN' })).toBe(state);
   });
 
+  it('gold does not go below 0 (gold floor)', () => {
+    // Player with low gold, a city that generates no gold, and 5 military units
+    const city = createTestCity({ population: 1 });
+    const units = new Map([
+      ['w1', createTestUnit({ id: 'w1', typeId: 'warrior' })],
+      ['w2', createTestUnit({ id: 'w2', typeId: 'warrior' })],
+      ['w3', createTestUnit({ id: 'w3', typeId: 'warrior' })],
+      ['w4', createTestUnit({ id: 'w4', typeId: 'warrior' })],
+      ['w5', createTestUnit({ id: 'w5', typeId: 'warrior' })],
+    ]);
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      units,
+      players: new Map([['p1', createTestPlayer({ gold: 2 })]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    // 5 military units = 5 maintenance, city yields ~0 gold → netGold = -5
+    // Gold floor prevents going below 0
+    expect(next.players.get('p1')!.gold).toBe(0);
+  });
+
+  it('does not charge maintenance before first city is founded', () => {
+    // No cities: pre-founding phase — military units should not cost maintenance
+    const units = new Map([
+      ['w1', createTestUnit({ id: 'w1', typeId: 'warrior' })],
+      ['s1', createTestUnit({ id: 's1', typeId: 'scout' })],
+    ]);
+    const state = createTestState({
+      units,
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    // No cities → no income, but also no maintenance deducted
+    expect(next.players.get('p1')!.gold).toBe(100);
+  });
+
   it('only processes current player', () => {
     const city = createTestCity({ owner: 'p2' });
     const state = createTestState({

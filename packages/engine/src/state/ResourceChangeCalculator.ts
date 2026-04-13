@@ -159,12 +159,15 @@ export function calculateResourceChanges(state: GameState, playerId: string): Re
     }
   }
 
-  // Unit maintenance (1 gold per military unit)
+  // Unit maintenance (1 gold per military unit).
+  // No maintenance before the player has founded their first city (pre-founding phase).
   let maintenance = 0;
-  for (const unit of state.units.values()) {
-    if (unit.owner === playerId) {
-      const isCivilian = state.config.units.get(unit.typeId)?.category === 'civilian';
-      if (!isCivilian) maintenance += 1;
+  if (cityCount > 0) {
+    for (const unit of state.units.values()) {
+      if (unit.owner === playerId) {
+        const isCivilian = state.config.units.get(unit.typeId)?.category === 'civilian';
+        if (!isCivilian) maintenance += 1;
+      }
     }
   }
 

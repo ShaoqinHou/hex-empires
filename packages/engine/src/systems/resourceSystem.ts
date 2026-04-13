@@ -235,12 +235,17 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       }
     }
 
-    // Unit maintenance (1 gold per military unit)
+    // Unit maintenance (1 gold per military unit).
+    // No maintenance is charged before the player has founded their first city —
+    // units in the pre-founding phase are considered "starting forces" and free.
     let maintenance = 0;
-    for (const unit of state.units.values()) {
-      if (unit.owner === playerId) {
-        const isCivilian = state.config.units.get(unit.typeId)?.category === 'civilian';
-        if (!isCivilian) maintenance += 1;
+    const playerHasCities = cityCount > 0;
+    if (playerHasCities) {
+      for (const unit of state.units.values()) {
+        if (unit.owner === playerId) {
+          const isCivilian = state.config.units.get(unit.typeId)?.category === 'civilian';
+          if (!isCivilian) maintenance += 1;
+        }
       }
     }
 
@@ -265,9 +270,12 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       celebrationTurnsLeft = CELEBRATION_DURATION_TURNS;
     }
 
+    // Gold floor: gold cannot go below 0 (bankrupt players can't spiral into
+    // unlimited negative debt; the UI should warn when gold income is negative).
+    const newGold = Math.max(0, player.gold + netGold);
     updatedPlayers.set(playerId, {
       ...player,
-      gold: player.gold + netGold,
+      gold: newGold,
       science: player.science + totalScience,
       culture: player.culture + totalCulture,
       faith: player.faith + totalFaith,
