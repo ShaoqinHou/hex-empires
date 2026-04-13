@@ -15,6 +15,7 @@ import type {
   CityFoundedAnimation,
   ProductionCompleteAnimation,
   CityGrowthAnimation,
+  FloatingDamageAnimation,
 } from './AnimationManager';
 import { AnimationManager } from './AnimationManager';
 import type { Camera } from './Camera';
@@ -75,6 +76,9 @@ export class AnimationRenderer {
           break;
         case 'city-growth':
           this.renderCityGrowth(anim, manager, currentTime);
+          break;
+        case 'floating-damage':
+          this.renderFloatingDamage(anim, manager, currentTime);
           break;
       }
     }
@@ -409,6 +413,39 @@ export class AnimationRenderer {
     this.ctx.fillStyle = '#fff';
     this.ctx.font = 'bold 10px sans-serif';
     this.ctx.fillText(`${anim.fromPop} → ${anim.toPop}`, x, arrowY + 14);
+
+    this.ctx.restore();
+  }
+
+  /** Render floating damage number (e.g. "-15 HP") */
+  private renderFloatingDamage(anim: FloatingDamageAnimation, manager: AnimationManager, currentTime: number): void {
+    const progress = manager.getProgress(anim, currentTime);
+    const { x, y } = hexToPixel(anim.position);
+
+    // Rise upward then fade
+    const riseY = y - HEX_SIZE * 0.8 - progress * 35;
+    const alpha = progress < 0.6 ? 1 : (1 - progress) / 0.4;
+
+    // Scale: pop in quickly then stable
+    const scale = progress < 0.15 ? progress / 0.15 : 1;
+
+    const label = `-${anim.damage} HP`;
+
+    this.ctx.save();
+    this.ctx.translate(x, riseY);
+    this.ctx.scale(scale, scale);
+    this.ctx.globalAlpha = alpha;
+
+    // Drop shadow for readability
+    this.ctx.font = 'bold 13px sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    this.ctx.fillText(label, 1, 1);
+
+    // Main text in bright red
+    this.ctx.fillStyle = '#ff4444';
+    this.ctx.fillText(label, 0, 0);
 
     this.ctx.restore();
   }

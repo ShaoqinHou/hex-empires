@@ -143,6 +143,14 @@ export interface CityGrowthAnimation extends Animation {
   readonly toPop: number;
 }
 
+/** Floating damage number (e.g. "-15 HP") */
+export interface FloatingDamageAnimation extends Animation {
+  readonly type: 'floating-damage';
+  readonly targetId: string;
+  readonly position: HexCoord;
+  readonly damage: number;
+}
+
 export type AnyAnimation =
   | UnitMoveAnimation
   | MeleeAttackAnimation
@@ -151,7 +159,8 @@ export type AnyAnimation =
   | UnitDeathAnimation
   | CityFoundedAnimation
   | ProductionCompleteAnimation
-  | CityGrowthAnimation;
+  | CityGrowthAnimation
+  | FloatingDamageAnimation;
 
 // ── Animation State ──
 
@@ -461,6 +470,25 @@ export class AnimationManager {
       position,
       itemName,
       itemType,
+    };
+  }
+
+  /** Create a floating damage number animation */
+  createFloatingDamageAnimation(
+    targetId: string,
+    position: HexCoord,
+    damage: number,
+    duration: number = 800,
+  ): FloatingDamageAnimation {
+    return {
+      id: this.generateId(),
+      type: 'floating-damage',
+      startTime: performance.now(),
+      duration,
+      easing: easeOutQuad,
+      targetId,
+      position,
+      damage,
     };
   }
 

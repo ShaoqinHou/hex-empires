@@ -170,10 +170,10 @@ function GameUI() {
 }
 
 function AppInner() {
-  const { state, initGame } = useGame();
+  const { state, initGame, loadGame } = useGame();
 
   if (!state) {
-    return <SetupScreen onStart={initGame} />;
+    return <SetupScreen onStart={initGame} onLoadGame={loadGame} />;
   }
 
   return <GameUI />;

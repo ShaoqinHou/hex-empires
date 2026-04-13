@@ -664,6 +664,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!state) return;
     const json = serializeState(state);
     localStorage.setItem('hex-empires-save', json);
+    // Store human-readable save date for the setup screen to display
+    const now = new Date();
+    const dateStr = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    localStorage.setItem('hex-empires-save-meta', dateStr);
   }, [state]);
 
   const loadGame = useCallback(() => {

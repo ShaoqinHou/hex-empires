@@ -1,9 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ALL_LEADERS, ALL_ANTIQUITY_CIVS } from '@hex/engine';
 import type { GameSetupConfig } from '../../providers/GameProvider';
 
+const SAVE_KEY = 'hex-empires-save';
+
+interface SaveInfo {
+  turn: number;
+  civName: string;
+  savedAt: string | null;
+}
+
+function readSaveInfo(): SaveInfo | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    // Lightweight parse — only pull top-level fields we need
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const turn = typeof obj.turn === 'number' ? obj.turn : 1;
+    // players is a serialized Map: { __type: 'Map', entries: [['player1', {...}], ...] }
+    let civName = 'Unknown Civilization';
+    const playersRaw = obj.players as { __type?: string; entries?: [string, Record<string, unknown>][] } | undefined;
+    if (playersRaw?.entries) {
+      const humanEntry = playersRaw.entries.find(([, p]) => p.isHuman === true);
+      if (humanEntry) {
+        const civId = humanEntry[1].civilizationId as string | undefined;
+        const matched = ALL_ANTIQUITY_CIVS.find(c => c.id === civId);
+        civName = matched?.name ?? civId ?? 'Unknown';
+      }
+    }
+    const savedAt = localStorage.getItem(SAVE_KEY + '-meta');
+    return { turn, civName, savedAt };
+  } catch {
+    return null;
+  }
+}
+
 interface SetupScreenProps {
   onStart: (config: GameSetupConfig) => void;
+  onLoadGame?: () => void;
 }
 
 const MAP_SIZES = [
@@ -12,11 +46,16 @@ const MAP_SIZES = [
   { label: 'Large', width: 80, height: 50 },
 ] as const;
 
-export function SetupScreen({ onStart }: SetupScreenProps) {
+export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
   const [leaderId, setLeaderId] = useState<string>(ALL_LEADERS[0].id);
   const [civId, setCivId] = useState<string>(ALL_ANTIQUITY_CIVS[0].id);
   const [mapSizeIndex, setMapSizeIndex] = useState<number>(1); // default Medium
   const [numAI, setNumAI] = useState<number>(1);
+  const [saveInfo, setSaveInfo] = useState<SaveInfo | null>(null);
+
+  useEffect(() => {
+    setSaveInfo(readSaveInfo());
+  }, []);
 
   const selectedLeader = ALL_LEADERS.find(l => l.id === leaderId)!;
   const selectedCiv = ALL_ANTIQUITY_CIVS.find(c => c.id === civId)!;
@@ -176,8 +215,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
 
         <Divider />
 
-        {/* Start button */}
-        <div className="px-6 py-5 flex justify-center">
+        {/* Start / Load buttons */}
+        <div className="px-6 py-5 flex flex-col items-center gap-3">
           <button
             onClick={handleStart}
             className="px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
@@ -191,6 +230,29 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
           >
             Start Game →
           </button>
+
+          {saveInfo && onLoadGame && (
+            <button
+              onClick={onLoadGame}
+              className="flex flex-col items-center gap-1 px-12 py-3 rounded-lg font-semibold text-sm tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
+              style={{
+                background: 'linear-gradient(135deg, rgba(59,74,107,0.9) 0%, rgba(39,52,82,0.9) 100%)',
+                color: 'var(--color-gold, #d4a853)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                border: '1px solid var(--color-gold, #d4a853)',
+                minWidth: '240px',
+              }}
+            >
+              <span>Load Saved Game</span>
+              <span
+                className="text-xs font-normal normal-case tracking-normal"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Turn {saveInfo.turn} · {saveInfo.civName}
+                {saveInfo.savedAt ? ` · ${saveInfo.savedAt}` : ''}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
