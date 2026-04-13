@@ -204,14 +204,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     const hex = pixelToHex(world.x, world.y);
     const key = coordToKey(hex);
 
-    // Check if clicked on a unit
-    let clickedUnit: UnitState | null = null;
-    for (const unit of state.units.values()) {
-      if (coordToKey(unit.position) === key && unit.owner === state.currentPlayerId) {
-        clickedUnit = unit;
-        break;
-      }
-    }
+    // Find ALL player units on this tile
+    const unitsOnTile = [...state.units.values()].filter(
+      u => coordToKey(u.position) === key && u.owner === state.currentPlayerId
+    );
 
     // Check if clicked on a city
     let clickedCity: CityState | null = null;
@@ -222,16 +218,34 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       }
     }
 
-    if (clickedCity && clickedCity.owner === state.currentPlayerId) {
-      // Open city panel
+    if (unitsOnTile.length > 0) {
+      // Cycle through units on this tile on repeated clicks
+      if (selectedUnit && unitsOnTile.some(u => u.id === selectedUnit.id)) {
+        // Already have a unit from this tile selected — cycle to next
+        const currentIdx = unitsOnTile.findIndex(u => u.id === selectedUnit.id);
+        const nextIdx = (currentIdx + 1) % (unitsOnTile.length + (clickedCity ? 1 : 0));
+        if (nextIdx < unitsOnTile.length) {
+          // Select next unit
+          setSelectedUnit(unitsOnTile[nextIdx]);
+          setSelectedHex(hex);
+          setShowImprovementPanel(false);
+        } else if (clickedCity && clickedCity.owner === state.currentPlayerId) {
+          // Cycled past all units → open city panel
+          onCityClick?.(clickedCity);
+          setSelectedUnit(null);
+          setSelectedHex(hex);
+        }
+      } else {
+        // First click on this tile — select first unit
+        setSelectedUnit(unitsOnTile[0]);
+        setSelectedHex(hex);
+        setShowImprovementPanel(false);
+      }
+    } else if (clickedCity && clickedCity.owner === state.currentPlayerId) {
+      // No units here, just a city — open city panel
       onCityClick?.(clickedCity);
       setSelectedUnit(null);
       setSelectedHex(hex);
-    } else if (clickedUnit) {
-      // Select the unit
-      setSelectedUnit(clickedUnit);
-      setSelectedHex(hex);
-      setShowImprovementPanel(false);
     } else if (selectedUnit && selectedUnit.movementLeft > 0) {
       // Check if selected unit is a Builder
       const unitDef = unitRegistry.get(selectedUnit.typeId);
