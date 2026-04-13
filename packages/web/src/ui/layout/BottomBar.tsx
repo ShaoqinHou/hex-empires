@@ -1,230 +1,373 @@
 import { useGameState } from '../../providers/GameProvider';
-import { coordToKey } from '@hex/engine';
+import { coordToKey, ALL_IMPROVEMENTS, ALL_TECHNOLOGIES, ALL_CIVICS } from '@hex/engine';
 import type { YieldSet } from '@hex/engine';
-import { ALL_IMPROVEMENTS } from '@hex/engine';
 import { useMemo } from 'react';
+
+const SHORTCUT_LINE = 'WASD: pan | Scroll: zoom | Enter: end turn | Space: next unit | T: tech | Esc: deselect';
 
 export function BottomBar() {
   const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGameState();
 
-  const canFoundCity = selectedUnit
-    ? state.config.units.get(selectedUnit.typeId)?.abilities.includes('found_city') ?? false
-    : false;
-  const isCivilian = selectedUnit
-    ? state.config.units.get(selectedUnit.typeId)?.category === 'civilian'
-    : false;
+  const player = state.players.get(state.currentPlayerId);
 
-  // Check if selected unit is a builder and show improvement hints
-  const isBuilder = selectedUnit
-    ? state.config.units.get(selectedUnit.typeId)?.abilities.includes('build_improvement') ?? false
-    : false;
+  const unitDef = selectedUnit ? state.config.units.get(selectedUnit.typeId) : null;
+  const canFoundCity = unitDef?.abilities.includes('found_city') ?? false;
+  const isCivilian = unitDef?.category === 'civilian';
+  const isBuilder = unitDef?.abilities.includes('build_improvement') ?? false;
 
-  // Calculate available improvements for selected tile
+  // Calculate available improvements for selected tile (builder)
   const availableImprovements = useMemo(() => {
     if (!isBuilder || !selectedHex) return [];
-
-    const player = state.players.get(state.currentPlayerId);
     if (!player) return [];
-
     const tileKey = coordToKey(selectedHex);
     const currentTile = state.map.tiles.get(tileKey);
     if (!currentTile) return [];
-
     return ALL_IMPROVEMENTS.filter(improvement => {
-      // Check tech prerequisite
-      if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) {
-        return false;
-      }
-
-      // Check terrain prerequisite
-      if (improvement.prerequisites.terrain) {
-        if (!improvement.prerequisites.terrain.includes(currentTile.terrain)) {
-          return false;
-        }
-      }
-
-      // Check feature prerequisite
+      if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) return false;
+      if (improvement.prerequisites.terrain && !improvement.prerequisites.terrain.includes(currentTile.terrain)) return false;
       if (improvement.prerequisites.feature) {
-        if (!currentTile.feature || !improvement.prerequisites.feature.includes(currentTile.feature)) {
-          return false;
-        }
+        if (!currentTile.feature || !improvement.prerequisites.feature.includes(currentTile.feature)) return false;
       }
-
-      // Check resource prerequisite
       if (improvement.prerequisites.resource) {
-        if (!currentTile.resource || !improvement.prerequisites.resource.includes(currentTile.resource)) {
-          return false;
-        }
+        if (!currentTile.resource || !improvement.prerequisites.resource.includes(currentTile.resource)) return false;
       }
-
-      // Check if improvement already exists
-      if (currentTile.improvement) {
-        return false;
-      }
-
+      if (currentTile.improvement) return false;
       return true;
     });
-  }, [isBuilder, selectedHex, state, state.currentPlayerId]);
+  }, [isBuilder, selectedHex, state, player]);
+
+  // Empire summary stats (used when nothing is selected)
+  const empireSummary = useMemo(() => {
+    if (!player) return null;
+    const playerCities = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId);
+    const totalPop = playerCities.reduce((s, c) => s + c.population, 0);
+
+    const playerUnits = [...state.units.values()].filter(u => u.owner === state.currentPlayerId);
+    const militaryUnits = playerUnits.filter(u => {
+      const def = state.config.units.get(u.typeId);
+      return def && def.category !== 'civilian';
+    }).length;
+    const civilianUnits = playerUnits.length - militaryUnits;
+
+    const researchTech = player.currentResearch
+      ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
+      : null;
+    const turnsRemaining = researchTech
+      ? Math.max(1, Math.ceil((researchTech.cost - player.researchProgress) / Math.max(1, player.science)))
+      : null;
+
+    const civicDef = player.currentCivic
+      ? ALL_CIVICS.find(c => c.id === player.currentCivic)
+      : null;
+    const civicTurns = civicDef
+      ? Math.max(1, Math.ceil((civicDef.cost - player.civicProgress) / Math.max(1, player.culture)))
+      : null;
+
+    return {
+      cityCount: playerCities.length,
+      totalPop,
+      militaryUnits,
+      civilianUnits,
+      researchTech,
+      researchProgress: player.researchProgress,
+      turnsRemaining,
+      civicDef,
+      civicProgress: player.civicProgress,
+      civicTurns,
+    };
+  }, [state, player]);
 
   return (
-    <div className="h-16 flex items-center px-4 gap-4 select-none"
+    <div
+      className="h-16 flex flex-col select-none"
       style={{
         background: 'linear-gradient(0deg, var(--color-bg) 0%, var(--color-surface) 100%)',
         borderTop: '2px solid var(--color-border)',
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
-        zIndex: 100
-      }}>
-      {/* Selected unit info */}
-      {selectedUnit && (
-        <div className="flex items-center gap-3 flex-1">
-          <div
-            className="px-3 py-1.5 rounded"
-            style={{
-              background: 'linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%)',
-              border: '1px solid rgba(88, 166, 255, 0.3)',
-            }}
-          >
-            <div className="flex flex-col min-w-0">
+        zIndex: 100,
+      }}
+    >
+      {/* ── Main content row ── */}
+      <div className="flex-1 flex items-center px-4 gap-3 min-h-0 overflow-hidden">
+
+        {/* ── UNIT SELECTED ── */}
+        {selectedUnit && unitDef && (
+          <>
+            {/* Unit identity card */}
+            <InfoPill color="rgba(88,166,255,0.18)" border="rgba(88,166,255,0.35)">
               <span className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
-                {unitRegistry.get(selectedUnit.typeId)?.name ?? selectedUnit.typeId}
+                {unitDef.name}
               </span>
-              <div className="flex gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                <span>❤️ <span style={{ color: selectedUnit.health > 66 ? 'var(--color-health-high)' : 'var(--color-health-low)' }}>{selectedUnit.health}</span>/100</span>
-                <span>🚀 <span style={{ color: selectedUnit.movementLeft > 0 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>{selectedUnit.movementLeft}</span></span>
-                {selectedUnit.fortified && <span>🛡️ Fortified</span>}
-                {selectedUnit.experience > 0 && <span>⭐ XP: {selectedUnit.experience}</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* Combat stats */}
-          {!isCivilian && (
-            <div
-              className="text-xs px-3 py-1.5 rounded font-mono"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%)',
-                border: '1px solid rgba(255, 107, 107, 0.3)',
-                color: 'var(--color-text-muted)'
-              }}
-            >
-              {(() => {
-                const def = unitRegistry.get(selectedUnit.typeId);
-                if (!def) return null;
-                return (
-                  <>
-                    <span style={{ color: 'var(--color-production)' }}>⚔️ {def.combat}</span>
-                    {def.rangedCombat > 0 && <span style={{ color: 'var(--color-science)' }}> | 🎯 {def.rangedCombat} ({def.range})</span>}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex gap-2 ml-auto">
-            {canFoundCity && (
-              <ActionButton
-                label="Found City"
-                shortcut="B"
-                color="var(--color-food)"
-                icon="🏰"
-                onClick={() => {
-                  const name = `City ${state.cities.size + 1}`;
-                  dispatch({ type: 'FOUND_CITY', unitId: selectedUnit.id, name });
-                }}
-              />
-            )}
-            {!isCivilian && selectedUnit.movementLeft > 0 && (
-              <ActionButton
-                label={selectedUnit.fortified ? 'Unfortify' : 'Fortify'}
-                shortcut="F"
-                color="var(--color-science)"
-                icon="🛡️"
-                onClick={() => {
-                  dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id });
-                }}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Selected hex info with yields */}
-      {selectedHex && !selectedUnit && (
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
-            ({selectedHex.q}, {selectedHex.r})
-          </span>
-          {(() => {
-            const tile = state.map.tiles.get(coordToKey(selectedHex));
-            if (!tile) return null;
-            const terrain = terrainRegistry.get(tile.terrain);
-            const feature = tile.feature ? featureRegistry.get(tile.feature) : null;
-            return (
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold" style={{ color: 'var(--color-text)' }}>
-                  {terrain?.name}{feature ? ` + ${feature.name}` : ''}
+              <div className="flex gap-2.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                <span>
+                  ❤️{' '}
+                  <span style={{ color: selectedUnit.health > 66 ? 'var(--color-health-high)' : 'var(--color-health-low)' }}>
+                    {selectedUnit.health}
+                  </span>
+                  /100
                 </span>
-                {terrain && <YieldDisplay yields={terrain.baseYields} />}
-                {tile.river.length > 0 && (
-                  <span className="text-xs" style={{ color: 'var(--color-science)' }}>River (+1 gold)</span>
+                <span>
+                  🚀{' '}
+                  <span style={{ color: selectedUnit.movementLeft > 0 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                    {selectedUnit.movementLeft}
+                  </span>
+                  /{unitDef.movement}
+                </span>
+                {selectedUnit.fortified && <span style={{ color: 'var(--color-science)' }}>🛡 Fortified</span>}
+                {selectedUnit.experience > 0 && <span>⭐ {selectedUnit.experience} XP</span>}
+              </div>
+            </InfoPill>
+
+            {/* Combat strength */}
+            {!isCivilian && (
+              <InfoPill color="rgba(255,107,107,0.12)" border="rgba(255,107,107,0.3)">
+                <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                  <span style={{ color: 'var(--color-production)' }}>⚔ {unitDef.combat}</span>
+                  {unitDef.rangedCombat > 0 && (
+                    <span style={{ color: 'var(--color-science)' }}> · 🎯 {unitDef.rangedCombat} (r{unitDef.range})</span>
+                  )}
+                </span>
+              </InfoPill>
+            )}
+
+            {/* Promotions */}
+            {selectedUnit.promotions.length > 0 && (
+              <InfoPill color="rgba(255,213,79,0.1)" border="rgba(255,213,79,0.3)">
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Promotions:{' '}
+                  {selectedUnit.promotions.map(pid => {
+                    const p = state.config.promotions?.get(pid);
+                    return (
+                      <span
+                        key={pid}
+                        className="inline-block px-1.5 py-0.5 rounded mr-1"
+                        style={{
+                          background: 'rgba(255,213,79,0.15)',
+                          color: '#ffd54f',
+                          border: '1px solid rgba(255,213,79,0.25)',
+                          fontSize: '11px',
+                        }}
+                        title={p?.description}
+                      >
+                        {p?.name ?? pid}
+                      </span>
+                    );
+                  })}
+                </span>
+              </InfoPill>
+            )}
+
+            {/* Builder improvement hints */}
+            {isBuilder && selectedHex && availableImprovements.length > 0 && (
+              <InfoPill color="rgba(124,252,0,0.08)" border="rgba(124,252,0,0.3)">
+                <span className="text-xs" style={{ color: 'var(--color-accent)' }}>🏗 Build:</span>
+                <div className="flex gap-1 flex-wrap">
+                  {availableImprovements.slice(0, 3).map(imp => (
+                    <span
+                      key={imp.id}
+                      className="px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(124,252,0,0.1)', color: 'var(--color-text)', border: '1px solid rgba(124,252,0,0.2)', fontSize: '11px' }}
+                    >
+                      {imp.name}
+                    </span>
+                  ))}
+                  {availableImprovements.length > 3 && (
+                    <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>
+                      +{availableImprovements.length - 3}
+                    </span>
+                  )}
+                </div>
+              </InfoPill>
+            )}
+
+            {/* Action buttons — pushed right */}
+            <div className="flex gap-2 ml-auto">
+              {canFoundCity && (
+                <ActionButton
+                  label="Found City"
+                  shortcut="B"
+                  color="var(--color-food)"
+                  icon="🏰"
+                  onClick={() => dispatch({ type: 'FOUND_CITY', unitId: selectedUnit.id, name: `City ${state.cities.size + 1}` })}
+                />
+              )}
+              {!isCivilian && selectedUnit.movementLeft > 0 && (
+                <ActionButton
+                  label={selectedUnit.fortified ? 'Unfortify' : 'Fortify'}
+                  shortcut="F"
+                  color="var(--color-science)"
+                  icon="🛡️"
+                  onClick={() => dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id })}
+                />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── HEX SELECTED (no unit) ── */}
+        {selectedHex && !selectedUnit && (
+          <>
+            <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
+              ({selectedHex.q}, {selectedHex.r})
+            </span>
+            {(() => {
+              const tile = state.map.tiles.get(coordToKey(selectedHex));
+              if (!tile) return null;
+              const terrain = terrainRegistry.get(tile.terrain);
+              const feature = tile.feature ? featureRegistry.get(tile.feature) : null;
+              return (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold" style={{ color: 'var(--color-text)' }}>
+                    {terrain?.name}{feature ? ` + ${feature.name}` : ''}
+                  </span>
+                  {terrain && <YieldDisplay yields={terrain.baseYields} />}
+                  {tile.river.length > 0 && (
+                    <span className="text-xs" style={{ color: 'var(--color-science)' }}>River (+1 gold)</span>
+                  )}
+                  {terrain && (
+                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      Move: {terrain.movementCost}{feature ? `+${feature.movementCostModifier}` : ''}
+                      {terrain.defenseBonus > 0 && ` · Def: +${Math.round(terrain.defenseBonus * 100)}%`}
+                      {feature && feature.defenseBonusModifier !== 0 &&
+                        ` · Def: ${feature.defenseBonusModifier > 0 ? '+' : ''}${Math.round(feature.defenseBonusModifier * 100)}%`}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+          </>
+        )}
+
+        {/* ── NOTHING SELECTED — empire summary ── */}
+        {!selectedUnit && !selectedHex && empireSummary && (
+          <div className="flex items-center gap-3 flex-1 flex-wrap">
+            {/* Cities */}
+            <InfoPill color="rgba(88,166,255,0.1)" border="rgba(88,166,255,0.25)">
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                🏙{' '}
+                <span className="font-bold" style={{ color: 'var(--color-accent)' }}>
+                  {empireSummary.cityCount}
+                </span>{' '}
+                {empireSummary.cityCount === 1 ? 'city' : 'cities'}
+                {empireSummary.totalPop > 0 && (
+                  <span style={{ color: 'var(--color-text-muted)' }}> · pop {empireSummary.totalPop}</span>
                 )}
-                {terrain && (
-                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    Move: {terrain.movementCost}{feature ? `+${feature.movementCostModifier}` : ''}
-                    {terrain.defenseBonus > 0 && ` | Def: +${Math.round(terrain.defenseBonus * 100)}%`}
-                    {feature && feature.defenseBonusModifier !== 0 && ` | Def: ${feature.defenseBonusModifier > 0 ? '+' : ''}${Math.round(feature.defenseBonusModifier * 100)}%`}
+              </span>
+            </InfoPill>
+
+            {/* Units */}
+            <InfoPill color="rgba(255,107,107,0.1)" border="rgba(255,107,107,0.25)">
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                ⚔{' '}
+                <span className="font-bold" style={{ color: 'var(--color-production)' }}>
+                  {empireSummary.militaryUnits}
+                </span>{' '}
+                mil
+                {empireSummary.civilianUnits > 0 && (
+                  <span> ·{' '}
+                    <span style={{ color: 'var(--color-food)' }}>{empireSummary.civilianUnits}</span> civ
                   </span>
                 )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
+              </span>
+            </InfoPill>
 
-      {/* Builder improvement hints */}
-      {isBuilder && selectedHex && availableImprovements.length > 0 && (
-        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded"
-          style={{
-            background: 'linear-gradient(135deg, rgba(124, 252, 0, 0.1) 0%, rgba(124, 252, 0, 0.05) 100%)',
-            border: '1px solid rgba(124, 252, 0, 0.3)',
-          }}
+            {/* Research */}
+            {empireSummary.researchTech ? (
+              <InfoPill color="rgba(77,171,247,0.1)" border="rgba(77,171,247,0.25)">
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  🔬{' '}
+                  <span className="font-semibold" style={{ color: 'var(--color-science)' }}>
+                    {empireSummary.researchTech.name}
+                  </span>
+                  {empireSummary.turnsRemaining !== null && (
+                    <span> · {empireSummary.turnsRemaining}t</span>
+                  )}
+                </span>
+                {/* Progress bar */}
+                <ProgressBar
+                  value={empireSummary.researchProgress}
+                  max={empireSummary.researchTech.cost}
+                  color="var(--color-science)"
+                />
+              </InfoPill>
+            ) : (
+              <InfoPill color="rgba(77,171,247,0.08)" border="rgba(77,171,247,0.2)">
+                <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>🔬 No research</span>
+              </InfoPill>
+            )}
+
+            {/* Civic */}
+            {empireSummary.civicDef ? (
+              <InfoPill color="rgba(204,93,232,0.1)" border="rgba(204,93,232,0.25)">
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  🎭{' '}
+                  <span className="font-semibold" style={{ color: 'var(--color-culture)' }}>
+                    {empireSummary.civicDef.name}
+                  </span>
+                  {empireSummary.civicTurns !== null && (
+                    <span> · {empireSummary.civicTurns}t</span>
+                  )}
+                </span>
+                <ProgressBar
+                  value={empireSummary.civicProgress}
+                  max={empireSummary.civicDef.cost}
+                  color="var(--color-culture)"
+                />
+              </InfoPill>
+            ) : (
+              <InfoPill color="rgba(204,93,232,0.08)" border="rgba(204,93,232,0.2)">
+                <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>🎭 No civic</span>
+              </InfoPill>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Keyboard shortcuts strip ── */}
+      <div
+        className="flex items-center justify-center px-4"
+        style={{
+          height: '16px',
+          borderTop: '1px solid rgba(139,148,158,0.12)',
+          background: 'rgba(0,0,0,0.15)',
+        }}
+      >
+        <span
+          className="font-mono"
+          style={{ fontSize: '10px', color: 'rgba(139,148,158,0.55)', letterSpacing: '0.03em' }}
         >
-          <span style={{ color: 'var(--color-accent)' }}>🏗️ Can build:</span>
-          {availableImprovements.slice(0, 3).map(imp => (
-            <span
-              key={imp.id}
-              className="px-2 py-0.5 rounded font-semibold"
-              style={{
-                background: 'rgba(124, 252, 0, 0.1)',
-                color: 'var(--color-text)',
-                border: '1px solid rgba(124, 252, 0, 0.2)',
-              }}
-            >
-              {imp.name}
-            </span>
-          ))}
-          {availableImprovements.length > 3 && (
-            <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>
-              +{availableImprovements.length - 3} more
-            </span>
-          )}
-        </div>
-      )}
+          {SHORTCUT_LINE}
+        </span>
+      </div>
+    </div>
+  );
+}
 
-      {/* Instructions with shortcuts */}
-      {!selectedUnit && !selectedHex && (
-        <div className="flex items-center gap-4 text-xs px-3 py-1.5 rounded" style={{
-          color: 'var(--color-text-muted)',
-          background: 'rgba(139, 148, 158, 0.1)',
-          border: '1px solid rgba(139, 148, 158, 0.2)'
-        }}>
-          <span style={{ color: 'var(--color-accent)' }}>🖱️ Click unit to select</span>
-          <span style={{ color: 'var(--color-accent)' }}>🟦 Click blue hex to move</span>
-          <span style={{ color: 'var(--color-production)' }}>⚔️ Click enemy to attack</span>
-          <span className="opacity-60">| WASD/Arrows: pan | Scroll: zoom | Enter: end turn | Space: next unit</span>
-        </div>
-      )}
+// ── Sub-components ──
+
+function InfoPill({ color, border, children }: { color: string; border: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="flex flex-col justify-center px-2.5 py-1 rounded gap-0.5 shrink-0"
+      style={{
+        background: color,
+        border: `1px solid ${border}`,
+        minHeight: '34px',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = Math.min(100, Math.round((value / Math.max(1, max)) * 100));
+  return (
+    <div
+      className="rounded-full overflow-hidden"
+      style={{ height: '3px', width: '64px', background: 'rgba(255,255,255,0.1)', marginTop: '2px' }}
+    >
+      <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '9999px' }} />
     </div>
   );
 }
@@ -255,7 +398,7 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
         style={{
           backgroundColor: 'rgba(0,0,0,0.3)',
           fontWeight: 'normal',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
         [{shortcut}]

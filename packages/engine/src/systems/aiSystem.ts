@@ -6,6 +6,26 @@ import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
 
+/** Diplomacy helpers (mirrored locally to avoid cross-system imports) */
+function aiRelationKey(a: string, b: string): string {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
+const AI_DEFAULT_RELATION = {
+  status: 'neutral' as const,
+  relationship: 0,
+  warSupport: 0,
+  turnsAtPeace: 0,
+  turnsAtWar: 0,
+  hasAlliance: false,
+  hasFriendship: false,
+  hasDenounced: false,
+  warDeclarer: null,
+  isSurpriseWar: false,
+  activeEndeavors: [] as ReadonlyArray<never>,
+  activeSanctions: [] as ReadonlyArray<never>,
+};
+
 /** Threat level returned by assessThreats */
 export type ThreatLevel = 'safe' | 'cautious' | 'danger' | 'critical';
 
@@ -163,7 +183,63 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
-  // 3. Process each unit
+  // 3. Diplomacy — war declarations and peace proposals
+  const otherPlayerIds = [...state.players.keys()].filter(id => id !== player.id);
+  for (const targetId of otherPlayerIds) {
+    const relKey = aiRelationKey(player.id, targetId);
+    const relation = state.diplomacy.relations.get(relKey) ?? AI_DEFAULT_RELATION;
+    const alreadyAtWar = relation.status === 'war';
+
+    if (!alreadyAtWar) {
+      // War declaration: aggressive + military advantage + visible enemy city nearby
+      const warThreshold = 0.6 - personality.riskTolerance * 0.2; // e.g. 0.6 for riskTolerance=0, 0.4 for riskTolerance=1
+      if (personality.aggressiveness > warThreshold) {
+        const targetPlayerUnits = [...state.units.values()].filter(u => u.owner === targetId);
+        const ourMilitaryCount = militaryUnits.length;
+        const theirVisibleMilitaryCount = targetPlayerUnits.filter(u => {
+          if (!canSee(visibility, u.position)) return false;
+          const def = state.config.units.get(u.typeId);
+          return def && def.category !== 'civilian' && def.category !== 'religious';
+        }).length;
+        const hasMilitaryAdvantage = ourMilitaryCount > theirVisibleMilitaryCount;
+
+        // Check for a visible enemy city within 15 hexes
+        const enemyCityNearby = [...state.cities.values()].some(
+          city => city.owner === targetId &&
+          canSee(visibility, city.position) &&
+          ourCities.some(oc => distance(oc.position, city.position) <= 15)
+        );
+
+        if (hasMilitaryAdvantage && enemyCityNearby) {
+          // Use surprise war (no hostile relationship required)
+          actions.push({
+            type: 'PROPOSE_DIPLOMACY',
+            targetId,
+            proposal: { type: 'DECLARE_WAR', warType: 'surprise' },
+          });
+        }
+      }
+    } else {
+      // Peace proposal: losing the war AND personality is not aggressive
+      if (personality.aggressiveness < 0.5) {
+        const losingWar =
+          threat.threatLevel === 'danger' || threat.threatLevel === 'critical';
+        if (losingWar) {
+          actions.push({
+            type: 'PROPOSE_DIPLOMACY',
+            targetId,
+            proposal: { type: 'PROPOSE_PEACE' },
+          });
+        }
+      }
+
+      // Auto-accept incoming peace: peaceful leaders always accept, aggressive reject
+      // We model this by the low-aggression AI also proposing peace to encourage resolution
+      // (The diplomacySystem auto-accepts after turnsAtWar >= 5 regardless of who proposes)
+    }
+  }
+
+  // 4. Process each unit
   for (const unit of ourUnits) {
     if (unit.movementLeft <= 0) continue;
     const unitDef = state.config.units.get(unit.typeId);
