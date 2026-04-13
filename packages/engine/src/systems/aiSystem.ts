@@ -146,6 +146,28 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
+  // 1a2. Civic research — pick cheapest unresearched civic
+  if (!player.currentCivic) {
+    const researchedCivics = new Set(player.researchedCivics);
+    let bestCivic: string | null = null;
+    let bestCost = Infinity;
+    for (const [civicId, civic] of state.config.civics) {
+      if (researchedCivics.has(civicId)) continue;
+      if (civic.age !== player.age) continue;
+      // Check civ-specific civics
+      if (civic.civId && civic.civId !== player.civilizationId) continue;
+      const prereqsMet = civic.prerequisites.every(p => researchedCivics.has(p));
+      if (!prereqsMet) continue;
+      if (civic.cost < bestCost) {
+        bestCost = civic.cost;
+        bestCivic = civicId;
+      }
+    }
+    if (bestCivic) {
+      actions.push({ type: 'SET_CIVIC', civicId: bestCivic });
+    }
+  }
+
   // 1b. Age transition — if we've earned enough age progress, transition to next age
   const nextAge = player.age === 'antiquity' ? 'exploration' : player.age === 'exploration' ? 'modern' : null;
   if (nextAge) {
