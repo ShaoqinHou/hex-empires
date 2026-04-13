@@ -11,7 +11,8 @@
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(48 E2E, 616 engine, spawn fix verified\\)\")",
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(48 E2E, 616 engine, AI strategy verified\\)\")",
       "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(terrain visuals improved\\)\")",
-      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(AI age transitions working\\)\")"
+      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(AI age transitions working\\)\")",
+      "Bash(echo \"PASS $\\(date -u +%Y-%m-%dT%H:%M:%SZ\\) \\(log cleanup, 200-turn stress pass\\)\")"
     ]
   }
 }

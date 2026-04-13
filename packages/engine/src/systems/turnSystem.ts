@@ -62,16 +62,22 @@ function handleStartTurn(state: GameState): GameState {
     }
   }
 
+  // Only log turn start for the human player (player1) — AI turn starts are noise
+  const isHuman = state.currentPlayerId === 'player1';
+  const newLog = isHuman
+    ? [...state.log, {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `Turn ${state.turn} — your turn`,
+        type: 'production' as const,
+      }]
+    : state.log;
+
   return {
     ...state,
     phase: 'actions',
     units: updatedUnits,
-    log: [...state.log, {
-      turn: state.turn,
-      playerId: state.currentPlayerId,
-      message: `Turn ${state.turn} started for ${state.currentPlayerId}`,
-      type: 'production',
-    }],
+    log: newLog,
   };
 }
 
@@ -121,19 +127,13 @@ function handleEndTurn(state: GameState): GameState {
   const isLastPlayer = currentIndex === playerIds.length - 1;
 
   if (isLastPlayer) {
-    // All players have gone — advance to next turn
+    // All players have gone — advance to next turn (no log entry, it's just noise)
     const nextPlayerId = playerIds[0];
     return {
       ...state,
       turn: state.turn + 1,
       currentPlayerId: nextPlayerId,
       phase: 'start',
-      log: [...state.log, {
-        turn: state.turn,
-        playerId: state.currentPlayerId,
-        message: `Turn ${state.turn} ended`,
-        type: 'production',
-      }],
     };
   } else {
     // Advance to next player in the same turn
