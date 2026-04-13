@@ -20,348 +20,127 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
   const { state, dispatch, saveGame, loadGame } = useGameState();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const player = state.players.get(state.currentPlayerId);
 
-  // Recent log entries for the current player (from previous turn)
-  const recentEvents = state.log
-    .filter(e => e.playerId === state.currentPlayerId && e.turn === state.turn - 1)
-    .slice(-2);
-
-  // Current research info
   const currentResearchTech: TechnologyDef | undefined = player?.currentResearch
     ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
     : undefined;
 
-  // Current civic info
   const currentCivicDef: CivicDef | undefined = player?.currentCivic
     ? ALL_CIVICS.find(c => c.id === player.currentCivic)
     : undefined;
 
-  // Calculate per-turn resource changes
   const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
 
-  // Check if player has any available actions
-  const hasActionsAvailable = (() => {
-    // Check if any units have movement left
-    const unitsWithMovement = [...state.units.values()].filter(
-      u => u.owner === state.currentPlayerId && u.movementLeft > 0
-    );
-
-    // Check if any cities have production queues that can be set
-    const citiesWithActions = [...state.cities.values()].filter(
-      c => c.owner === state.currentPlayerId && c.productionQueue.length === 0
-    );
-
-    return unitsWithMovement.length > 0 || citiesWithActions.length > 0;
-  })();
+  // Units with remaining movement (for indicator, not for blocking End Turn)
+  const unitsWithMovement = [...state.units.values()].filter(
+    u => u.owner === state.currentPlayerId && u.movementLeft > 0
+  ).length;
 
   return (
-    <div className="h-14 flex items-center justify-between px-4 select-none"
+    <div className="h-12 flex items-center justify-between px-3 select-none"
       style={{
         background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
         borderBottom: '2px solid var(--color-border)',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-        zIndex: 100
+        zIndex: 100,
       }}>
-      {/* Left: Turn & Age & Notifications */}
-      <div className="flex items-center gap-4">
-        <div
-          className="px-3 py-1 rounded"
+
+      {/* Left: Turn & Age */}
+      <div className="flex items-center gap-3">
+        <div className="px-2.5 py-1 rounded"
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
             boxShadow: '0 2px 4px rgba(88, 166, 255, 0.3)',
-          }}
-        >
-          <span className="text-sm font-bold" style={{ color: '#0d1117' }}>
+          }}>
+          <span className="text-xs font-bold" style={{ color: '#0d1117' }}>
             Turn {state.turn}
           </span>
         </div>
         <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-          {state.age.currentAge} Age
+          {state.age.currentAge}
         </span>
-        <span className="text-xs px-2 py-0.5 rounded" style={{
-          color: 'var(--color-text-muted)',
-          backgroundColor: 'rgba(139, 148, 158, 0.1)'
-        }}>
-          Units: {[...state.units.values()].filter(u => u.owner === state.currentPlayerId).length}
-        </span>
-        {recentEvents.length > 0 && (
-          <span className="text-xs italic truncate max-w-48 px-2 py-0.5 rounded" style={{
-            color: 'var(--color-accent)',
-            backgroundColor: 'rgba(88, 166, 255, 0.1)',
-            border: '1px solid rgba(88, 166, 255, 0.2)'
-          }}>
-            {recentEvents[recentEvents.length - 1].message}
-          </span>
-        )}
       </div>
 
-      {/* Center: Resources + Research */}
-      <div className="flex items-center gap-3 text-sm">
-        {/* Gold with per-turn indicator */}
-        <div className="flex items-center gap-1">
-          <ResourceBadge label="Gold" value={player?.gold ?? 0} color="var(--color-gold)" />
-          <span className="font-mono text-[10px]" style={{ color: resourceChanges.goldPerTurn >= 0 ? 'var(--color-food)' : 'var(--color-health-low)' }}>
-            {resourceChanges.goldPerTurn >= 0 ? '+' : ''}{resourceChanges.goldPerTurn}/turn
-          </span>
-        </div>
+      {/* Center: Resources */}
+      <div className="flex items-center gap-4">
+        <ResourcePill label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
+        <ResourcePill label="Science" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
+        <ResourcePill label="Culture" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
+        <ResourcePill label="Faith" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" />
 
-        {/* Science with per-turn indicator */}
-        <div className="flex items-center gap-1">
-          <ResourceBadge label="Science" value={player?.science ?? 0} color="var(--color-science)" />
-          {resourceChanges.sciencePerTurn > 0 && (
-            <span className="font-mono text-xs" style={{ color: 'var(--color-science)' }}>
-              (+{resourceChanges.sciencePerTurn})
-            </span>
-          )}
-        </div>
-
+        {/* Research progress */}
         {currentResearchTech && (
-          <span className="text-[10px]" style={{ color: 'var(--color-science)' }}>
-            {currentResearchTech.name} ({player?.researchProgress ?? 0}/{currentResearchTech.cost})
+          <span className="text-xs px-2 py-0.5 rounded" style={{ color: 'var(--color-science)', backgroundColor: 'rgba(77, 171, 247, 0.1)' }}>
+            🔬 {currentResearchTech.name} ({player?.researchProgress ?? 0}/{currentResearchTech.cost})
           </span>
         )}
 
-        {/* Culture with per-turn indicator */}
-        <div className="flex items-center gap-1">
-          <ResourceBadge label="Culture" value={player?.culture ?? 0} color="var(--color-culture)" />
-          {resourceChanges.culturePerTurn > 0 && (
-            <span className="font-mono text-xs" style={{ color: 'var(--color-culture)' }}>
-              (+{resourceChanges.culturePerTurn})
-            </span>
-          )}
-        </div>
-
-        {currentCivicDef && (
-          <span className="text-[10px]" style={{ color: 'var(--color-culture)' }}>
-            {currentCivicDef.name} ({player?.civicProgress ?? 0}/{currentCivicDef.cost})
-          </span>
-        )}
-
-        <ResourceBadge label="Faith" value={player?.faith ?? 0} color="var(--color-faith)" />
-        <ResourceBadge label="Influence" value={player?.influence ?? 0} color="rgba(186, 104, 200, 0.9)" />
-
-        {/* Warning indicator for critical shortages */}
         <WarningIndicator summary={resourceChanges} />
       </div>
 
-      {/* Right: Audio Settings + Tech Tree + End Turn */}
-      <div className="flex items-center gap-2">
-        {/* Audio settings toggle */}
+      {/* Right: Panel buttons + End Turn */}
+      <div className="flex items-center gap-1.5">
+        <PanelButton label="Tech" color="#4dabf7" onClick={onOpenTechTree} />
+        <PanelButton label="Civics" color="#cc5de8" onClick={onOpenCivicTree} />
+        <PanelButton label="Diplo" color="#ba68c8" onClick={onOpenDiplomacy} />
+        <PanelButton label="Ages" color="#ffd54f" dark onClick={onOpenAge} />
+
+        {/* More menu for secondary actions */}
+        <div className="relative">
+          <button
+            className="px-2 py-1 rounded text-xs cursor-pointer hover:opacity-80"
+            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+          >
+            ⋯
+          </button>
+          {showMoreMenu && (
+            <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 z-50 min-w-36"
+              style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+              <MenuButton label="👑 Governors" onClick={() => { onOpenGovernors?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="📜 Event Log" onClick={() => { onOpenLog?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="📊 Summary" onClick={() => { onOpenTurnSummary?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="🏆 Victory" onClick={() => { setShowVictoryProgress(true); setShowMoreMenu(false); }} />
+              <div className="h-px my-1" style={{ backgroundColor: 'var(--color-border)' }} />
+              <MenuButton label="💾 Save" onClick={() => { saveGame(); setShowMoreMenu(false); }} />
+              <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
+              <MenuButton label="🔊 Audio" onClick={() => { setShowAudioSettings(true); setShowMoreMenu(false); }} />
+            </div>
+          )}
+        </div>
+
+        {/* End Turn — always clickable */}
         <button
-          className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
+          className="px-4 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1"
           style={{
-            background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-            color: 'var(--color-text-muted)',
-            border: '1px solid var(--color-border)',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+            color: '#fff',
+            boxShadow: '0 2px 8px rgba(34, 197, 94, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
           }}
-          onClick={() => setShowAudioSettings(!showAudioSettings)}
-          title="Audio Settings"
+          onClick={() => dispatch({ type: 'END_TURN' })}
         >
-          🔊
+          End Turn →
+          {unitsWithMovement > 0 && (
+            <span className="ml-1.5 text-xs opacity-75">({unitsWithMovement} idle)</span>
+          )}
         </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-          color: 'var(--color-text-muted)',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={() => {
-          saveGame();
-        }}
-      >
-        Save
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-          color: 'var(--color-text-muted)',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={() => {
-          loadGame();
-        }}
-      >
-        Load
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
-          color: '#0d1117',
-          border: '1px solid rgba(88, 166, 255, 0.3)',
-          boxShadow: '0 1px 3px rgba(88, 166, 255, 0.2)'
-        }}
-        onClick={() => {
-          window.open('/QUICK_START.md', '_blank');
-        }}
-        title="Quick Start Guide"
-      >
-        ❓ Help
-      </button>
-      <button
-        className="px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-science) 0%, #3b8dbd 100%)',
-          color: '#ffffff',
-          border: '1px solid #5aa9f7',
-          boxShadow: '0 2px 4px rgba(77, 171, 247, 0.3)',
-        }}
-        onClick={onOpenTechTree}
-      >
-        📚 Tech
-      </button>
-      <button
-        className="px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-culture) 0%, #9b4dcb 100%)',
-          color: '#ffffff',
-          border: '1px solid #d67de8',
-          boxShadow: '0 2px 4px rgba(204, 93, 232, 0.3)',
-        }}
-        onClick={onOpenCivicTree}
-      >
-        🎭 Civics
-      </button>
-      <button
-        className="px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, rgba(186, 104, 200, 0.8) 0%, rgba(156, 84, 180, 0.8) 100%)',
-          color: '#ffffff',
-          border: '1px solid rgba(186, 104, 200, 0.5)',
-          boxShadow: '0 2px 4px rgba(186, 104, 200, 0.3)',
-        }}
-        onClick={onOpenDiplomacy}
-      >
-        🤝 Diplo
-      </button>
-      <button
-        className="px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-gold) 0%, #e6c200 100%)',
-          color: '#0d1117',
-          border: '1px solid #ffe066',
-          boxShadow: '0 2px 4px rgba(255, 213, 79, 0.3)',
-        }}
-        onClick={onOpenAge}
-      >
-        ⚡ Ages
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-          color: 'var(--color-text-muted)',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={onOpenLog}
-      >
-        📜 Log
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-          color: 'var(--color-text-muted)',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={onOpenTurnSummary}
-        title="View turn summary and resource changes"
-      >
-        📊 Summary
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-          color: 'var(--color-text-muted)',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-        }}
-        onClick={onOpenGovernors}
-        title="Manage governors"
-      >
-        👑 Gov
-      </button>
-      <button
-        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-          color: '#0d1117',
-          border: '1px solid #fde047',
-          boxShadow: '0 1px 3px rgba(251, 191, 36, 0.4)'
-        }}
-        onClick={() => setShowVictoryProgress(true)}
-        title="View victory progress"
-      >
-        🏆 Victory
-      </button>
-      <button
-        className="px-5 py-2 rounded text-base font-bold transition-all"
-        style={{
-          background: hasActionsAvailable
-            ? 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)'
-            : 'linear-gradient(135deg, var(--color-text-muted) 0%, #6e7681 100%)',
-          color: '#0d1117',
-          cursor: hasActionsAvailable ? 'pointer' : 'not-allowed',
-          opacity: hasActionsAvailable ? 1 : 0.5,
-          boxShadow: hasActionsAvailable
-            ? '0 4px 12px rgba(88, 166, 255, 0.4), 0 0 20px rgba(88, 166, 255, 0.2)'
-            : 'none',
-          border: hasActionsAvailable ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
-        }}
-        onMouseEnter={(e) => {
-          if (hasActionsAvailable) {
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (hasActionsAvailable) {
-            e.currentTarget.style.transform = 'scale(1)';
-          }
-        }}
-        onClick={() => {
-          if (hasActionsAvailable) dispatch({ type: 'END_TURN' });
-        }}
-        disabled={!hasActionsAvailable}
-      >
-        ⚔️ End Turn {hasActionsAvailable && '→'}
-        {!hasActionsAvailable && (
-          <span className="ml-1 text-xs">(No actions)</span>
-        )}
-      </button>
       </div>
 
-      {/* Audio Settings Panel */}
+      {/* Floating panels */}
       {showAudioSettings && (
-        <div
-          className="absolute top-14 right-4 w-80 rounded-lg shadow-xl p-4 z-50"
-          style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
-        >
+        <div className="absolute top-14 right-4 w-80 rounded-lg shadow-xl p-4 z-50"
+          style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-              Audio Settings
-            </h3>
-            <button
-              onClick={() => setShowAudioSettings(false)}
-              className="text-lg"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              ✕
-            </button>
+            <h3 className="text-lg font-bold">Audio Settings</h3>
+            <button onClick={() => setShowAudioSettings(false)} className="text-lg cursor-pointer" style={{ color: 'var(--color-text-muted)' }}>✕</button>
           </div>
           <AudioSettings />
         </div>
       )}
 
-      {/* Victory Progress Panel */}
       {showVictoryProgress && (
         <VictoryProgressPanel onClose={() => setShowVictoryProgress(false)} />
       )}
@@ -369,12 +148,46 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
   );
 }
 
-function ResourceBadge({ label, value, color }: { label: string; value: number; color: string }) {
+function ResourcePill({ label, value, perTurn, color }: { label: string; value: number; perTurn: number; color: string }) {
   return (
-    <div className="flex items-center gap-1" title={label}>
+    <div className="flex items-center gap-1" title={`${label}: ${value} (${perTurn >= 0 ? '+' : ''}${perTurn}/turn)`}>
       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>{label.slice(0, 3).toUpperCase()}</span>
       <span className="font-mono text-xs font-bold" style={{ color }}>{value}</span>
+      {perTurn !== 0 && (
+        <span className="text-xs" style={{ color: perTurn >= 0 ? 'var(--color-food)' : 'var(--color-health-low)' }}>
+          {perTurn >= 0 ? '+' : ''}{perTurn}
+        </span>
+      )}
     </div>
+  );
+}
+
+function PanelButton({ label, color, dark, onClick }: { label: string; color: string; dark?: boolean; onClick?: () => void }) {
+  return (
+    <button
+      className="px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
+      style={{
+        background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+        color: dark ? '#0d1117' : '#fff',
+        border: `1px solid ${color}80`,
+      }}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MenuButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      className="w-full text-left px-3 py-1.5 text-xs cursor-pointer hover:brightness-125"
+      style={{ color: 'var(--color-text)' }}
+      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface-elevated)'; }}
+      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onClick={onClick}
+    >
+      {label}
+    </button>
   );
 }

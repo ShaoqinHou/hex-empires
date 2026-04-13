@@ -462,9 +462,13 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields]);
 
   // Edge-of-screen scrolling
+  // Top edge is small (8px) to avoid conflict with TopBar buttons
+  // Bottom edge is small (8px) to avoid conflict with BottomBar
+  // Left/right edges use a moderate zone
   useEffect(() => {
-    const EDGE_SIZE = 30;
-    const EDGE_SPEED = 8;
+    const EDGE_SIDE = 15;
+    const EDGE_TOP = 8;
+    const EDGE_BOTTOM = 8;
     let edgeFrame: number;
 
     const edgeScroll = () => {
@@ -475,10 +479,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       const my = lastMouseRef.current.y - rect.top;
 
       if (mx >= 0 && mx <= rect.width && my >= 0 && my <= rect.height) {
-        if (mx < EDGE_SIZE) cameraRef.current.panByKey('ArrowLeft');
-        if (mx > rect.width - EDGE_SIZE) cameraRef.current.panByKey('ArrowRight');
-        if (my < EDGE_SIZE) cameraRef.current.panByKey('ArrowUp');
-        if (my > rect.height - EDGE_SIZE) cameraRef.current.panByKey('ArrowDown');
+        if (mx < EDGE_SIDE) cameraRef.current.panByKey('ArrowLeft');
+        if (mx > rect.width - EDGE_SIDE) cameraRef.current.panByKey('ArrowRight');
+        if (my < EDGE_TOP) cameraRef.current.panByKey('ArrowUp');
+        if (my > rect.height - EDGE_BOTTOM) cameraRef.current.panByKey('ArrowDown');
       }
 
       edgeFrame = requestAnimationFrame(edgeScroll);
