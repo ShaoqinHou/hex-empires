@@ -14,9 +14,10 @@ interface TopBarProps {
   onOpenAge?: () => void;
   onOpenTurnSummary?: () => void;
   onOpenGovernors?: () => void;
+  onOpenHelp?: () => void;
 }
 
-export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors, onOpenHelp }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGameState();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
@@ -108,6 +109,7 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
               <MenuButton label="💾 Save" onClick={() => { saveGame(); setShowMoreMenu(false); }} />
               <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
               <MenuButton label="🔊 Audio" onClick={() => { setShowAudioSettings(true); setShowMoreMenu(false); }} />
+              <MenuButton label="❓ Help (H)" onClick={() => { onOpenHelp?.(); setShowMoreMenu(false); }} />
             </div>
           )}
         </div>

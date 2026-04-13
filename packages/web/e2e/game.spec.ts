@@ -3,6 +3,8 @@ import { test, expect, Page } from '@playwright/test';
 /** Navigate to the app and click Start Game to get past the setup screen */
 async function startGame(page: Page) {
   await page.goto('/');
+  // Suppress auto-help overlay in tests
+  await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   // Wait for setup screen to render
   const startButton = page.getByRole('button', { name: /start game/i });
   await startButton.waitFor({ timeout: 10000 });

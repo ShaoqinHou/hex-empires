@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { GameProvider, useGame } from './providers/GameProvider';
 import { SetupScreen } from './ui/panels/SetupScreen';
 import { GameCanvas } from './canvas/GameCanvas';
@@ -23,19 +23,40 @@ import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './canvas/TooltipOverlay';
 import { GovernorPanel } from './ui/panels/GovernorPanel';
+import { HelpPanel } from './ui/panels/HelpPanel';
 
-type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors';
+type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help';
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed } = useGame();
   const state = nullableState!; // GameUI only renders when state is non-null
-  const [activePanel, setActivePanel] = useState<Panel>('none');
+  const [activePanel, setActivePanel] = useState<Panel>(() => {
+    // Auto-show help on first ever game start
+    if (!localStorage.getItem('helpShown')) {
+      localStorage.setItem('helpShown', '1');
+      return 'help';
+    }
+    return 'none';
+  });
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [showYields, setShowYields] = useState(false);
   const selectedCity = selectedCityId ? state.cities.get(selectedCityId) ?? null : null;
   const cameraRef = useRef<Camera | null>(null);
 
   const togglePanel = (panel: Panel) => setActivePanel(prev => prev === panel ? 'none' : panel);
+
+  // H key — toggle help panel
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'h' || e.key === 'H') {
+        togglePanel('help');
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   // Determine if we should show combat preview
   const combatPreviewTarget = useMemo(() => {
@@ -74,6 +95,7 @@ function GameUI() {
         onOpenAge={() => togglePanel('age')}
         onOpenTurnSummary={() => togglePanel('turnSummary')}
         onOpenGovernors={() => togglePanel('governors')}
+        onOpenHelp={() => togglePanel('help')}
       />
       <div className="flex-1 relative">
         <GameCanvas
@@ -109,6 +131,9 @@ function GameUI() {
         )}
         {activePanel === 'governors' && (
           <GovernorPanel onClose={() => setActivePanel('none')} />
+        )}
+        {activePanel === 'help' && (
+          <HelpPanel onClose={() => setActivePanel('none')} />
         )}
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />

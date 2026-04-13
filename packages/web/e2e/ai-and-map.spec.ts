@@ -71,6 +71,7 @@ async function dispatch(page: Page, action: Record<string, any>) {
 
 async function startGameWith(page: Page, numAI: number) {
   await page.goto('http://localhost:5174');
+  await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(300);
 
   // Select AI count — button text is "{numAI}\nopponent(s)"

@@ -71,6 +71,8 @@ async function dispatch(page: Page, action: Record<string, any>) {
 /** Start game with specific config */
 async function startGame(page: Page, options?: { civ?: string; leader?: string }) {
   await page.goto('http://localhost:5174');
+  // Suppress auto-help overlay in tests
+  await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(500);
 
   // Select leader if specified
