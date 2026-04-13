@@ -104,6 +104,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   // Track drag state
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
+  const mouseOverCanvasRef = useRef(false);
   const dragDistRef = useRef(0);
 
   // Initialize canvas and renderer
@@ -473,7 +474,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
     const edgeScroll = () => {
       const canvas = canvasRef.current;
-      if (!canvas) { edgeFrame = requestAnimationFrame(edgeScroll); return; }
+      if (!canvas || !mouseOverCanvasRef.current) {
+        edgeFrame = requestAnimationFrame(edgeScroll);
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       const mx = lastMouseRef.current.x - rect.left;
       const my = lastMouseRef.current.y - rect.top;
@@ -500,7 +504,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseEnter={() => { mouseOverCanvasRef.current = true; }}
         onMouseLeave={() => {
+          mouseOverCanvasRef.current = false;
           isDraggingRef.current = false;
           setCombatPreview(null);
           setCombatPreviewPosition(null);
