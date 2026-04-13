@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { GameEvent } from '@hex/engine';
 
 interface TurnTransitionProps {
@@ -7,7 +7,7 @@ interface TurnTransitionProps {
 }
 
 export function TurnTransition({ onComplete }: TurnTransitionProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
   const [showOverlay, setShowOverlay] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [previousTurn, setPreviousTurn] = useState(state.turn);

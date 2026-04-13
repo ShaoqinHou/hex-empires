@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { ALL_CIVILIZATIONS, ALL_LEADERS } from '@hex/engine';
 import type { PlayerId, DiplomaticStatus, DiplomacyProposal, DiplomacyRelation } from '@hex/engine';
 
@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<DiplomaticStatus, string> = {
 };
 
 export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const currentPlayerId = state.currentPlayerId;
   const otherPlayers = [...state.players.values()].filter(p => p.id !== currentPlayerId);
 

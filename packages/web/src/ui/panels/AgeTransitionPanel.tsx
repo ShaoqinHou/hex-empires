@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { ALL_CIVILIZATIONS, ALL_UNITS, ALL_BUILDINGS } from '@hex/engine';
 import type { Age } from '@hex/engine';
 
@@ -7,7 +7,7 @@ interface AgeTransitionPanelProps {
 }
 
 export function AgeTransitionPanel({ onClose }: AgeTransitionPanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 

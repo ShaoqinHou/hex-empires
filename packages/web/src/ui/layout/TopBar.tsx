@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
@@ -17,7 +17,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors }: TopBarProps) {
-  const { state, dispatch, saveGame, loadGame } = useGame();
+  const { state, dispatch, saveGame, loadGame } = useGameState();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const player = state.players.get(state.currentPlayerId);

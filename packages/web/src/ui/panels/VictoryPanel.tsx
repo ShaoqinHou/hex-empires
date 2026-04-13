@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 
 export function VictoryPanel() {
-  const { state } = useGame();
+  const { state } = useGameState();
   const [dismissed, setDismissed] = useState(false);
 
   if (!state.victory.winner || dismissed) return null;

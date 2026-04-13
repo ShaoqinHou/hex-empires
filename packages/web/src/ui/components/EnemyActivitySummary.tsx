@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 
 interface EnemyActivitySummaryProps {
   onClose?: () => void;
 }
 
 export function EnemyActivitySummary({ onClose }: EnemyActivitySummaryProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
   const [show, setShow] = useState(false);
   const [activities, setActivities] = useState<string[]>([]);
 

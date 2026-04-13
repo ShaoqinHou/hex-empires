@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { ALL_ANTIQUITY_CIVICS } from '@hex/engine';
 import type { CivicDef } from '@hex/engine';
 
@@ -13,7 +13,7 @@ interface CivicTreePanelProps {
 }
 
 export function CivicTreePanel({ onClose }: CivicTreePanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 

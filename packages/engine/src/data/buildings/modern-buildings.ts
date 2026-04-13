@@ -4,7 +4,7 @@ export const FACTORY: BuildingDef = {
   id: 'factory',
   name: 'Factory',
   age: 'modern',
-  cost: 300,
+  cost: 240,
   maintenance: 3,
   yields: { production: 5 },
   effects: [],

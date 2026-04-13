@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { GameProvider, useGame } from './providers/GameProvider';
+import { SetupScreen } from './ui/panels/SetupScreen';
 import { GameCanvas } from './canvas/GameCanvas';
 import { Camera } from './canvas/Camera';
 import { TopBar } from './ui/layout/TopBar';
@@ -26,7 +27,8 @@ import { GovernorPanel } from './ui/panels/GovernorPanel';
 type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors';
 
 function GameUI() {
-  const { state, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed } = useGame();
+  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed } = useGame();
+  const state = nullableState!; // GameUI only renders when state is non-null
   const [activePanel, setActivePanel] = useState<Panel>('none');
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [showYields, setShowYields] = useState(false);
@@ -139,10 +141,20 @@ function GameUI() {
   );
 }
 
+function AppInner() {
+  const { state, initGame } = useGame();
+
+  if (!state) {
+    return <SetupScreen onStart={initGame} />;
+  }
+
+  return <GameUI />;
+}
+
 export function App() {
   return (
     <GameProvider>
-      <GameUI />
+      <AppInner />
     </GameProvider>
   );
 }

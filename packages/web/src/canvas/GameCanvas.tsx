@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useGame } from '../providers/GameProvider';
+import { useGameState } from '../providers/GameProvider';
 import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
@@ -39,7 +39,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
     reachableHexes, animationManager, setHoveredHex: setGlobalHoveredHex,
     combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
-  } = useGame();
+  } = useGameState();
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [showImprovementPanel, setShowImprovementPanel] = useState(false);

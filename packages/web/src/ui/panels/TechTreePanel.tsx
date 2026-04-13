@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { ALL_ANTIQUITY_TECHS, ALL_EXPLORATION_TECHS, ALL_MODERN_TECHS } from '@hex/engine';
 import type { TechnologyDef } from '@hex/engine';
 
@@ -13,7 +13,7 @@ interface TechTreePanelProps {
 }
 
 export function TechTreePanel({ onClose }: TechTreePanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 

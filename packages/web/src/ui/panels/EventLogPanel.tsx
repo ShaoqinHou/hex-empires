@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { GameEvent } from '@hex/engine';
 
 interface EventLogPanelProps {
@@ -34,7 +34,7 @@ const EVENT_LABELS: Record<GameEvent['type'], string> = {
 };
 
 export function EventLogPanel({ onClose }: EventLogPanelProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
 
   // Reverse chronological order (newest first)
   const events = [...state.log].reverse();

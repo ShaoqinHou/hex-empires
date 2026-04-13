@@ -1,8 +1,8 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { CrisisState } from '@hex/engine';
 
 export function CrisisPanel() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
 
   // Find the first active (unresolved) crisis
   const activeCrisis: CrisisState | undefined = state.crises.find(c => c.active);

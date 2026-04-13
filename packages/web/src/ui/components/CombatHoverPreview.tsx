@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { CombatPreview } from '@hex/engine';
 
 interface CombatHoverPreviewProps {
@@ -12,7 +12,7 @@ interface CombatHoverPreviewProps {
  * Displays near the cursor/target unit.
  */
 export function CombatHoverPreview({ preview, position }: CombatHoverPreviewProps) {
-  const { state, unitRegistry } = useGame();
+  const { state, unitRegistry } = useGameState();
 
   if (!preview || !position || !preview.canAttack) {
     return null;

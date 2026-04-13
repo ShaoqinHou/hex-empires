@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { coordToKey } from '@hex/engine';
 import { ALL_IMPROVEMENTS } from '@hex/engine';
 import type { ImprovementDef } from '@hex/engine';
@@ -10,7 +10,7 @@ interface ImprovementPanelProps {
 }
 
 export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelProps) {
-  const { state, dispatch, selectedHex } = useGame();
+  const { state, dispatch, selectedHex } = useGameState();
   const [selectedImprovement, setSelectedImprovement] = useState<string | null>(null);
 
   const builder = state.units.get(builderUnitId);

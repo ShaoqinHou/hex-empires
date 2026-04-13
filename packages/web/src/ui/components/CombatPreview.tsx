@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { calculateCombatPreview } from '@hex/engine';
 
 interface CombatPreviewProps {
@@ -9,7 +9,7 @@ interface CombatPreviewProps {
 }
 
 export function CombatPreviewPanel({ attackerId, targetId, onAttack, onClose }: CombatPreviewProps) {
-  const { state, unitRegistry } = useGame();
+  const { state, unitRegistry } = useGameState();
 
   const preview = calculateCombatPreview(state, attackerId, targetId);
   const attacker = state.units.get(attackerId);

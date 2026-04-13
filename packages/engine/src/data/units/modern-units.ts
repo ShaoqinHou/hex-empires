@@ -1,5 +1,102 @@
 import type { UnitDef } from '../../types/Unit';
 
+export const DESTROYER: UnitDef = {
+  id: 'destroyer',
+  name: 'Destroyer',
+  age: 'modern',
+  category: 'naval',
+  cost: 280,
+  combat: 65,
+  rangedCombat: 0,
+  range: 0,
+  movement: 6,
+  sightRange: 3,
+  requiredTech: 'steam_power',
+  upgradesTo: null,
+  abilities: ['anti_submarine'],
+} as const;
+
+export const SUBMARINE: UnitDef = {
+  id: 'submarine',
+  name: 'Submarine',
+  age: 'modern',
+  category: 'naval',
+  cost: 300,
+  combat: 55,
+  rangedCombat: 60,
+  range: 2,
+  movement: 5,
+  sightRange: 2,
+  requiredTech: 'combined_arms',
+  upgradesTo: null,
+  abilities: ['stealth'],
+} as const;
+
+export const BOMBER: UnitDef = {
+  id: 'bomber',
+  name: 'Bomber',
+  age: 'modern',
+  category: 'ranged',
+  cost: 350,
+  combat: 35,
+  rangedCombat: 80,
+  range: 10,
+  movement: 8,
+  sightRange: 2,
+  requiredTech: 'combined_arms',
+  upgradesTo: null,
+  abilities: ['bonus_vs_cities'],
+} as const;
+
+export const BATTLESHIP: UnitDef = {
+  id: 'battleship',
+  name: 'Battleship',
+  age: 'modern',
+  category: 'naval',
+  cost: 400,
+  combat: 80,
+  rangedCombat: 70,
+  range: 3,
+  movement: 5,
+  sightRange: 3,
+  requiredTech: 'combined_arms',
+  requiredResource: 'coal',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const PARATROOPERS: UnitDef = {
+  id: 'paratroopers',
+  name: 'Paratroopers',
+  age: 'modern',
+  category: 'melee',
+  cost: 320,
+  combat: 65,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'amphibious_warfare',
+  upgradesTo: null,
+  abilities: ['parachute_drop'],
+} as const;
+
+export const MECHANIZED_INFANTRY: UnitDef = {
+  id: 'mechanized_infantry',
+  name: 'Mechanized Infantry',
+  age: 'modern',
+  category: 'melee',
+  cost: 350,
+  combat: 70,
+  rangedCombat: 0,
+  range: 0,
+  movement: 3,
+  sightRange: 2,
+  requiredTech: 'combined_arms',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
 export const INFANTRY: UnitDef = {
   id: 'infantry',
   name: 'Infantry',
@@ -155,4 +252,10 @@ export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   SAM,
   IRONCLAD,
   BIPLANE,
+  DESTROYER,
+  SUBMARINE,
+  BOMBER,
+  BATTLESHIP,
+  PARATROOPERS,
+  MECHANIZED_INFANTRY,
 ] as const;

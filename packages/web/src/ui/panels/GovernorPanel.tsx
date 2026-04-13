@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { Governor, GovernorDef, GovernorAbility } from '@hex/engine';
 
 interface GovernorPanelProps {
@@ -24,7 +24,7 @@ const SPECIALIZATION_COLORS: Record<string, string> = {
 };
 
 export function GovernorPanel({ onClose }: GovernorPanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 

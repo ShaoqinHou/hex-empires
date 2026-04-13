@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { useGame } from '../../providers/GameProvider';
-import { hexToPixel } from '../../canvas/HexRenderer';
+import { useGameState } from '../../providers/GameProvider';
+import { hexToPixel } from '../../utils/hexMath';
 
 const MINIMAP_WIDTH = 200;
 const MINIMAP_HEIGHT = 130;
@@ -11,7 +11,7 @@ interface MinimapProps {
 
 export function Minimap({ cameraRef }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { state, terrainRegistry } = useGame();
+  const { state, terrainRegistry } = useGameState();
 
   // Compute world bounds for coordinate mapping
   const worldBounds = useRef({ minX: 0, maxX: 1, minY: 0, maxY: 1 });

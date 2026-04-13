@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 
 interface Notification {
   id: string;
@@ -9,7 +9,7 @@ interface Notification {
 }
 
 export function Notifications() {
-  const { state } = useGame();
+  const { state } = useGameState();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifiedEventIds, setNotifiedEventIds] = useState<Set<string>>(new Set());
 

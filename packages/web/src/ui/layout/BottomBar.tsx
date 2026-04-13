@@ -1,11 +1,11 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { coordToKey } from '@hex/engine';
 import type { YieldSet } from '@hex/engine';
 import { ALL_IMPROVEMENTS } from '@hex/engine';
 import { useMemo } from 'react';
 
 export function BottomBar() {
-  const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGame();
+  const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGameState();
 
   const canFoundCity = selectedUnit
     ? state.config.units.get(selectedUnit.typeId)?.abilities.includes('found_city') ?? false

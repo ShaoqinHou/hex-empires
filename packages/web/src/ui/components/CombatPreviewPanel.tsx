@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { calculateCombatPreview, calculateCityCombatPreview } from '@hex/engine';
 import type { CombatPreview as EngineCombatPreview, UnitState, CityState } from '@hex/engine';
 import { coordToKey, distance } from '@hex/engine';
@@ -13,7 +13,7 @@ interface CombatPreviewPanelProps {
  * Displays when player selects a unit and hovers over enemy unit/city.
  */
 export function CombatPreviewPanel({ attackerUnitId, targetHex }: CombatPreviewPanelProps) {
-  const { state, unitRegistry, terrainRegistry, featureRegistry } = useGame();
+  const { state, unitRegistry, terrainRegistry, featureRegistry } = useGameState();
 
   if (!targetHex) return null;
 

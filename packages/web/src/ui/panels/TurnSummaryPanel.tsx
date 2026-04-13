@@ -1,4 +1,4 @@
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { calculateResourceChanges, getGrowthThreshold } from '@hex/engine';
 import type { ResourceChangeSummary } from '@hex/engine';
 import { ResourceChangeSummaryDisplay } from '../components/ResourceChangeBadge';
@@ -8,7 +8,7 @@ interface TurnSummaryPanelProps {
 }
 
 export function TurnSummaryPanel({ onClose }: TurnSummaryPanelProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
   const player = state.players.get(state.currentPlayerId);
 
   if (!player) return null;

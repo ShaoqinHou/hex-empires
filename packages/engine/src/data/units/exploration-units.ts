@@ -1,5 +1,87 @@
 import type { UnitDef } from '../../types/Unit';
 
+export const QUADRIREME: UnitDef = {
+  id: 'quadrireme',
+  name: 'Quadrireme',
+  age: 'exploration',
+  category: 'naval',
+  cost: 90,
+  combat: 30,
+  rangedCombat: 20,
+  range: 1,
+  movement: 3,
+  sightRange: 2,
+  requiredTech: 'cartography',
+  upgradesTo: 'caravel',
+  abilities: [],
+} as const;
+
+export const CATAPULT: UnitDef = {
+  id: 'catapult',
+  name: 'Catapult',
+  age: 'exploration',
+  category: 'siege',
+  cost: 100,
+  combat: 10,
+  rangedCombat: 35,
+  range: 2,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'metallurgy',
+  upgradesTo: 'bombard',
+  abilities: [],
+} as const;
+
+export const TREBUCHET: UnitDef = {
+  id: 'trebuchet',
+  name: 'Trebuchet',
+  age: 'exploration',
+  category: 'siege',
+  cost: 130,
+  combat: 12,
+  rangedCombat: 45,
+  range: 3,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'siege_tactics',
+  upgradesTo: 'cannon',
+  abilities: ['bonus_vs_walls'],
+} as const;
+
+export const LANCER: UnitDef = {
+  id: 'lancer',
+  name: 'Lancer',
+  age: 'exploration',
+  category: 'cavalry',
+  cost: 120,
+  combat: 40,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  sightRange: 2,
+  requiredTech: 'military_tactics',
+  requiredResource: 'horses',
+  upgradesTo: null,
+  abilities: ['charge'],
+} as const;
+
+export const CUIRASSIER: UnitDef = {
+  id: 'cuirassier',
+  name: 'Cuirassier',
+  age: 'exploration',
+  category: 'cavalry',
+  cost: 160,
+  combat: 48,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  sightRange: 2,
+  requiredTech: 'military_science',
+  requiredResource: 'horses',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
 export const SWORDSMAN: UnitDef = {
   id: 'swordsman',
   name: 'Swordsman',
@@ -174,4 +256,9 @@ export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   CANNON,
   SIEGE_TOWER,
   CARAVEL,
+  QUADRIREME,
+  CATAPULT,
+  TREBUCHET,
+  LANCER,
+  CUIRASSIER,
 ] as const;

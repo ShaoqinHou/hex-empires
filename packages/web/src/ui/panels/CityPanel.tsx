@@ -1,7 +1,7 @@
 import type { CityState } from '@hex/engine';
 import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges, coordToKey } from '@hex/engine';
 import type { UnitDef, BuildingDef } from '@hex/engine';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
 import { BuildingPlacementPanel } from '../components/BuildingPlacementPanel';
@@ -13,7 +13,7 @@ interface CityPanelProps {
 }
 
 export function CityPanel({ city, onClose }: CityPanelProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = useGameState();
   const [placementMode, setPlacementMode] = useState<{ buildingId: string } | null>(null);
 
   const yields = calculateCityYields(city, state);

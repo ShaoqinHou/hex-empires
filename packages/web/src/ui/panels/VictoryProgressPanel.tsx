@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { VictoryType, VictoryProgress } from '@hex/engine';
 
 const VICTORY_CONFIG: Record<VictoryType, { name: string; icon: string; description: string; color: string }> = {
@@ -17,7 +17,7 @@ interface VictoryProgressPanelProps {
 }
 
 export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
   const player = state.players.get(state.currentPlayerId);
 
   if (!player) return null;

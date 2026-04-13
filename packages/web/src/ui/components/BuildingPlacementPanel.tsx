@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import { coordToKey } from '@hex/engine';
 import type { HexCoord, UnitState } from '@hex/engine';
 import { ALL_BUILDINGS } from '@hex/engine';
@@ -12,7 +12,7 @@ interface BuildingPlacementPanelProps {
 }
 
 export function BuildingPlacementPanel({ cityId, buildingId, onClose, onTileSelect }: BuildingPlacementPanelProps) {
-  const { state } = useGame();
+  const { state } = useGameState();
 
   const city = state.cities.get(cityId);
   const building = ALL_BUILDINGS.find(b => b.id === buildingId);

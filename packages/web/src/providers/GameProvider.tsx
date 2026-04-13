@@ -89,35 +89,48 @@ for (const r of ALL_RESOURCES) {
   resourceRegistry.register(r);
 }
 
+// ── Setup config type ──
+
+export interface GameSetupConfig {
+  civId: string;
+  leaderId: string;
+  mapWidth: number;
+  mapHeight: number;
+  numAI: number;
+}
+
+// AI civilization/leader pool (different from player defaults)
+const AI_CIVS = ['greece', 'egypt', 'persia', 'india', 'china'];
+const AI_LEADERS = ['pericles', 'cleopatra', 'cyrus', 'gandhi', 'qin_shi_huang'];
+
 // ── Initial state factory ──
 
-function createInitialState(seed?: number): GameState {
+function createInitialState(config: GameSetupConfig, seed?: number): GameState {
   const gameSeed = seed ?? Date.now();
   const { terrainRegistry } = createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES);
+
+  const { mapWidth, mapHeight, civId, leaderId, numAI } = config;
+  const rowMargin = Math.floor(mapHeight * 0.13);
 
   const map = generateMap(
     terrainRegistry,
     createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES).featureRegistry,
-    { width: 60, height: 40, seed: gameSeed, waterRatio: 0.35, wrapX: false },
+    { width: mapWidth, height: mapHeight, seed: gameSeed, waterRatio: 0.35, wrapX: false },
   );
 
   const playerId = 'player1';
-  const aiPlayerId = 'ai1';
 
-  // Find starting positions on flat land, spread apart
+  // Find land tiles away from edges for start positions
   const landTiles = [...map.tiles.values()].filter(tile => {
     const t = terrainRegistry.get(tile.terrain);
     return t && !t.isWater && tile.feature !== 'mountains' && tile.feature !== 'marsh'
-      && tile.coord.r > 5 && tile.coord.r < 35;
+      && tile.coord.r > rowMargin && tile.coord.r < mapHeight - rowMargin;
   });
 
-  const startCoord = landTiles[0]?.coord ?? { q: 15, r: 10 };
-  // AI starts far away from player
-  const aiStartCoord = landTiles[Math.min(landTiles.length - 1, Math.floor(landTiles.length * 0.7))]?.coord
-    ?? { q: 40, r: 25 };
+  const startCoord = landTiles[0]?.coord ?? { q: Math.floor(mapWidth * 0.25), r: Math.floor(mapHeight * 0.5) };
 
-  const makePlayer = (id: string, name: string, isHuman: boolean, civId: string, leaderId: string) => ({
-    id, name, isHuman, civilizationId: civId, leaderId,
+  const makePlayer = (id: string, name: string, isHuman: boolean, pCivId: string, pLeaderId: string) => ({
+    id, name, isHuman, civilizationId: pCivId, leaderId: pLeaderId,
     age: 'antiquity' as const,
     researchedTechs: [] as string[],
     currentResearch: null,
@@ -152,24 +165,50 @@ function createInitialState(seed?: number): GameState {
     promotions: [] as string[], fortified: false,
   });
 
+  // Build players map — human + N AI
+  const playersArr: [string, ReturnType<typeof makePlayer>][] = [
+    [playerId, makePlayer(playerId, 'Player 1', true, civId, leaderId)],
+  ];
+
+  // AI players get spread positions and distinct civs/leaders
+  const aiCount = Math.min(numAI, 3);
+  for (let i = 0; i < aiCount; i++) {
+    const aiId = `ai${i + 1}`;
+    // Pick civ/leader that isn't the player's (cycle through pool)
+    const aiCivPool = AI_CIVS.filter(c => c !== civId);
+    const aiLeaderPool = AI_LEADERS.filter(l => l !== leaderId);
+    const aiCiv = aiCivPool[i % aiCivPool.length];
+    const aiLeader = aiLeaderPool[i % aiLeaderPool.length];
+    playersArr.push([aiId, makePlayer(aiId, `AI Empire ${i + 1}`, false, aiCiv, aiLeader)]);
+  }
+
+  // Spread AI start positions evenly across remaining land tiles
+  const unitsEntries: [string, ReturnType<typeof makeUnit>][] = [
+    ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
+    ['builder1', makeUnit('builder1', 'builder', playerId, { q: startCoord.q, r: startCoord.r - 1 }, 2)],
+    ['warrior1', makeUnit('warrior1', 'warrior', playerId, { q: startCoord.q + 1, r: startCoord.r }, 2)],
+    ['scout1', makeUnit('scout1', 'scout', playerId, { q: startCoord.q - 1, r: startCoord.r + 1 }, 3)],
+  ];
+
+  for (let i = 0; i < aiCount; i++) {
+    const aiId = `ai${i + 1}`;
+    const fraction = (i + 1) / (aiCount + 1);
+    const aiStart = landTiles[Math.min(landTiles.length - 1, Math.floor(landTiles.length * (0.4 + fraction * 0.5)))]?.coord
+      ?? { q: Math.floor(mapWidth * fraction), r: Math.floor(mapHeight * 0.5) };
+    unitsEntries.push(
+      [`ai${i + 1}_settler1`, makeUnit(`ai${i + 1}_settler1`, 'settler', aiId, aiStart, 2)],
+      [`ai${i + 1}_builder1`, makeUnit(`ai${i + 1}_builder1`, 'builder', aiId, { q: aiStart.q, r: aiStart.r - 1 }, 2)],
+      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, { q: aiStart.q + 1, r: aiStart.r }, 2)],
+    );
+  }
+
   const state: GameState = {
     turn: 1,
     currentPlayerId: playerId,
     phase: 'actions',
-    players: new Map([
-      [playerId, makePlayer(playerId, 'Player 1', true, 'rome', 'augustus')],
-      [aiPlayerId, makePlayer(aiPlayerId, 'AI Empire', false, 'greece', 'pericles')],
-    ]),
+    players: new Map(playersArr),
     map,
-    units: new Map([
-      ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
-      ['builder1', makeUnit('builder1', 'builder', playerId, { q: startCoord.q, r: startCoord.r - 1 }, 2)],
-      ['warrior1', makeUnit('warrior1', 'warrior', playerId, { q: startCoord.q + 1, r: startCoord.r }, 2)],
-      ['scout1', makeUnit('scout1', 'scout', playerId, { q: startCoord.q - 1, r: startCoord.r + 1 }, 3)],
-      ['ai_settler1', makeUnit('ai_settler1', 'settler', aiPlayerId, aiStartCoord, 2)],
-      ['ai_builder1', makeUnit('ai_builder1', 'builder', aiPlayerId, { q: aiStartCoord.q, r: aiStartCoord.r - 1 }, 2)],
-      ['ai_warrior1', makeUnit('ai_warrior1', 'warrior', aiPlayerId, { q: aiStartCoord.q + 1, r: aiStartCoord.r }, 2)],
-    ]),
+    units: new Map(unitsEntries),
     cities: new Map(),
     districts: new Map(),
     governors: new Map(),
@@ -273,8 +312,9 @@ function detectAndTriggerTurnAnimations(
 // ── Context ──
 
 interface GameContextValue {
-  state: GameState;
+  state: GameState | null;
   dispatch: (action: GameAction) => void;
+  initGame: (config: GameSetupConfig) => void;
   terrainRegistry: Registry<TerrainDef>;
   featureRegistry: Registry<TerrainFeatureDef>;
   unitRegistry: Registry<UnitDef>;
@@ -308,14 +348,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const [state, setState] = useState<GameState>(createInitialState);
+  const [state, setState] = useState<GameState | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<HexCoord | null>(null);
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const [combatPreview, setCombatPreview] = useState<CombatPreview | null>(null);
   const [combatPreviewPosition, setCombatPreviewPosition] = useState<{ x: number; y: number } | null>(null);
-  const [lastValidation, setLastValidation] = useState<ValidationResult | null>(state.lastValidation ?? null);
+  const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
 
   // Create and maintain AnimationManager instance
   const animationManagerRef = useRef<AnimationManager | null>(null);
@@ -351,7 +391,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Derive selectedUnit from state — always fresh reference
-  const selectedUnit = selectedUnitId ? state.units.get(selectedUnitId) ?? null : null;
+  const selectedUnit = (selectedUnitId && state) ? state.units.get(selectedUnitId) ?? null : null;
   const setSelectedUnit = useCallback((unit: UnitState | null) => {
     setSelectedUnitId(unit?.id ?? null);
   }, []);
@@ -360,11 +400,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setLastValidation(null);
   }, []);
 
+  const initGame = useCallback((config: GameSetupConfig) => {
+    const newState = createInitialState(config);
+    setState(newState);
+    setSelectedUnitId(null);
+    setSelectedHex(null);
+    setLastValidation(null);
+  }, []);
+
   const dispatch = useCallback((action: GameAction) => {
     const animationManager = animationManagerRef.current;
     if (!animationManager) {
       // Fallback if animation manager not initialized
       setState(prev => {
+        if (!prev) return prev;
         let next = engine.applyAction(prev, action);
 
         // Track validation result for feedback
@@ -404,6 +453,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     setState(prev => {
+      if (!prev) return prev;
       // Track previous state for sound effects
       previousStateRef.current = prev;
       previousActionRef.current = action;
@@ -590,6 +640,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [unitRegistry]);
 
   const saveGame = useCallback(() => {
+    if (!state) return;
     const json = serializeState(state);
     localStorage.setItem('hex-empires-save', json);
   }, [state]);
@@ -608,18 +659,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Calculate reachable hexes for selected unit
   const reachableHexes = useMemo(() => {
-    if (!selectedUnit || selectedUnit.movementLeft <= 0) return null;
-    const costFn = (from: HexCoord, to: HexCoord) => {
+    if (!selectedUnit || selectedUnit.movementLeft <= 0 || !state) return null;
+    const costFn = (_from: HexCoord, to: HexCoord) => {
       const tile = state.map.tiles.get(coordToKey(to));
       if (!tile) return null;
       return getMovementCost(tile);
     };
     return getReachable(selectedUnit.position, selectedUnit.movementLeft, costFn);
-  }, [selectedUnit, state.map]);
+  }, [selectedUnit, state]);
 
   const value = useMemo(() => ({
     state,
     dispatch,
+    initGame,
     terrainRegistry: registries.terrainRegistry,
     featureRegistry: registries.featureRegistry,
     unitRegistry,
@@ -641,7 +693,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     animationManager: animationManagerRef.current,
     lastValidation,
     clearValidation,
-  }), [state, dispatch, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
+  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
 
   return (
     <GameContext.Provider value={value}>
@@ -654,4 +706,11 @@ export function useGame(): GameContextValue {
   const ctx = useContext(GameContext);
   if (!ctx) throw new Error('useGame must be used within GameProvider');
   return ctx;
+}
+
+/** Like useGame, but asserts state is non-null. Use only in components that render inside GameUI. */
+export function useGameState(): GameContextValue & { state: GameState } {
+  const ctx = useGame();
+  if (!ctx.state) throw new Error('useGameState called before game was initialized');
+  return ctx as GameContextValue & { state: GameState };
 }

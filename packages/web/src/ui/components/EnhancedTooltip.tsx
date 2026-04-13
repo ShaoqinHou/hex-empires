@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
-import { useGame } from '../../providers/GameProvider';
+import { useGameState } from '../../providers/GameProvider';
 import type { HexCoord, UnitState, CityState, TerrainDef } from '@hex/engine';
 import { coordToKey } from '@hex/engine';
 
@@ -9,7 +9,7 @@ interface EnhancedTooltipProps {
 }
 
 export function EnhancedTooltip({ hex }: EnhancedTooltipProps) {
-  const { state, terrainRegistry, featureRegistry, unitRegistry, resourceRegistry } = useGame();
+  const { state, terrainRegistry, featureRegistry, unitRegistry, resourceRegistry } = useGameState();
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 

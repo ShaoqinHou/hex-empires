@@ -1,6 +1,55 @@
 export type { UnitDef } from '../../types/Unit';
 import type { UnitDef } from '../../types/Unit';
 
+export const BALLISTA: UnitDef = {
+  id: 'ballista',
+  name: 'Ballista',
+  age: 'antiquity',
+  category: 'siege',
+  cost: 80,
+  combat: 10,
+  rangedCombat: 30,
+  range: 2,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'mathematics',
+  upgradesTo: 'catapult',
+  abilities: [],
+} as const;
+
+export const PHALANX: UnitDef = {
+  id: 'phalanx',
+  name: 'Phalanx',
+  age: 'antiquity',
+  category: 'melee',
+  cost: 70,
+  combat: 28,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'bronze_working',
+  upgradesTo: 'pikeman',
+  abilities: ['anti_cavalry', 'formation'],
+} as const;
+
+export const ANTIQUITY_HORSEMAN: UnitDef = {
+  id: 'antiquity_horseman',
+  name: 'Horseman',
+  age: 'antiquity',
+  category: 'cavalry',
+  cost: 60,
+  combat: 22,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  sightRange: 2,
+  requiredTech: 'wheel',
+  requiredResource: 'horses',
+  upgradesTo: 'horseman',
+  abilities: [],
+} as const;
+
 export const WARRIOR: UnitDef = {
   id: 'warrior',
   name: 'Warrior',
@@ -190,4 +239,7 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   BATTERING_RAM,
   GALLEY,
   MERCHANT,
+  BALLISTA,
+  PHALANX,
+  ANTIQUITY_HORSEMAN,
 ] as const;
