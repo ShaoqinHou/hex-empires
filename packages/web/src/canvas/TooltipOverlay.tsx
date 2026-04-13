@@ -4,20 +4,14 @@ import { coordToKey, calculateCityYields } from '@hex/engine';
 import type { Camera } from './Camera';
 import { hexToPixel } from './HexRenderer';
 import { UnitStateTooltip } from '../ui/components/tooltips';
-import type { UnitState, UnitDef, CityState, HexTile } from '@hex/engine';
+import type { UnitState, UnitDef, CityState, HexTile, GameState } from '@hex/engine';
 import { ALL_UNITS, ALL_BUILDINGS, ALL_IMPROVEMENTS, ALL_RESOURCES, ALL_BASE_TERRAINS, ALL_FEATURES } from '@hex/engine';
 
 interface TooltipOverlayProps {
   camera: Camera;
   hoveredHex: HexCoord | null;
   isAltPressed: boolean;
-  state: {
-    units: ReadonlyMap<string, UnitState>;
-    cities: ReadonlyMap<string, CityState>;
-    map: {
-      tiles: ReadonlyMap<string, import('@hex/engine').HexTile>;
-    };
-  };
+  state: GameState;
 }
 
 /**
@@ -53,7 +47,7 @@ export function TooltipOverlay({ camera, hoveredHex, isAltPressed, state }: Tool
     if (!content) {
       for (const [id, city] of state.cities) {
         if (coordToKey(city.position) === hexKey) {
-          const yields = calculateCityYields(city, state as any);
+          const yields = calculateCityYields(city, state);
           content = (
             <div
               className="px-4 py-3 rounded-lg shadow-xl border"
