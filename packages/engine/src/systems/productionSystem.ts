@@ -306,7 +306,7 @@ function processProduction(state: GameState): GameState {
             ...state,
             cities: updatedCities,
             units: updatedUnits,
-            log: [...state.log, ...newLog],
+            log: newLog,
             builtWonders: [...state.builtWonders, currentItem.id],
           };
         }

@@ -370,12 +370,13 @@ export class HexRenderer {
     ctx.restore();
 
     // First letter of resource name
+    ctx.save();
     ctx.fillStyle = textColor;
     ctx.font = `bold ${Math.round(radius * 1.2)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(resource.name.charAt(0).toUpperCase(), iconX, iconY);
-    ctx.textBaseline = 'alphabetic'; // reset
+    ctx.restore();
   }
 
   private drawImprovementIcon(tile: HexTile, cx: number, cy: number, _rc: RenderContext): void {

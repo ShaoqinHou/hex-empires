@@ -102,12 +102,16 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     }
   }
 
-  // If ZoC stopped us at an intermediate position, check stacking there
+  // If ZoC stopped us at an intermediate position, check stacking and enemy occupation there
   if (stoppedByZoC && coordToKey(currentPos) !== finalDestKey) {
     const stopKey = coordToKey(currentPos);
     for (const [id, other] of state.units) {
-      if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === stopKey) {
+      if (id === unit.id) continue;
+      if (coordToKey(other.position) !== stopKey) continue;
+      if (other.owner === unit.owner) {
         return createInvalidResult(state, 'Cannot stack at Zone of Control stop position', 'movement');
+      } else {
+        return createInvalidResult(state, 'Cannot move into a tile occupied by an enemy', 'movement');
       }
     }
   }

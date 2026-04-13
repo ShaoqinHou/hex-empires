@@ -510,12 +510,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const loadGame = useCallback(() => {
     const json = localStorage.getItem('hex-empires-save');
     if (json) {
-      const loaded = deserializeState(json);
-      // Reconstruct config from current data definitions (config is static, not serialized)
-      setState({ ...loaded, config: createGameConfig(), lastValidation: null });
-      setSelectedUnit(null);
-      setSelectedHex(null);
-      setLastValidation(null);
+      try {
+        const loaded = deserializeState(json);
+        // Reconstruct config from current data definitions (config is static, not serialized)
+        setState({ ...loaded, config: createGameConfig(), lastValidation: null });
+        setSelectedUnit(null);
+        setSelectedHex(null);
+        setLastValidation(null);
+      } catch (err) {
+        console.warn('Failed to load save game — corrupt data removed.', err);
+        localStorage.removeItem('hex-empires-save');
+        localStorage.removeItem('hex-empires-save-meta');
+      }
     }
   }, []);
 

@@ -1098,9 +1098,8 @@ function tryBuildImprovement(state: GameState, builder: UnitState, player: any, 
 
       const improvement = pickBestImprovement(state, tile, player);
       if (improvement) {
-        // Need to move to this tile first
+        // Move to this tile first — BUILD will happen next turn when builder is on the tile
         actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [adj] });
-        actions.push({ type: 'BUILD_IMPROVEMENT', unitId: builder.id, tile: adj, improvementId: improvement });
         return true;
       }
     }
