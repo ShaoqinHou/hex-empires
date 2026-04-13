@@ -695,6 +695,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     clearValidation,
   }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
 
+  // Expose game state for E2E testing (Playwright can read window.__gameState)
+  useEffect(() => {
+    (window as any).__gameState = state;
+    (window as any).__gameDispatch = dispatch;
+  }, [state, dispatch]);
+
   return (
     <GameContext.Provider value={value}>
       {children}
