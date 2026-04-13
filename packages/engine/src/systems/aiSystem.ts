@@ -110,7 +110,7 @@ function canSee(visibility: ReadonlySet<string>, position: HexCoord): boolean {
 }
 
 /** Pick the best tech based on strategic needs, not just cost */
-function pickBestTech(state: GameState): string | null {
+function pickBestTech(state: GameState, personality: AIPersonality): string | null {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return null;
 
@@ -123,6 +123,10 @@ function pickBestTech(state: GameState): string | null {
     u => u.owner === player.id && u.typeId !== 'settler' && u.typeId !== 'builder'
   ).length;
   const atWar = checkAtWar(state, player.id);
+
+  // Personality-scaled multipliers
+  const scienceMultiplier = 1 + personality.scienceFocus;        // 1.0–2.0
+  const militaryMultiplier = 1 + personality.aggressiveness;     // 1.0–2.0
 
   for (const [techId, tech] of state.config.technologies) {
     if (researched.has(techId)) continue;
@@ -140,9 +144,9 @@ function pickBestTech(state: GameState): string | null {
       // Check if it's a unit
       const unit = state.config.units.get(unlockId);
       if (unit) {
-        if (atWar || militaryCount < cityCount * 2) {
+        if (atWar || militaryCount < cityCount * personality.militaryRatio) {
           if (unit.combat > 0 || unit.rangedCombat > 0) {
-            score += 50; // Military units valuable when needed
+            score += 50 * militaryMultiplier; // Military units weighted by aggressiveness
           }
         }
         if (unit.abilities.includes('found_city') && cityCount < 4) {
@@ -156,7 +160,7 @@ function pickBestTech(state: GameState): string | null {
         if (building.yields.food && cityCount < 4) score += 30; // Food early game
         if (building.yields.production) score += 40; // Production always good
         if (building.yields.gold) score += 30;
-        if (building.yields.science) score += 50; // Science accelerates research
+        if (building.yields.science) score += 50 * scienceMultiplier; // Science weighted by focus
       }
 
       // Check if it's an improvement
@@ -187,12 +191,22 @@ function checkAtWar(state: GameState, playerId: string): boolean {
 }
 
 /** Pick what to produce based on game state */
-function pickProduction(state: GameState, city: CityState, cityCount: number, militaryCount: number): string {
+function pickProduction(
+  state: GameState,
+  city: CityState,
+  cityCount: number,
+  militaryCount: number,
+  personality: AIPersonality,
+): string {
   const player = state.players.get(state.currentPlayerId);
   const age = player?.age ?? 'antiquity';
 
+  // Personality-driven targets
+  const targetMilitaryPerCity = personality.militaryRatio;
+  // High expansionism → start building settlers earlier (need fewer cities)
+  const maxCitiesBeforeSettle = personality.expansionism >= 0.7 ? 5 : 3;
+
   // Priority 1: Ensure at least 1 defender per city before expanding
-  // Settle: produce warrior first, then another before a settler
   const minMilitary = Math.max(cityCount, 1); // at least 1 unit per city
   if (militaryCount < minMilitary) {
     const military = findCheapestMilitary(state, age);
@@ -213,14 +227,14 @@ function pickProduction(state: GameState, city: CityState, cityCount: number, mi
     }
   }
 
-  // Priority 3: Build up to 2 military per city before expanding
-  if (militaryCount < cityCount * 2) {
+  // Priority 3: Build up to personality-driven military ratio before expanding
+  if (militaryCount < cityCount * targetMilitaryPerCity) {
     const military = findCheapestMilitary(state, age);
     if (military) return military;
   }
 
-  // Priority 4: Settler — only if we have military protection and few cities
-  if (cityCount < 3 && !hasUnitAbility(state, 'found_city') && militaryCount >= cityCount) {
+  // Priority 4: Settler — high-expansion civs want more cities
+  if (cityCount < maxCitiesBeforeSettle && !hasUnitAbility(state, 'found_city') && militaryCount >= cityCount) {
     const settler = findCheapestUnitByAbility(state, 'found_city');
     if (settler) return settler;
   }
@@ -239,8 +253,8 @@ function pickProduction(state: GameState, city: CityState, cityCount: number, mi
     }
   }
 
-  // Priority 6: More military (maintain army)
-  if (militaryCount < cityCount * 3) {
+  // Priority 6: More military (maintain army) — cap varies by personality
+  if (militaryCount < cityCount * (targetMilitaryPerCity + 1)) {
     const military = findCheapestMilitary(state, age);
     if (military) return military;
   }
@@ -313,16 +327,24 @@ function tryFoundCity(state: GameState, settler: UnitState, ourCities: CityState
   return true;
 }
 
-/** Move settler toward a good city location */
-function moveTowardGoodCitySpot(state: GameState, settler: UnitState, ourCities: CityState[], actions: GameAction[]): void {
-  // Find a land tile far enough from all cities
+/** Move settler toward a good city location (only considers explored tiles) */
+function moveTowardGoodCitySpot(
+  state: GameState,
+  settler: UnitState,
+  ourCities: CityState[],
+  actions: GameAction[],
+  explored: ReadonlySet<string>,
+): void {
+  // Find a land tile far enough from all cities — only among explored tiles
   let bestTarget: HexCoord | null = null;
   let bestScore = -Infinity;
 
-  // Sample nearby tiles
+  // Sample nearby tiles (2 hex range)
   for (const n of neighbors(settler.position)) {
     for (const nn of neighbors(n)) {
       const key = coordToKey(nn);
+      // Only evaluate tiles the AI has already seen
+      if (!explored.has(key)) continue;
       const tile = state.map.tiles.get(key);
       if (!tile) continue;
       const terrain = state.config.terrains.get(tile.terrain);
@@ -343,6 +365,20 @@ function moveTowardGoodCitySpot(state: GameState, settler: UnitState, ourCities:
     }
   }
 
+  // Fallback: if no explored tiles found nearby, just move toward an unexplored neighbor
+  if (!bestTarget) {
+    for (const n of neighbors(settler.position)) {
+      const key = coordToKey(n);
+      const tile = state.map.tiles.get(key);
+      if (!tile) continue;
+      const terrain = state.config.terrains.get(tile.terrain);
+      if (!terrain || terrain.isWater) continue;
+      if (tile.feature && state.config.features.get(tile.feature)?.blocksMovement) continue;
+      bestTarget = n;
+      break;
+    }
+  }
+
   if (bestTarget) {
     const step = getOneStepToward(settler.position, bestTarget, state);
     if (step) {
@@ -351,8 +387,13 @@ function moveTowardGoodCitySpot(state: GameState, settler: UnitState, ourCities:
   }
 }
 
-/** Try to attack an adjacent enemy */
-function tryAttackNearby(state: GameState, unit: UnitState, actions: GameAction[]): boolean {
+/** Try to attack an adjacent enemy (only enemies the AI can see) */
+function tryAttackNearby(
+  state: GameState,
+  unit: UnitState,
+  visibility: ReadonlySet<string>,
+  actions: GameAction[],
+): boolean {
   const unitDef = state.config.units.get(unit.typeId);
   const attackRange = unitDef?.range ?? 0;
   const maxRange = attackRange > 0 ? attackRange : 1;
@@ -362,6 +403,8 @@ function tryAttackNearby(state: GameState, unit: UnitState, actions: GameAction[
 
   for (const enemy of state.units.values()) {
     if (enemy.owner === unit.owner) continue;
+    // Only attack enemies the AI can see
+    if (!canSee(visibility, enemy.position)) continue;
     const dist = distance(unit.position, enemy.position);
     if (dist > maxRange) continue;
 
@@ -381,8 +424,13 @@ function tryAttackNearby(state: GameState, unit: UnitState, actions: GameAction[
   return false;
 }
 
-/** Try to attack an adjacent enemy city */
-function tryAttackNearbyCity(state: GameState, unit: UnitState, actions: GameAction[]): boolean {
+/** Try to attack an adjacent enemy city (only cities the AI can see) */
+function tryAttackNearbyCity(
+  state: GameState,
+  unit: UnitState,
+  visibility: ReadonlySet<string>,
+  actions: GameAction[],
+): boolean {
   const unitDef = state.config.units.get(unit.typeId);
   const attackRange = unitDef?.range ?? 0;
   const maxRange = attackRange > 0 ? attackRange : 1;
@@ -392,6 +440,8 @@ function tryAttackNearbyCity(state: GameState, unit: UnitState, actions: GameAct
 
   for (const city of state.cities.values()) {
     if (city.owner === unit.owner) continue;
+    // Only attack cities the AI can see
+    if (!canSee(visibility, city.position)) continue;
     const dist = distance(unit.position, city.position);
     if (dist > maxRange) continue;
 
@@ -411,12 +461,23 @@ function tryAttackNearbyCity(state: GameState, unit: UnitState, actions: GameAct
 }
 
 /** Move military units strategically */
-function moveStrategically(state: GameState, unit: UnitState, ourCities: CityState[], actions: GameAction[]): void {
-  // Priority 1: Move toward nearest enemy (within 10 hexes)
+function moveStrategically(
+  state: GameState,
+  unit: UnitState,
+  ourCities: CityState[],
+  visibility: ReadonlySet<string>,
+  personality: AIPersonality,
+  actions: GameAction[],
+): void {
+  // Priority 1: Aggressive personalities move toward visible enemies
+  // Low-aggression personalities skip this unless the enemy is very close
+  const aggressionRange = Math.round(5 + personality.aggressiveness * 10); // 5–15 hexes
   let nearestEnemy: HexCoord | null = null;
   let nearestDist = Infinity;
   for (const enemy of state.units.values()) {
     if (enemy.owner === unit.owner) continue;
+    // Only move toward enemies the AI can see
+    if (!canSee(visibility, enemy.position)) continue;
     const d = distance(unit.position, enemy.position);
     if (d < nearestDist) {
       nearestDist = d;
@@ -424,7 +485,7 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
     }
   }
 
-  if (nearestEnemy && nearestDist <= 10) {
+  if (nearestEnemy && nearestDist <= aggressionRange) {
     const step = getOneStepToward(unit.position, nearestEnemy, state);
     if (step) {
       actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
@@ -432,7 +493,7 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
     return;
   }
 
-  // Priority 2: If no nearby enemy, defend cities
+  // Priority 2: If no visible enemy, defend cities
   if (ourCities.length > 0) {
     // Find least-defended city
     let leastDefended: CityState | null = null;
@@ -459,19 +520,25 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
         return;
       }
 
-      // Not yet at city — move toward it
-      const step = getOneStepToward(unit.position, leastDefended.position, state);
-      if (step) {
-        actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
+      // Not yet at city — move toward it (unless personality prefers exploring)
+      // High scout frequency personalities may instead explore rather than sit at city
+      const turnSeedForScout = (state.turn + unit.id.charCodeAt(unit.id.length - 1)) % 100;
+      const shouldExplore = turnSeedForScout < personality.scoutFrequency * 100;
+      if (!shouldExplore) {
+        const step = getOneStepToward(unit.position, leastDefended.position, state);
+        if (step) {
+          actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [step] });
+        }
+        return;
       }
-      return;
     }
   }
 
-  // Priority 3: Explore — pick a passable neighbor we haven't just come from
-  // Use unit position hash to vary the chosen neighbor so we don't always pick the same one
+  // Priority 3: Explore — high scoutFrequency personalities explore more
+  // Pick a passable neighbor, preferring unexplored tiles
   const ns = neighbors(unit.position);
   const passable: HexCoord[] = [];
+  const unexplored: HexCoord[] = [];
   for (const n of ns) {
     const tile = state.map.tiles.get(coordToKey(n));
     if (!tile) continue;
@@ -482,13 +549,23 @@ function moveStrategically(state: GameState, unit: UnitState, ourCities: CitySta
     for (const u of state.units.values()) {
       if (coordToKey(u.position) === coordToKey(n)) { occupied = true; break; }
     }
-    if (!occupied) passable.push(n);
+    if (!occupied) {
+      passable.push(n);
+      if (!visibility.has(coordToKey(n))) {
+        unexplored.push(n);
+      }
+    }
   }
 
-  if (passable.length > 0) {
+  // High scout frequency: prefer unexplored tiles; low: any passable tile
+  const candidates = personality.scoutFrequency >= 0.5 && unexplored.length > 0
+    ? unexplored
+    : passable;
+
+  if (candidates.length > 0) {
     // Use a simple deterministic offset based on unit id + turn so we rotate through neighbors
-    const turnSeed = (state.turn + unit.id.charCodeAt(unit.id.length - 1)) % passable.length;
-    const exploreTarget = passable[turnSeed];
+    const turnSeed = (state.turn + unit.id.charCodeAt(unit.id.length - 1)) % candidates.length;
+    const exploreTarget = candidates[turnSeed];
     actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [exploreTarget] });
   }
 }
