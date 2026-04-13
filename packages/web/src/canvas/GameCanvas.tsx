@@ -5,6 +5,7 @@ import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
 import { ImprovementPanel } from '../ui/components/ImprovementPanel';
+import { UnitContextMenu } from '../ui/components/UnitContextMenu';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
 import type { HexCoord, UnitState, CityState } from '@hex/engine';
@@ -43,6 +44,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [showImprovementPanel, setShowImprovementPanel] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Sync local hover state to global state for combat preview
   useEffect(() => {
@@ -291,10 +293,14 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
   // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Left click dismisses context menu
+    if (e.button === 0 && contextMenu) {
+      setContextMenu(null);
+    }
     isDraggingRef.current = true;
     dragDistRef.current = 0;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
-  }, []);
+  }, [contextMenu]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const canvas = canvasRef.current;
@@ -338,9 +344,68 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+
+    // Close any existing context menu first
+    setContextMenu(null);
+
+    if (!selectedUnit) {
+      setSelectedUnit(null);
+      setSelectedHex(null);
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const world = cameraRef.current.screenToWorld(sx, sy);
+    const hex = pixelToHex(world.x, world.y);
+    const key = coordToKey(hex);
+
+    // Right-click on own unit's hex → show popup menu
+    if (coordToKey(selectedUnit.position) === key) {
+      setContextMenu({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Right-click on enemy unit in attack range → attack
+    let enemyUnit: UnitState | null = null;
+    for (const unit of state.units.values()) {
+      if (unit.owner !== state.currentPlayerId && coordToKey(unit.position) === key) {
+        enemyUnit = unit;
+        break;
+      }
+    }
+    if (enemyUnit) {
+      const attackable = getAttackableUnits(state, selectedUnit.id);
+      const canAttack = attackable.some(a => a.unitId === enemyUnit!.id);
+      if (canAttack) {
+        dispatch({ type: 'ATTACK_UNIT', attackerId: selectedUnit.id, targetId: enemyUnit.id });
+        return;
+      }
+    }
+
+    // Right-click on reachable hex → move there
+    if (reachableHexes && reachableHexes.has(key)) {
+      const costFn = (_from: HexCoord, to: HexCoord) => {
+        const tile = state.map.tiles.get(coordToKey(to));
+        if (!tile) return null;
+        return getMovementCost(tile);
+      };
+      const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
+      if (path && path.length > 0) {
+        dispatch({ type: 'MOVE_UNIT', unitId: selectedUnit.id, path });
+        setSelectedHex(hex);
+      }
+      return;
+    }
+
+    // Fallback — deselect
     setSelectedUnit(null);
-    setSelectedHex(null);
-  }, [setSelectedUnit, setSelectedHex]);
+    setSelectedHex(hex);
+  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedUnit, setSelectedHex]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const canvas = canvasRef.current;
@@ -527,6 +592,35 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
             setSelectedUnit(null);
             setSelectedHex(null);
           }}
+        />
+      )}
+      {contextMenu && selectedUnit && (
+        <UnitContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          unit={selectedUnit}
+          onClose={() => setContextMenu(null)}
+          onFortify={() => {
+            dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id });
+            setContextMenu(null);
+          }}
+          onFoundCity={() => {
+            const cityCount = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId).length;
+            dispatch({ type: 'FOUND_CITY', unitId: selectedUnit.id, name: `City ${cityCount + 1}` });
+            setContextMenu(null);
+            setSelectedUnit(null);
+          }}
+          onSkipTurn={() => {
+            dispatch({ type: 'SKIP_UNIT', unitId: selectedUnit.id });
+            setContextMenu(null);
+          }}
+          onDeleteUnit={() => {
+            dispatch({ type: 'DELETE_UNIT', unitId: selectedUnit.id });
+            setContextMenu(null);
+            setSelectedUnit(null);
+            setSelectedHex(null);
+          }}
+          unitRegistry={unitRegistry}
         />
       )}
     </>

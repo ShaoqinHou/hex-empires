@@ -117,7 +117,10 @@ function GameUI() {
 
         {/* Turn transition and notifications */}
         <TurnTransition />
-        <Notifications />
+        <Notifications onCityClick={(cityId) => {
+          setSelectedCityId(cityId);
+          setActivePanel('city');
+        }} />
         <EnemyActivitySummary />
         <ValidationFeedback validation={lastValidation} onAnimationEnd={clearValidation} />
 

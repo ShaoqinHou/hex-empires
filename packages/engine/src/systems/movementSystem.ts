@@ -7,8 +7,35 @@ import { getMovementCost } from '../hex/TerrainCost';
  * MovementSystem handles unit movement actions.
  * Validates movement paths and deducts movement points.
  * Enforces Zone of Control — entering a hex adjacent to an enemy unit stops movement.
+ * Also handles SKIP_UNIT (expend all movement) and DELETE_UNIT (disband unit).
  */
 export function movementSystem(state: GameState, action: GameAction): GameState {
+  if (action.type === 'SKIP_UNIT') {
+    const unit = state.units.get(action.unitId);
+    if (!unit || unit.owner !== state.currentPlayerId) return state;
+    const updatedUnits = new Map(state.units);
+    updatedUnits.set(unit.id, { ...unit, movementLeft: 0 });
+    return { ...state, units: updatedUnits, lastValidation: null };
+  }
+
+  if (action.type === 'DELETE_UNIT') {
+    const unit = state.units.get(action.unitId);
+    if (!unit || unit.owner !== state.currentPlayerId) return state;
+    const updatedUnits = new Map(state.units);
+    updatedUnits.delete(action.unitId);
+    return {
+      ...state,
+      units: updatedUnits,
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${unit.typeId} was disbanded`,
+        type: 'move' as const,
+      }],
+      lastValidation: null,
+    };
+  }
+
   if (action.type !== 'MOVE_UNIT') return state;
 
   const unit = state.units.get(action.unitId);

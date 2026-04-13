@@ -6,9 +6,28 @@ interface Notification {
   message: string;
   type: 'production' | 'research' | 'civic' | 'info' | 'warning';
   timestamp: number;
+  /** City ID for production-complete notifications — enables click-to-open city panel */
+  cityId?: string;
 }
 
-export function Notifications() {
+interface NotificationsProps {
+  /** Called when the user clicks a production-complete notification to open that city's panel */
+  onCityClick?: (cityId: string) => void;
+}
+
+/**
+ * Extract a city ID from a production log message by matching a city name.
+ * Returns null if no city matches.
+ */
+function extractCityId(message: string, cities: ReadonlyMap<string, { id: string; name: string; owner: string }>, playerId: string): string | null {
+  for (const city of cities.values()) {
+    if (city.owner !== playerId) continue;
+    if (message.startsWith(city.name + ' ')) return city.id;
+  }
+  return null;
+}
+
+export function Notifications({ onCityClick }: NotificationsProps) {
   const { state } = useGameState();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifiedEventIds, setNotifiedEventIds] = useState<Set<string>>(new Set());
@@ -34,16 +53,27 @@ export function Notifications() {
       }
 
       let type: Notification['type'] = 'info';
+      let cityId: string | undefined;
 
       // Determine notification type based on message content
       const msg = event.message.toLowerCase();
-      if (msg.includes('finished') || msg.includes('completed')) {
-        if (msg.includes('production') || msg.includes('produced')) {
-          type = 'production';
-        } else if (msg.includes('research') || msg.includes('technology')) {
+
+      // Production complete: "CityName produced unitId" or "CityName built buildingId"
+      if (msg.includes(' produced ') || msg.includes(' built ')) {
+        type = 'production';
+        cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
+      } else if (msg.includes('completed') && msg.includes('ready to place')) {
+        // District complete: "CityName completed districtId - ready to place"
+        type = 'production';
+        cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
+      } else if (msg.includes('finished') || msg.includes('completed')) {
+        if (msg.includes('research') || msg.includes('technology')) {
           type = 'research';
         } else if (msg.includes('civic')) {
           type = 'civic';
+        } else if (msg.includes('production') || msg.includes('produced')) {
+          type = 'production';
+          cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
         }
       } else if (msg.includes('raided') || msg.includes('attacked')) {
         type = 'warning';
@@ -54,6 +84,7 @@ export function Notifications() {
         message: event.message,
         type,
         timestamp: now,
+        cityId,
       });
     }
 
@@ -61,10 +92,10 @@ export function Notifications() {
       setNotifications(prev => [...prev, ...newNotifications]);
       setNotifiedEventIds(prev => new Set([...prev, ...newNotifications.map(n => n.id)]));
 
-      // Auto-remove after 5 seconds
+      // Auto-remove after 8 seconds (production notifications need time to act on)
       const timer = setTimeout(() => {
         setNotifications(prev => prev.filter(n => !newNotifications.some(nn => nn.id === n.id)));
-      }, 5000);
+      }, 8000);
 
       return () => clearTimeout(timer);
     }
@@ -74,47 +105,58 @@ export function Notifications() {
 
   return (
     <div className="fixed top-20 right-4 z-40 space-y-2 pointer-events-none">
-      {notifications.map(notification => (
-        <div
-          key={notification.id}
-          className="bg-surface border rounded-lg px-4 py-3 shadow-lg animate-slide-in pointer-events-auto max-w-sm"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderLeftColor: getNotificationColor(notification.type),
-            borderLeftWidth: '4px',
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <div
-              className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
-              style={{ backgroundColor: getNotificationColor(notification.type) }}
-            />
-            <div className="flex-1">
+      {notifications.map(notification => {
+        const isClickable = notification.type === 'production' && !!notification.cityId && !!onCityClick;
+        return (
+          <div
+            key={notification.id}
+            className={`bg-surface border rounded-lg px-4 py-3 shadow-lg animate-slide-in pointer-events-auto max-w-sm${isClickable ? ' cursor-pointer hover:brightness-110' : ''}`}
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderLeftColor: getNotificationColor(notification.type),
+              borderLeftWidth: '4px',
+            }}
+            onClick={isClickable ? () => {
+              onCityClick!(notification.cityId!);
+              setNotifications(prev => prev.filter(n => n.id !== notification.id));
+            } : undefined}
+          >
+            <div className="flex items-start gap-3">
               <div
-                className="text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {getNotificationTitle(notification.type)}
+                className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
+                style={{ backgroundColor: getNotificationColor(notification.type) }}
+              />
+              <div className="flex-1">
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text)' }}
+                >
+                  {getNotificationTitle(notification.type)}
+                  {isClickable && (
+                    <span className="ml-2 text-xs font-normal opacity-70">(click to manage)</span>
+                  )}
+                </div>
+                <div
+                  className="text-xs mt-1"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  {notification.message}
+                </div>
               </div>
-              <div
-                className="text-xs mt-1"
+              <button
+                className="text-xs hover:text-red-400 transition-colors"
                 style={{ color: 'var(--color-text-muted)' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotifications(prev => prev.filter(n => n.id !== notification.id));
+                }}
               >
-                {notification.message}
-              </div>
+                ×
+              </button>
             </div>
-            <button
-              className="text-xs hover:text-red-400 transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-              onClick={() => {
-                setNotifications(prev => prev.filter(n => n.id !== notification.id));
-              }}
-            >
-              ×
-            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <style>{`
         @keyframes slideIn {
           from {

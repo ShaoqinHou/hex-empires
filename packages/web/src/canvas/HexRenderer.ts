@@ -1,4 +1,4 @@
-import type { HexCoord, HexMap, HexTile, GameState, UnitState, CityState } from '@hex/engine';
+import type { HexCoord, HexMap, HexTile, GameState, UnitState, CityState, DistrictSlot } from '@hex/engine';
 import { coordToKey, distance, HEX_DIRECTIONS } from '@hex/engine';
 import type { Registry } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
@@ -97,6 +97,9 @@ export class HexRenderer {
     // Draw fog of war overlay
     this.drawFogOfWar(rc, viewport);
 
+    // Draw districts (below cities/units so markers appear on top)
+    this.drawDistricts(rc, viewport);
+
     // Draw cities (only visible/explored, viewport culled)
     this.drawCities(rc, viewport);
 
@@ -165,21 +168,12 @@ export class HexRenderer {
         this.drawBuildingIcon(tile, x, y, rc);
       }
 
-      // Yield dots (small indicators) — only when lens is active
+      // Yield dots and resource icon — only when lens is active
       if (rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
         // Resource icon — drawn after yield dots to appear above them
         if (tile.resource) {
           this.drawResourceIcon(tile, x, y, rc);
-        }
-        // Improvement icon
-        if (tile.improvement) {
-          this.drawImprovementIcon(tile, x, y, rc);
-        }
-
-        // Building icon
-        if (tile.building) {
-          this.drawBuildingIcon(tile, x, y, rc);
         }
       }
     }
@@ -259,36 +253,134 @@ export class HexRenderer {
     ctx.textBaseline = 'alphabetic'; // reset
   }
 
-  private drawImprovementIcon(tile: HexTile, cx: number, cy: number, rc: RenderContext): void {
+  private drawImprovementIcon(tile: HexTile, cx: number, cy: number, _rc: RenderContext): void {
     if (!tile.improvement) return;
 
     const ctx = this.ctx;
-
-    // Improvement icons map
-    const icons: Record<string, string> = {
-      farm: '🌾',
-      mine: '⛏️',
-      pasture: '🐄',
-      plantation: '🌿',
-      quarry: '🪨',
-      camp: '⛺',
-      road: '🛤️',
-    };
-
-    const icon = icons[tile.improvement] || '❓';
-
-    // Position icon in upper-right area of the hex (opposite to resources)
-    const iconX = cx + HEX_SIZE * 0.35;
-    const iconY = cy - HEX_SIZE * 0.35;
-
-    // Draw improvement icon
     ctx.save();
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 3;
-    ctx.fillText(icon, iconX, iconY);
+
+    // Position: upper-right quadrant of the hex
+    const ix = cx + HEX_SIZE * 0.30;
+    const iy = cy - HEX_SIZE * 0.28;
+    const s = HEX_SIZE * 0.18; // scale unit
+
+    switch (tile.improvement) {
+      case 'farm': {
+        // Three horizontal green crop rows
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 1.5;
+        for (let row = -1; row <= 1; row++) {
+          ctx.beginPath();
+          ctx.moveTo(ix - s, iy + row * s * 0.65);
+          ctx.lineTo(ix + s, iy + row * s * 0.65);
+          ctx.stroke();
+        }
+        // Vertical divider
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - s);
+        ctx.lineTo(ix, iy + s);
+        ctx.stroke();
+        break;
+      }
+
+      case 'mine':
+      case 'quarry': {
+        // Grey downward triangle (pit/mine symbol)
+        const col = tile.improvement === 'mine' ? '#9e9e9e' : '#b0bec5';
+        ctx.fillStyle = col;
+        ctx.strokeStyle = '#424242';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, iy + s * 1.2);        // bottom apex
+        ctx.lineTo(ix - s, iy - s * 0.6);    // top-left
+        ctx.lineTo(ix + s, iy - s * 0.6);    // top-right
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Small pick handle line
+        ctx.strokeStyle = '#795548';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ix - s * 0.7, iy - s * 0.9);
+        ctx.lineTo(ix + s * 0.3, iy + s * 0.4);
+        ctx.stroke();
+        break;
+      }
+
+      case 'pasture': {
+        // Light brown filled circle (field/pasture)
+        ctx.beginPath();
+        ctx.arc(ix, iy, s, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(188, 143, 88, 0.75)';
+        ctx.fill();
+        ctx.strokeStyle = '#795548';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        break;
+      }
+
+      case 'plantation': {
+        // Dark green diamond
+        ctx.fillStyle = 'rgba(46, 125, 50, 0.8)';
+        ctx.strokeStyle = '#1b5e20';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - s * 1.1);       // top
+        ctx.lineTo(ix + s * 0.9, iy);       // right
+        ctx.lineTo(ix, iy + s * 1.1);       // bottom
+        ctx.lineTo(ix - s * 0.9, iy);       // left
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      }
+
+      case 'camp': {
+        // Brown tent triangle
+        ctx.fillStyle = 'rgba(121, 85, 72, 0.85)';
+        ctx.strokeStyle = '#4e342e';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - s * 1.1);       // apex
+        ctx.lineTo(ix + s, iy + s * 0.7);   // bottom-right
+        ctx.lineTo(ix - s, iy + s * 0.7);   // bottom-left
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      }
+
+      case 'road': {
+        // Draw a thin brown line through the tile center (horizontal)
+        ctx.strokeStyle = '#8d6e63';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(cx - HEX_SIZE * 0.6, cy);
+        ctx.lineTo(cx + HEX_SIZE * 0.6, cy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        break;
+      }
+
+      default: {
+        // Generic: small white circle with first letter
+        ctx.beginPath();
+        ctx.arc(ix, iy, s, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fill();
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#333';
+        ctx.font = `bold ${Math.round(s * 1.1)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tile.improvement.charAt(0).toUpperCase(), ix, iy);
+        break;
+      }
+    }
+
     ctx.restore();
   }
 
@@ -299,64 +391,57 @@ export class HexRenderer {
     const building = rc.state.config.buildings.get(tile.building);
     if (!building) return;
 
-    // Building icons map - use emojis for visual clarity
-    const getBuildingIcon = (buildingId: string): string => {
-      const iconMap: Record<string, string> = {
-        // Military
-        barracks: '🏰',
-        armory: '🛡️',
-        walls: '🏰',
-        star_fort: '⭐',
-        military_base: '🎖️',
-
-        // Science
-        library: '📚',
-        university: '🎓',
-        research_lab: '🔬',
-        observatory: '🔭',
-
-        // Economy/Production
-        granary: '🌾',
-        market: '💰',
-        bank: '🏦',
-        stock_exchange: '📈',
-        workshop: '🔨',
-        factory: '🏭',
-        watermill: '💧',
-        power_plant: '⚡',
-        nuclear_plant: '☢️',
-
-        // Culture
-        monument: '🗿',
-        shrine: '⛩️',
-        temple: '🏛️',
-        cathedral: '⛪',
-        stadium: '🏟️',
-        broadcast_tower: '📡',
-        mall: '🏬',
-
-        // Gold
-        airport: '✈️',
-        shipyard: '⚓',
+    // Map building categories to badge colors
+    const getBuildingColor = (buildingId: string): string => {
+      const colorMap: Record<string, string> = {
+        // Military — red
+        barracks: '#e53935', armory: '#e53935', walls: '#e53935',
+        star_fort: '#e53935', military_base: '#e53935',
+        // Science — cyan
+        library: '#00acc1', university: '#00acc1', research_lab: '#00acc1',
+        observatory: '#00acc1',
+        // Economy/Production — orange
+        granary: '#fb8c00', market: '#fb8c00', bank: '#fb8c00',
+        stock_exchange: '#fb8c00', workshop: '#fb8c00', factory: '#fb8c00',
+        watermill: '#fb8c00', power_plant: '#fb8c00', nuclear_plant: '#fb8c00',
+        // Culture — purple
+        monument: '#8e24aa', shrine: '#8e24aa', temple: '#8e24aa',
+        cathedral: '#8e24aa', stadium: '#8e24aa', broadcast_tower: '#8e24aa',
+        mall: '#8e24aa',
+        // Gold — yellow
+        airport: '#fdd835', shipyard: '#fdd835',
       };
-
-      return iconMap[buildingId] || '🏠';
+      return colorMap[buildingId] ?? '#607d8b';
     };
 
-    const icon = getBuildingIcon(tile.building);
+    // Get first two chars of building id as label (more readable than single letter)
+    const label = tile.building.substring(0, 2).toUpperCase();
+    const color = getBuildingColor(tile.building);
 
-    // Position building icon in lower-right area of the hex
-    const iconX = cx + HEX_SIZE * 0.35;
-    const iconY = cy + HEX_SIZE * 0.35;
+    // Position: lower-right quadrant (away from resource icon in upper-left)
+    const bx = cx + HEX_SIZE * 0.30;
+    const by = cy + HEX_SIZE * 0.30;
+    const r = HEX_SIZE * 0.18;
 
-    // Draw building icon with background for visibility
     ctx.save();
-    ctx.font = '16px sans-serif';
+
+    // Filled rounded square badge
+    const sq = r * 1.1;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx - sq, by - sq, sq * 2, sq * 2, sq * 0.35);
+    ctx.fill();
+    ctx.stroke();
+
+    // Label text
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(r * 0.95)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 4;
-    ctx.fillText(icon, iconX, iconY);
+    ctx.fillText(label, bx, by);
+
     ctx.restore();
   }
 
@@ -537,6 +622,116 @@ export class HexRenderer {
       ctx.strokeStyle = 'rgba(100, 181, 246, 0.5)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
+    }
+  }
+
+  private drawDistricts(rc: RenderContext, viewport: ViewportBounds): void {
+    if (!rc.state.districts || rc.state.districts.size === 0) return;
+
+    const ctx = this.ctx;
+
+    // Color coding per district type
+    const DISTRICT_COLORS: Record<string, string> = {
+      city_center:   '#9e9e9e',
+      encampment:    '#e53935',  // red — military
+      campus:        '#00acc1',  // cyan — science
+      theater:       '#8e24aa',  // purple — culture
+      commercial:    '#fdd835',  // yellow — gold
+      industrial:    '#fb8c00',  // orange — production
+      holy_site:     '#fff9c4',  // pale yellow — faith
+      government:    '#f5f5f5',  // white — gov
+      entertainment: '#e91e63',  // pink — amenities
+      aerodrome:     '#78909c',  // steel — air
+      waterfront:    '#1565c0',  // deep blue — harbor
+      downtown:      '#ff7043',  // deep orange — modern
+      preserve:      '#2e7d32',  // dark green — nature
+    };
+
+    // Short labels per district type for the badge
+    const DISTRICT_LABELS: Record<string, string> = {
+      city_center:   'CC',
+      encampment:    'EN',
+      campus:        'CA',
+      theater:       'TH',
+      commercial:    'CO',
+      industrial:    'IN',
+      holy_site:     'HS',
+      government:    'GV',
+      entertainment: 'ET',
+      aerodrome:     'AD',
+      waterfront:    'WF',
+      downtown:      'DT',
+      preserve:      'PR',
+    };
+
+    for (const district of rc.state.districts.values()) {
+      const pos = district.position;
+
+      // Viewport culling
+      if (
+        pos.q < viewport.minQ ||
+        pos.q > viewport.maxQ ||
+        pos.r < viewport.minR ||
+        pos.r > viewport.maxR
+      ) {
+        continue;
+      }
+
+      const { x, y } = hexToPixel(pos);
+      const color = DISTRICT_COLORS[district.type] ?? '#9e9e9e';
+      const label = DISTRICT_LABELS[district.type] ?? district.type.substring(0, 2).toUpperCase();
+
+      ctx.save();
+
+      // Colored hex border outline (thick) to mark the district tile
+      drawHexPath(ctx, x, y, HEX_SIZE * 0.88);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.75;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Semi-transparent fill tint
+      drawHexPath(ctx, x, y, HEX_SIZE * 0.88);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.12;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Small badge in the lower-center showing district type initials
+      const badgeX = x;
+      const badgeY = y + HEX_SIZE * 0.5;
+      const badgeR = HEX_SIZE * 0.17;
+
+      ctx.fillStyle = color;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(badgeX - badgeR * 1.3, badgeY - badgeR, badgeR * 2.6, badgeR * 2, badgeR * 0.4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(badgeR * 0.95)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, badgeX, badgeY);
+
+      // Level indicator dots (one dot per level above 1)
+      if (district.level > 1) {
+        for (let i = 0; i < district.level; i++) {
+          ctx.beginPath();
+          ctx.arc(
+            badgeX - (district.level - 1) * 3 + i * 6,
+            badgeY + badgeR + 3,
+            2, 0, Math.PI * 2
+          );
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
     }
   }
 
