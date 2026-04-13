@@ -1,10 +1,12 @@
 # Project Status
 
 ## Current State
-- **Phase:** Rulebook-aligned — all gap analysis items resolved
-- **Last verified:** 2026-04-13 (Playwright E2E + engine tests)
-- **Tests:** 640+ passing across 32 engine + 6 E2E test files
-- **Commits:** 42+
+- **Phase:** Feature-complete — ongoing polish and balance
+- **Last verified:** 2026-04-14 (200-turn stress test: 0 errors, 17.8s)
+- **Tests:** 618 engine + 48 Playwright E2E = 666 total, all passing
+- **Commits:** 113+
+- **AI:** Personality system (9 leaders), fog-of-war, threat assessment, diplomacy, age transitions
+- **UI:** Setup screen, help panel, right-click menu, improved tech/civic trees, territory borders
 
 ## Rulebook Alignment (post-audit, verified 2026-04-10)
 - ✓ All 7 critical bugs fixed (river penalty, specialist costs, healing, cap penalty, fortification, HP degradation)

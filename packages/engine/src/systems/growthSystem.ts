@@ -93,6 +93,13 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
           territory: expandedTerritory,
         });
         changed = true;
+      } else if (!canGrow) {
+        // At population cap — stop accumulating food (reset to threshold to avoid runaway)
+        const cappedFood = Math.min(clampedFood, growthThreshold);
+        if (cappedFood !== city.food) {
+          updatedCities.set(cityId, { ...city, food: cappedFood });
+          changed = true;
+        }
       } else if (clampedFood !== city.food) {
         updatedCities.set(cityId, { ...city, food: clampedFood });
         changed = true;

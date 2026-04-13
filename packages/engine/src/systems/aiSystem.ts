@@ -190,7 +190,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       const currentItemId = city.productionQueue[0]?.id;
       if (currentItemId && state.config.buildings.has(currentItemId)) {
         const age = player.age ?? 'antiquity';
-        const military = findCheapestMilitary(state, age);
+        const military = findCheapestMilitary(state, age, isCityCoastal(state, city));
         if (military) {
           actions.push({ type: 'SET_PRODUCTION', cityId: city.id, itemId: military, itemType: 'unit' });
         }
@@ -396,6 +396,20 @@ function checkAtWar(state: GameState, playerId: string): boolean {
   return false;
 }
 
+/**
+ * Check whether a city is coastal — i.e., any neighbor of the city tile is a water tile.
+ * Naval units should only be considered for coastal cities.
+ */
+function isCityCoastal(state: GameState, city: CityState): boolean {
+  for (const neighbor of neighbors(city.position)) {
+    const tile = state.map.tiles.get(coordToKey(neighbor));
+    if (!tile) continue;
+    const terrain = state.config.terrains.get(tile.terrain);
+    if (terrain?.isWater) return true;
+  }
+  return false;
+}
+
 /** Pick what to produce based on game state and threat level */
 function pickProduction(
   state: GameState,
@@ -407,15 +421,16 @@ function pickProduction(
 ): string {
   const player = state.players.get(state.currentPlayerId);
   const age = player?.age ?? 'antiquity';
+  const coastal = isCityCoastal(state, city);
 
   // Under critical threat: produce military units only
   if (threatLevel === 'critical') {
-    return findCheapestMilitary(state, age) ?? 'warrior';
+    return findCheapestMilitary(state, age, coastal) ?? 'warrior';
   }
 
   // Under danger: prioritize military over buildings regardless of personality
   if (threatLevel === 'danger') {
-    const military = findCheapestMilitary(state, age);
+    const military = findCheapestMilitary(state, age, coastal);
     if (military) return military;
   }
 
@@ -427,7 +442,7 @@ function pickProduction(
   // Priority 1: Ensure at least 1 defender per city before expanding
   const minMilitary = Math.max(cityCount, 1); // at least 1 unit per city
   if (militaryCount < minMilitary) {
-    const military = pickMilitaryUnit(state, age, personality);
+    const military = pickMilitaryUnit(state, age, personality, coastal);
     if (military) return military;
   }
 
@@ -449,7 +464,7 @@ function pickProduction(
 
   // Priority 3: Build up to personality-driven military ratio before expanding
   if (militaryCount < cityCount * targetMilitaryPerCity) {
-    const military = pickMilitaryUnit(state, age, personality);
+    const military = pickMilitaryUnit(state, age, personality, coastal);
     if (military) return military;
   }
 
@@ -485,7 +500,7 @@ function pickProduction(
 
   // Priority 6: More military (maintain army) — cap varies by personality; use varied unit types
   if (militaryCount < cityCount * (targetMilitaryPerCity + 1)) {
-    const military = pickMilitaryUnit(state, age, personality);
+    const military = pickMilitaryUnit(state, age, personality, coastal);
     if (military) return military;
   }
 
@@ -497,7 +512,7 @@ function pickProduction(
     return buildingId;
   }
 
-  return pickMilitaryUnit(state, age, personality) ?? 'warrior';
+  return pickMilitaryUnit(state, age, personality, coastal) ?? 'warrior';
 }
 
 function hasUnitAbility(state: GameState, ability: string): boolean {
@@ -522,15 +537,33 @@ function findCheapestUnitByAbility(state: GameState, ability: string): string | 
   return cheapest;
 }
 
-function findCheapestMilitary(state: GameState, age: string): string | null {
+function findCheapestMilitary(state: GameState, age: string, allowNaval = false): string | null {
+  const player = state.players.get(state.currentPlayerId);
+  const researchedTechs = player ? new Set(player.researchedTechs) : new Set<string>();
+
   let cheapest: string | null = null;
   let cheapestCost = Infinity;
   for (const [id, def] of state.config.units) {
     if (def.age !== age) continue;
     if (def.category === 'civilian' || def.category === 'religious') continue;
+    if (!allowNaval && def.category === 'naval') continue;
     if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+    if (def.requiredTech && !researchedTechs.has(def.requiredTech)) continue;
     if (def.cost < cheapestCost) { cheapestCost = def.cost; cheapest = id; }
   }
+
+  // Fallback: if nothing is buildable at this age (all locked by unresearched techs),
+  // try any age's units so the AI always has something to produce.
+  if (!cheapest) {
+    for (const [id, def] of state.config.units) {
+      if (def.category === 'civilian' || def.category === 'religious') continue;
+      if (!allowNaval && def.category === 'naval') continue;
+      if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+      if (def.requiredTech && !researchedTechs.has(def.requiredTech)) continue;
+      if (def.cost < cheapestCost) { cheapestCost = def.cost; cheapest = id; }
+    }
+  }
+
   return cheapest;
 }
 
@@ -538,14 +571,16 @@ function findCheapestMilitary(state: GameState, age: string): string | null {
  * Pick a military unit to build based on personality and the current unit composition.
  * After the first 2 warriors the AI diversifies — ranged, cavalry, melee depending on
  * personality and how many of each type it already owns.
+ * Pass isCoastal=true to allow naval units (only for cities adjacent to water).
  */
 function pickMilitaryUnit(
   state: GameState,
   age: string,
   personality: AIPersonality,
+  isCoastal = false,
 ): string | null {
   const player = state.players.get(state.currentPlayerId);
-  if (!player) return findCheapestMilitary(state, age);
+  if (!player) return findCheapestMilitary(state, age, isCoastal);
 
   // Count current military unit types owned
   let meleeCount = 0;
@@ -563,7 +598,7 @@ function pickMilitaryUnit(
   const totalMilitary = meleeCount + rangedCount + cavalryCount;
 
   // For the first 2 units always build the cheapest melee (warrior)
-  if (totalMilitary < 2) return findCheapestMilitary(state, age);
+  if (totalMilitary < 2) return findCheapestMilitary(state, age, isCoastal);
 
   // Determine desired composition by personality
   // aggressive:  50% melee, 20% ranged, 30% cavalry
@@ -589,47 +624,60 @@ function pickMilitaryUnit(
   order.sort((a, b) => deficits[b] - deficits[a]);
 
   for (const category of order) {
-    const candidate = findBestMilitaryByCategory(state, age, category);
+    const candidate = findBestMilitaryByCategory(state, age, category, isCoastal);
     if (candidate) return candidate;
   }
 
-  return findCheapestMilitary(state, age);
+  return findCheapestMilitary(state, age, isCoastal);
 }
 
 /** Find the best affordable military unit matching the desired category */
-function findBestMilitaryByCategory(state: GameState, age: string, category: 'melee' | 'ranged' | 'cavalry'): string | null {
+function findBestMilitaryByCategory(
+  state: GameState,
+  age: string,
+  category: 'melee' | 'ranged' | 'cavalry',
+  isCoastal = false,
+): string | null {
   const player = state.players.get(state.currentPlayerId);
   const researchedTechs = player ? new Set(player.researchedTechs) : new Set<string>();
 
   let best: string | null = null;
   let bestScore = -Infinity;
 
-  for (const [id, def] of state.config.units) {
-    if (def.age !== age) continue;
-    if (def.category === 'civilian' || def.category === 'religious') continue;
-    if (def.combat <= 0 && def.rangedCombat <= 0) continue;
-    // Check tech requirement
-    if (def.requiredTech && !researchedTechs.has(def.requiredTech)) continue;
+  // Try current age first, then fall back to any age if nothing is buildable
+  const ageFilter = (defAge: string) => defAge === age;
+  const anyAgeFilter = (_defAge: string) => true;
 
-    // Classify this unit
-    const isCavalry = def.category === 'cavalry';
-    const isRanged  = !isCavalry && def.rangedCombat > 0 && def.combat === 0;
-    const isMelee   = !isCavalry && !isRanged;
+  for (const ageCheck of [ageFilter, anyAgeFilter]) {
+    for (const [id, def] of state.config.units) {
+      if (!ageCheck(def.age)) continue;
+      if (def.category === 'civilian' || def.category === 'religious') continue;
+      if (!isCoastal && def.category === 'naval') continue;
+      if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+      // Check tech requirement
+      if (def.requiredTech && !researchedTechs.has(def.requiredTech)) continue;
 
-    const matches =
-      (category === 'cavalry' && isCavalry) ||
-      (category === 'ranged'  && isRanged)  ||
-      (category === 'melee'   && isMelee);
+      // Classify this unit
+      const isCavalry = def.category === 'cavalry';
+      const isRanged  = !isCavalry && def.rangedCombat > 0 && def.combat === 0;
+      const isMelee   = !isCavalry && !isRanged;
 
-    if (!matches) continue;
+      const matches =
+        (category === 'cavalry' && isCavalry) ||
+        (category === 'ranged'  && isRanged)  ||
+        (category === 'melee'   && isMelee);
 
-    // Score: prefer stronger units; among equals prefer cheaper
-    const combatStrength = Math.max(def.combat, def.rangedCombat);
-    const score = combatStrength * 10 - def.cost * 0.1;
-    if (score > bestScore) {
-      bestScore = score;
-      best = id;
+      if (!matches) continue;
+
+      // Score: prefer stronger units; among equals prefer cheaper
+      const combatStrength = Math.max(def.combat, def.rangedCombat);
+      const score = combatStrength * 10 - def.cost * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = id;
+      }
     }
+    if (best) break; // found something at the preferred age
   }
 
   return best;
