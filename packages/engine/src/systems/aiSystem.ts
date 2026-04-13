@@ -460,6 +460,15 @@ function pickProduction(
     if (settler) return settler;
   }
 
+  // Priority 4b: Builder — produce one if we don't have any and have at least 1 city
+  const hasBuilder = [...state.units.values()].some(
+    u => u.owner === player?.id && state.config.units.get(u.typeId)?.abilities.includes('build_improvement')
+  );
+  if (!hasBuilder && cityCount > 0) {
+    const builder = findCheapestUnitByAbility(state, 'build_improvement');
+    if (builder) return builder;
+  }
+
   // Priority 5: Production building, then science building (one of each)
   const hasProductionBuilding = city.buildings.some(bId => {
     const b = state.config.buildings.get(bId);
