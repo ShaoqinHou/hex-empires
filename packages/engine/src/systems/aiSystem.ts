@@ -3,6 +3,8 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
 import { ALL_IMPROVEMENTS } from '../data/improvements';
+import { getLeaderPersonality } from '../types/AIPersonality';
+import type { AIPersonality } from '../types/AIPersonality';
 
 /**
  * AISystem generates actions for non-human players.
@@ -17,6 +19,9 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
   const player = state.players.get(state.currentPlayerId);
   if (!player || player.isHuman) return [];
 
+  const personality = getLeaderPersonality(player.leaderId);
+  const visibility = player.visibility;
+
   const actions: GameAction[] = [];
   const ourCities = [...state.cities.values()].filter(c => c.owner === player.id);
   const ourUnits = [...state.units.values()].filter(u => u.owner === player.id);
@@ -27,7 +32,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
 
   // 1. Research — pick cheapest unresearched tech with met prerequisites
   if (!player.currentResearch) {
-    const techId = pickBestTech(state);
+    const techId = pickBestTech(state, personality);
     if (techId) {
       actions.push({ type: 'SET_RESEARCH', techId });
     }
@@ -45,7 +50,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
 
       // Towns must purchase with gold — only purchase if we can actually afford it
-      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
       const baseCost = state.config.units.get(itemId)?.cost ?? state.config.buildings.get(itemId)?.cost ?? 100;
       const purchaseCost = baseCost * 2; // towns pay double
@@ -54,7 +59,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
       // else: town remains idle this turn — no IDLE production action needed (engine handles it)
     } else if (city.productionQueue.length === 0) {
-      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length);
+      const itemId = pickProduction(state, city, ourCities.length, militaryUnits.length, personality);
       const itemType = state.config.buildings.has(itemId) ? 'building' as const : 'unit' as const;
       actions.push({ type: 'SET_PRODUCTION', cityId: city.id, itemId, itemType });
     }
@@ -72,7 +77,7 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
         const founded = tryFoundCity(state, unit, ourCities, actions);
         if (!founded) {
           // Move toward a good city location
-          moveTowardGoodCitySpot(state, unit, ourCities, actions);
+          moveTowardGoodCitySpot(state, unit, ourCities, actions, player.explored);
         }
       }
       // Builders: build improvements on nearby tiles
@@ -85,11 +90,11 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       }
     } else {
       // Military: attack nearby enemy units first, then enemy cities, or explore
-      const attacked = tryAttackNearby(state, unit, actions);
+      const attacked = tryAttackNearby(state, unit, visibility, actions);
       if (!attacked) {
-        const attackedCity = tryAttackNearbyCity(state, unit, actions);
+        const attackedCity = tryAttackNearbyCity(state, unit, visibility, actions);
         if (!attackedCity) {
-          moveStrategically(state, unit, ourCities, actions);
+          moveStrategically(state, unit, ourCities, visibility, personality, actions);
         }
       }
     }
@@ -97,6 +102,11 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
 
   actions.push({ type: 'END_TURN' });
   return actions;
+}
+
+/** Check whether a hex position is in the player's visibility set */
+function canSee(visibility: ReadonlySet<string>, position: HexCoord): boolean {
+  return visibility.has(coordToKey(position));
 }
 
 /** Pick the best tech based on strategic needs, not just cost */

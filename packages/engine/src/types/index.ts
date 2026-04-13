@@ -12,6 +12,8 @@ export type { CivicDef } from './Civic';
 export type { PromotionDef } from './Promotion';
 export type { ResourceDef } from './Resource';
 export type { ImprovementDef } from './Improvement';
+export type { AIPersonality } from './AIPersonality';
+export { getLeaderPersonality } from './AIPersonality';
 export type {
   TurnPhase,
   Age,
