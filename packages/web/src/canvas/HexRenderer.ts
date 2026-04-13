@@ -317,41 +317,61 @@ export class HexRenderer {
 
     const ctx = this.ctx;
 
-    // Pick circle color by resource type
-    let circleColor: string;
+    // Pick colors by resource type — distinct ring + fill for each class
+    let fillColor: string;
+    let ringColor: string;
+    let textColor: string;
     switch (resource.type) {
-      case 'luxury':   circleColor = '#ffd54f'; break; // gold
-      case 'strategic': circleColor = '#9e9e9e'; break; // gray
-      case 'bonus':    circleColor = '#66bb6a'; break; // green
-      default:         circleColor = '#ffffff';
+      case 'luxury':
+        fillColor  = '#ffd54f'; // gold
+        ringColor  = '#f9a825';
+        textColor  = '#4a3000';
+        break;
+      case 'strategic':
+        fillColor  = '#b0bec5'; // steel grey
+        ringColor  = '#546e7a';
+        textColor  = '#1a2a2e';
+        break;
+      case 'bonus':
+        fillColor  = '#81c784'; // soft green
+        ringColor  = '#2e7d32';
+        textColor  = '#0a2210';
+        break;
+      default:
+        fillColor  = '#ffffff';
+        ringColor  = '#888';
+        textColor  = '#333';
     }
 
-    // Position icon in upper-left area of the hex (doesn't overlap yield dots at bottom)
+    // Position: upper-left of hex, clear of improvement icon (upper-right)
     const iconX = cx - HEX_SIZE * 0.35;
     const iconY = cy - HEX_SIZE * 0.35;
-    const radius = 5;
+    const radius = 6.5;
 
-    // Drop shadow for readability
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 3;
 
-    // Filled circle
+    // Drop shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 4;
+
+    // Outer ring (type colour — slightly larger)
     ctx.beginPath();
-    ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = circleColor;
+    ctx.arc(iconX, iconY, radius + 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = ringColor;
     ctx.fill();
 
-    // Dark border
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Inner filled circle
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
 
     ctx.restore();
 
     // First letter of resource name
-    ctx.fillStyle = '#000';
-    ctx.font = `bold ${radius + 1}px sans-serif`;
+    ctx.fillStyle = textColor;
+    ctx.font = `bold ${Math.round(radius * 1.2)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(resource.name.charAt(0).toUpperCase(), iconX, iconY);
