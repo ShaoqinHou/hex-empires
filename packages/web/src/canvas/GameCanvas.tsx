@@ -131,10 +131,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     resize();
     window.addEventListener('resize', resize);
 
-    // Center camera on first unit
-    const firstUnit = state.units.values().next().value;
-    if (firstUnit) {
-      const { x, y } = hexToPixel(firstUnit.position);
+    // Center camera on the player's first unit
+    const playerUnit = [...state.units.values()].find(u => u.owner === state.currentPlayerId);
+    if (playerUnit) {
+      const { x, y } = hexToPixel(playerUnit.position);
       cameraRef.current.centerOn(x, y);
     }
 
