@@ -104,7 +104,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   // Track drag state
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
-  const mouseOverCanvasRef = useRef(false);
   const dragDistRef = useRef(0);
 
   // Initialize canvas and renderer
@@ -462,38 +461,40 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     };
   }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields]);
 
-  // Edge-of-screen scrolling
-  // Top edge is small (8px) to avoid conflict with TopBar buttons
-  // Bottom edge is small (8px) to avoid conflict with BottomBar
-  // Left/right edges use a moderate zone
+  // Edge-of-screen scrolling — triggers at WINDOW edges, not canvas edges.
+  // This way the cursor must be at the very edge of the browser window
+  // to scroll, which doesn't conflict with TopBar/BottomBar buttons.
   useEffect(() => {
-    const EDGE_SIDE = 15;
-    const EDGE_TOP = 8;
-    const EDGE_BOTTOM = 8;
+    const EDGE = 3; // pixels from window edge
     let edgeFrame: number;
+    const windowMouse = { x: 0, y: 0 };
+
+    const trackMouse = (e: MouseEvent) => {
+      windowMouse.x = e.clientX;
+      windowMouse.y = e.clientY;
+    };
 
     const edgeScroll = () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !mouseOverCanvasRef.current) {
-        edgeFrame = requestAnimationFrame(edgeScroll);
-        return;
-      }
-      const rect = canvas.getBoundingClientRect();
-      const mx = lastMouseRef.current.x - rect.left;
-      const my = lastMouseRef.current.y - rect.top;
+      const mx = windowMouse.x;
+      const my = windowMouse.y;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
 
-      if (mx >= 0 && mx <= rect.width && my >= 0 && my <= rect.height) {
-        if (mx < EDGE_SIDE) cameraRef.current.panByKey('ArrowLeft');
-        if (mx > rect.width - EDGE_SIDE) cameraRef.current.panByKey('ArrowRight');
-        if (my < EDGE_TOP) cameraRef.current.panByKey('ArrowUp');
-        if (my > rect.height - EDGE_BOTTOM) cameraRef.current.panByKey('ArrowDown');
-      }
+      if (mx <= EDGE) cameraRef.current.panByKey('ArrowLeft');
+      if (mx >= w - EDGE) cameraRef.current.panByKey('ArrowRight');
+      if (my <= EDGE) cameraRef.current.panByKey('ArrowUp');
+      if (my >= h - EDGE) cameraRef.current.panByKey('ArrowDown');
 
       edgeFrame = requestAnimationFrame(edgeScroll);
     };
+
+    window.addEventListener('mousemove', trackMouse);
     edgeFrame = requestAnimationFrame(edgeScroll);
 
-    return () => cancelAnimationFrame(edgeFrame);
+    return () => {
+      window.removeEventListener('mousemove', trackMouse);
+      cancelAnimationFrame(edgeFrame);
+    };
   }, []);
 
   return (
@@ -504,9 +505,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseEnter={() => { mouseOverCanvasRef.current = true; }}
         onMouseLeave={() => {
-          mouseOverCanvasRef.current = false;
           isDraggingRef.current = false;
           setCombatPreview(null);
           setCombatPreviewPosition(null);
