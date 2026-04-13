@@ -48,7 +48,7 @@ export function improvementSystem(state: GameState, action: GameAction): GameSta
   }
 
   // Update the tile with the improvement
-  const updatedTile = { ...currentTile, improvement: improvementId as any };
+  const updatedTile = { ...currentTile, improvement: improvementId };
   const updatedTiles = new Map(state.map.tiles);
   updatedTiles.set(tileKey, updatedTile);
 

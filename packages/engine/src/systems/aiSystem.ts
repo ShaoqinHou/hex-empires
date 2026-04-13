@@ -412,7 +412,7 @@ function pickProduction(
   // Priority 1: Ensure at least 1 defender per city before expanding
   const minMilitary = Math.max(cityCount, 1); // at least 1 unit per city
   if (militaryCount < minMilitary) {
-    const military = findCheapestMilitary(state, age);
+    const military = pickMilitaryUnit(state, age, personality);
     if (military) return military;
   }
 
@@ -434,7 +434,7 @@ function pickProduction(
 
   // Priority 3: Build up to personality-driven military ratio before expanding
   if (militaryCount < cityCount * targetMilitaryPerCity) {
-    const military = findCheapestMilitary(state, age);
+    const military = pickMilitaryUnit(state, age, personality);
     if (military) return military;
   }
 
@@ -459,9 +459,9 @@ function pickProduction(
     }
   }
 
-  // Priority 6: More military (maintain army) — cap varies by personality
+  // Priority 6: More military (maintain army) — cap varies by personality; use varied unit types
   if (militaryCount < cityCount * (targetMilitaryPerCity + 1)) {
-    const military = findCheapestMilitary(state, age);
+    const military = pickMilitaryUnit(state, age, personality);
     if (military) return military;
   }
 
@@ -473,7 +473,7 @@ function pickProduction(
     return buildingId;
   }
 
-  return findCheapestMilitary(state, age) ?? 'warrior';
+  return pickMilitaryUnit(state, age, personality) ?? 'warrior';
 }
 
 function hasUnitAbility(state: GameState, ability: string): boolean {
@@ -508,6 +508,107 @@ function findCheapestMilitary(state: GameState, age: string): string | null {
     if (def.cost < cheapestCost) { cheapestCost = def.cost; cheapest = id; }
   }
   return cheapest;
+}
+
+/**
+ * Pick a military unit to build based on personality and the current unit composition.
+ * After the first 2 warriors the AI diversifies — ranged, cavalry, melee depending on
+ * personality and how many of each type it already owns.
+ */
+function pickMilitaryUnit(
+  state: GameState,
+  age: string,
+  personality: AIPersonality,
+): string | null {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return findCheapestMilitary(state, age);
+
+  // Count current military unit types owned
+  let meleeCount = 0;
+  let rangedCount = 0;
+  let cavalryCount = 0;
+  for (const unit of state.units.values()) {
+    if (unit.owner !== player.id) continue;
+    const def = state.config.units.get(unit.typeId);
+    if (!def || def.category === 'civilian' || def.category === 'religious') continue;
+    if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+    if (def.category === 'cavalry') cavalryCount++;
+    else if (def.rangedCombat > 0 && def.combat === 0) rangedCount++;
+    else meleeCount++;
+  }
+  const totalMilitary = meleeCount + rangedCount + cavalryCount;
+
+  // For the first 2 units always build the cheapest melee (warrior)
+  if (totalMilitary < 2) return findCheapestMilitary(state, age);
+
+  // Determine desired composition by personality
+  // aggressive:  50% melee, 20% ranged, 30% cavalry
+  // balanced:    40% melee, 40% ranged, 20% cavalry
+  // defensive:   30% melee, 55% ranged, 15% cavalry
+  const targetMeleeFrac  = 0.4 - personality.aggressiveness * 0.1 + (1 - personality.aggressiveness) * 0.0;
+  const targetCavFrac    = 0.15 + personality.aggressiveness * 0.15;
+  const targetRangedFrac = 1.0 - targetMeleeFrac - targetCavFrac;
+
+  const meleeFrac  = totalMilitary > 0 ? meleeCount  / totalMilitary : 0;
+  const rangedFrac = totalMilitary > 0 ? rangedCount  / totalMilitary : 0;
+  const cavFrac    = totalMilitary > 0 ? cavalryCount / totalMilitary : 0;
+
+  // Determine which category is most under-represented
+  const meleeDeficit  = targetMeleeFrac  - meleeFrac;
+  const rangedDeficit = targetRangedFrac - rangedFrac;
+  const cavDeficit    = targetCavFrac    - cavFrac;
+
+  // Prefer the most-deficient category; ties broken by: melee > ranged > cavalry
+  type Category = 'melee' | 'ranged' | 'cavalry';
+  const order: Category[] = ['melee', 'ranged', 'cavalry'];
+  const deficits: Record<Category, number> = { melee: meleeDeficit, ranged: rangedDeficit, cavalry: cavDeficit };
+  order.sort((a, b) => deficits[b] - deficits[a]);
+
+  for (const category of order) {
+    const candidate = findBestMilitaryByCategory(state, age, category);
+    if (candidate) return candidate;
+  }
+
+  return findCheapestMilitary(state, age);
+}
+
+/** Find the best affordable military unit matching the desired category */
+function findBestMilitaryByCategory(state: GameState, age: string, category: 'melee' | 'ranged' | 'cavalry'): string | null {
+  const player = state.players.get(state.currentPlayerId);
+  const researchedTechs = player ? new Set(player.researchedTechs) : new Set<string>();
+
+  let best: string | null = null;
+  let bestScore = -Infinity;
+
+  for (const [id, def] of state.config.units) {
+    if (def.age !== age) continue;
+    if (def.category === 'civilian' || def.category === 'religious') continue;
+    if (def.combat <= 0 && def.rangedCombat <= 0) continue;
+    // Check tech requirement
+    if (def.requiredTech && !researchedTechs.has(def.requiredTech)) continue;
+
+    // Classify this unit
+    const isCavalry = def.category === 'cavalry';
+    const isRanged  = !isCavalry && def.rangedCombat > 0 && def.combat === 0;
+    const isMelee   = !isCavalry && !isRanged;
+
+    const matches =
+      (category === 'cavalry' && isCavalry) ||
+      (category === 'ranged'  && isRanged)  ||
+      (category === 'melee'   && isMelee);
+
+    if (!matches) continue;
+
+    // Score: prefer stronger units; among equals prefer cheaper
+    const combatStrength = Math.max(def.combat, def.rangedCombat);
+    const score = combatStrength * 10 - def.cost * 0.1;
+    if (score > bestScore) {
+      bestScore = score;
+      best = id;
+    }
+  }
+
+  return best;
 }
 
 /** Try to found a city at current position */
@@ -668,7 +769,8 @@ function tryAttackNearbyCity(
 
 /**
  * Move a scout unit toward unexplored territory.
- * Scouts flee from adjacent enemies instead of fighting.
+ * Scouts avoid occupied tiles but do NOT flee from enemies — they push outward
+ * toward unexplored areas using a scoring system biased toward the map center.
  */
 function moveScout(
   state: GameState,
@@ -677,50 +779,67 @@ function moveScout(
   visibility: ReadonlySet<string>,
   actions: GameAction[],
 ): void {
-  // Check if any enemies are adjacent — if so, flee
-  const ns = neighbors(unit.position);
-  for (const n of ns) {
-    for (const other of state.units.values()) {
-      if (other.owner === unit.owner) continue;
-      if (coordToKey(other.position) === coordToKey(n)) {
-        // Enemy adjacent — flee in the opposite direction
-        const fleeStep = getFleeStep(unit.position, other.position, state);
-        if (fleeStep) {
-          actions.push({ type: 'MOVE_UNIT', unitId: unit.id, path: [fleeStep] });
-        }
-        return;
-      }
+  const mapCenterQ = state.map.width / 2;
+  const mapCenterR = state.map.height / 2;
+
+  // How explored is the immediate vicinity? Count explored tiles in a 3-hex radius.
+  let nearbyExploredCount = 0;
+  let nearbyTotalCount = 0;
+  for (const n of neighbors(unit.position)) {
+    nearbyTotalCount++;
+    if (explored.has(coordToKey(n))) nearbyExploredCount++;
+    for (const nn of neighbors(n)) {
+      nearbyTotalCount++;
+      if (explored.has(coordToKey(nn))) nearbyExploredCount++;
     }
   }
+  // When >60% of nearby tiles are already explored, add a strong center bias
+  const locallyExplored = nearbyTotalCount > 0 && (nearbyExploredCount / nearbyTotalCount) > 0.6;
 
-  // Find the direction with the most unexplored tiles in a 3-hex radius
-  // Count unexplored neighbors for each adjacent passable hex
+  // Score each passable adjacent tile
   let bestStep: HexCoord | null = null;
-  let bestUnexploredCount = -1;
+  let bestScore = -Infinity;
 
-  for (const n of ns) {
+  for (const n of neighbors(unit.position)) {
     const tile = state.map.tiles.get(coordToKey(n));
     if (!tile) continue;
     if (state.config.terrains.get(tile.terrain)?.isWater) continue;
     if (tile.feature && state.config.features.get(tile.feature)?.blocksMovement) continue;
 
-    // Skip tiles occupied by units
+    // Skip tiles occupied by any unit (friendly or enemy)
     let occupied = false;
     for (const u of state.units.values()) {
       if (coordToKey(u.position) === coordToKey(n)) { occupied = true; break; }
     }
     if (occupied) continue;
 
-    // Count unexplored tiles reachable from n (2-hex look-ahead)
-    let unexploredCount = 0;
-    for (const nn of neighbors(n)) {
-      if (!explored.has(coordToKey(nn))) unexploredCount++;
-    }
-    // Heavily prefer tiles that are themselves unexplored
-    if (!explored.has(coordToKey(n))) unexploredCount += 3;
+    let score = 0;
 
-    if (unexploredCount > bestUnexploredCount) {
-      bestUnexploredCount = unexploredCount;
+    // +10 per unexplored neighbor (2-hex look-ahead)
+    for (const nn of neighbors(n)) {
+      if (!explored.has(coordToKey(nn))) score += 10;
+    }
+    // Heavily prefer stepping onto an unexplored tile itself
+    if (!explored.has(coordToKey(n))) score += 30;
+
+    // Bias toward map center when the local area is well-explored.
+    // This pushes scouts away from their starting corner and toward other players.
+    if (locallyExplored) {
+      const distToCenter = distance(n, { q: Math.round(mapCenterQ), r: Math.round(mapCenterR) });
+      const currentDistToCenter = distance(unit.position, { q: Math.round(mapCenterQ), r: Math.round(mapCenterR) });
+      // +20 for every step closer to center, -5 for every step further
+      if (distToCenter < currentDistToCenter) {
+        score += 20;
+      } else if (distToCenter > currentDistToCenter) {
+        score -= 5;
+      }
+    }
+
+    // Tiebreak deterministically using unit id + turn (avoids ping-pong)
+    score += ((unit.id.charCodeAt(unit.id.length - 1) + state.turn) % 7) * 0.1;
+
+    if (score > bestScore) {
+      bestScore = score;
       bestStep = n;
     }
   }
