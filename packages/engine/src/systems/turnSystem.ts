@@ -62,8 +62,9 @@ function handleStartTurn(state: GameState): GameState {
     }
   }
 
-  // Only log turn start for the human player (player1) — AI turn starts are noise
-  const isHuman = state.currentPlayerId === 'player1';
+  // Only log turn start for human players — AI turn starts are noise
+  const currentPlayer = state.players.get(state.currentPlayerId);
+  const isHuman = currentPlayer?.isHuman ?? true;
   const newLog = isHuman
     ? [...state.log, {
         turn: state.turn,

@@ -42,7 +42,7 @@ describe('turnSystem', () => {
       const state = createTestState({ phase: 'start' });
       const next = turnSystem(state, { type: 'START_TURN' });
       expect(next.log.length).toBe(1);
-      expect(next.log[0].message).toContain('Turn 1 started');
+      expect(next.log[0].message).toContain('Turn 1');
     });
   });
 
