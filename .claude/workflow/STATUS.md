@@ -63,6 +63,17 @@ Also: `aiSystem` (generateAIActions) — not a pipeline system, called separatel
 - 24 pure system functions in pipeline
 - Data-driven via GameConfig — zero hardcoded content IDs in systems
 - Single source of truth (GameState)
-- 640+ tests (616 engine + 24 web unit + 6 Playwright E2E), strict TypeScript, seeded RNG
+- 664+ tests (616 engine + 48 Playwright E2E), strict TypeScript, seeded RNG
+- Effect utilities moved to state/EffectUtils.ts (no cross-system imports)
 - effectSystem functional: civ/leader/legacy abilities apply yield, combat, and movement bonuses
 - Governor UI panel: recruit, assign to cities, promote abilities
+- AI personality system: 9 leaders with unique traits (aggression, expansion, science, etc.)
+- AI fog-of-war: only acts on visible information (no cheating)
+- AI-vs-AI match simulator for testing strategy
+- Playwright E2E: setup screen, gameplay, AI behavior, map integrity
+- Game setup screen: leader/civ/map/AI picker
+- Right-click context menu: move/attack/fortify/delete units
+- Territory borders + improvement/district visual rendering
+- Production complete notifications
+- Edge scrolling at window edges only
+- Click-cycling through stacked units
