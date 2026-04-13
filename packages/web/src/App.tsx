@@ -21,8 +21,9 @@ import { TurnSummaryPanel } from './ui/panels/TurnSummaryPanel';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './canvas/TooltipOverlay';
+import { GovernorPanel } from './ui/panels/GovernorPanel';
 
-type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary';
+type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors';
 
 function GameUI() {
   const { state, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed } = useGame();
@@ -70,6 +71,7 @@ function GameUI() {
         onOpenLog={() => togglePanel('log')}
         onOpenAge={() => togglePanel('age')}
         onOpenTurnSummary={() => togglePanel('turnSummary')}
+        onOpenGovernors={() => togglePanel('governors')}
       />
       <div className="flex-1 relative">
         <GameCanvas
@@ -102,6 +104,9 @@ function GameUI() {
         )}
         {activePanel === 'turnSummary' && (
           <TurnSummaryPanel onClose={() => setActivePanel('none')} />
+        )}
+        {activePanel === 'governors' && (
+          <GovernorPanel onClose={() => setActivePanel('none')} />
         )}
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />

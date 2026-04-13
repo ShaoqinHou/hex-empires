@@ -13,9 +13,10 @@ interface TopBarProps {
   onOpenLog?: () => void;
   onOpenAge?: () => void;
   onOpenTurnSummary?: () => void;
+  onOpenGovernors?: () => void;
 }
 
-export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGame();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
@@ -275,6 +276,19 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
         title="View turn summary and resource changes"
       >
         📊 Summary
+      </button>
+      <button
+        className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"
+        style={{
+          background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 100%)',
+          color: 'var(--color-text-muted)',
+          border: '1px solid var(--color-border)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+        }}
+        onClick={onOpenGovernors}
+        title="Manage governors"
+      >
+        👑 Gov
       </button>
       <button
         className="px-2 py-1 rounded text-[10px] cursor-pointer transition-all hover:scale-105"

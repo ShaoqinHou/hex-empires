@@ -48,21 +48,32 @@ The engine is a pipeline of pure functions. Each system processes actions it car
 ```typescript
 type System = (state: GameState, action: GameAction) => GameState;
 
+// Pipeline assembled in GameProvider.tsx — order matters
 const SYSTEMS: System[] = [
   turnSystem,                 // validates phase, player order
-  effectSystem,               // civ/leader/legacy ability effects (runs early so other systems see active effects)
-  movementSystem,             // unit movement, pathfinding
-  citySystem,                 // city founding, territory
-  combatSystem,               // combat resolution
+  visibilitySystem,           // fog of war, tile visibility
+  effectSystem,               // civ/leader/legacy ability effects
+  movementSystem,             // unit movement, pathfinding, ZoC
+  citySystem,                 // city founding, territory, upgrade
+  combatSystem,               // damage, flanking, first strike, walls
+  promotionSystem,            // unit promotion and experience
   fortifySystem,              // unit fortification
-  growthSystem,               // city population, food
-  productionSystem,           // city production queues
-  resourceSystem,             // yield calculation, trade
-  researchSystem,             // technology progress
-  ageSystem,                  // age progress, transitions
-  diplomacySystem,            // relations, treaties, war/peace
+  improvementSystem,          // tile improvements (farms, mines, etc.)
+  buildingPlacementSystem,    // building placement in cities
+  districtSystem,             // district placement, adjacency bonuses
+  growthSystem,               // population, food, town specialization
+  productionSystem,           // queues, overflow, rush buying
+  resourceSystem,             // yields, happiness, celebrations
+  researchSystem,             // technology progress, mastery
+  civicSystem,                // civic research, civ-unique civics
+  ageSystem,                  // age transitions, legacy bonuses
+  diplomacySystem,            // relations, war/peace, endeavors, sanctions
   updateDiplomacyCounters,    // diplomacy turn counters
-  victorySystem,              // win condition checks
+  specialistSystem,           // citizen specialist assignment
+  tradeSystem,                // merchant units, trade routes
+  governorSystem,             // governor recruitment, assignment, promotion
+  crisisSystem,               // crisis events, trigger conditions
+  victorySystem,              // win condition checks (7 paths)
 ];
 
 function applyAction(state: GameState, action: GameAction): GameState {
@@ -74,6 +85,8 @@ function applyAction(state: GameState, action: GameAction): GameState {
 }
 ```
 
+Note: `aiSystem` (generateAIActions) is NOT in the pipeline — it's a utility function `(state) → GameAction[]` called separately by GameProvider for AI turns.
+
 ### GameState (single source of truth)
 
 The entire game is one immutable state object:
@@ -82,17 +95,23 @@ The entire game is one immutable state object:
 interface GameState {
   readonly turn: number;
   readonly currentPlayerId: PlayerId;
-  readonly phase: TurnPhase;          // 'start' | 'actions' | 'end'
+  readonly phase: TurnPhase;                              // 'start' | 'actions' | 'end'
   readonly players: ReadonlyMap<PlayerId, PlayerState>;
   readonly map: HexMap;
   readonly units: ReadonlyMap<UnitId, UnitState>;
   readonly cities: ReadonlyMap<CityId, CityState>;
+  readonly districts: ReadonlyMap<DistrictId, DistrictSlot>;
+  readonly governors: ReadonlyMap<GovernorId, Governor>;
+  readonly tradeRoutes: ReadonlyMap<string, TradeRoute>;
   readonly diplomacy: DiplomacyState;
   readonly age: AgeState;
+  readonly builtWonders: ReadonlyArray<BuildingId>;
   readonly crises: ReadonlyArray<CrisisState>;
   readonly victory: VictoryState;
   readonly log: ReadonlyArray<GameEvent>;
-  readonly rng: RngState;             // seeded RNG for determinism
+  readonly rng: RngState;                                 // seeded RNG for determinism
+  readonly config: GameConfig;                            // embedded content registries
+  readonly lastValidation: ValidationResult | null;
 }
 ```
 
@@ -100,17 +119,48 @@ interface GameState {
 
 ```typescript
 type GameAction =
+  // Core turn
   | { type: 'START_TURN' }
   | { type: 'END_TURN' }
+  // Units
   | { type: 'MOVE_UNIT'; unitId: UnitId; path: ReadonlyArray<HexCoord> }
   | { type: 'ATTACK_UNIT'; attackerId: UnitId; targetId: UnitId }
+  | { type: 'ATTACK_CITY'; attackerId: UnitId; cityId: CityId }
+  | { type: 'FORTIFY_UNIT'; unitId: UnitId }
+  | { type: 'PROMOTE_UNIT'; unitId: UnitId; promotionId: string }
+  // Cities & production
   | { type: 'FOUND_CITY'; unitId: UnitId; name: string }
-  | { type: 'SET_PRODUCTION'; cityId: CityId; itemId: string }
+  | { type: 'SET_PRODUCTION'; cityId: CityId; itemId: string; itemType: ProductionItem['type'] }
+  | { type: 'PURCHASE_ITEM'; cityId: CityId; itemId: string; itemType: 'unit' | 'building' }
+  | { type: 'PURCHASE_TILE'; cityId: CityId; tile: HexCoord }
+  | { type: 'UPGRADE_SETTLEMENT'; cityId: CityId }
+  | { type: 'SET_SPECIALIZATION'; cityId: CityId; specialization: TownSpecialization }
+  | { type: 'ASSIGN_SPECIALIST'; cityId: CityId }
+  | { type: 'UNASSIGN_SPECIALIST'; cityId: CityId }
+  // Buildings, districts, improvements
+  | { type: 'PLACE_BUILDING'; cityId: CityId; buildingId: BuildingId; tile: HexCoord }
+  | { type: 'PLACE_DISTRICT'; cityId: CityId; districtId: DistrictId; tile: HexCoord }
+  | { type: 'UPGRADE_DISTRICT'; districtId: DistrictId }
+  | { type: 'BUILD_IMPROVEMENT'; unitId: UnitId; tile: HexCoord; improvementId: string }
+  // Research & civics
   | { type: 'SET_RESEARCH'; techId: TechnologyId }
+  | { type: 'SET_MASTERY'; techId: TechnologyId }
+  | { type: 'SET_CIVIC'; civicId: string }
+  | { type: 'SET_CIVIC_MASTERY'; civicId: string }
+  // Diplomacy
   | { type: 'PROPOSE_DIPLOMACY'; targetId: PlayerId; proposal: DiplomacyProposal }
+  | { type: 'DIPLOMATIC_ENDEAVOR'; targetId: PlayerId; endeavorType: string }
+  | { type: 'DIPLOMATIC_SANCTION'; targetId: PlayerId; sanctionType: string }
+  // Trade
+  | { type: 'CREATE_TRADE_ROUTE'; merchantId: UnitId; targetCityId: CityId }
+  // Ages & crises
   | { type: 'TRANSITION_AGE'; newCivId: CivilizationId }
   | { type: 'RESOLVE_CRISIS'; crisisId: string; choice: string }
-  // ... extensible
+  // Governors
+  | { type: 'RECRUIT_GOVERNOR'; governorId: GovernorId }
+  | { type: 'ASSIGN_GOVERNOR'; governorId: GovernorId; cityId: CityId }
+  | { type: 'UNASSIGN_GOVERNOR'; governorId: GovernorId }
+  | { type: 'PROMOTE_GOVERNOR'; governorId: GovernorId; abilityId: string }
 ```
 
 ### Hex Grid (packages/engine/src/hex/)
@@ -136,43 +186,54 @@ Map generation: Procedural via seeded noise. Reads terrain definitions from regi
 packages/engine/src/
   index.ts              — barrel export
   GameEngine.ts         — system pipeline orchestrator
-  state/                — GameState type, immutable update helpers
-  hex/                  — HexCoord, HexGrid, Pathfinding, MapGenerator
-  systems/              — pure function systems (one file per system)
-  effects/              — EffectPipeline, composable ability effects
-  registry/             — Generic Registry<T> + content registries
-  types/                — all TypeScript interfaces
-  data/                 — game content (data files only)
-    civilizations/      — one file per civ
-    leaders/            — one file per leader
-    units/              — one file per unit type
-    buildings/          — one file per building
-    technologies/       — organized by age (antiquity/, exploration/, modern/)
-    terrains/           — terrain definitions
-    crises/             — crisis event definitions
+  state/                — GameState type, immutable update helpers, YieldCalculator, CombatPreview, SaveLoad
+  hex/                  — HexCoord, HexGrid, Pathfinding, MapGenerator, TerrainCost
+  systems/              — pure function systems (23 systems, one file per system)
+  effects/              — EffectDef types, effect evaluation (minimal — most logic in effectSystem)
+  registry/             — Generic Registry<T>
+  types/                — all TypeScript interfaces (GameState, District, Governor, Improvement, etc.)
+  data/                 — game content (data files only, grouped by age)
+    civilizations/      — grouped by age: antiquity-civs.ts, exploration-civs.ts, modern-civs.ts
+    leaders/            — all-leaders.ts (single file)
+    units/              — grouped by age + promotions.ts
+    buildings/          — grouped by age (includes wonders)
+    technologies/       — organized by age subdirectories (antiquity/, exploration/, modern/)
+    civics/             — organized by age subdirectories
+    terrains/           — base-terrains.ts + features.ts
+    crises/             — all-crises.ts (single file)
+    districts/          — grouped by age
+    governors/          — grouped by age
+    improvements/       — index.ts (single file)
+    resources/          — index.ts (single file)
 ```
 
 ## Data-Driven Content
 
-### Registry Pattern
+### GameConfig Pattern
 
-Every content type uses a generic typed Registry:
+Content is embedded in `GameState.config` as a `GameConfig` object (built by `GameConfigFactory.ts`). This contains `ReadonlyMap<string, T>` fields for all content types, making content available to systems without global singletons:
 
 ```typescript
-class Registry<T extends { readonly id: string }> {
-  register(item: T): void;
-  get(id: string): T | undefined;
-  getAll(): ReadonlyArray<T>;
+interface GameConfig {
+  readonly units: ReadonlyMap<string, UnitDef>;
+  readonly buildings: ReadonlyMap<string, BuildingDef>;
+  readonly districts: ReadonlyMap<string, DistrictDef>;
+  readonly technologies: ReadonlyMap<string, TechnologyDef>;
+  readonly civics: ReadonlyMap<string, CivicDef>;
+  readonly terrains: ReadonlyMap<string, TerrainDef>;
+  readonly features: ReadonlyMap<string, TerrainFeatureDef>;
+  readonly promotions: ReadonlyMap<string, PromotionDef>;
+  readonly resources: ReadonlyMap<string, ResourceDef>;
 }
 ```
 
-Content is registered at startup from barrel exports. Systems and UI query registries at runtime.
+A generic `Registry<T>` class also exists in `registry/` and is used by GameProvider for unit and resource lookups.
 
 ### Adding New Content
 
 **Adding a new civilization requires exactly 2 edits:**
-1. Create `packages/engine/src/data/civilizations/mongols.ts` with a `CivilizationDef` export
-2. Add the import + entry to `ALL_CIVILIZATIONS` in `civilizations/index.ts`
+1. Create the entry in the appropriate age file (e.g., add to `antiquity-civs.ts`)
+2. Ensure the barrel export `ALL_CIVILIZATIONS` in `civilizations/index.ts` includes it
 
 Zero changes to engine systems, rendering, or UI. The `/add-content` skill has full step-by-step guides.
 
@@ -181,9 +242,15 @@ Zero changes to engine systems, rendering, or UI. The `/add-content` skill has f
 - `CivilizationDef` — id, name, age, uniqueAbility, uniqueUnit, uniqueBuilding, legacyBonus
 - `LeaderDef` — id, name, ability, agendas, compatibleAges
 - `UnitDef` — id, name, age, category, cost, combat/rangedCombat/movement, requiredTech, upgradesTo
-- `BuildingDef` — id, name, age, cost, maintenance, yields, effects, requiredTech
-- `TechnologyDef` — id, name, age, cost, prerequisites, unlocks, effects, tree position
-- `TerrainDef` — id, name, movementCost, defenseBonus, baseYields, isPassable
+- `BuildingDef` — id, name, age, cost, maintenance, yields, effects, requiredTech, category, isWonder, happinessCost
+- `TechnologyDef` — id, name, age, cost, prerequisites, unlocks, description, treePosition
+- `TerrainDef` — id, name, movementCost, defenseBonus, baseYields, isPassable, isWater, color
+- `CivicDef` — id, name, age, cost, prerequisites, unlocks, description, treePosition
+- `DistrictDef` — id, name, type, age, cost, requiredTech, placementConstraints, adjacencyYields
+- `GovernorDef` — id, name, title, specialization, abilities
+- `ImprovementDef` — id, name, category, cost, requiredTech, yields, modifier
+- `ResourceDef` — id, name, type (bonus/strategic/luxury), yields
+- `PromotionDef` — id, name, tier, effects, requiredExperience
 
 ### Effect System
 
@@ -193,10 +260,12 @@ Abilities are expressed as composable `EffectDef` objects:
 type EffectDef =
   | { type: 'MODIFY_YIELD'; target: EffectTarget; yield: YieldType; value: number }
   | { type: 'MODIFY_COMBAT'; target: UnitCategory | 'all'; value: number }
-  | { type: 'GRANT_UNIT'; unitId: UnitId; count: number }
+  | { type: 'GRANT_UNIT'; unitId: string; count: number }
   | { type: 'UNLOCK_BUILDING'; buildingId: BuildingId }
   | { type: 'DISCOUNT_PRODUCTION'; target: string; percent: number }
-  // ... extensible discriminated union
+  | { type: 'MODIFY_MOVEMENT'; target: UnitCategory | 'all'; value: number }
+  | { type: 'FREE_TECH'; techId: TechnologyId }
+  | { type: 'CULTURE_BOMB'; range: number }
 ```
 
 Effects are evaluated by the `effectSystem` which collects active effects from the player's civ, leader, and legacy bonuses. Other systems query active effects to modify their calculations.
@@ -225,7 +294,7 @@ Effects are evaluated by the `effectSystem` which collects active effects from t
 - Each choice has effects (EffectDef)
 
 ### Victory Conditions
-- Multiple paths: domination, science, culture, diplomacy, score
+- Multiple paths: domination, science, culture, economic, diplomacy, military, score
 - Each condition is a function `(state, playerId) → { achieved, progress }`
 - Checked by `victorySystem` at end of each turn
 
@@ -239,21 +308,35 @@ Effects are evaluated by the `effectSystem` which collects active effects from t
 - Animations are purely visual — state is already updated when animation starts
 
 ### UI Panels (React + Tailwind)
-- `TopBar` — turn counter, age, resources, end turn button
-- `BottomBar` — selected unit/city info, unit actions
-- `Minimap` — map overview with camera viewport
+
+**Layout:** `TopBar`, `BottomBar`
+
+**Panels (mutually exclusive via `activePanel` state in `GameUI` component):**
 - `TechTreePanel` — tech tree for current age
+- `CivicTreePanel` — civic tree for current age
 - `CityPanel` — city detail: population, yields, production, buildings
 - `DiplomacyPanel` — relations, trade, war/peace
 - `AgeTransitionPanel` — pick new civ on age change
-- `VictoryPanel` — progress toward victory conditions
+- `EventLogPanel` — game event history
+- `TurnSummaryPanel` — end-of-turn summary
 
-Panels managed by `UIProvider` — mutually exclusive (one open at a time).
+**Always-mounted overlays:**
+- `VictoryPanel` / `VictoryProgressPanel` — victory conditions
+- `CrisisPanel` — crisis event choices
+- `Minimap` — map overview with camera viewport
+- `Notifications` — game notifications
+- `TurnTransition` — animated turn transition
+- `EnemyActivitySummary` — post-AI-turn summary
+- `ValidationFeedback` — action validation errors
+
+**Components:** `CombatHoverPreview`, `BuildingPlacementPanel`, `ImprovementPanel`, `UnitCard`, `BuildingCard`, `AudioSettings`, tooltip system
+
+Panel state is managed by plain `useState<Panel>` in the `GameUI` component in `App.tsx` — no UIProvider exists.
 
 ### State Flow
 
 ```
-1. Canvas click → camera.screenToHex(x, y) → HexCoord
+1. Canvas click → camera.screenToWorld(x, y) → pixelToHex(worldX, worldY) → HexCoord
 2. UI determines intent → creates GameAction
 3. GameProvider.dispatch(action) → engine.applyAction(state, action) → newState
 4. React state update → UI panels re-render

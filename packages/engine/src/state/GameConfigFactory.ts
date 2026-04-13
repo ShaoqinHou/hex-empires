@@ -1,12 +1,15 @@
 import type { GameConfig } from '../types/GameConfig';
-import type { UnitDef } from '../data/units/antiquity-units';
-import type { BuildingDef } from '../data/buildings/antiquity-buildings';
+import type { UnitDef } from '../types/Unit';
+import type { BuildingDef } from '../types/Building';
 import type { DistrictDef } from '../types/District';
-import type { TechnologyDef } from '../data/technologies/types';
-import type { CivicDef } from '../data/civics/types';
-import type { PromotionDef } from '../data/units/promotions';
-import type { ResourceDef } from '../data/resources';
+import type { TechnologyDef } from '../types/Technology';
+import type { CivicDef } from '../types/Civic';
+import type { PromotionDef } from '../types/Promotion';
+import type { ResourceDef } from '../types/Resource';
 import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
+import type { GovernorDef } from '../types/Governor';
+import type { CivilizationDef } from '../data/civilizations/types';
+import type { LeaderDef } from '../data/leaders/types';
 import { ALL_UNITS } from '../data/units';
 import { ALL_BUILDINGS } from '../data/buildings';
 import { ALL_DISTRICTS } from '../data/districts';
@@ -16,6 +19,9 @@ import { ALL_BASE_TERRAINS } from '../data/terrains/base-terrains';
 import { ALL_FEATURES } from '../data/terrains/features';
 import { ALL_PROMOTIONS } from '../data/units/promotions';
 import { ALL_RESOURCES } from '../data/resources';
+import { ALL_GOVERNORS } from '../data/governors';
+import { ALL_CIVILIZATIONS } from '../data/civilizations';
+import { ALL_LEADERS } from '../data/leaders';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -46,5 +52,14 @@ export function createGameConfig(): GameConfig {
   const resources = new Map<string, ResourceDef>();
   for (const r of ALL_RESOURCES) resources.set(r.id, r);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources };
+  const governors = new Map<string, GovernorDef>();
+  for (const g of ALL_GOVERNORS) governors.set(g.id, g);
+
+  const civilizations = new Map<string, CivilizationDef>();
+  for (const c of ALL_CIVILIZATIONS) civilizations.set(c.id, c);
+
+  const leaders = new Map<string, LeaderDef>();
+  for (const l of ALL_LEADERS) leaders.set(l.id, l);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders };
 }

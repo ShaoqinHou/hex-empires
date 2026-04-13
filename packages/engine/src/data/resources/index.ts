@@ -1,13 +1,5 @@
-import type { YieldSet } from '../../types/Yields';
-
-export interface ResourceDef {
-  readonly id: string;
-  readonly name: string;
-  readonly type: 'bonus' | 'strategic' | 'luxury';
-  readonly yieldBonus: Partial<YieldSet>;
-  readonly validTerrains: ReadonlyArray<string>; // terrain IDs where this can spawn
-  readonly happinessBonus: number; // luxury resources give happiness
-}
+export type { ResourceDef } from '../../types/Resource';
+import type { ResourceDef } from '../../types/Resource';
 
 // ── Bonus Resources ──
 

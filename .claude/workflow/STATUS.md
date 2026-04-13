@@ -1,9 +1,9 @@
 # Project Status
 
 ## Current State
-- **Phase:** Rulebook-aligned — all audit items resolved
-- **Last verified:** 2026-04-10 (E2E + re-audit)
-- **Tests:** 442 passing across 24 test files
+- **Phase:** Rulebook-aligned — all gap analysis items resolved
+- **Last verified:** 2026-04-13 (Playwright E2E + engine tests)
+- **Tests:** 640+ passing across 32 engine + 6 E2E test files
 - **Commits:** 42+
 
 ## Rulebook Alignment (post-audit, verified 2026-04-10)
@@ -16,40 +16,53 @@
 | Type | Count | Details |
 |------|-------|---------|
 | Units | 28 (3 ages) | 11 antiquity, 10 exploration, 7 modern |
-| Buildings | 23 (3 ages) | 10 antiquity, 7 exploration, 7 modern (note: ~40% of rulebook buildings missing) |
-| Technologies | 35 (3 ages) | 15 antiquity, 10 exploration, 10 modern |
+| Buildings | 76 (3 ages) | 23 antiquity, 27 exploration, 26 modern (includes wonders) |
+| Technologies | 41 (3 ages) | 15 antiquity, 12 exploration, 14 modern |
 | Civics | 25 (3 ages) | 11 antiquity (3 civ-unique), 8 exploration, 6 modern |
 | Civilizations | 16 (3 ages) | 6 antiquity, 6 exploration, 4 modern |
 | Leaders | 9 | Augustus, Cleopatra, Pericles, Cyrus, Gandhi, Qin Shi Huang, Alexander, Hatshepsut, Genghis Khan |
-| Promotions | 14 (3 tiers) | 7 tier-1, 5 tier-2, 2 tier-3 |
+| Promotions | 11 (3 tiers) | |
 | Crisis events | 7 | Plague, Barbarian Invasion, Golden Age, Trade Opportunity, Natural Disaster, Religious Schism, Trade Disruption |
 | Resources | 13 | 4 bonus, 4 strategic, 5 luxury |
-| Independent Powers | 3 | Vilnius (scientific), Antananarivo (cultural), Zanzibar (economic) |
+| Districts | 29 (3 ages) | 10 antiquity, 9 exploration, 10 modern |
+| Governors | 18 (3 ages) | 6 per age (governorSystem implemented) |
+| Improvements | 7 | Farm, Mine, Pasture, etc. |
 | Terrains | 7 + 8 features | |
 | UI panels | 13 | |
-| Test files | 24 | |
+| Test files | 32 | |
 
-## Systems Implemented
+## Systems Implemented (24 in pipeline order)
 1. turnSystem — turn phases, player order
-2. effectSystem — civ/leader/legacy ability effects
-3. movementSystem — pathfinding, ZoC
-4. citySystem — founding, territory, upgrade
-5. combatSystem — damage, flanking, first strike, walls
-6. fortifySystem — unit fortification
-7. growthSystem — quadratic formula, growth rate modifiers, town specialization, food sharing
-8. productionSystem — queues, overflow, rush buying, barracks/workshop bonuses, strategic resources
-9. resourceSystem — yields, happiness, celebrations, town gold conversion
-10. researchSystem — tech research, mastery
-11. civicSystem — civic research, civ-unique civics
-12. ageSystem — age transitions, legacy bonuses, golden/dark ages
-13. diplomacySystem — relationships, war support, formal/surprise war, endeavors, sanctions
-14. victorySystem — domination, science, culture, economic, diplomacy, military, score
-15. tradeSystem — merchant unit, trade routes, gold yields
-16. specialistSystem — citizen specialist assignment
-17. independentSystem — independent powers, envoys, suzerain
+2. visibilitySystem — fog of war, tile visibility
+3. effectSystem — civ/leader/legacy ability effects
+4. movementSystem — pathfinding, ZoC
+5. citySystem — founding, territory, upgrade
+6. combatSystem — damage, flanking, first strike, walls
+7. promotionSystem — unit promotion and experience
+8. fortifySystem — unit fortification
+9. improvementSystem — tile improvements (farms, mines, etc.)
+10. buildingPlacementSystem — building placement in cities
+11. districtSystem — district placement, adjacency bonuses
+12. growthSystem — quadratic formula, growth rate modifiers, town specialization, food sharing
+13. productionSystem — queues, overflow, rush buying, barracks/workshop bonuses, strategic resources
+14. resourceSystem — yields, happiness, celebrations, town gold conversion
+15. researchSystem — tech research, mastery
+16. civicSystem — civic research, civ-unique civics
+17. ageSystem — age transitions, legacy bonuses, golden/dark ages
+18. diplomacySystem — relationships, war support, formal/surprise war, endeavors, sanctions
+19. updateDiplomacyCounters — diplomacy turn counters
+20. specialistSystem — citizen specialist assignment
+21. tradeSystem — merchant unit, trade routes, gold yields
+22. crisisSystem — crisis events, trigger conditions, player choices
+23. governorSystem — governor recruitment, assignment, promotion
+24. victorySystem — domination, science, culture, economic, diplomacy, military, score
+
+Also: `aiSystem` (generateAIActions) — not a pipeline system, called separately for AI turns.
 
 ## Architecture
-- 17 pure system functions in pipeline
+- 24 pure system functions in pipeline
 - Data-driven via GameConfig — zero hardcoded content IDs in systems
 - Single source of truth (GameState)
-- 442 tests, strict TypeScript, seeded RNG
+- 640+ tests (616 engine + 24 web unit + 6 Playwright E2E), strict TypeScript, seeded RNG
+- effectSystem functional: civ/leader/legacy abilities apply yield, combat, and movement bonuses
+- Governor UI panel: recruit, assign to cities, promote abilities

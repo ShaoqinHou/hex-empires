@@ -1,5 +1,6 @@
 import type { GameState, GameAction, PlayerState, CityState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
+import { getMovementBonus } from './effectSystem';
 
 /**
  * TurnSystem manages turn phases and player order.
@@ -37,7 +38,9 @@ function handleStartTurn(state: GameState): GameState {
   const updatedUnits = new Map(state.units);
   for (const [id, unit] of updatedUnits) {
     if (unit.owner === state.currentPlayerId) {
-      const baseMovement = getBaseMovement(state, unit.typeId);
+      const unitDef = state.config.units.get(unit.typeId);
+      const category = unitDef?.category ?? 'melee';
+      const baseMovement = getBaseMovement(state, unit.typeId) + getMovementBonus(state, unit.owner, category);
 
       // Healing logic: heal damaged units at start of turn
       let health = unit.health;

@@ -35,7 +35,7 @@ if [[ "$FILE_PATH" =~ systems/ ]] && [[ ! "$FILE_PATH" =~ __tests__ ]]; then
   SYSTEM=$(basename "$FILE_PATH" .ts)
   if [ -f "$FILE_PATH" ]; then
     while IFS= read -r line; do
-      if echo "$line" | grep -qE "from.*['\"]\./(Turn|Movement|Combat|Production|Research|Growth|Diplomacy|Resource|Age|Crisis|Victory|Effect)System" ; then
+      if echo "$line" | grep -qE "from.*['\"]\./(turn|movement|combat|production|research|growth|diplomacy|resource|age|crisis|victory|effect|visibility|promotion|improvement|buildingPlacement|district|civic|specialist|trade|governor|fortify|ai)System" ; then
         IMPORTED=$(echo "$line" | sed -n "s|.*from.*['\"]\.\/\([^'\"]*\).*|\1|p")
         if [ -n "$IMPORTED" ] && [ "$IMPORTED" != "$SYSTEM" ]; then
           VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: ${SYSTEM} imports from ${IMPORTED}"

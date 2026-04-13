@@ -53,11 +53,15 @@ export interface UnitState {
 export type SettlementType = 'town' | 'city';
 
 export type TownSpecialization =
-  | 'growing_town'   // +50% growth rate
-  | 'farming_town'   // +2 food
-  | 'mining_town'    // +2 production
-  | 'trade_outpost'  // +3 gold
-  | 'fort_town';     // +5 defense HP, +5 healing in territory
+  | 'growing_town'    // +50% growth rate
+  | 'farming_town'    // +2 food
+  | 'mining_town'     // +2 production
+  | 'trade_outpost'   // +3 gold
+  | 'fort_town'       // +5 defense HP, +5 healing in territory
+  | 'religious_site'  // +3 faith
+  | 'hub_town'        // +2 gold, +1 production
+  | 'urban_center'    // +1 food, +1 production, +1 gold
+  | 'factory_town';   // +3 production
 
 export interface CityState {
   readonly id: CityId;
@@ -307,7 +311,6 @@ export type GameAction =
   | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
   | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
-  | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
   | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId }
   | { readonly type: 'RECRUIT_GOVERNOR'; readonly governorId: GovernorId }
   | { readonly type: 'ASSIGN_GOVERNOR'; readonly governorId: GovernorId; readonly cityId: CityId }

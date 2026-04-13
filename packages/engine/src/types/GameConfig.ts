@@ -1,11 +1,14 @@
-import type { UnitDef } from '../data/units/antiquity-units';
-import type { BuildingDef } from '../data/buildings/antiquity-buildings';
-import type { TechnologyDef } from '../data/technologies/types';
-import type { CivicDef } from '../data/civics/types';
-import type { PromotionDef } from '../data/units/promotions';
-import type { ResourceDef } from '../data/resources';
+import type { UnitDef } from './Unit';
+import type { BuildingDef } from './Building';
+import type { TechnologyDef } from './Technology';
+import type { CivicDef } from './Civic';
+import type { PromotionDef } from './Promotion';
+import type { ResourceDef } from './Resource';
 import type { TerrainDef, TerrainFeatureDef } from './Terrain';
 import type { DistrictDef } from './District';
+import type { GovernorDef } from './Governor';
+import type { CivilizationDef } from '../data/civilizations/types';
+import type { LeaderDef } from '../data/leaders/types';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -22,4 +25,7 @@ export interface GameConfig {
   readonly features: ReadonlyMap<string, TerrainFeatureDef>;
   readonly promotions: ReadonlyMap<string, PromotionDef>;
   readonly resources: ReadonlyMap<string, ResourceDef>;
+  readonly governors: ReadonlyMap<string, GovernorDef>;
+  readonly civilizations: ReadonlyMap<string, CivilizationDef>;
+  readonly leaders: ReadonlyMap<string, LeaderDef>;
 }

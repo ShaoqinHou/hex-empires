@@ -1,4 +1,4 @@
-import type { BuildingDef } from './antiquity-buildings';
+import type { BuildingDef } from '../../types/Building';
 
 export const BANK: BuildingDef = {
   id: 'bank',
@@ -233,8 +233,141 @@ export const FORBIDDEN_CITY: BuildingDef = {
   greatPersonPoints: { type: 'scientist', amount: 1 },
 } as const;
 
+export const GRISTMILL: BuildingDef = {
+  id: 'gristmill',
+  name: 'Gristmill',
+  age: 'exploration',
+  cost: 130,
+  maintenance: 1,
+  yields: { food: 3, production: 1 },
+  effects: ['+10% food from farms'],
+  requiredTech: 'apprenticeship',
+  category: 'food',
+  growthRateBonus: 0.1,
+  happinessCost: 0,
+} as const;
+
+export const SAWMILL: BuildingDef = {
+  id: 'sawmill',
+  name: 'Sawmill',
+  age: 'exploration',
+  cost: 150,
+  maintenance: 1,
+  yields: { production: 3 },
+  effects: ['+1 Production from forests'],
+  requiredTech: 'apprenticeship',
+  category: 'military',
+  happinessCost: 2,
+} as const;
+
+export const STONECUTTER: BuildingDef = {
+  id: 'stonecutter',
+  name: 'Stonecutter',
+  age: 'exploration',
+  cost: 140,
+  maintenance: 1,
+  yields: { production: 2, gold: 1 },
+  effects: ['+1 Production from quarries'],
+  requiredTech: 'apprenticeship',
+  category: 'military',
+  happinessCost: 2,
+} as const;
+
+export const WHARF: BuildingDef = {
+  id: 'wharf',
+  name: 'Wharf',
+  age: 'exploration',
+  cost: 160,
+  maintenance: 1,
+  yields: { gold: 3, food: 1 },
+  effects: ['+1 trade route capacity'],
+  requiredTech: 'cartography',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
+export const INN: BuildingDef = {
+  id: 'inn',
+  name: 'Inn',
+  age: 'exploration',
+  cost: 120,
+  maintenance: 1,
+  yields: { gold: 2, culture: 1 },
+  effects: ['+1 Amenity', '+1 Housing'],
+  requiredTech: 'banking',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
+export const TEMPLE: BuildingDef = {
+  id: 'temple',
+  name: 'Temple',
+  age: 'exploration',
+  cost: 190,
+  maintenance: 2,
+  yields: { faith: 4, culture: 1 },
+  effects: ['+1 Relic slot'],
+  requiredTech: 'printing',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const MENAGERIE: BuildingDef = {
+  id: 'menagerie',
+  name: 'Menagerie',
+  age: 'exploration',
+  cost: 200,
+  maintenance: 2,
+  yields: { culture: 2 },
+  effects: ['+3 Amenities', '+1 Great Merchant point per turn'],
+  requiredTech: 'astronomy',
+  category: 'happiness',
+  happinessCost: 0,
+  greatPersonPoints: { type: 'merchant', amount: 1 },
+} as const;
+
+export const BAZAAR: BuildingDef = {
+  id: 'bazaar',
+  name: 'Bazaar',
+  age: 'exploration',
+  cost: 180,
+  maintenance: 2,
+  yields: { gold: 4 },
+  effects: ['+1 Luxury resource slot', '+2 Amenities'],
+  requiredTech: 'economics',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
+export const GUILDHALL: BuildingDef = {
+  id: 'guildhall',
+  name: 'Guildhall',
+  age: 'exploration',
+  cost: 220,
+  maintenance: 2,
+  yields: { gold: 2, production: 2 },
+  effects: ['+25% production toward buildings'],
+  requiredTech: 'education',
+  category: 'gold',
+  happinessCost: 2,
+} as const;
+
+export const DUNGEON: BuildingDef = {
+  id: 'dungeon',
+  name: 'Dungeon',
+  age: 'exploration',
+  cost: 170,
+  maintenance: 1,
+  yields: { production: 1 },
+  effects: ['+75 City Defense', '+1 spy capacity'],
+  requiredTech: 'military_tactics',
+  category: 'military',
+  happinessCost: 3,
+} as const;
+
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
   MARKET, WORKSHOP, MONASTERY, UNIVERSITY, OBSERVATORY,
   BANK, STOCK_EXCHANGE, BARRACKS, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
+  GRISTMILL, SAWMILL, STONECUTTER, WHARF, INN, TEMPLE, MENAGERIE, BAZAAR, GUILDHALL, DUNGEON,
   NOTRE_DAME, VENETIAN_ARSENAL, ALHAMBRA, TAJ_MAHAL, FORBIDDEN_CITY,
 ] as const;

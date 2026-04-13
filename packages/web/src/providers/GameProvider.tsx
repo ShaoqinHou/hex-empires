@@ -33,6 +33,7 @@ import {
   civicSystem,
   tradeSystem,
   specialistSystem,
+  governorSystem,
   serializeState,
   deserializeState,
   createGameConfig,
@@ -69,6 +70,7 @@ const engine = new GameEngine([
   updateDiplomacyCounters,
   specialistSystem,
   tradeSystem,
+  governorSystem,
   crisisSystem,
   victorySystem,
 ]);
@@ -89,13 +91,14 @@ for (const r of ALL_RESOURCES) {
 
 // ── Initial state factory ──
 
-function createInitialState(): GameState {
+function createInitialState(seed?: number): GameState {
+  const gameSeed = seed ?? Date.now();
   const { terrainRegistry } = createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES);
 
   const map = generateMap(
     terrainRegistry,
     createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES).featureRegistry,
-    { width: 60, height: 40, seed: Date.now(), waterRatio: 0.35, wrapX: false },
+    { width: 60, height: 40, seed: gameSeed, waterRatio: 0.35, wrapX: false },
   );
 
   const playerId = 'player1';
@@ -177,7 +180,7 @@ function createInitialState(): GameState {
     crises: [],
     victory: { winner: null, winType: null, progress: new Map() },
     log: [],
-    rng: { seed: Date.now(), counter: 0 },
+    rng: { seed: gameSeed, counter: 0 },
     config: createGameConfig(),
     lastValidation: null,
   };

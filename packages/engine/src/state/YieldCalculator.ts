@@ -2,6 +2,7 @@ import type { GameState, CityState, TownSpecialization } from '../types/GameStat
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 import { ALL_IMPROVEMENTS } from '../data/improvements';
+import { getYieldBonus } from '../systems/effectSystem';
 
 /** Calculate total yields for a city from its territory tiles */
 export function calculateCityYields(city: CityState, state: GameState): YieldSet {
@@ -58,6 +59,16 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     });
   }
 
+  // Civ/leader/legacy ability yield bonuses (MODIFY_YIELD with target: 'empire')
+  total = addYields(total, {
+    food: getYieldBonus(state, city.owner, 'food'),
+    production: getYieldBonus(state, city.owner, 'production'),
+    gold: getYieldBonus(state, city.owner, 'gold'),
+    science: getYieldBonus(state, city.owner, 'science'),
+    culture: getYieldBonus(state, city.owner, 'culture'),
+    faith: getYieldBonus(state, city.owner, 'faith'),
+  });
+
   return total;
 }
 
@@ -67,12 +78,16 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
  */
 export function getSpecializationYields(specialization: TownSpecialization): Partial<YieldSet> {
   switch (specialization) {
-    case 'farming_town':  return { food: 2 };
-    case 'mining_town':   return { production: 2 };
-    case 'trade_outpost': return { gold: 3 };
-    case 'growing_town':  return {}; // bonus is applied as growth threshold reduction
-    case 'fort_town':     return {}; // bonus is defense HP + healing, not yields
-    default:              return {};
+    case 'farming_town':   return { food: 2 };
+    case 'mining_town':    return { production: 2 };
+    case 'trade_outpost':  return { gold: 3 };
+    case 'growing_town':   return {}; // bonus is applied as growth threshold reduction
+    case 'fort_town':      return {}; // bonus is defense HP + healing, not yields
+    case 'religious_site': return { faith: 3 };
+    case 'hub_town':       return { gold: 2, production: 1 };
+    case 'urban_center':   return { food: 1, production: 1, gold: 1 };
+    case 'factory_town':   return { production: 3 };
+    default:               return {};
   }
 }
 

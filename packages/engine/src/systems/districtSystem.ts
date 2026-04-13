@@ -7,7 +7,7 @@
 
 import type { GameState, GameAction } from '../types/GameState';
 import type { DistrictSlot, DistrictDef } from '../types/District';
-import { coordToKey } from '../hex/HexMath';
+import { coordToKey, neighbors, distance } from '../hex/HexMath';
 
 /**
  * Generate deterministic district ID from state
@@ -290,5 +290,3 @@ function calculateAdjacencyBonus(
   return bonus;
 }
 
-// Import helper functions
-import { neighbors, distance } from '../hex/HexMath';

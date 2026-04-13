@@ -3,7 +3,6 @@ import { useGame } from '../providers/GameProvider';
 import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
-import { CombatPreviewPanel } from '../ui/components/CombatPreview';
 import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
 import { ImprovementPanel } from '../ui/components/ImprovementPanel';
 import { AnimationManager } from './AnimationManager';

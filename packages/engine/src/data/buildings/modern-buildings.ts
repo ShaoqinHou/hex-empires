@@ -1,4 +1,4 @@
-import type { BuildingDef } from './antiquity-buildings';
+import type { BuildingDef } from '../../types/Building';
 
 export const FACTORY: BuildingDef = {
   id: 'factory',
@@ -222,7 +222,143 @@ export const UN_HEDQUARTERS: BuildingDef = {
   greatPersonPoints: { type: 'diplomat', amount: 1 },
 } as const;
 
+export const MILITARY_ACADEMY: BuildingDef = {
+  id: 'military_academy',
+  name: 'Military Academy',
+  age: 'modern',
+  cost: 380,
+  maintenance: 3,
+  yields: { production: 2 },
+  effects: ['+30% military XP', '+1 Great General point per turn'],
+  requiredTech: 'combined_arms',
+  category: 'military',
+  happinessCost: 3,
+  greatPersonPoints: { type: 'general', amount: 1 },
+} as const;
+
+export const AERODROME: BuildingDef = {
+  id: 'aerodrome',
+  name: 'Aerodrome',
+  age: 'modern',
+  cost: 420,
+  maintenance: 3,
+  yields: { production: 3 },
+  effects: ['+25% air unit production speed', '+2 air unit slots'],
+  requiredTech: 'flight',
+  category: 'military',
+  happinessCost: 3,
+} as const;
+
+export const CITY_PARK: BuildingDef = {
+  id: 'city_park',
+  name: 'City Park',
+  age: 'modern',
+  cost: 280,
+  maintenance: 2,
+  yields: { culture: 3, food: 1 },
+  effects: ['+3 Amenities', '+10% growth rate'],
+  requiredTech: 'mass_consumption',
+  category: 'happiness',
+  growthRateBonus: 0.1,
+  happinessCost: 0,
+} as const;
+
+export const DEPARTMENT_STORE: BuildingDef = {
+  id: 'department_store',
+  name: 'Department Store',
+  age: 'modern',
+  cost: 320,
+  maintenance: 2,
+  yields: { gold: 6 },
+  effects: ['+2 Amenities', '+15% gold from trade routes'],
+  requiredTech: 'mass_consumption',
+  category: 'gold',
+  happinessCost: 2,
+} as const;
+
+export const RADIO_STATION: BuildingDef = {
+  id: 'radio_station',
+  name: 'Radio Station',
+  age: 'modern',
+  cost: 300,
+  maintenance: 2,
+  yields: { culture: 4 },
+  effects: ['+25% cultural influence range'],
+  requiredTech: 'mass_media',
+  category: 'culture',
+  happinessCost: 4,
+} as const;
+
+export const MUSEUM: BuildingDef = {
+  id: 'museum',
+  name: 'Museum',
+  age: 'modern',
+  cost: 360,
+  maintenance: 2,
+  yields: { culture: 5 },
+  effects: ['+2 Great Work slots', '+1 Great Artist point per turn'],
+  requiredTech: 'mass_media',
+  category: 'culture',
+  happinessCost: 2,
+  greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
+export const OPERA_HOUSE: BuildingDef = {
+  id: 'opera_house',
+  name: 'Opera House',
+  age: 'modern',
+  cost: 340,
+  maintenance: 2,
+  yields: { culture: 4, gold: 1 },
+  effects: ['+2 Amenities', '+1 Great Writer point per turn'],
+  requiredTech: 'electricity',
+  category: 'culture',
+  happinessCost: 2,
+  greatPersonPoints: { type: 'writer', amount: 1 },
+} as const;
+
+export const SCHOOLHOUSE: BuildingDef = {
+  id: 'schoolhouse',
+  name: 'Schoolhouse',
+  age: 'modern',
+  cost: 290,
+  maintenance: 2,
+  yields: { science: 4 },
+  effects: ['+15% science from campuses'],
+  requiredTech: 'scientific_theory',
+  category: 'science',
+  happinessCost: 4,
+} as const;
+
+export const RAIL_STATION: BuildingDef = {
+  id: 'rail_station',
+  name: 'Rail Station',
+  age: 'modern',
+  cost: 400,
+  maintenance: 3,
+  yields: { production: 3, gold: 2 },
+  effects: ['+1 trade route capacity', '+2 production from mines'],
+  requiredTech: 'steam_power',
+  category: 'gold',
+  happinessCost: 2,
+} as const;
+
+export const TENEMENT: BuildingDef = {
+  id: 'tenement',
+  name: 'Tenement',
+  age: 'modern',
+  cost: 250,
+  maintenance: 1,
+  yields: { housing: 4 },
+  effects: ['+20% growth rate'],
+  requiredTech: 'industrialization',
+  category: 'food',
+  growthRateBonus: 0.2,
+  happinessCost: 0,
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
+  MILITARY_ACADEMY, AERODROME, CITY_PARK, DEPARTMENT_STORE, RADIO_STATION, MUSEUM, OPERA_HOUSE, SCHOOLHOUSE, RAIL_STATION, TENEMENT,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
 ] as const;

@@ -3,6 +3,7 @@ import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
+import { getCombatBonus } from './effectSystem';
 
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
@@ -180,7 +181,11 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? base * 0.15 : 0;
   // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
-  return base * healthModifier + flankingBonus + firstStrikeBonus - riverPenalty - warSupportPenalty;
+  // Civ/leader/legacy combat bonuses (MODIFY_COMBAT effects)
+  const unitDef = state.config.units.get(unit.typeId);
+  const category = unitDef?.category ?? 'melee';
+  const effectBonus = getCombatBonus(state, unit.owner, category);
+  return base * healthModifier + flankingBonus + firstStrikeBonus + effectBonus - riverPenalty - warSupportPenalty;
 }
 
 /**

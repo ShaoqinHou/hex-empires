@@ -23,9 +23,12 @@ export function createTestState(overrides: Partial<GameState> = {}): GameState {
     },
     units: new Map(),
     cities: new Map(),
+    districts: new Map(),
+    governors: new Map(),
     tradeRoutes: new Map(),
     diplomacy: { relations: new Map() },
     age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    builtWonders: [],
     crises: [],
     victory: { winner: null, winType: null, progress: new Map() },
     log: [],
@@ -72,6 +75,7 @@ export function createTestPlayer(overrides: Partial<PlayerState> = {}): PlayerSt
     masteredCivics: [],
     currentCivicMastery: null,
     civicMasteryProgress: 0,
+    governors: [],
     ...overrides,
   };
 }

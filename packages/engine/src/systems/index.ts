@@ -14,8 +14,9 @@ export { diplomacySystem, updateDiplomacyCounters, getStatusFromRelationship, ge
 export { fortifySystem } from './fortifySystem';
 export { generateAIActions } from './aiSystem';
 export { victorySystem } from './victorySystem';
-export { effectSystem, getActiveEffects } from './effectSystem';
+export { effectSystem, getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from './effectSystem';
 export { visibilitySystem } from './visibilitySystem';
 export { crisisSystem } from './crisisSystem';
 export { civicSystem } from './civicSystem';
 export { tradeSystem } from './tradeSystem';
+export { governorSystem } from './governorSystem';

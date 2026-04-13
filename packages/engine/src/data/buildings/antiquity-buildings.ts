@@ -1,24 +1,5 @@
-import type { YieldSet } from '../../types/Yields';
-
-export interface BuildingDef {
-  readonly id: string;
-  readonly name: string;
-  readonly age: 'antiquity' | 'exploration' | 'modern';
-  readonly cost: number;          // production cost
-  readonly maintenance: number;   // gold per turn
-  readonly yields: Partial<YieldSet>;
-  readonly effects: ReadonlyArray<string>; // effect descriptions
-  readonly requiredTech: string | null;
-  readonly growthRateBonus?: number; // 0-1 fraction; reduces growth threshold (e.g. 0.1 = -10% threshold)
-  /** Building category for maintenance cost grouping */
-  readonly category?: 'warehouse' | 'science' | 'culture' | 'gold' | 'happiness' | 'military' | 'food' | 'wonder';
-  /** Happiness maintenance cost per turn (default 0). Science/culture/military buildings cost 2-4 by age. */
-  readonly happinessCost?: number;
-  /** Whether this is a world wonder (only one can be built per game) */
-  readonly isWonder?: boolean;
-  /** Great person points generated per turn */
-  readonly greatPersonPoints?: { type: string; amount: number };
-}
+export type { BuildingDef } from '../../types/Building';
+import type { BuildingDef } from '../../types/Building';
 
 export const GRANARY: BuildingDef = {
   id: 'granary',
@@ -229,8 +210,116 @@ export const ORACLE: BuildingDef = {
   greatPersonPoints: { type: 'writer', amount: 1 },
 } as const;
 
+export const BATH: BuildingDef = {
+  id: 'bath',
+  name: 'Bath',
+  age: 'antiquity',
+  cost: 90,
+  maintenance: 1,
+  yields: { housing: 2 },
+  effects: ['+2 Amenities', '+10% Growth Rate'],
+  requiredTech: 'construction',
+  category: 'happiness',
+  growthRateBonus: 0.1,
+  happinessCost: 0,
+} as const;
+
+export const ARENA: BuildingDef = {
+  id: 'arena',
+  name: 'Arena',
+  age: 'antiquity',
+  cost: 110,
+  maintenance: 1,
+  yields: { culture: 1 },
+  effects: ['+3 Amenities'],
+  requiredTech: 'construction',
+  category: 'happiness',
+  happinessCost: 0,
+} as const;
+
+export const ALTAR: BuildingDef = {
+  id: 'altar',
+  name: 'Altar',
+  age: 'antiquity',
+  cost: 80,
+  maintenance: 1,
+  yields: { faith: 3 },
+  effects: ['+1 Amenity from faith'],
+  requiredTech: 'astrology',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const VILLA: BuildingDef = {
+  id: 'villa',
+  name: 'Villa',
+  age: 'antiquity',
+  cost: 100,
+  maintenance: 1,
+  yields: { gold: 2, culture: 1 },
+  effects: ['+1 Housing'],
+  requiredTech: 'currency',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
+export const AMPHITHEATRE: BuildingDef = {
+  id: 'amphitheatre',
+  name: 'Amphitheatre',
+  age: 'antiquity',
+  cost: 120,
+  maintenance: 1,
+  yields: { culture: 3 },
+  effects: ['+2 Amenities', '+1 Great Writer slot'],
+  requiredTech: 'writing',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const GARDEN: BuildingDef = {
+  id: 'garden',
+  name: 'Garden',
+  age: 'antiquity',
+  cost: 80,
+  maintenance: 1,
+  yields: { food: 1, culture: 1 },
+  effects: ['+15% great person generation'],
+  requiredTech: 'irrigation',
+  category: 'culture',
+  growthRateBonus: 0.05,
+  happinessCost: 0,
+} as const;
+
+export const BLACKSMITH: BuildingDef = {
+  id: 'blacksmith',
+  name: 'Blacksmith',
+  age: 'antiquity',
+  cost: 95,
+  maintenance: 1,
+  yields: { production: 2 },
+  effects: ['+10% unit production speed'],
+  requiredTech: 'iron_working',
+  category: 'military',
+  happinessCost: 2,
+} as const;
+
+export const AQUEDUCT: BuildingDef = {
+  id: 'aqueduct',
+  name: 'Aqueduct',
+  age: 'antiquity',
+  cost: 75,
+  maintenance: 0,
+  yields: { housing: 3 },
+  effects: ['+20% Growth Rate'],
+  requiredTech: 'construction',
+  category: 'food',
+  growthRateBonus: 0.2,
+  happinessCost: 0,
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
+  BATH, ARENA, ALTAR, VILLA, AMPHITHEATRE, GARDEN, BLACKSMITH, AQUEDUCT,
   PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
 ] as const;

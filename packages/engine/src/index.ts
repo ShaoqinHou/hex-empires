@@ -55,6 +55,7 @@ export type {
   ValidationResult,
 } from './types';
 export type { DistrictDef, DistrictSlot, DistrictType, AdjacencyResult } from './types/District';
+export type { Governor, GovernorDef, GovernorAbility, GovernorTitle, GovernorSpecialization } from './types/Governor';
 export { EMPTY_YIELDS, addYields } from './types';
 
 // Hex math
@@ -116,12 +117,16 @@ export { buildingPlacementSystem } from './systems/buildingPlacementSystem';
 export { districtSystem } from './systems/districtSystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem } from './systems/victorySystem';
-export { effectSystem, getActiveEffects } from './systems/effectSystem';
+export { effectSystem, getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
 export { crisisSystem } from './systems/crisisSystem';
 export { civicSystem } from './systems/civicSystem';
 export { tradeSystem } from './systems/tradeSystem';
 export { specialistSystem } from './systems/specialistSystem';
+export { governorSystem } from './systems/governorSystem';
+
+// Governor data
+export { ALL_GOVERNORS } from './data/governors';
 
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';

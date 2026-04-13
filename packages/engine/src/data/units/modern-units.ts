@@ -1,4 +1,4 @@
-import type { UnitDef } from './antiquity-units';
+import type { UnitDef } from '../../types/Unit';
 
 export const INFANTRY: UnitDef = {
   id: 'infantry',
