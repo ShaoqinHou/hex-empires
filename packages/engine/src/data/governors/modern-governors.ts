@@ -11,13 +11,13 @@ const ability = (
   name: string,
   description: string,
   requiredLevel: number,
-  effect: { type: string; value?: number; yieldType?: string },
+  effect: GovernorAbility['effect'],
 ): GovernorAbility => ({
   id,
   name,
   description,
   requiredLevel,
-  effect: effect as any,
+  effect,
 });
 
 /**

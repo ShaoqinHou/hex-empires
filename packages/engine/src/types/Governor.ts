@@ -40,7 +40,7 @@ export interface GovernorAbility {
   readonly effect: {
     readonly type: 'yield_bonus' | 'production_bonus' | 'combat_bonus' | 'growth_bonus' | 'happiness_bonus' | 'special';
     readonly value?: number;
-    readonly yieldType?: 'food' | 'production' | 'gold' | 'science' | 'culture' | 'faith';
+    readonly yieldType?: 'food' | 'production' | 'gold' | 'science' | 'culture' | 'faith' | 'influence';
   };
 }
 
