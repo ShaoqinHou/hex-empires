@@ -32,6 +32,7 @@ const SECTIONS: Section[] = [
       { key: 'Y', label: 'Toggle yield overlay' },
       { key: 'F', label: 'Fortify selected unit' },
       { key: 'B', label: 'Found city (with Settler selected)' },
+      { key: 'U', label: 'Upgrade selected unit (if tech + gold available)' },
       { key: 'H', label: 'Open / close this help panel' },
       { key: 'Escape', label: 'Deselect unit / close panel' },
     ],
