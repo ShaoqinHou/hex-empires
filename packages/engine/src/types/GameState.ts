@@ -5,6 +5,7 @@ import type { YieldSet, YieldType } from './Yields';
 import type { TerrainId, FeatureId } from './Terrain';
 import type { DistrictSlot } from './District';
 import type { Governor } from './Governor';
+import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
 
 // ── Turn ──
 
@@ -81,6 +82,22 @@ export interface CityState {
   readonly specialization: TownSpecialization | null; // towns only, requires pop >= 7
   readonly specialists: number;    // population assigned as specialists (each: +2 sci, +2 culture, -1 happiness)
   readonly districts: ReadonlyArray<DistrictId>; // IDs of districts this city has constructed
+
+  /**
+   * ── Districts Overhaul (Cycle B) — optional spatial state ──
+   *
+   * Parallel-namespace fields wired in as OPTIONAL so existing CityState
+   * construction (engine, web, tests, save files) keeps compiling and
+   * behaving unchanged. Cycle C will start populating these via the
+   * forthcoming `PLACE_URBAN_BUILDING` action; legacy systems read the
+   * pre-existing `buildings`/`districts` fields when these are absent.
+   *
+   * See `.claude/workflow/design/districts-overhaul.md` for the rollout plan
+   * and `types/DistrictOverhaul.ts` for the V2 type definitions.
+   */
+  readonly urbanTiles?: ReadonlyMap<HexKey, UrbanTileV2>;
+  readonly ruralAssignments?: ReadonlyMap<HexKey, RuralTileV2>;
+  readonly quarters?: ReadonlyArray<QuarterV2>;
 }
 
 export interface ProductionItem {
