@@ -1,5 +1,5 @@
 import type { GameState, GameAction, CityState } from '../types/GameState';
-import { calculateCityYields } from '../state/YieldCalculator';
+import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey } from '../hex/HexMath';
 
 /** Number of free settlements before happiness penalty applies (Civ VII: 4) */
@@ -168,7 +168,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     for (const city of state.cities.values()) {
       if (city.owner !== playerId) continue;
       cityCount++;
-      const yields = calculateCityYields(city, state);
+      const yields = calculateCityYieldsWithAdjacency(city, state);
 
       // Update happiness for this city
       const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
