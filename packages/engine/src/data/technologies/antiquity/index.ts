@@ -165,8 +165,53 @@ export const MATHEMATICS: TechnologyDef = {
   treePosition: { row: 0, col: 4 },
 };
 
+export const AGRICULTURE: TechnologyDef = {
+  id: 'agriculture',
+  name: 'Agriculture',
+  age: 'antiquity',
+  cost: 25,
+  prerequisites: [],
+  unlocks: [],
+  description: 'Enables farms and sustainable food production (rulebook §9.4 Depth 1)',
+  treePosition: { row: 0, col: -1 },
+};
+
+export const ENGINEERING: TechnologyDef = {
+  id: 'engineering',
+  name: 'Engineering',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['masonry'],
+  unlocks: ['amphitheatre'],
+  description: 'Enables Amphitheatre and Ancient Bridge (rulebook §9.4 Depth 5)',
+  treePosition: { row: 3, col: 3 },
+};
+
+export const MILITARY_TRAINING: TechnologyDef = {
+  id: 'military_training',
+  name: 'Military Training',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['bronze_working'],
+  unlocks: ['arena'],
+  description: 'Enables Arena, unlocking Flanking promotions (rulebook §9.4 Depth 5)',
+  treePosition: { row: 2, col: 3 },
+};
+
+export const NAVIGATION: TechnologyDef = {
+  id: 'navigation',
+  name: 'Navigation',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['sailing'],
+  unlocks: [],
+  description: 'Advanced seafaring: Lighthouse and Quadrireme (rulebook §9.4 Depth 5)',
+  treePosition: { row: 4, col: 3 },
+};
+
 export const ALL_ANTIQUITY_TECHS: ReadonlyArray<TechnologyDef> = [
   POTTERY, ANIMAL_HUSBANDRY, MINING, SAILING, ASTROLOGY,
   ARCHERY, WRITING, MASONRY, BRONZE_WORKING, WHEEL,
   IRRIGATION, CURRENCY, CONSTRUCTION, IRON_WORKING, MATHEMATICS,
+  AGRICULTURE, ENGINEERING, MILITARY_TRAINING, NAVIGATION,
 ];
