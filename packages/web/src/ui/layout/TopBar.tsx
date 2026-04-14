@@ -22,6 +22,14 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  const handleSave = () => {
+    saveGame();
+    setSaveToast('Game saved');
+    setTimeout(() => setSaveToast(null), 2000);
+    setShowMoreMenu(false);
+  };
   const player = state.players.get(state.currentPlayerId);
 
   const currentResearchTech: TechnologyDef | undefined = player?.currentResearch
@@ -106,7 +114,7 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
               <MenuButton label="📊 Summary" onClick={() => { onOpenTurnSummary?.(); setShowMoreMenu(false); }} />
               <MenuButton label="🏆 Victory" onClick={() => { setShowVictoryProgress(true); setShowMoreMenu(false); }} />
               <div className="h-px my-1" style={{ backgroundColor: 'var(--color-border)' }} />
-              <MenuButton label="💾 Save" onClick={() => { saveGame(); setShowMoreMenu(false); }} />
+              <MenuButton label="💾 Save" onClick={handleSave} />
               <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
               <MenuButton label="🔊 Audio" onClick={() => { setShowAudioSettings(true); setShowMoreMenu(false); }} />
               <MenuButton label="❓ Help (H)" onClick={() => { onOpenHelp?.(); setShowMoreMenu(false); }} />
@@ -132,6 +140,21 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           )}
         </button>
       </div>
+
+      {/* Save toast */}
+      {saveToast && (
+        <div
+          className="absolute top-14 right-4 px-4 py-2 rounded-lg z-50"
+          style={{
+            backgroundColor: '#22c55e',
+            color: '#fff',
+            boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
+            animation: 'fadeInOut 2s ease-out',
+          }}
+        >
+          {saveToast}
+        </div>
+      )}
 
       {/* Floating panels */}
       {showAudioSettings && (

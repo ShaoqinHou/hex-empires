@@ -5,6 +5,7 @@ import type { HexCoord } from '../types/HexCoord';
 import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
+import { PROMOTION_THRESHOLDS } from '../data/units/promotions';
 
 /** Diplomacy helpers (mirrored locally to avoid cross-system imports) */
 function aiRelationKey(a: string, b: string): string {
@@ -377,6 +378,105 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       projectedGold -= upgradeCost;
     }
   }
+
+  // 6. Unit promotions — promote units that have earned enough XP
+  for (const unit of ourUnits) {
+    // Only promote if unit has reached tier-1 threshold and has no promotions yet
+    if (unit.experience < PROMOTION_THRESHOLDS[1]) continue;
+    if (unit.promotions.length > 0) continue;
+
+    const unitDef = state.config.units.get(unit.typeId);
+    if (!unitDef || unitDef.category === 'civilian') continue;
+
+    // Find a valid tier-1 promotion for this unit's category
+    let chosenPromotion: string | null = null;
+    for (const [promoId, promoDef] of state.config.promotions) {
+      if (promoDef.tier !== 1) continue;
+      if (promoDef.category !== 'all' && promoDef.category !== unitDef.category) continue;
+      chosenPromotion = promoId;
+      break;
+    }
+
+    if (chosenPromotion) {
+      actions.push({ type: 'PROMOTE_UNIT', unitId: unit.id, promotionId: chosenPromotion });
+    }
+  }
+
+  // 7. Trade routes — move merchants toward foreign cities; create route when adjacent
+  const merchantUnits = ourUnits.filter(u => {
+    const def = state.config.units.get(u.typeId);
+    return def?.abilities.includes('create_trade_route');
+  });
+
+  for (const merchant of merchantUnits) {
+    // Find visible foreign cities to trade with
+    let nearestForeignCity: CityState | null = null;
+    let nearestDist = Infinity;
+
+    for (const city of state.cities.values()) {
+      if (city.owner === player.id) continue;
+      if (!canSee(visibility, city.position)) continue;
+      const d = distance(merchant.position, city.position);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestForeignCity = city;
+      }
+    }
+
+    if (!nearestForeignCity) continue;
+
+    if (nearestDist <= 1) {
+      // Adjacent to (or on) target city — create the trade route
+      actions.push({ type: 'CREATE_TRADE_ROUTE', merchantId: merchant.id, targetCityId: nearestForeignCity.id });
+    } else {
+      // Move toward the foreign city
+      const step = getOneStepToward(merchant.position, nearestForeignCity.position, state);
+      if (step && merchant.movementLeft > 0) {
+        actions.push({ type: 'MOVE_UNIT', unitId: merchant.id, path: [step] });
+      }
+    }
+  }
+
+  // 8. Tech mastery — master a researched tech when not currently mastering anything
+  if (!player.currentMastery) {
+    // Find the cheapest masterable tech (researched but not yet mastered)
+    let bestMasteryTech: string | null = null;
+    let bestMasteryCost = Infinity;
+    for (const techId of player.researchedTechs) {
+      if (player.masteredTechs.includes(techId)) continue;
+      const techDef = state.config.technologies.get(techId);
+      if (!techDef) continue;
+      const masteryCost = Math.ceil(techDef.cost * 0.8);
+      if (masteryCost < bestMasteryCost) {
+        bestMasteryCost = masteryCost;
+        bestMasteryTech = techId;
+      }
+    }
+    if (bestMasteryTech) {
+      actions.push({ type: 'SET_MASTERY', techId: bestMasteryTech });
+    }
+  }
+
+  // 8b. Civic mastery — master a researched civic when not currently mastering anything
+  if (!player.currentCivicMastery) {
+    let bestMasteryCivic: string | null = null;
+    let bestMasteryCivicCost = Infinity;
+    for (const civicId of player.researchedCivics) {
+      if (player.masteredCivics.includes(civicId)) continue;
+      const civicDef = state.config.civics.get(civicId);
+      if (!civicDef) continue;
+      const masteryCost = Math.ceil(civicDef.cost * 0.8);
+      if (masteryCost < bestMasteryCivicCost) {
+        bestMasteryCivicCost = masteryCost;
+        bestMasteryCivic = civicId;
+      }
+    }
+    if (bestMasteryCivic) {
+      actions.push({ type: 'SET_CIVIC_MASTERY', civicId: bestMasteryCivic });
+    }
+  }
+
+  // TODO: PURCHASE_TILE — AI territorial expansion is complex to prioritize correctly
 
   actions.push({ type: 'END_TURN' });
   return actions;
