@@ -1,4 +1,6 @@
-import type { GameState, GameAction, VictoryProgress, VictoryType } from '../types/GameState';
+import type { GameState, GameAction, VictoryProgress, VictoryType, VictoryLegacyProgressEntry } from '../types/GameState';
+import type { PlayerId } from '../types/Ids';
+import { scoreLegacyPaths } from '../state/LegacyPaths';
 
 /**
  * VictorySystem checks win conditions at the end of each turn.
@@ -24,6 +26,16 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
 
   const progress = new Map<string, ReadonlyArray<VictoryProgress>>();
 
+  // M18: Recompute LegacyPath progress for every player. The scoring is
+  // pure and independent of victory detection — we always compute it on
+  // a victory-check tick, even if a player wins this turn, so UI panels
+  // always see a fresh snapshot. This is pure enrichment; the existing
+  // seven-path victory detection below is unchanged.
+  const legacyProgress = new Map<PlayerId, ReadonlyArray<VictoryLegacyProgressEntry>>();
+  for (const pid of state.players.keys()) {
+    legacyProgress.set(pid, scoreLegacyPaths(pid, state));
+  }
+
   for (const [playerId, player] of state.players) {
     const playerProgress: VictoryProgress[] = [
       checkDomination(state, playerId),
@@ -46,6 +58,7 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
           winner: playerId,
           winType: won.type,
           progress,
+          legacyProgress,
         },
         log: [...state.log, {
           turn: state.turn,
@@ -57,7 +70,7 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
     }
   }
 
-  return { ...state, victory: { ...state.victory, progress } };
+  return { ...state, victory: { ...state.victory, progress, legacyProgress } };
 }
 
 function checkDomination(state: GameState, playerId: string): VictoryProgress {

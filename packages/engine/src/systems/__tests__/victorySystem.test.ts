@@ -11,6 +11,7 @@ function makeCity(id: string, owner: string, position = { q: 0, r: 0 }): CitySta
     buildings: [], territory: [coordToKey(position)],
     settlementType: 'city', happiness: 10, isCapital: false, defenseHP: 100,
     specialization: null, specialists: 0,
+    districts: [],
   };
 }
 
@@ -260,5 +261,115 @@ describe('victorySystem', () => {
     });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBe('p1');
+  });
+
+  // ── M18: LegacyPath progress enrichment ─────────────────────────────────
+  describe('legacyProgress enrichment (M18)', () => {
+    it('attaches legacyProgress after END_TURN recomputation', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      // Give each player a city so domination does not trigger
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.legacyProgress).toBeDefined();
+      expect(next.victory.legacyProgress!.size).toBe(2);
+      expect(next.victory.legacyProgress!.has('p1')).toBe(true);
+      expect(next.victory.legacyProgress!.has('p2')).toBe(true);
+    });
+
+    it('each player has 12 legacy progress entries (4 axes × 3 ages)', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      const p1Entries = next.victory.legacyProgress!.get('p1')!;
+      const p2Entries = next.victory.legacyProgress!.get('p2')!;
+      expect(p1Entries.length).toBe(12);
+      expect(p2Entries.length).toBe(12);
+
+      // Confirm the shape: every axis/age combo present exactly once
+      const axes = ['science', 'culture', 'military', 'economic'] as const;
+      const ages = ['antiquity', 'exploration', 'modern'] as const;
+      for (const axis of axes) {
+        for (const age of ages) {
+          const match = p1Entries.filter(e => e.axis === axis && e.age === age);
+          expect(match.length).toBe(1);
+        }
+      }
+    });
+
+    it('fresh player (0 techs, 0 kills, 0 gold, 0 wonders) has tiersCompleted === 0 on every path', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      const entries = next.victory.legacyProgress!.get('p1')!;
+      for (const entry of entries) {
+        expect(entry.tiersCompleted).toBe(0);
+      }
+    });
+
+    it('player with 4+ researched techs has tiersCompleted >= 1 on Antiquity Science axis', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          researchedTechs: ['pottery', 'writing', 'bronze_working', 'mining'],
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      const entries = next.victory.legacyProgress!.get('p1')!;
+      const antiquityScience = entries.find(e => e.axis === 'science' && e.age === 'antiquity')!;
+      expect(antiquityScience.tiersCompleted).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not recompute legacyProgress on non-END_TURN actions', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+      ]);
+      const state = createTestState({ players, currentPlayerId: 'p1' });
+      const next = victorySystem(state, { type: 'START_TURN' });
+      // Non-END_TURN returns state unchanged — legacyProgress remains unset
+      expect(next).toBe(state);
+      expect(next.victory.legacyProgress).toBeUndefined();
+    });
+
+    it('does not recompute legacyProgress when winner already set', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const state = createTestState({
+        players,
+        currentPlayerId: 'p2',
+        victory: { winner: 'p1', winType: 'domination', progress: new Map() },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      // Existing-winner early-return path: legacyProgress must remain unset
+      expect(next.victory.legacyProgress).toBeUndefined();
+    });
   });
 });

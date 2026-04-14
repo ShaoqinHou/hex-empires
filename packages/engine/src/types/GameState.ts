@@ -244,10 +244,38 @@ export interface VictoryProgress {
   readonly achieved: boolean;
 }
 
+/**
+ * Per-player Legacy Path progress, structurally compatible with
+ * `LegacyProgress` exported from `state/LegacyPaths.ts`. Declared
+ * structurally here (rather than imported) so that `types/` does not
+ * reverse-depend on `state/` (LegacyPaths already imports GameState from
+ * types/, which would otherwise create an import cycle).
+ */
+export interface VictoryLegacyProgressEntry {
+  readonly axis: 'science' | 'culture' | 'military' | 'economic';
+  readonly age: 'antiquity' | 'exploration' | 'modern';
+  readonly tiersCompleted: 0 | 1 | 2 | 3;
+}
+
 export interface VictoryState {
   readonly winner: PlayerId | null;
   readonly winType: VictoryType | null;
   readonly progress: ReadonlyMap<PlayerId, ReadonlyArray<VictoryProgress>>;
+
+  /**
+   * ── M18: Legacy Path progress (optional) ──
+   *
+   * Populated by `victorySystem` at the end of every END_TURN tick that
+   * runs victory checks (i.e. when the last player ends their turn).
+   * Maps each player id to a 12-entry array (4 axes × 3 ages) describing
+   * how many tiers of each legacy path that player has completed.
+   *
+   * Optional so pre-M18 saves migrate as `undefined` and existing
+   * VictoryState construction (tests, save files, other systems) keeps
+   * compiling unchanged. Consumers (UI) should treat `undefined` as
+   * "no data yet — wait for the next END_TURN recomputation."
+   */
+  readonly legacyProgress?: ReadonlyMap<PlayerId, ReadonlyArray<VictoryLegacyProgressEntry>>;
 }
 
 // ── Trade Routes ──
