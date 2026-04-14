@@ -12,8 +12,8 @@ export interface GameSetupConfig {
 }
 
 // AI civilization/leader pool (different from player defaults)
-const AI_CIVS = ['greece', 'egypt', 'persia', 'india', 'china'];
-const AI_LEADERS = ['pericles', 'cleopatra', 'cyrus', 'gandhi', 'qin_shi_huang'];
+const AI_CIVS = ['greece', 'egypt', 'persia', 'india', 'china', 'rome'];
+const AI_LEADERS = ['pericles', 'cleopatra', 'cyrus', 'gandhi', 'qin_shi_huang', 'alexander', 'hatshepsut', 'genghis_khan', 'augustus'];
 
 export function createInitialState(config: GameSetupConfig, seed?: number): GameState {
   const gameSeed = seed ?? Date.now();
