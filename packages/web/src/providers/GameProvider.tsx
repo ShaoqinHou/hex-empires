@@ -428,6 +428,37 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               200
             );
             animationManager.add(flashAnim);
+
+            // Floating damage number on target — compute delta from prev→next health.
+            // If the target died (removed from next), use the full previous health as damage.
+            const nextTarget = next.units.get(action.targetId);
+            const dealtToTarget = nextTarget
+              ? Math.max(0, target.health - nextTarget.health)
+              : target.health;
+            if (dealtToTarget > 0) {
+              animationManager.add(
+                animationManager.createFloatingDamageAnimation(
+                  action.targetId,
+                  target.position,
+                  dealtToTarget,
+                ),
+              );
+            }
+            // Melee combat also damages the attacker (retaliation). Surface that too.
+            const prevAttacker = prev.units.get(action.attackerId);
+            const nextAttacker = next.units.get(action.attackerId);
+            if (prevAttacker && nextAttacker) {
+              const dealtToAttacker = Math.max(0, prevAttacker.health - nextAttacker.health);
+              if (dealtToAttacker > 0) {
+                animationManager.add(
+                  animationManager.createFloatingDamageAnimation(
+                    action.attackerId,
+                    prevAttacker.position,
+                    dealtToAttacker,
+                  ),
+                );
+              }
+            }
           }
 
           // Check if target unit died
@@ -450,6 +481,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         case 'ATTACK_CITY': {
           const attacker = next.units.get(action.attackerId);
           const city = next.cities.get(action.cityId);
+          const prevCity = prev.cities.get(action.cityId);
 
           if (attacker && city) {
             // City attack animation
@@ -460,6 +492,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               300
             );
             animationManager.add(cityAnim);
+
+            // Floating damage number on the city using defenseHP delta.
+            if (prevCity) {
+              const dealt = Math.max(0, prevCity.defenseHP - city.defenseHP);
+              if (dealt > 0) {
+                animationManager.add(
+                  animationManager.createFloatingDamageAnimation(
+                    action.cityId,
+                    city.position,
+                    dealt,
+                  ),
+                );
+              }
+            }
           }
           break;
         }
