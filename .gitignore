@@ -24,3 +24,4 @@ test-results/
 packages/web/test-results/
 packages/web/e2e/screenshot-*.png
 .claude/scheduled_tasks.lock
+packages/web/e2e/visual-snapshot*.png
