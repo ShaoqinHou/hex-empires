@@ -172,20 +172,20 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
 /** Get base combat strength, reduced by health using discrete -1 CS per 10 HP lost */
 function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord, attackerTile?: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  // B7: Discrete HP degradation — for every 10 HP lost, -1 CS (e.g. 90 HP = 0.9x, 50 HP = 0.5x)
-  const healthModifier = Math.floor(unit.health / 10) / 10;
+  // B7: Discrete HP degradation — rulebook §6.3: "For every 10 HP lost, -1 CS" (flat subtraction, not multiplier)
+  const healthPenalty = Math.floor((100 - unit.health) / 10);
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
-  // B1: River penalty applies to ATTACKER crossing a river (not the defender)
-  const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? base * 0.15 : 0;
+  // B1: River penalty applies to ATTACKER attacking from a river tile (rulebook §6.4: -2 CS flat)
+  const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? 2 : 0;
   // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
   // Civ/leader/legacy combat bonuses (MODIFY_COMBAT effects)
   const unitDef = state.config.units.get(unit.typeId);
   const category = unitDef?.category ?? 'melee';
   const effectBonus = getCombatBonus(state, unit.owner, category);
-  return base * healthModifier + flankingBonus + firstStrikeBonus + effectBonus - riverPenalty - warSupportPenalty;
+  return base - healthPenalty + flankingBonus + firstStrikeBonus + effectBonus - riverPenalty - warSupportPenalty;
 }
 
 /**
@@ -225,9 +225,9 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
 /** Get effective defense strength with terrain and fortification bonuses */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  // B7: Discrete HP degradation — for every 10 HP lost, -1 CS
-  const healthModifier = Math.floor(unit.health / 10) / 10;
-  let strength = base * healthModifier;
+  // B7: Discrete HP degradation — rulebook §6.3: "For every 10 HP lost, -1 CS" (flat subtraction, not multiplier)
+  const healthPenalty = Math.floor((100 - unit.health) / 10);
+  let strength = base - healthPenalty;
 
   // Terrain defense bonus
   if (tile) {
