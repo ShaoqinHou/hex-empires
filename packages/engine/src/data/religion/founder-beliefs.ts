@@ -98,6 +98,33 @@ export const SCRIPTORIUM: FounderBeliefDef = {
   faithCost: 120,
 };
 
+export const CRUSADE: FounderBeliefDef = {
+  id: 'crusade',
+  name: 'Crusade',
+  description:
+    'The faithful muster for holy war under banner and chant. Melee units of your empire strike with greater strength against the heretic and the infidel alike.',
+  bonus: { type: 'MODIFY_COMBAT', target: 'melee', value: 3 },
+  faithCost: 110,
+};
+
+export const MISSIONARY_ZEAL: FounderBeliefDef = {
+  id: 'missionary_zeal',
+  name: 'Missionary Zeal',
+  description:
+    'Preachers and mendicants range tirelessly across the known world. Empire-wide religious output rises as your envoys carry the creed to every crossroads and caravanserai.',
+  bonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 },
+  faithCost: 100,
+};
+
+export const DEFENDER_OF_THE_FAITH: FounderBeliefDef = {
+  id: 'defender_of_the_faith',
+  name: 'Defender of the Faith',
+  description:
+    'Religious orders stand sentinel at every frontier. Ranged troops of your empire enjoy greater marksmanship in every skirmish, reprisal, and holy defence.',
+  bonus: { type: 'MODIFY_COMBAT', target: 'ranged', value: 3 },
+  faithCost: 110,
+};
+
 /**
  * Full catalogue of founder beliefs. Not yet registered in the engine
  * index; consumed by the Religion system wiring cycle.
@@ -110,4 +137,7 @@ export const ALL_FOUNDER_BELIEFS: ReadonlyArray<FounderBeliefDef> = [
   PILGRIMAGE,
   STEWARDSHIP,
   SCRIPTORIUM,
+  CRUSADE,
+  MISSIONARY_ZEAL,
+  DEFENDER_OF_THE_FAITH,
 ];

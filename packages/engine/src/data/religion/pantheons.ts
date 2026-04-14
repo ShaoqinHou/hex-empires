@@ -111,6 +111,51 @@ export const GODDESS_OF_THE_HUNT: PantheonDef = {
   faithCost: 25,
 };
 
+export const GOD_OF_THE_DEAD: PantheonDef = {
+  id: 'god_of_the_dead',
+  name: 'God of the Dead',
+  description:
+    'Funerary priests tend the memory of the ancestors in every populous city, and the devotion of mourners feeds a steady Faith yield across the empire.',
+  bonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 1 },
+  faithCost: 30,
+};
+
+export const GODDESS_OF_LOVE: PantheonDef = {
+  id: 'goddess_of_love',
+  name: 'Goddess of Love',
+  description:
+    'Household shrines to the patron of marriage and family pacify civic life. Every city gains a trickle of Happiness in the form of additional Culture.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
+  faithCost: 25,
+};
+
+export const GOD_OF_WRITING: PantheonDef = {
+  id: 'god_of_writing',
+  name: 'God of Writing',
+  description:
+    'Scribes consecrate every tablet, scroll, and monument under the patron of letters. The empire-wide Science yield rises as records and inscriptions multiply.',
+  bonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 },
+  faithCost: 30,
+};
+
+export const GODDESS_OF_THE_DAWN: PantheonDef = {
+  id: 'goddess_of_the_dawn',
+  name: 'Goddess of the Dawn',
+  description:
+    'Daybreak rites gather the city before every shrine. Each settlement in the empire gains additional Culture from morning processions and hymns.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
+  faithCost: 25,
+};
+
+export const GODDESS_OF_THE_WILD: PantheonDef = {
+  id: 'goddess_of_the_wild',
+  name: 'Goddess of the Wild',
+  description:
+    'Groves, clearings, and canopies are held sacred. Forested hinterlands feed the empire, adding Food to every city that shelters beneath them.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 1 },
+  faithCost: 25,
+};
+
 /**
  * Full catalogue of pantheons. Not yet registered in the engine index —
  * the Religion system wiring cycle will consume this barrel.
@@ -127,4 +172,9 @@ export const ALL_PANTHEONS: ReadonlyArray<PantheonDef> = [
   GODDESS_OF_WISDOM,
   GOD_OF_STORMS,
   GODDESS_OF_THE_HUNT,
+  GOD_OF_THE_DEAD,
+  GODDESS_OF_LOVE,
+  GOD_OF_WRITING,
+  GODDESS_OF_THE_DAWN,
+  GODDESS_OF_THE_WILD,
 ];

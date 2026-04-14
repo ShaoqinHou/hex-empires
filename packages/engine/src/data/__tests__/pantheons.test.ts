@@ -19,7 +19,7 @@ const VALID_EFFECT_TYPES: ReadonlyArray<EffectDef['type']> = [
   'CULTURE_BOMB',
 ];
 
-const EXPECTED_PANTHEON_COUNT = 11;
+const EXPECTED_PANTHEON_COUNT = 16;
 
 describe('ALL_PANTHEONS catalogue', () => {
   it('exposes the expected number of pantheons', () => {

@@ -35,8 +35,8 @@ const VALID_COMBAT_TARGETS: ReadonlyArray<string> = [
   'all',
 ];
 
-const EXPECTED_FOUNDER_COUNT = 7;
-const EXPECTED_FOLLOWER_COUNT = 10;
+const EXPECTED_FOUNDER_COUNT = 10;
+const EXPECTED_FOLLOWER_COUNT = 14;
 
 describe('ALL_FOUNDER_BELIEFS catalogue', () => {
   it('exposes the expected number of founder beliefs', () => {

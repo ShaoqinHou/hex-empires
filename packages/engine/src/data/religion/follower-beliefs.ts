@@ -124,6 +124,42 @@ export const DIPLOMATIC_LEAGUE: FollowerBeliefDef = {
   faithCost: 85,
 };
 
+export const MONASTERIES: FollowerBeliefDef = {
+  id: 'monasteries',
+  name: 'Monasteries',
+  description:
+    'Cloistered scholars copy and translate in every follower city. Each settlement of the faithful gains additional Science as the monastic libraries fill.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 1 },
+  faithCost: 80,
+};
+
+export const PILGRIM_ROADS: FollowerBeliefDef = {
+  id: 'pilgrim_roads',
+  name: 'Pilgrim Roads',
+  description:
+    'Roads of the faithful connect every shrine with every sanctuary. Follower cities generate additional Faith from the constant tread of pilgrims between them.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'faith', value: 1 },
+  faithCost: 75,
+};
+
+export const RELIGIOUS_COMMUNITY: FollowerBeliefDef = {
+  id: 'religious_community',
+  name: 'Religious Community',
+  description:
+    'Parish orders and lay brotherhoods weave the city together. Every follower city gains additional Food as congregations share bread, shelter, and fields.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 1 },
+  faithCost: 75,
+};
+
+export const TITHED_HARVEST: FollowerBeliefDef = {
+  id: 'tithed_harvest',
+  name: 'Tithed Harvest',
+  description:
+    'Every farmer reserves a share of their crop for the temple storehouse. Follower cities convert that reserve into Gold each turn as the temples trade surplus.',
+  bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: 1 },
+  faithCost: 75,
+};
+
 /**
  * Full catalogue of follower beliefs. Not yet registered in the engine
  * index; consumed by the Religion system wiring cycle.
@@ -139,4 +175,8 @@ export const ALL_FOLLOWER_BELIEFS: ReadonlyArray<FollowerBeliefDef> = [
   GURUS_BLESSING,
   DIVINE_INSPIRATION,
   DIPLOMATIC_LEAGUE,
+  MONASTERIES,
+  PILGRIM_ROADS,
+  RELIGIOUS_COMMUNITY,
+  TITHED_HARVEST,
 ];
