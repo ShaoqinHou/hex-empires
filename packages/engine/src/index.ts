@@ -90,6 +90,8 @@ export {
   getAttackableCities,
 } from './state/CombatPreview';
 export type { CombatPreview, CombatOdds, CombatModifiers, CombatTarget, AttackableTarget } from './state/CombatPreview';
+export { getTileContents, getSelectionCycle, hasStackedEntities } from './state/TileContents';
+export type { TileContents } from './state/TileContents';
 
 // Engine
 export { GameEngine } from './GameEngine';
