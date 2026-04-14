@@ -1,4 +1,5 @@
 import type { CrisisEventDef } from './types';
+import { EXPANSION_CRISES } from './expansion-crises';
 
 export const PLAGUE: CrisisEventDef = {
   id: 'plague',
@@ -160,4 +161,5 @@ export const ALL_CRISES: ReadonlyArray<CrisisEventDef> = [
   NATURAL_DISASTER,
   RELIGIOUS_SCHISM,
   TRADE_DISRUPTION,
+  ...EXPANSION_CRISES,
 ];
