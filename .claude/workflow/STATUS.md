@@ -1,15 +1,28 @@
 # Project Status
 
 ## Current State
-- **Phase:** Feature-complete — playable Civ-style 4X with victory conditions
-- **Last verified:** 2026-04-14 (culture victory at T115, 13s, 0 errors)
-- **Tests:** 623 engine + 48 Playwright E2E = 671 total, all passing
-- **Commits:** 130+
+- **Phase:** Feature-complete — playable Civ-style 4X with victory conditions · **DEPLOYED at https://rehou.games/hex-empires/**
+- **Last verified:** 2026-04-14 (autonomous loop, 10 improvement cycles)
+- **Tests:** 638 engine + 79 Playwright E2E = 717 total, 0 failures, 0 skips
+- **Commits:** 150+
+- **Bundle:** 524 kB initial JS (down from 602), 9 lazy-loaded panels
 - **AI:** Personality system (9 leaders), fog-of-war, threat assessment, diplomacy, age transitions,
   crisis resolution, civic research, tech/civic mastery, unit promotions, trade routes, varied unit production
-- **UI:** Setup screen, help panel, right-click menu, improved tech/civic trees, territory borders,
-  combat animations, production notifications, save toast, unit upgrade UI, empire summary
+- **UI:** Modern-RTS interaction (left=select, right=act), path preview, attack overlay, dynamic cursor,
+  city cycling (N), ESC smart-close, turn-ready pulse, autosave every turn
 - **Victory:** Cultural, scientific, domination, economic, diplomatic, military, and score victories all functional
+
+## Autonomous improvement loop (2026-04-14)
+1. Bundle split — `69a3907`
+2. Zero-skip E2E + deterministic seed — `d4c7272`
+3. Yellow path preview on hover — `867e165`
+4. Red attack-target overlay — `0527ef1`
+5. Dynamic cursor feedback — `d7cf4db`
+6. N key cycles own cities — `5792425`
+7. Skip fortified in Space cycle + unmoved count — `a6f7415`
+8. End Turn button pulses when 0 units need orders — `9dd54d0`
+9. Autosave on every turn advance — `9a9d7d3`
+10. ESC smart-close (panel first, then deselect) — `ebdfe99`
 
 ## Rulebook Alignment (post-audit, verified 2026-04-10)
 - ✓ All 7 critical bugs fixed (river penalty, specialist costs, healing, cap penalty, fortification, HP degradation)
