@@ -139,7 +139,23 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       cameraRef.current.centerOn(x, y);
     }
 
-    return () => window.removeEventListener('resize', resize);
+    // Expose a hex→screen helper for E2E tests (Playwright needs to click on known hexes).
+    (window as any).__hexToScreen = (q: number, r: number) => {
+      const c = canvasRef.current;
+      const cam = cameraRef.current;
+      if (!c || !cam) return null;
+      const { x: wx, y: wy } = hexToPixel({ q, r });
+      const rect = c.getBoundingClientRect();
+      return {
+        x: rect.left + (wx - cam.x) * cam.zoom + c.width / 2,
+        y: rect.top + (wy - cam.y) * cam.zoom + c.height / 2,
+      };
+    };
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      delete (window as any).__hexToScreen;
+    };
   }, []);
 
   // Render loop
@@ -240,8 +256,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     }
   }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick]);
 
-  // Mouse handlers
+  // Mouse handlers — left button drives drag-pan + click-select; right button is reserved
+  // for handleContextMenu (RTS-style action). Middle button is ignored.
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     isDraggingRef.current = true;
     dragDistRef.current = 0;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
@@ -281,6 +299,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, [combatPreview, setCombatPreviewPosition]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    // Only left-button mouseup triggers selection. Right-button mouseup must NOT run
+    // handleClick, otherwise the empty-tile deselect path would wipe selectedUnit before
+    // (or after) handleContextMenu runs, swallowing the MOVE_UNIT/ATTACK dispatch.
+    if (e.button !== 0) return;
     if (dragDistRef.current < 5) {
       handleClick(e.clientX, e.clientY);
     }

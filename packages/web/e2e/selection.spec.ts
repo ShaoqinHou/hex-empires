@@ -144,6 +144,77 @@ test.describe('Selection System: Unified TileContents', () => {
     expect(menuCount).toBe(0);
   });
 
+  test('RTS flow: left-click selects warrior, right-click adjacent hex MOVES it (selection preserved)', async ({ page }) => {
+    await startGame(page);
+    const before = await getState(page);
+    const warrior = before!.units.find(u => u.owner === before!.currentPlayerId && u.typeId === 'warrior');
+    expect(warrior).toBeTruthy();
+
+    // Pick a neighbor hex — try the 6 axial directions and use the first land tile the unit can reach.
+    const target = await page.evaluate(({ pos }) => {
+      const s = (window as any).__gameState;
+      const dirs = [ {dq:1,dr:0}, {dq:-1,dr:0}, {dq:0,dr:1}, {dq:0,dr:-1}, {dq:1,dr:-1}, {dq:-1,dr:1} ];
+      for (const d of dirs) {
+        const q = pos.q + d.dq, r = pos.r + d.dr;
+        const k = `${q},${r}`;
+        const t = s.map.tiles.get(k);
+        if (!t) continue;
+        // Skip any tile that has a unit or city already, and any water tile.
+        const occupied = [...s.units.values()].some((u: any) => u.position.q === q && u.position.r === r)
+                      || [...s.cities.values()].some((c: any) => c.position.q === q && c.position.r === r);
+        if (occupied) continue;
+        if (t.terrain === 'ocean' || t.terrain === 'coast' || t.terrain === 'reef') continue;
+        return { q, r };
+      }
+      return null;
+    }, { pos: warrior!.position });
+    expect(target).toBeTruthy();
+
+    // Left-click the warrior's hex to select it.
+    const wScr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), warrior!.position);
+    expect(wScr).toBeTruthy();
+    await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
+    await page.waitForTimeout(150);
+
+    // Right-click the target to issue MOVE.
+    const tScr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), target!);
+    expect(tScr).toBeTruthy();
+    await page.mouse.click(tScr!.x, tScr!.y, { button: 'right' });
+    await page.waitForTimeout(300);
+
+    const after = await getState(page);
+    const warriorAfter = after!.units.find(u => u.id === warrior!.id);
+    expect(warriorAfter).toBeTruthy();
+    // The warrior actually moved to the target hex.
+    expect(warriorAfter!.position).toEqual(target);
+  });
+
+  test('RTS flow: right-click does NOT trigger the browser context menu', async ({ page }) => {
+    await startGame(page);
+    // Select a unit first so handleContextMenu takes its main path.
+    const state = await getState(page);
+    const warrior = state!.units.find(u => u.owner === state!.currentPlayerId && u.typeId === 'warrior')!;
+    const scr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), warrior.position);
+    await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
+    await page.waitForTimeout(100);
+
+    // Right-click anywhere on the canvas — browser's native contextmenu must be suppressed.
+    // Playwright doesn't surface the native menu as a locator; we assert via an in-page flag
+    // that captures the default-prevented state of the contextmenu event.
+    await page.evaluate(() => {
+      (window as any).__ctxDefault = null;
+      // Bubble-phase listener on window fires AFTER React's synthetic onContextMenu has run,
+      // so defaultPrevented reflects whether the game handler suppressed the browser menu.
+      window.addEventListener('contextmenu', (e) => {
+        (window as any).__ctxDefault = e.defaultPrevented;
+      });
+    });
+    await page.mouse.click(scr!.x + 60, scr!.y, { button: 'right' });
+    await page.waitForTimeout(150);
+    const defaultPrevented = await page.evaluate(() => (window as any).__ctxDefault);
+    expect(defaultPrevented).toBe(true);
+  });
+
   test('RTS semantics: right-click with no selection is a no-op (never deselects)', async ({ page }) => {
     await startGame(page);
 
