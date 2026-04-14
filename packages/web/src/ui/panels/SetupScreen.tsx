@@ -215,42 +215,60 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
 
         <Divider />
 
-        {/* Start / Load buttons */}
+        {/* Start / Load buttons. When a save exists Resume is the primary action — a
+            returning player is almost always here to continue, not to start over. */}
         <div className="px-6 py-5 flex flex-col items-center gap-3">
-          <button
-            onClick={handleStart}
-            className="px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
-            style={{
-              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-              color: '#fff',
-              boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              minWidth: '240px',
-            }}
-          >
-            Start Game →
-          </button>
-
-          {saveInfo && onLoadGame && (
+          {saveInfo && onLoadGame ? (
+            <>
+              <button
+                data-testid="resume-game-button"
+                onClick={onLoadGame}
+                className="flex flex-col items-center gap-1 px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  color: '#fff',
+                  boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  minWidth: '240px',
+                }}
+              >
+                <span>Resume Game →</span>
+                <span
+                  className="text-xs font-normal normal-case tracking-normal opacity-85"
+                >
+                  Turn {saveInfo.turn} · {saveInfo.civName}
+                  {saveInfo.savedAt ? ` · ${saveInfo.savedAt}` : ''}
+                </span>
+              </button>
+              <button
+                data-testid="new-game-button"
+                onClick={handleStart}
+                className="px-10 py-2.5 rounded-lg font-semibold text-sm tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59,74,107,0.9) 0%, rgba(39,52,82,0.9) 100%)',
+                  color: 'var(--color-gold, #d4a853)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                  border: '1px solid var(--color-gold, #d4a853)',
+                  minWidth: '240px',
+                }}
+              >
+                Start Game (new run · overwrites save)
+              </button>
+            </>
+          ) : (
             <button
-              onClick={onLoadGame}
-              className="flex flex-col items-center gap-1 px-12 py-3 rounded-lg font-semibold text-sm tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
+              data-testid="start-game-button"
+              onClick={handleStart}
+              className="px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
               style={{
-                background: 'linear-gradient(135deg, rgba(59,74,107,0.9) 0%, rgba(39,52,82,0.9) 100%)',
-                color: 'var(--color-gold, #d4a853)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-                border: '1px solid var(--color-gold, #d4a853)',
+                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                color: '#fff',
+                boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
                 minWidth: '240px',
               }}
             >
-              <span>Load Saved Game</span>
-              <span
-                className="text-xs font-normal normal-case tracking-normal"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                Turn {saveInfo.turn} · {saveInfo.civName}
-                {saveInfo.savedAt ? ` · ${saveInfo.savedAt}` : ''}
-              </span>
+              Start Game →
             </button>
           )}
         </div>

@@ -517,6 +517,48 @@ test.describe('Hover & tooltip', () => {
   });
 });
 
+// ── Setup screen Resume UI ───────────────────────────────────────────────────
+
+test.describe('Setup screen: Resume vs New', () => {
+  test('no autosave → single "Start Game" button, no Resume', async ({ page }) => {
+    await page.goto('http://localhost:5174/?seed=2');
+    await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
+    await page.waitForTimeout(300);
+    expect(await page.locator('[data-testid="resume-game-button"]').count()).toBe(0);
+    expect(await page.locator('[data-testid="start-game-button"]').count()).toBe(1);
+  });
+
+  test('autosave present → Resume is primary, New Run is secondary, Resume actually loads', async ({ page }) => {
+    await page.goto('http://localhost:5174/?seed=2');
+    await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: /start game/i }).click();
+    await page.waitForSelector('canvas', { timeout: 10000 });
+    // Play one turn to trigger autosave (turn ≥ 2).
+    await dispatch(page, { type: 'END_TURN' });
+    await page.waitForFunction(() => ((window as any).__gameState?.turn ?? 0) >= 2, { timeout: 10000 });
+    // Re-navigate to setup.
+    await page.goto('http://localhost:5174/?seed=2');
+    await page.waitForTimeout(300);
+
+    // Resume is the big green button; New Run is the small secondary one.
+    expect(await page.locator('[data-testid="resume-game-button"]').count()).toBe(1);
+    expect(await page.locator('[data-testid="new-game-button"]').count()).toBe(1);
+    expect(await page.locator('[data-testid="start-game-button"]').count()).toBe(0);
+
+    // Resume button shows turn/civ info.
+    const resumeText = await page.locator('[data-testid="resume-game-button"]').innerText();
+    expect(resumeText).toMatch(/Resume/i);
+    expect(resumeText).toMatch(/Turn\s*\d+/i);
+
+    // Clicking Resume loads the game — canvas mounts.
+    await page.locator('[data-testid="resume-game-button"]').click();
+    await page.waitForSelector('canvas', { timeout: 10000 });
+    const state = await getState(page);
+    expect(state!.turn).toBeGreaterThanOrEqual(2);
+  });
+});
+
 // ── Autosave ─────────────────────────────────────────────────────────────────
 
 test.describe('Autosave', () => {
