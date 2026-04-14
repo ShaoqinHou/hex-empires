@@ -130,6 +130,7 @@ export { governorSystem } from './systems/governorSystem';
 export { religionSystem, canAdoptPantheon } from './systems/religionSystem';
 export { governmentSystem, canAdoptGovernment, canSlotPolicy, findGovernment, findPolicy } from './systems/governmentSystem';
 export { urbanBuildingSystem } from './systems/urbanBuildingSystem';
+export { resourceAssignmentSystem, getResourceSlotCapacity } from './systems/resourceAssignmentSystem';
 export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRESHOLDS } from './systems/commanderPromotionSystem';
 
 // Governor data

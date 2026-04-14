@@ -92,9 +92,14 @@ describe('resourceAssignmentSystem', () => {
     });
   });
 
-  describe('graceful no-op when schema lacks fields', () => {
-    it('ASSIGN_RESOURCE is a no-op when city has no assignedResources field', () => {
-      const city = createTestCity(); // no assignedResources
+  describe('live behaviour now that CityState.assignedResources exists', () => {
+    // Flipped from the prior "graceful no-op — city missing field" spec:
+    // `assignedResources` is now an optional field on `CityState`. A city
+    // that omits it in construction still registers as absent (the system's
+    // runtime predicate uses `Array.isArray`), but the canonical path is
+    // for construction to provide `[]` and have ASSIGN_RESOURCE persist.
+    it('ASSIGN_RESOURCE persists on a city constructed with assignedResources=[]', () => {
+      const city = createTestCity({ assignedResources: [] });
       const player = playerWithOwned(createTestPlayer({ id: 'p1' }), ['wheat']);
       const state = stateWith(city, player);
 
@@ -105,9 +110,16 @@ describe('resourceAssignmentSystem', () => {
         playerId: 'p1',
       });
 
-      expect(next).toBe(state);
+      const updated = next.cities.get('c1') as CityState & {
+        readonly assignedResources: ReadonlyArray<ResourceId>;
+      };
+      expect(updated.assignedResources).toEqual(['wheat']);
+      expect(next).not.toBe(state);
     });
 
+    // Retained: `PlayerState.ownedResources` is NOT yet part of the
+    // canonical PlayerState schema, so a player record without it remains
+    // a graceful no-op (ownership is unverifiable).
     it('ASSIGN_RESOURCE is a no-op when player has no ownedResources field', () => {
       const city = createTestCity({ assignedResources: [] });
       const player = createTestPlayer({ id: 'p1' }); // no ownedResources

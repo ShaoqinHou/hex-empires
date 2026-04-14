@@ -99,6 +99,17 @@ export interface CityState {
   readonly urbanTiles?: ReadonlyMap<HexKey, UrbanTileV2>;
   readonly ruralAssignments?: ReadonlyMap<HexKey, RuralTileV2>;
   readonly quarters?: ReadonlyArray<QuarterV2>;
+
+  /**
+   * ── Resource Slot assignment (rulebook §13.3) — optional runtime field ──
+   *
+   * Populated by `resourceAssignmentSystem` when `ASSIGN_RESOURCE` /
+   * `UNASSIGN_RESOURCE` actions are dispatched. Optional so existing
+   * CityState construction (engine, web, tests, save files) keeps
+   * compiling and behaving unchanged. The system gracefully no-ops for
+   * cities where the field is absent.
+   */
+  readonly assignedResources?: ReadonlyArray<ResourceId>;
 }
 
 export interface ProductionItem {
@@ -409,7 +420,10 @@ export type GameAction =
   | { readonly type: 'UNSLOT_POLICY'; readonly playerId: PlayerId; readonly category: 'military' | 'economic' | 'diplomatic' | 'wildcard'; readonly slotIndex: number }
   | { readonly type: 'PLACE_URBAN_BUILDING'; readonly cityId: CityId; readonly tile: HexCoord; readonly buildingId: string }
   | { readonly type: 'GAIN_COMMANDER_XP'; readonly commanderId: UnitId; readonly amount: number }
-  | { readonly type: 'PROMOTE_COMMANDER'; readonly commanderId: UnitId; readonly promotionId: string };
+  | { readonly type: 'PROMOTE_COMMANDER'; readonly commanderId: UnitId; readonly promotionId: string }
+  // ── Resource Slot assignment (rulebook §13.3) ──
+  | { readonly type: 'ASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId }
+  | { readonly type: 'UNASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId };
 
 // ── Events ──
 

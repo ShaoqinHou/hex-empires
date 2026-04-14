@@ -11,6 +11,7 @@ import { combatSystem } from './systems/combatSystem';
 import { religionSystem } from './systems/religionSystem';
 import { governmentSystem } from './systems/governmentSystem';
 import { urbanBuildingSystem } from './systems/urbanBuildingSystem';
+import { resourceAssignmentSystem } from './systems/resourceAssignmentSystem';
 import { commanderPromotionSystem } from './systems/commanderPromotionSystem';
 import { promotionSystem } from './systems/promotionSystem';
 import { fortifySystem } from './systems/fortifySystem';
@@ -55,6 +56,9 @@ function adaptGovernment(state: GameState, action: GameAction): GameState {
 function adaptUrbanBuilding(state: GameState, action: GameAction): GameState {
   return urbanBuildingSystem(state, action);
 }
+function adaptResourceAssignment(state: GameState, action: GameAction): GameState {
+  return resourceAssignmentSystem(state, action);
+}
 function adaptCommanderPromotion(state: GameState, action: GameAction): GameState {
   return commanderPromotionSystem(state, action);
 }
@@ -70,6 +74,7 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   adaptReligion,
   adaptGovernment,
   adaptUrbanBuilding,
+  adaptResourceAssignment,
   adaptCommanderPromotion,
   promotionSystem,
   fortifySystem,

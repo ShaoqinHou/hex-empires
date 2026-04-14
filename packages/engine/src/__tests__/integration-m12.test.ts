@@ -107,4 +107,34 @@ describe('integration-m12: standalone systems wired into pipeline', () => {
 
     expect(next.units.size).toBe(0);
   });
+
+  it('engine handles ASSIGN_RESOURCE without crashing when city is absent', () => {
+    const engine = new GameEngine();
+    const state = seedState();
+
+    const next = engine.applyAction(state, {
+      type: 'ASSIGN_RESOURCE',
+      resourceId: 'wheat',
+      cityId: 'does_not_exist',
+      playerId: 'p1',
+    });
+
+    // No city exists — resourceAssignmentSystem no-ops; pipeline returns
+    // a valid state object with no cities.
+    expect(next.cities.size).toBe(0);
+  });
+
+  it('engine handles UNASSIGN_RESOURCE without crashing when city is absent', () => {
+    const engine = new GameEngine();
+    const state = seedState();
+
+    const next = engine.applyAction(state, {
+      type: 'UNASSIGN_RESOURCE',
+      resourceId: 'wheat',
+      cityId: 'does_not_exist',
+      playerId: 'p1',
+    });
+
+    expect(next.cities.size).toBe(0);
+  });
 });
