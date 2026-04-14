@@ -6,8 +6,9 @@ import type { DiplomacyRelation } from '../../types/GameState';
 function twoPlayerState() {
   return createTestState({
     players: new Map([
-      ['p1', createTestPlayer({ id: 'p1' })],
-      ['p2', createTestPlayer({ id: 'p2' })],
+      // Give ample Influence so war declarations clear the §11.1 cost check.
+      ['p1', createTestPlayer({ id: 'p1', influence: 500 })],
+      ['p2', createTestPlayer({ id: 'p2', influence: 500 })],
     ]),
     currentPlayerId: 'p1',
   });
@@ -18,8 +19,8 @@ function stateWithRelation(relationOverrides: Partial<DiplomacyRelation>) {
   const relation: DiplomacyRelation = { ...defaultRelation(), ...relationOverrides };
   return createTestState({
     players: new Map([
-      ['p1', createTestPlayer({ id: 'p1' })],
-      ['p2', createTestPlayer({ id: 'p2' })],
+      ['p1', createTestPlayer({ id: 'p1', influence: 500 })],
+      ['p2', createTestPlayer({ id: 'p2', influence: 500 })],
     ]),
     currentPlayerId: 'p1',
     diplomacy: { relations: new Map([['p1:p2', relation]]) },

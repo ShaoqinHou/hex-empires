@@ -227,8 +227,17 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     }
     totalGold -= sanctionGoldPenalty;
 
-    // Calculate influence: +1 per city, +2 per alliance
-    let totalInfluence = cityCount;
+    // Calculate influence (§11.1):
+    //   Base +10 per turn once the player has founded their first city
+    //   (this represents the civilization's baseline diplomatic presence).
+    //   +1 per additional city, +2 per alliance.
+    // Rulebook minimum: a 1-city player must net ≥ 10 Influence / turn.
+    const playerHasCities = cityCount > 0;
+    let totalInfluence = 0;
+    if (playerHasCities) {
+      totalInfluence += 10; // Standard-speed base generation.
+      totalInfluence += cityCount; // per-city contribution (capital + additional).
+    }
     for (const [key, rel] of state.diplomacy.relations) {
       if (key.includes(playerId) && rel.hasAlliance) {
         totalInfluence += 2;
@@ -239,7 +248,6 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     // No maintenance is charged before the player has founded their first city —
     // units in the pre-founding phase are considered "starting forces" and free.
     let maintenance = 0;
-    const playerHasCities = cityCount > 0;
     if (playerHasCities) {
       for (const unit of state.units.values()) {
         if (unit.owner === playerId) {

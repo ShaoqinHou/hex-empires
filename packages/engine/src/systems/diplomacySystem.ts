@@ -1,4 +1,4 @@
-import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age } from '../types/GameState';
 
 /**
  * DiplomacySystem handles diplomatic proposals between players.
@@ -10,13 +10,28 @@ import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, Diplom
  * - Formal war requires hostile relationship; surprise war gives defender war support
  * - Alliance requires helpful status (relationship > 60)
  */
-/** Cost in Influence for diplomatic endeavors and sanctions */
+/** Base cost in Influence for diplomatic endeavors and sanctions (Antiquity). */
 const ENDEAVOR_INFLUENCE_COST = 50;
 const SANCTION_INFLUENCE_COST = 50;
+
+/** Influence cost to declare a formal war (§11.1, §11.4). */
+const FORMAL_WAR_INFLUENCE_COST = 100;
+/** Influence cost to declare a surprise war — strictly higher than formal. */
+const SURPRISE_WAR_INFLUENCE_COST = 200;
 
 /** Duration in turns for endeavors and sanctions */
 const ENDEAVOR_DURATION = 10;
 const SANCTION_DURATION = 10;
+
+/**
+ * Age multiplier for diplomacy costs (§11.3):
+ *   Antiquity ×1, Exploration ×2, Modern ×3.
+ */
+function ageCostMultiplier(age: Age): number {
+  if (age === 'exploration') return 2;
+  if (age === 'modern') return 3;
+  return 1;
+}
 
 export function diplomacySystem(state: GameState, action: GameAction): GameState {
   if (
@@ -67,6 +82,23 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
 
       // Surprise war: any relationship but gives defender war support
       const isSurprise = warType === 'surprise';
+
+      // §11.1 — Influence is spent on all diplomatic actions. Surprise war
+      // (§11.4) costs strictly more than formal war.
+      const warCost = isSurprise ? SURPRISE_WAR_INFLUENCE_COST : FORMAL_WAR_INFLUENCE_COST;
+      const sourcePlayer = state.players.get(sourceId)!;
+      if (sourcePlayer.influence < warCost) {
+        return {
+          ...state,
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `Cannot declare ${warType} war on ${targetId} (insufficient Influence, need ${warCost})`,
+            type: 'diplomacy',
+          }],
+        };
+      }
+
       const warSupportChange = isSurprise ? -50 : 0; // negative = defender advantage
 
       newRelation = {
@@ -83,8 +115,23 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         // Relationship drops significantly on war
         relationship: clampRelationship(currentRelation.relationship - 40),
       };
-      logMessage = `Declared ${warType} war on ${targetId}`;
-      break;
+
+      // Deduct Influence for the declaration.
+      const updatedRelations = new Map(state.diplomacy.relations);
+      updatedRelations.set(relationKey, newRelation);
+      const updatedPlayers = new Map(state.players);
+      updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - warCost });
+      return {
+        ...state,
+        players: updatedPlayers,
+        diplomacy: { relations: updatedRelations },
+        log: [...state.log, {
+          turn: state.turn,
+          playerId: sourceId,
+          message: `Declared ${warType} war on ${targetId}`,
+          type: 'diplomacy',
+        }],
+      };
     }
 
     case 'PROPOSE_PEACE': {
@@ -242,14 +289,17 @@ function clampWarSupport(value: number): number {
 function handleEndeavor(state: GameState, sourceId: string, targetId: string, endeavorType: string): GameState {
   const sourcePlayer = state.players.get(sourceId)!;
 
+  // §11.3: base cost × Age multiplier (Antiquity ×1, Exploration ×2, Modern ×3).
+  const cost = ENDEAVOR_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+
   // Check influence cost
-  if (sourcePlayer.influence < ENDEAVOR_INFLUENCE_COST) {
+  if (sourcePlayer.influence < cost) {
     return {
       ...state,
       log: [...state.log, {
         turn: state.turn,
         playerId: sourceId,
-        message: `Cannot conduct ${endeavorType} endeavor with ${targetId} (insufficient Influence, need ${ENDEAVOR_INFLUENCE_COST})`,
+        message: `Cannot conduct ${endeavorType} endeavor with ${targetId} (insufficient Influence, need ${cost})`,
         type: 'diplomacy',
       }],
     };
@@ -268,7 +318,7 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
   updatedRelations.set(relationKey, updatedRelation);
 
   const updatedPlayers = new Map(state.players);
-  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - ENDEAVOR_INFLUENCE_COST });
+  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - cost });
 
   return {
     ...state,
@@ -286,14 +336,17 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
 function handleSanction(state: GameState, sourceId: string, targetId: string, sanctionType: string): GameState {
   const sourcePlayer = state.players.get(sourceId)!;
 
+  // §11.3: base cost × Age multiplier (Antiquity ×1, Exploration ×2, Modern ×3).
+  const cost = SANCTION_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+
   // Check influence cost
-  if (sourcePlayer.influence < SANCTION_INFLUENCE_COST) {
+  if (sourcePlayer.influence < cost) {
     return {
       ...state,
       log: [...state.log, {
         turn: state.turn,
         playerId: sourceId,
-        message: `Cannot impose ${sanctionType} sanction on ${targetId} (insufficient Influence, need ${SANCTION_INFLUENCE_COST})`,
+        message: `Cannot impose ${sanctionType} sanction on ${targetId} (insufficient Influence, need ${cost})`,
         type: 'diplomacy',
       }],
     };
@@ -312,7 +365,7 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
   updatedRelations.set(relationKey, updatedRelation);
 
   const updatedPlayers = new Map(state.players);
-  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - SANCTION_INFLUENCE_COST });
+  updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - cost });
 
   return {
     ...state,

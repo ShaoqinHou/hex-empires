@@ -343,7 +343,7 @@ describe('D9: diplomatic endeavors cost Influence when executed (§11.1, §11.3)
 // ── D10: Influence costs scale with Age (§11.3) ────────────────────────────
 
 describe('D10: endeavor Influence cost scales with Age (x1 Antiquity, x2 Exploration, x3 Modern) (§11.3)', () => {
-  it.fails('Exploration-age endeavor should cost 2× Antiquity — engine cost is a flat 50', () => {
+  it('Exploration-age endeavor costs 2× Antiquity (age scaling)', () => {
     // §11.3: "Base costs are multiplied by the current Age number (x1
     // Antiquity, x2 Exploration, x3 Modern)." The engine's endeavor cost is
     // currently a hard-coded ENDEAVOR_INFLUENCE_COST = 50 with no age scaling.
@@ -372,7 +372,7 @@ describe('D10: endeavor Influence cost scales with Age (x1 Antiquity, x2 Explora
 // ── D11: War declaration costs Influence (§11.1, §11.4) ────────────────────
 
 describe('D11: declaring war costs Influence (§11.1 — "Influence is spent on all diplomatic actions")', () => {
-  it.fails('surprise war should deduct Influence from the declarer — engine currently costs 0', () => {
+  it('surprise war deducts Influence from the declarer', () => {
     // §11.1 makes Influence the universal diplomacy currency. §11.4 further
     // specifies that boosting War Support costs 180 Influence, strongly
     // implying war-related actions cost Influence. A surprise war launched
@@ -394,7 +394,7 @@ describe('D11: declaring war costs Influence (§11.1 — "Influence is spent on 
 // ── D12: Surprise war should cost more Influence than Formal war (§11.4) ───
 
 describe('D12: surprise war should be costlier (or more penalised) than formal war (§11.4)', () => {
-  it.fails('surprise war should deduct MORE Influence than formal war — engine treats both as free', () => {
+  it('surprise war deducts MORE Influence than formal war', () => {
     // §11.4: Formal War requires hostile relationship (already an investment)
     // and grants NO advantage. Surprise War is available at any relationship
     // but "Gives opponent a War Support advantage" — the cost model the
@@ -426,12 +426,10 @@ describe('D12: surprise war should be costlier (or more penalised) than formal w
 // ── D13: Base Influence generation per turn (§11.1) ────────────────────────
 
 describe('D13: base Influence generation is at least 10/turn (§11.1)', () => {
-  it.fails('a single-city player should accrue ≥10 Influence per turn — engine yields only +1 per city', () => {
-    // §11.1: "Base generation: 10 Influence per turn (Standard speed)." The
-    // engine's resourceSystem grants +1 Influence per city (+2 per alliance)
-    // with no base generation, so a 1-city player nets +1 / turn. This
-    // silently starves every diplomacy cost in §11.3.
-    // BUG: missing base 10 Influence/turn accrual.
+  it('a single-city player accrues ≥10 Influence per turn', () => {
+    // §11.1: "Base generation: 10 Influence per turn (Standard speed)."
+    // The engine now grants a +10 base once the player has founded their
+    // first city, plus +1 per city and +2 per alliance.
     //
     // We directly import the resourceSystem to drive an END_TURN tick and
     // measure Influence delta for p1 (who owns one city).
@@ -439,7 +437,7 @@ describe('D13: base Influence generation is at least 10/turn (§11.1)', () => {
     // Import lazily inside the test to keep the failing-import cost contained
     // to this one test; the test harness still reports `it.fails` cleanly.
     return import('../resourceSystem').then(({ resourceSystem }) => {
-      // Build a one-city state for p1, zero cities for p2. +1 per city = +1.
+      // Build a one-city state for p1, zero cities for p2.
       const base = twoPlayerState();
       const cityId = 'c1';
       const stateWithCity: GameState = {
@@ -453,21 +451,16 @@ describe('D13: base Influence generation is at least 10/turn (§11.1)', () => {
             population: 1,
             food: 0,
             happiness: 0,
-            production: 0,
             productionQueue: [],
-            workedTiles: new Set(),
-            ownedTiles: new Set([`${0}:${0}`]),
+            productionProgress: 0,
             buildings: [],
+            territory: [],
             isCapital: true,
-            isTown: false,
             settlementType: 'city',
             specialization: null,
-            foundedTurn: 1,
-            hp: 200,
-            walls: 0,
-            rallyPoint: null,
             specialists: 0,
-            growthProgress: 0,
+            districts: [],
+            defenseHP: 200,
           }],
         ]),
       } as unknown as GameState;
