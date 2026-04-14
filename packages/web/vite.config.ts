@@ -14,4 +14,19 @@ export default defineConfig({
   server: {
     port: 5174,
   },
+  build: {
+    // Split the bundle so initial load is leaner. The single 602 kB chunk warning
+    // was real — engine + react + game-data dwarfed the actual UI code.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React + ReactDOM stay together (shared runtime).
+          'react-vendor': ['react', 'react-dom'],
+        },
+      },
+    },
+    // Engine code is large (data registries) but unavoidable for offline play.
+    // Bump the warning threshold past the engine chunk so we don't see noise.
+    chunkSizeWarningLimit: 700,
+  },
 });

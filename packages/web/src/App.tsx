@@ -1,29 +1,32 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { GameProvider, useGame } from './providers/GameProvider';
 import { SetupScreen } from './ui/panels/SetupScreen';
 import { GameCanvas } from './canvas/GameCanvas';
 import { Camera } from './canvas/Camera';
 import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
-import { CityPanel } from './ui/panels/CityPanel';
-import { TechTreePanel } from './ui/panels/TechTreePanel';
-import { CivicTreePanel } from './ui/panels/CivicTreePanel';
 import { VictoryPanel } from './ui/panels/VictoryPanel';
-import { DiplomacyPanel } from './ui/panels/DiplomacyPanel';
-import { EventLogPanel } from './ui/panels/EventLogPanel';
-import { AgeTransitionPanel } from './ui/panels/AgeTransitionPanel';
 import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
 import { YieldsToggle } from './ui/components/YieldsToggle';
 import { TurnTransition } from './ui/components/TurnTransition';
 import { Notifications } from './ui/components/Notifications';
 import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
-import { TurnSummaryPanel } from './ui/panels/TurnSummaryPanel';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './canvas/TooltipOverlay';
-import { GovernorPanel } from './ui/panels/GovernorPanel';
-import { HelpPanel } from './ui/panels/HelpPanel';
+
+// Lazy-loaded panels — they only mount when the user opens them, so split them out
+// of the initial bundle to cut first-paint payload.
+const CityPanel = lazy(() => import('./ui/panels/CityPanel').then(m => ({ default: m.CityPanel })));
+const TechTreePanel = lazy(() => import('./ui/panels/TechTreePanel').then(m => ({ default: m.TechTreePanel })));
+const CivicTreePanel = lazy(() => import('./ui/panels/CivicTreePanel').then(m => ({ default: m.CivicTreePanel })));
+const DiplomacyPanel = lazy(() => import('./ui/panels/DiplomacyPanel').then(m => ({ default: m.DiplomacyPanel })));
+const EventLogPanel = lazy(() => import('./ui/panels/EventLogPanel').then(m => ({ default: m.EventLogPanel })));
+const AgeTransitionPanel = lazy(() => import('./ui/panels/AgeTransitionPanel').then(m => ({ default: m.AgeTransitionPanel })));
+const TurnSummaryPanel = lazy(() => import('./ui/panels/TurnSummaryPanel').then(m => ({ default: m.TurnSummaryPanel })));
+const GovernorPanel = lazy(() => import('./ui/panels/GovernorPanel').then(m => ({ default: m.GovernorPanel })));
+const HelpPanel = lazy(() => import('./ui/panels/HelpPanel').then(m => ({ default: m.HelpPanel })));
 
 type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help';
 
@@ -106,33 +109,35 @@ function GameUI() {
           }}
           onToggleTechTree={() => togglePanel('tech')}
         />
-        {activePanel === 'city' && selectedCity && (
-          <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'tech' && (
-          <TechTreePanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'civics' && (
-          <CivicTreePanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'diplomacy' && (
-          <DiplomacyPanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'log' && (
-          <EventLogPanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'age' && (
-          <AgeTransitionPanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'turnSummary' && (
-          <TurnSummaryPanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'governors' && (
-          <GovernorPanel onClose={() => setActivePanel('none')} />
-        )}
-        {activePanel === 'help' && (
-          <HelpPanel onClose={() => setActivePanel('none')} />
-        )}
+        <Suspense fallback={null}>
+          {activePanel === 'city' && selectedCity && (
+            <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'tech' && (
+            <TechTreePanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'civics' && (
+            <CivicTreePanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'diplomacy' && (
+            <DiplomacyPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'log' && (
+            <EventLogPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'age' && (
+            <AgeTransitionPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'turnSummary' && (
+            <TurnSummaryPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'governors' && (
+            <GovernorPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'help' && (
+            <HelpPanel onClose={() => setActivePanel('none')} />
+          )}
+        </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />
         <CrisisPanel />
