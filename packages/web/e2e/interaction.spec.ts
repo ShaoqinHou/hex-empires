@@ -526,6 +526,41 @@ test.describe('Keyboard shortcuts', () => {
 // ── Hover / tooltip ──────────────────────────────────────────────────────────
 
 test.describe('Hover & tooltip', () => {
+  test('tooltip never renders off the viewport edges', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    const canvas = page.locator('canvas').first();
+    const box = (await canvas.boundingBox())!;
+
+    // Hover near each corner of the canvas and assert the tooltip element (the
+    // fixed-position wrapper, class "fixed z-50 pointer-events-none") stays on-screen.
+    const corners = [
+      { x: box.x + 4, y: box.y + 4, label: 'top-left' },
+      { x: box.x + box.width - 4, y: box.y + 4, label: 'top-right' },
+      { x: box.x + 4, y: box.y + box.height - 4, label: 'bottom-left' },
+      { x: box.x + box.width - 4, y: box.y + box.height - 4, label: 'bottom-right' },
+    ];
+
+    for (const c of corners) {
+      await page.mouse.move(c.x, c.y);
+      await page.waitForTimeout(120);
+      const rect = await page.evaluate(() => {
+        const el = document.querySelector('.fixed.z-50.pointer-events-none') as HTMLElement | null;
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { top: r.top, left: r.left, right: r.right, bottom: r.bottom, vw: window.innerWidth, vh: window.innerHeight };
+      });
+      // It's OK if the tooltip isn't rendered at all (e.g. unexplored fog tile has no tooltip
+      // content), but if it IS rendered, it must fit within the viewport (with small margin).
+      if (rect) {
+        const margin = 4;
+        expect(rect.top, `${c.label} top`).toBeGreaterThanOrEqual(-margin);
+        expect(rect.left, `${c.label} left`).toBeGreaterThanOrEqual(-margin);
+        expect(rect.right, `${c.label} right`).toBeLessThanOrEqual(rect.vw + margin);
+        expect(rect.bottom, `${c.label} bottom`).toBeLessThanOrEqual(rect.vh + margin);
+      }
+    }
+  });
+
   test('sweeping mouse across 5 hexes produces no console / page errors', async ({ page }) => {
     await startGame(page);
     const errs: string[] = [];

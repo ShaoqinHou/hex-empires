@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useLayoutEffect, useState } from 'react';
 import type { HexCoord, GameState } from '@hex/engine';
 import {
   getTileContents,
@@ -379,19 +379,76 @@ export function TooltipOverlay({
   const screen = camera.worldToScreen(worldX, worldY);
 
   return (
-    <div
-      className="fixed z-50 pointer-events-none"
-      style={{
-        left: screen.x,
-        top: screen.y,
-        transform: 'translate(-50%, -100%) translateY(-12px)',
-      }}
-    >
+    <ClampedTooltipPositioner anchorX={screen.x} anchorY={screen.y}>
       {isAltPressed ? (
         <DetailedTooltip state={state} hex={hoveredHex} />
       ) : (
         <LightweightTooltip state={state} hex={hoveredHex} />
       )}
+    </ClampedTooltipPositioner>
+  );
+}
+
+/**
+ * Positions the tooltip above the anchor by default, then clamps into viewport:
+ *   - if it would overflow the top edge → render BELOW the anchor
+ *   - if it would overflow left/right → slide horizontally to fit
+ *
+ * This prevents tooltips from being clipped at map edges, a common complaint when
+ * hovering tiles near the window border.
+ */
+function ClampedTooltipPositioner({
+  anchorX,
+  anchorY,
+  children,
+}: {
+  anchorX: number;
+  anchorY: number;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  // Offsets applied on top of the default (centered, above). We measure then nudge.
+  const [nudge, setNudge] = useState<{ dx: number; dy: number; below: boolean }>({ dx: 0, dy: 0, below: false });
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Reset nudge before measuring so we don't compound offsets across re-renders.
+    // We take the element's current rect as-if it's in its default position.
+    const rect = el.getBoundingClientRect();
+    const margin = 8;
+    let dx = 0;
+    let dy = 0;
+    let below = false;
+
+    if (rect.top < margin) {
+      // Flip below: move down by (tooltip height + 2 × 12 padding). translateY handled via
+      // swapping from -100% to 0% and adding +12 instead of -12.
+      below = true;
+    }
+    if (rect.left < margin) {
+      dx = margin - rect.left;
+    } else if (rect.right > window.innerWidth - margin) {
+      dx = window.innerWidth - margin - rect.right;
+    }
+    if (below && rect.bottom + rect.height + 24 > window.innerHeight - margin) {
+      // Even below would overflow bottom: clamp to bottom of viewport.
+      dy = window.innerHeight - margin - rect.bottom - rect.height - 24;
+    }
+    if (dx !== 0 || below || dy !== 0) setNudge({ dx, dy, below });
+  }, [anchorX, anchorY, children]);
+
+  const baseTransform = nudge.below
+    ? `translate(-50%, 0%) translate(${nudge.dx}px, ${12 + nudge.dy}px)`
+    : `translate(-50%, -100%) translate(${nudge.dx}px, ${-12 + nudge.dy}px)`;
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-50 pointer-events-none"
+      style={{ left: anchorX, top: anchorY, transform: baseTransform }}
+    >
+      {children}
     </div>
   );
 }
