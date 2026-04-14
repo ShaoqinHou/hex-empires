@@ -491,6 +491,30 @@ test.describe('Hover & tooltip', () => {
   });
 });
 
+// ── Autosave ─────────────────────────────────────────────────────────────────
+
+test.describe('Autosave', () => {
+  test('saves to localStorage after a turn advance', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    // Fresh game — autosave intentionally skips turn 1.
+    const beforeKey = await page.evaluate(() => localStorage.getItem('hex-empires-save-meta'));
+
+    // Advance turns by dispatching END_TURN (wraps through AI and back).
+    await dispatch(page, { type: 'END_TURN' });
+    // AI turns can take a bit — wait until state.turn has incremented.
+    await page.waitForFunction(() => ((window as any).__gameState?.turn ?? 0) >= 2, { timeout: 10000 });
+
+    const saveMeta = await page.evaluate(() => localStorage.getItem('hex-empires-save-meta'));
+    expect(saveMeta).not.toBeNull();
+    expect(saveMeta).toMatch(/Autosave.*T[2-9]/);
+    // Must differ from the pre-turn state.
+    expect(saveMeta).not.toBe(beforeKey);
+    // And the save payload parses as JSON.
+    const saveJson = await page.evaluate(() => localStorage.getItem('hex-empires-save'));
+    expect(() => JSON.parse(saveJson!)).not.toThrow();
+  });
+});
+
 // ── End Turn ready signal ────────────────────────────────────────────────────
 
 test.describe('End Turn ready signal', () => {

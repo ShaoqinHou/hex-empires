@@ -598,6 +598,29 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [selectedUnit, selectedHex, selectedCityId]);
 
+  // Autosave on every turn advance — players never lose progress to a tab close.
+  // Skips turn 1 (just-started game: nothing worth saving, and we don't want to clobber
+  // a previous save the moment the setup screen hands off).
+  const lastAutosavedTurn = useRef<number>(0);
+  useEffect(() => {
+    if (!state) return;
+    if (state.turn === lastAutosavedTurn.current) return;
+    if (state.turn <= 1) {
+      lastAutosavedTurn.current = state.turn;
+      return;
+    }
+    lastAutosavedTurn.current = state.turn;
+    try {
+      const json = serializeState(state);
+      localStorage.setItem('hex-empires-save', json);
+      const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      localStorage.setItem('hex-empires-save-meta', `Autosave · T${state.turn} · ${dateStr}`);
+    } catch (err) {
+      // Don't let a full-storage or serialization failure crash gameplay.
+      console.warn('Autosave failed:', err);
+    }
+  }, [state?.turn, state]);
+
   return (
     <GameContext.Provider value={value}>
       {children}
