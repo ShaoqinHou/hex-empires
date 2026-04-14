@@ -229,10 +229,11 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   const healthPenalty = Math.floor((100 - unit.health) / 10);
   let strength = base - healthPenalty;
 
-  // Terrain defense bonus
+  // Terrain defense bonus — multiplicative component on base strength
   if (tile) {
-    const terrainBonus = getTerrainDefenseBonus(state, tile);
-    strength *= (1 + terrainBonus);
+    const { percent, flat } = getTerrainDefenseBonus(state, tile);
+    strength *= (1 + percent);
+    strength += flat;
   }
 
   // B6: Fortification bonus is flat +5 CS additive (not +50% multiplicative)
@@ -258,19 +259,21 @@ function getUnitRange(state: GameState, typeId: string): number {
 }
 
 /** Terrain defense bonus from state.config.terrains and state.config.features — driven by data */
-function getTerrainDefenseBonus(state: GameState, tile: HexTile): number {
-  let bonus = 0;
-  // Terrain base defense
+function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: number; flat: number } {
+  let percent = 0;
+  let flat = 0;
+  // Terrain base defense (multiplicative)
   const terrainDef = state.config.terrains.get(tile.terrain);
-  bonus += terrainDef?.defenseBonus ?? 0;
+  percent += terrainDef?.defenseBonus ?? 0;
 
-  // Feature defense bonus
+  // Feature defense bonus — supports both multiplicative and flat CS (rulebook §6.4)
   if (tile.feature) {
     const featureDef = state.config.features.get(tile.feature);
-    bonus += featureDef?.defenseBonusModifier ?? 0;
+    percent += featureDef?.defenseBonusModifier ?? 0;
+    flat += featureDef?.flatDefenseBonus ?? 0;
   }
 
-  return bonus;
+  return { percent, flat };
 }
 
 /** Flanking bonus: +2 strength per friendly unit adjacent to the defender, capped at +6 */

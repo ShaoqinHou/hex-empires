@@ -4,7 +4,8 @@ export const HILLS: TerrainFeatureDef = {
   id: 'hills',
   name: 'Hills',
   movementCostModifier: 1, // +1 to enter
-  defenseBonusModifier: 0.3, // +30% defense
+  defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
+  flatDefenseBonus: 3,      // +3 CS to defenders (rulebook §6.4 rough terrain)
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#8a7a55',

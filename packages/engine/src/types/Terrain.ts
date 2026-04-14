@@ -20,9 +20,10 @@ export type FeatureId = string;
 export interface TerrainFeatureDef {
   readonly id: FeatureId;
   readonly name: string;
-  readonly movementCostModifier: number; // added to base terrain cost
-  readonly defenseBonusModifier: number; // added to base terrain defense
+  readonly movementCostModifier: number;   // added to base terrain cost
+  readonly defenseBonusModifier: number;   // multiplicative defense bonus (e.g. 0.25 = +25%)
+  readonly flatDefenseBonus?: number;      // flat +CS defender bonus (rulebook §6.4 rough/vegetated terrain)
   readonly yieldModifiers: Partial<YieldSet>;
-  readonly blocksMovement: boolean; // e.g., mountains
-  readonly color: string; // rendering overlay color
+  readonly blocksMovement: boolean;        // e.g., mountains
+  readonly color: string;                  // rendering overlay color
 }

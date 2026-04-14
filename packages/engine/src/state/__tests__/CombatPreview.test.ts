@@ -153,12 +153,14 @@ describe('calculateCombatPreview', () => {
     ]);
     const stateBase = createTestState({ units });
 
-    // Put defender on hills
-    const tilesHills = new Map(stateBase.map.tiles);
-    setTile(tilesHills, { q: 4, r: 3 }, 'grassland', 'hills');
-    const stateHills = { ...stateBase, map: { ...stateBase.map, tiles: tilesHills } };
+    // Put defender on forest (retains multiplicative defenseBonusModifier).
+    // Hills now uses flat +3 CS (rulebook §6.4), not a multiplier, so its
+    // defenseBonusModifier is 0 and would not surface here.
+    const tilesForest = new Map(stateBase.map.tiles);
+    setTile(tilesForest, { q: 4, r: 3 }, 'grassland', 'forest');
+    const stateForest = { ...stateBase, map: { ...stateBase.map, tiles: tilesForest } };
 
-    const preview = calculateCombatPreview(stateHills, 'a1', 'd1');
+    const preview = calculateCombatPreview(stateForest, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);
     expect(preview.modifiers.terrainDefenseBonus).toBeGreaterThan(0);

@@ -101,8 +101,28 @@ export function buildingPlacementSystem(state: GameState, action: GameAction): G
   const updatedTiles = new Map(state.map.tiles);
   updatedTiles.set(tileKey, updatedTile);
 
+  // Rulebook §6.6: Walls add +100 HP to the district on placement.
+  // Guard against double-add by checking a dedicated placement flag via tile building marker;
+  // we detect prior placement via any existing tile whose `building` is already 'walls' in this city's territory.
+  let updatedCities = state.cities;
+  if (buildingId === 'walls') {
+    const alreadyPlaced = city.territory.some((key) => {
+      const t = state.map.tiles.get(key);
+      return t?.building === 'walls';
+    });
+    if (!alreadyPlaced) {
+      const nextCities = new Map(state.cities);
+      nextCities.set(cityId, {
+        ...city,
+        defenseHP: city.defenseHP + 100,
+      });
+      updatedCities = nextCities;
+    }
+  }
+
   return {
     ...state,
+    cities: updatedCities,
     map: {
       ...state.map,
       tiles: updatedTiles,

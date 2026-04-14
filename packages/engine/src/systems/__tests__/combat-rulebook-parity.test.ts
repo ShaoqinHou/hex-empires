@@ -240,10 +240,9 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
     expect(forestDef).toBeLessThan(flat);
   });
 
-  it.fails('R64a: hills gives FLAT +3 CS (rulebook §6.4), not +30% multiplicative (current bug)', () => {
+  it('R64a: hills gives FLAT +3 CS (rulebook §6.4), not +30% multiplicative', () => {
     // Attacker at 99 HP (no first strike), warrior vs warrior on hills.
     // Rulebook: defender CS 20+3=23, attacker CS 20. Diff -3. Expected avg ≈ 30 × e^(-3/25) ≈ 26.6.
-    // Current code: +30% multiplicative → defender CS=26. Diff -6. Expected avg ≈ 23.6.
     const hillsDef = averageDefenderDamage((seed) =>
       buildMeleeScenario({
         seed,
@@ -255,7 +254,6 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
         },
       }),
     );
-    // Rulebook expects ~26.6 (±2). Current bug produces ~23.6, which will fail this assertion.
     expect(Math.abs(hillsDef - 26.6)).toBeLessThanOrEqual(2);
   });
 
@@ -355,10 +353,12 @@ describe('R66: Walls — +100 HP to district, walls must be destroyed before cap
     expect(avg2).toBeLessThan(avg1);
   });
 
-  it.fails('R66a: placing walls building grants +100 defenseHP to the city (rulebook §6.6)', () => {
+  it('R66a: placing walls building grants +100 defenseHP to the city (rulebook §6.6)', () => {
     // Rulebook: walls add 100 HP to the district. Place walls in a city that currently
     // has defenseHP 100 → expect defenseHP to become 200.
-    const city = makeCity({ id: 'c1', owner: 'p1', defenseHP: 100, buildings: [] });
+    // Walls must already be constructed (in city.buildings) before placement — mirrors the
+    // productionSystem → buildingPlacementSystem flow.
+    const city = makeCity({ id: 'c1', owner: 'p1', defenseHP: 100, buildings: ['walls'] });
     const state = createTestState({
       cities: new Map([['c1', city]]),
       players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
