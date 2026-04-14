@@ -131,6 +131,45 @@ export const FLEET_ADMIRAL: CommanderUnitDef = {
 } as const;
 
 /**
+ * Modern-era air-wing commander. Added alongside M17's Helicopter and
+ * Jet Fighter content so air stacks have a natural commander to attach
+ * to. Role is `'air'`; falls back to the `ranged` unit category as
+ * compat anchor (matching the Jet Fighter's category) until the
+ * dedicated air-unit category lands.
+ */
+export const AIR_GENERAL: CommanderUnitDef = {
+  id: 'air_general',
+  name: 'Air General',
+  age: 'modern',
+  role: 'air',
+  category: 'ranged',
+  cost: 260,
+  combat: 28,
+  movement: 6,
+  auraRadius: 2,
+  initialLevel: 1,
+} as const;
+
+/**
+ * Exploration-era irregular commander — leads partisans and guerilla
+ * ground forces. Lower combat than a line General but cheaper to
+ * produce; pairs with the `maneuver` promotion tree (Guerilla Tactics)
+ * for flanking and extra-movement auras.
+ */
+export const PARTISAN_LEADER: CommanderUnitDef = {
+  id: 'partisan_leader',
+  name: 'Partisan Leader',
+  age: 'exploration',
+  role: 'ground',
+  category: 'melee',
+  cost: 120,
+  combat: 18,
+  movement: 3,
+  auraRadius: 1,
+  initialLevel: 1,
+} as const;
+
+/**
  * Catalogue of all Commander archetypes.
  *
  * Kept internal to this cycle — not yet re-exported from the engine
@@ -141,6 +180,8 @@ export const ALL_COMMANDERS: ReadonlyArray<CommanderUnitDef> = [
   CAPTAIN,
   GENERAL,
   ADMIRAL,
+  PARTISAN_LEADER,
   MARSHAL,
   FLEET_ADMIRAL,
+  AIR_GENERAL,
 ] as const;

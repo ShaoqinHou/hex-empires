@@ -35,9 +35,9 @@ const VALID_TREES: ReadonlyArray<CommanderTree> = [
 ];
 
 describe('ALL_COMMANDERS catalogue', () => {
-  it('contains between 3 and 6 commander archetypes', () => {
+  it('contains between 3 and 10 commander archetypes (seed + expansion)', () => {
     expect(ALL_COMMANDERS.length).toBeGreaterThanOrEqual(3);
-    expect(ALL_COMMANDERS.length).toBeLessThanOrEqual(6);
+    expect(ALL_COMMANDERS.length).toBeLessThanOrEqual(10);
   });
 
   it('has all unique ids', () => {
@@ -204,5 +204,140 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     expect(COMMANDER_PROMOTION_XP_COST[3]).toBeGreaterThan(
       COMMANDER_PROMOTION_XP_COST[2],
     );
+  });
+});
+
+// ── Expansion: commanders + promotions added post-M10 ──
+// Guards the new Air General + Partisan Leader archetypes and the
+// Guerilla Tactics / Air Superiority / Naval Engineering branches.
+
+describe('Commander expansion content', () => {
+  it('ships more than the M10 starter count in both catalogues', () => {
+    // M10 seeded 5 commanders and 10 promotions.
+    expect(ALL_COMMANDERS.length).toBeGreaterThan(5);
+    expect(ALL_COMMANDER_PROMOTIONS.length).toBeGreaterThan(10);
+  });
+
+  it('adds an air-role commander in the modern age (pairs with M17 aircraft)', () => {
+    const airModern = ALL_COMMANDERS.filter(
+      c => c.age === 'modern' && c.role === 'air',
+    );
+    expect(airModern).toHaveLength(1);
+    expect(airModern[0]!.id).toBe('air_general');
+    expect(airModern[0]!.auraRadius).toBeGreaterThanOrEqual(1);
+  });
+
+  it('adds a Partisan Leader ground commander in the exploration age', () => {
+    const partisan = ALL_COMMANDERS.find(c => c.id === 'partisan_leader');
+    expect(partisan).toBeDefined();
+    expect(partisan!.age).toBe('exploration');
+    expect(partisan!.role).toBe('ground');
+    // Cheaper + faster than a line General so it reads as irregular.
+    const general = ALL_COMMANDERS.find(c => c.id === 'general')!;
+    expect(partisan!.cost).toBeLessThan(general.cost);
+    expect(partisan!.movement).toBeGreaterThan(general.movement);
+  });
+
+  it('covers every declared role (ground, naval, air) at least once', () => {
+    const roles = new Set(ALL_COMMANDERS.map(c => c.role));
+    expect(roles.has('ground')).toBe(true);
+    expect(roles.has('naval')).toBe(true);
+    expect(roles.has('air')).toBe(true);
+  });
+
+  it('seeds the maneuver tree with a full 3-tier Guerilla Tactics spine', () => {
+    const maneuver = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'maneuver');
+    expect(maneuver).toHaveLength(3);
+    const tiers = maneuver.map(p => p.tier).sort();
+    expect(tiers).toEqual([1, 2, 3]);
+    const ids = maneuver.map(p => p.id);
+    expect(ids).toContain('maneuver_ambush');
+    expect(ids).toContain('maneuver_hit_and_run');
+    expect(ids).toContain('maneuver_guerilla_war');
+  });
+
+  it('grows the leadership tree with an Air Superiority sub-branch', () => {
+    const airSup = ALL_COMMANDER_PROMOTIONS.find(
+      p => p.id === 'leadership_air_superiority',
+    );
+    const longRange = ALL_COMMANDER_PROMOTIONS.find(
+      p => p.id === 'leadership_long_range',
+    );
+    expect(airSup).toBeDefined();
+    expect(longRange).toBeDefined();
+    expect(airSup!.tree).toBe('leadership');
+    expect(longRange!.tree).toBe('leadership');
+    expect(airSup!.tier).toBe(2);
+    expect(longRange!.tier).toBe(3);
+    expect(airSup!.prerequisites).toContain('leadership_commanding_presence');
+    expect(longRange!.prerequisites).toContain('leadership_air_superiority');
+  });
+
+  it('caps the bastion tree with a Naval Engineering tier-3 pick', () => {
+    const navalEng = ALL_COMMANDER_PROMOTIONS.find(
+      p => p.id === 'bastion_naval_engineering',
+    );
+    expect(navalEng).toBeDefined();
+    expect(navalEng!.tree).toBe('bastion');
+    expect(navalEng!.tier).toBe(3);
+    expect(navalEng!.prerequisites).toContain('bastion_ranged_cover');
+    expect(navalEng!.aura.type).toBe('AURA_FORTIFY_BONUS');
+    if (navalEng!.aura.type === 'AURA_FORTIFY_BONUS') {
+      expect(navalEng!.aura.target).toBe('naval');
+      expect(navalEng!.aura.value).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps every expansion prereq internal to its own tree (no cross-tree leaks)', () => {
+    const byId = new Map(ALL_COMMANDER_PROMOTIONS.map(p => [p.id, p] as const));
+    const expansionIds = [
+      'maneuver_ambush',
+      'maneuver_hit_and_run',
+      'maneuver_guerilla_war',
+      'leadership_air_superiority',
+      'leadership_long_range',
+      'bastion_naval_engineering',
+    ];
+    for (const id of expansionIds) {
+      const p = byId.get(id)!;
+      for (const prereqId of p.prerequisites) {
+        const pre = byId.get(prereqId)!;
+        expect(pre.tree).toBe(p.tree);
+      }
+    }
+  });
+
+  it('keeps all expansion auras inside the known AuraEffectDef variant set', () => {
+    const expansionIds = new Set([
+      'maneuver_ambush',
+      'maneuver_hit_and_run',
+      'maneuver_guerilla_war',
+      'leadership_air_superiority',
+      'leadership_long_range',
+      'bastion_naval_engineering',
+    ]);
+    for (const p of ALL_COMMANDER_PROMOTIONS) {
+      if (!expansionIds.has(p.id)) continue;
+      expect(VALID_AURA_TYPES).toContain(p.aura.type);
+    }
+  });
+
+  it('leaves every age+role slot with at least one commander archetype', () => {
+    // Sanity: Antiquity ground, Exploration ground+naval, Modern ground+naval+air
+    const has = (age: string, role: string): boolean =>
+      ALL_COMMANDERS.some(c => c.age === age && c.role === role);
+    expect(has('antiquity', 'ground')).toBe(true);
+    expect(has('exploration', 'ground')).toBe(true);
+    expect(has('exploration', 'naval')).toBe(true);
+    expect(has('modern', 'ground')).toBe(true);
+    expect(has('modern', 'naval')).toBe(true);
+    expect(has('modern', 'air')).toBe(true);
+  });
+
+  it('keeps all commander + promotion ids globally unique after expansion', () => {
+    const cIds = ALL_COMMANDERS.map(c => c.id);
+    expect(new Set(cIds).size).toBe(cIds.length);
+    const pIds = ALL_COMMANDER_PROMOTIONS.map(p => p.id);
+    expect(new Set(pIds).size).toBe(pIds.length);
   });
 });
