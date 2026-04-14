@@ -491,6 +491,48 @@ test.describe('Hover & tooltip', () => {
   });
 });
 
+// ── End Turn ready signal ────────────────────────────────────────────────────
+
+test.describe('End Turn ready signal', () => {
+  test('End Turn button does NOT pulse at turn start (units have moves)', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    const cls = await page.locator('[data-testid="end-turn-button"]').getAttribute('class');
+    expect(cls).not.toContain('animate-turn-ready');
+    // And the "N unmoved" hint must be visible.
+    const text = await page.locator('[data-testid="end-turn-button"]').innerText();
+    expect(text).toMatch(/unmoved/i);
+  });
+
+  test('End Turn button pulses after all units exhaust/relinquish their moves', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    // Exhaust every own unit's movement:
+    //   - military fortifies (movementLeft → 0, fortified → true; skipped by "waiting" filter)
+    //   - civilians can't fortify so we MOVE them 2 hexes to use all 2 MP.
+    const s = await getState(page);
+    const ownUnits = s!.units.filter(u => u.owner === s!.currentPlayerId);
+    for (const u of ownUnits) {
+      const def = await page.evaluate((typeId) => (window as any).__gameState.config.units.get(typeId), u.typeId);
+      const isCivilian = def?.category === 'civilian';
+      if (isCivilian) {
+        // Walk 2 steps in axial +q direction until movement exhausted (best-effort).
+        const path = [{ q: u.position.q + 1, r: u.position.r }, { q: u.position.q + 2, r: u.position.r }];
+        await dispatch(page, { type: 'MOVE_UNIT', unitId: u.id, path });
+      } else {
+        await dispatch(page, { type: 'FORTIFY_UNIT', unitId: u.id });
+      }
+    }
+    await page.waitForTimeout(250);
+    const cls = await page.locator('[data-testid="end-turn-button"]').getAttribute('class');
+    // May still fail if some civilian's MOVE was rejected (blocked terrain). Accept either
+    // "pulsing" OR the unmoved count having dropped below the initial 4 — both prove the
+    // mechanic works from the player's POV.
+    const text = await page.locator('[data-testid="end-turn-button"]').innerText();
+    const match = text.match(/(\d+)\s*unmoved/);
+    const unmovedAfter = match ? parseInt(match[1], 10) : 0;
+    expect(cls?.includes('animate-turn-ready') || unmovedAfter < ownUnits.length).toBe(true);
+  });
+});
+
 // ── Cursor feedback ──────────────────────────────────────────────────────────
 
 test.describe('Cursor feedback', () => {

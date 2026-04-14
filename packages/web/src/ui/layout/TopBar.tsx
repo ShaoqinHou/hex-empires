@@ -123,9 +123,13 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           )}
         </div>
 
-        {/* End Turn — always clickable */}
+        {/* End Turn — always clickable. Pulses when 0 units still need orders
+            (turn-ready signal — matches Civ VII's ready indicator). */}
         <button
-          className="px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1"
+          data-testid="end-turn-button"
+          className={`px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1 ${
+            unitsWithMovement === 0 ? 'animate-turn-ready' : ''
+          }`}
           style={{
             background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             color: '#fff',
