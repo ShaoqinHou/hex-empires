@@ -284,3 +284,30 @@ export const RELIGIOUS_PRESSURE_RADIUS = 10 as const;
  * founder + follower + enhancer + worship = 4.
  */
 export const MAX_RELIGION_BELIEFS = 4 as const;
+
+// ── Religion cycle D — runtime record for founded religions ──
+
+/**
+ * Lightweight runtime record stored in `ReligionState` (or on a
+ * synthetic `state.religion` slot, see religionSystem.ts) once a player
+ * successfully dispatches `FOUND_RELIGION`.
+ *
+ * This is a narrower shape than `ReligionDef` (no `founderId` civ
+ * dependency, no `foundedByPlayer`/`foundedTurn` split) so the
+ * FOUND_RELIGION handler can emit it without pulling civ-id bookkeeping
+ * in from elsewhere. Once `GameState.religion` is widened this type may
+ * be folded into or replaced by `ReligionDef` proper.
+ *
+ * Uniqueness: at most one record may use a given `founderBeliefId`, and
+ * at most one may use a given `followerBeliefId` — enforced by the
+ * system, not the type.
+ */
+export interface ReligionRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly founderPlayerId: PlayerId;
+  readonly founderBeliefId: string;
+  readonly followerBeliefId: string;
+  readonly holyCityId: CityId;
+  readonly foundedOnTurn: number;
+}
