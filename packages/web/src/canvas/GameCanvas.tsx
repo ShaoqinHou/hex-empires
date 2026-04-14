@@ -190,6 +190,22 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         ? new Set(reachableHexes.keys())
         : null;
 
+      // Compute the move-path preview: when a unit is selected AND the hovered hex is
+      // within its reach, find the path so the renderer can draw it. Recomputed per
+      // frame — pathfinding on a small 3–6 step grid is cheap (<1ms), so no need to memo.
+      let pathPreview: ReadonlyArray<HexCoord> | null = null;
+      if (selectedUnit && hoveredHex && reachableSet) {
+        const hoveredKey = coordToKey(hoveredHex);
+        if (reachableSet.has(hoveredKey) && hoveredKey !== coordToKey(selectedUnit.position)) {
+          const costFn = (_from: HexCoord, to: HexCoord) => {
+            const tile = state.map.tiles.get(coordToKey(to));
+            if (!tile) return null;
+            return getMovementCost(tile);
+          };
+          pathPreview = findPath(selectedUnit.position, hoveredHex, costFn, selectedUnit.movementLeft);
+        }
+      }
+
       const player = state.players.get(state.currentPlayerId);
       renderer.render(cameraRef.current, {
         state,
@@ -200,6 +216,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         selectedUnit,
         reachableHexes: reachableSet,
         hoveredHex,
+        pathPreview,
         visibility: player?.visibility ?? null,
         explored: player?.explored ?? null,
         showYields,

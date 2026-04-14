@@ -17,6 +17,10 @@ export interface RenderContext {
   selectedUnit: UnitState | null;
   reachableHexes: ReadonlySet<string> | null;
   hoveredHex: HexCoord | null;
+  /** Precomputed hexes forming the path from selectedUnit to hoveredHex (inclusive).
+   *  Null if there's no active preview. Drawn as chevron dots so the player sees
+   *  where a right-click will move them. */
+  pathPreview: ReadonlyArray<HexCoord> | null;
   visibility: ReadonlySet<string> | null;  // currently visible tiles
   explored: ReadonlySet<string> | null;    // ever-seen tiles
   showYields: boolean;
@@ -138,6 +142,11 @@ export class HexRenderer {
     // Draw hover highlight
     if (rc.hoveredHex) {
       this.drawHexHighlight(rc.hoveredHex, 'rgba(255, 255, 255, 0.15)', 1);
+    }
+
+    // Draw path preview (after selection + hover so it sits on top of both overlays)
+    if (rc.pathPreview && rc.pathPreview.length > 0) {
+      this.drawPathPreview(rc);
     }
 
     ctx.restore();
@@ -778,6 +787,46 @@ export class HexRenderer {
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
+  }
+
+  /** Render the move path as bright chevron dots along hex centers — shows the player
+   *  exactly where their right-click MOVE will go. */
+  private drawPathPreview(rc: RenderContext): void {
+    if (!rc.pathPreview || rc.pathPreview.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    // Draw a dashed line connecting hex centers.
+    ctx.strokeStyle = 'rgba(255, 235, 120, 0.85)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    const start = rc.selectedUnit?.position;
+    if (start) {
+      const p = hexToPixel(start);
+      ctx.moveTo(p.x, p.y);
+    }
+    for (const step of rc.pathPreview) {
+      const p = hexToPixel(step);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Mark each step with a small filled circle; end with a bigger diamond target.
+    for (let i = 0; i < rc.pathPreview.length; i++) {
+      const step = rc.pathPreview[i];
+      const p = hexToPixel(step);
+      const isEnd = i === rc.pathPreview.length - 1;
+      ctx.fillStyle = isEnd ? 'rgba(255, 220, 60, 0.95)' : 'rgba(255, 235, 120, 0.75)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, isEnd ? 7 : 4, 0, Math.PI * 2);
+      ctx.fill();
+      if (isEnd) {
+        ctx.strokeStyle = 'rgba(40, 30, 0, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   private drawDistricts(rc: RenderContext, viewport: ViewportBounds): void {
