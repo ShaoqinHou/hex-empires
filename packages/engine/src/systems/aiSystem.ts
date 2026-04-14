@@ -6,6 +6,19 @@ import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
 import { PROMOTION_THRESHOLDS } from '../data/units/promotions';
+import { ALL_PANTHEONS } from '../data/religion';
+import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
+import type { PolicyCategory } from '../data/governments';
+
+/** Faith threshold for adopting a pantheon (mirrors PANTHEON_DEFAULT_FAITH_COST). */
+const AI_PANTHEON_FAITH_COST = 25;
+/** Category order used when scanning for an empty policy slot. */
+const POLICY_CATEGORY_ORDER: ReadonlyArray<PolicyCategory> = [
+  'military',
+  'economic',
+  'diplomatic',
+  'wildcard',
+];
 
 /** Diplomacy helpers (mirrored locally to avoid cross-system imports) */
 function aiRelationKey(a: string, b: string): string {
@@ -482,8 +495,106 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
 
   // TODO: PURCHASE_TILE — AI territorial expansion is complex to prioritize correctly
 
+  // 9. Civ VII parity emissions (low priority — at most ONE per turn).
+  //    Order: pantheon → government → policy. Each guarded by its own
+  //    prerequisites. These never block the existing core AI flow above.
+  const parityAction = pickCivVIIParityAction(state, player);
+  if (parityAction) {
+    actions.push(parityAction);
+  }
+
   actions.push({ type: 'END_TURN' });
   return actions;
+}
+
+/**
+ * Pick exactly one Civ VII parity action (ADOPT_PANTHEON, SET_GOVERNMENT,
+ * or SLOT_POLICY) for the current AI player, or null if none apply.
+ *
+ * Priority order:
+ *   1. Adopt a pantheon when the player has none AND has enough faith AND
+ *      at least one ALL_PANTHEONS entry is not yet claimed by any player.
+ *   2. Set a government when the player has none AND has researched the
+ *      unlock civic for at least one GovernmentDef.
+ *   3. Slot a policy when the player HAS a government AND has at least
+ *      one empty slot AND a matching PolicyDef whose unlockCivic is
+ *      researched exists.
+ */
+function pickCivVIIParityAction(
+  state: GameState,
+  player: { readonly id: string; readonly faith: number; readonly researchedCivics: ReadonlyArray<string>; readonly pantheonId?: string | null; readonly governmentId?: string | null; readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string | null>> },
+): GameAction | null {
+  // 1. Pantheon
+  if (!player.pantheonId && player.faith >= AI_PANTHEON_FAITH_COST) {
+    const claimedByAny = new Set<string>();
+    for (const p of state.players.values()) {
+      if (p.pantheonId) claimedByAny.add(p.pantheonId);
+    }
+    // Also honour any religion-slot pantheon claims, if present.
+    const religionSlot = state.religion;
+    if (religionSlot?.pantheonClaims) {
+      for (const pid of religionSlot.pantheonClaims.keys()) {
+        claimedByAny.add(pid);
+      }
+    }
+    const available = ALL_PANTHEONS.find(p => !claimedByAny.has(p.id));
+    if (available) {
+      return {
+        type: 'ADOPT_PANTHEON',
+        playerId: player.id,
+        pantheonId: available.id,
+      };
+    }
+  }
+
+  // 2. Government
+  if (!player.governmentId) {
+    const researched = new Set(player.researchedCivics);
+    const candidate = ALL_GOVERNMENTS.find(g => researched.has(g.unlockCivic));
+    if (candidate) {
+      return {
+        type: 'SET_GOVERNMENT',
+        playerId: player.id,
+        governmentId: candidate.id,
+      };
+    }
+  }
+
+  // 3. Slot a policy — needs a government and an empty slot. Wildcard
+  //    slots accept any policy; other slots only accept policies of
+  //    matching category (per GovernmentDef slot semantics).
+  if (player.governmentId && player.slottedPolicies) {
+    const researched = new Set(player.researchedCivics);
+    const alreadySlotted = new Set<string>();
+    for (const arr of player.slottedPolicies.values()) {
+      for (const p of arr) {
+        if (p) alreadySlotted.add(p);
+      }
+    }
+    for (const category of POLICY_CATEGORY_ORDER) {
+      const slots = player.slottedPolicies.get(category);
+      if (!slots) continue;
+      const slotIndex = slots.findIndex(s => s === null);
+      if (slotIndex < 0) continue;
+      const policy = ALL_POLICIES.find(
+        p =>
+          (category === 'wildcard' || p.category === category) &&
+          researched.has(p.unlockCivic) &&
+          !alreadySlotted.has(p.id),
+      );
+      if (policy) {
+        return {
+          type: 'SLOT_POLICY',
+          playerId: player.id,
+          category,
+          slotIndex,
+          policyId: policy.id,
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 /** Check whether a hex position is in the player's visibility set */
