@@ -429,6 +429,31 @@ test.describe('Keyboard shortcuts', () => {
     expect(errs).toEqual([]);
   });
 
+  test('C jumps to capital after one is founded', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    // No cities yet → C is a no-op (no crash).
+    await page.keyboard.press('c');
+    await page.waitForTimeout(100);
+    expect((await getSelection(page)).cityId).toBeNull();
+
+    // Found a city with the settler.
+    const settler = await ownUnit(page, 'settler');
+    const sScr = await hexScreen(page, settler.position.q, settler.position.r);
+    await page.mouse.click(sScr!.x, sScr!.y, { button: 'left' });
+    await page.waitForTimeout(100);
+    await page.keyboard.press('b');
+    await page.waitForTimeout(250);
+    const after = await getState(page);
+    expect(after!.cityCount).toBe(1);
+
+    // Press C — should select the (only, therefore capital) city.
+    await page.keyboard.press('c');
+    await page.waitForTimeout(200);
+    const sel = await getSelection(page);
+    expect(sel.cityId).not.toBeNull();
+    expect(sel.unitId).toBeNull();
+  });
+
   test('N cycles own cities (selects city, no-op with zero cities)', async ({ page }) => {
     await startGame(page, { seed: 2 });
     // No cities yet — N should be a silent no-op (no crash, no selection change).

@@ -506,6 +506,23 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         cameraRef.current.centerOn(x, y);
       }
 
+      // C — Jump to capital (standard 4X shortcut). Falls back to first own city if no
+      // capital is flagged yet (e.g. capital was razed and no successor set).
+      if (key === 'c' || key === 'C') {
+        e.preventDefault();
+        const ownCities = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId);
+        if (ownCities.length === 0) return;
+        const capital = ownCities.find(c => c.isCapital) ?? ownCities[0];
+
+        setSelectedUnit(null);
+        setSelectedHex(capital.position);
+        selectCity(capital.id);
+        onCityClick?.(capital);
+
+        const { x, y } = hexToPixel(capital.position);
+        cameraRef.current.centerOn(x, y);
+      }
+
       // N — Cycle to next own city (mirrors Space for units); opens city panel + recenters.
       if (key === 'n' || key === 'N') {
         e.preventDefault();
