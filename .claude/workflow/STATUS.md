@@ -1,12 +1,15 @@
 # Project Status
 
 ## Current State
-- **Phase:** Feature-complete — ongoing polish and balance
-- **Last verified:** 2026-04-14 (200-turn stress test: 0 errors, 17.8s)
-- **Tests:** 618 engine + 48 Playwright E2E = 666 total, all passing
-- **Commits:** 113+
-- **AI:** Personality system (9 leaders), fog-of-war, threat assessment, diplomacy, age transitions
-- **UI:** Setup screen, help panel, right-click menu, improved tech/civic trees, territory borders
+- **Phase:** Feature-complete — playable Civ-style 4X with victory conditions
+- **Last verified:** 2026-04-14 (culture victory at T115, 13s, 0 errors)
+- **Tests:** 623 engine + 48 Playwright E2E = 671 total, all passing
+- **Commits:** 130+
+- **AI:** Personality system (9 leaders), fog-of-war, threat assessment, diplomacy, age transitions,
+  crisis resolution, civic research, tech/civic mastery, unit promotions, trade routes, varied unit production
+- **UI:** Setup screen, help panel, right-click menu, improved tech/civic trees, territory borders,
+  combat animations, production notifications, save toast, unit upgrade UI, empire summary
+- **Victory:** Cultural, scientific, domination, economic, diplomatic, military, and score victories all functional
 
 ## Rulebook Alignment (post-audit, verified 2026-04-10)
 - ✓ All 7 critical bugs fixed (river penalty, specialist costs, healing, cap penalty, fortification, HP degradation)
