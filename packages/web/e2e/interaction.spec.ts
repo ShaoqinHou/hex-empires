@@ -403,6 +403,32 @@ test.describe('Keyboard shortcuts', () => {
     expect(errs).toEqual([]);
   });
 
+  test('N cycles own cities (selects city, no-op with zero cities)', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    // No cities yet — N should be a silent no-op (no crash, no selection change).
+    expect((await getSelection(page)).cityId).toBeNull();
+    await page.keyboard.press('n');
+    await page.waitForTimeout(150);
+    expect((await getSelection(page)).cityId).toBeNull();
+
+    // Found a city, then press N — it should select that city.
+    const settler = await ownUnit(page, 'settler');
+    const sScr = await hexScreen(page, settler.position.q, settler.position.r);
+    await page.mouse.click(sScr!.x, sScr!.y, { button: 'left' });
+    await page.waitForTimeout(100);
+    await page.keyboard.press('b');
+    await page.waitForTimeout(250);
+
+    const after = await getState(page);
+    expect(after!.cityCount).toBe(1);
+
+    await page.keyboard.press('n');
+    await page.waitForTimeout(150);
+    const sel = await getSelection(page);
+    expect(sel.cityId).not.toBeNull();
+    expect(sel.unitId).toBeNull(); // city selection clears unit
+  });
+
   test('Space cycles selection to a different unit with movement', async ({ page }) => {
     await startGame(page);
     const warrior = await ownUnit(page, 'warrior');

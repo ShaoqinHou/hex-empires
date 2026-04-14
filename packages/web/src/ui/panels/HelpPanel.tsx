@@ -25,6 +25,7 @@ const SECTIONS: Section[] = [
       { key: 'Left-click', label: 'Select / cycle units & cities (RTS-style — never moves or attacks)' },
       { key: 'Right-click', label: 'Move selected unit, or attack enemy in range' },
       { key: 'Space', label: 'Cycle through units with moves remaining' },
+      { key: 'N', label: 'Cycle through own cities (opens city panel)' },
       { key: 'Enter', label: 'End turn' },
       { key: 'WASD / Arrows', label: 'Pan camera' },
       { key: 'Scroll', label: 'Zoom in / out' },
