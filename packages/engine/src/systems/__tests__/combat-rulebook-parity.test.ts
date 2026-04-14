@@ -240,6 +240,23 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
     expect(forestDef).toBeLessThan(flat);
   });
 
+  it('R64c: forest gives FLAT +2 CS (rulebook §6.4 vegetated terrain), not +25% multiplicative', () => {
+    // Attacker at 99 HP (no first strike), warrior vs warrior on forest.
+    // Rulebook: defender CS 20+2=22, attacker CS 20. Diff -2. Expected avg ≈ 30 × e^(-2/25) ≈ 27.7.
+    const forestDef = averageDefenderDamage((seed) =>
+      buildMeleeScenario({
+        seed,
+        attacker: { health: 99 },
+        tileMutator: (tiles) => {
+          const key = coordToKey({ q: 4, r: 3 });
+          const t = tiles.get(key)!;
+          tiles.set(key, { ...t, feature: 'forest' });
+        },
+      }),
+    );
+    expect(Math.abs(forestDef - 27.7)).toBeLessThanOrEqual(2);
+  });
+
   it('R64a: hills gives FLAT +3 CS (rulebook §6.4), not +30% multiplicative', () => {
     // Attacker at 99 HP (no first strike), warrior vs warrior on hills.
     // Rulebook: defender CS 20+3=23, attacker CS 20. Diff -3. Expected avg ≈ 30 × e^(-3/25) ≈ 26.6.

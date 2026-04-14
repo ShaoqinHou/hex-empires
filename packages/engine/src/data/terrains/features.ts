@@ -25,7 +25,8 @@ export const FOREST: TerrainFeatureDef = {
   id: 'forest',
   name: 'Forest',
   movementCostModifier: 1,
-  defenseBonusModifier: 0.25,
+  defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
+  flatDefenseBonus: 2,      // +2 CS to defenders (rulebook §6.4 vegetated terrain)
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#2d5a1e',
