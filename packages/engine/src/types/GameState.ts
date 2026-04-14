@@ -317,7 +317,8 @@ export type GameAction =
   | { readonly type: 'UNASSIGN_GOVERNOR'; readonly governorId: GovernorId }
   | { readonly type: 'PROMOTE_GOVERNOR'; readonly governorId: GovernorId; readonly abilityId: string }
   | { readonly type: 'SKIP_UNIT'; readonly unitId: UnitId }
-  | { readonly type: 'DELETE_UNIT'; readonly unitId: UnitId };
+  | { readonly type: 'DELETE_UNIT'; readonly unitId: UnitId }
+  | { readonly type: 'UPGRADE_UNIT'; readonly unitId: UnitId };
 
 // ── Events ──
 

@@ -15,6 +15,17 @@ export function BottomBar() {
   const isCivilian = unitDef?.category === 'civilian';
   const isBuilder = unitDef?.abilities.includes('build_improvement') ?? false;
 
+  // Upgrade availability
+  const upgradeTargetDef = useMemo(() => {
+    if (!unitDef?.upgradesTo || !player) return null;
+    const target = state.config.units.get(unitDef.upgradesTo);
+    if (!target) return null;
+    if (target.requiredTech && !player.researchedTechs.includes(target.requiredTech)) return null;
+    return target;
+  }, [unitDef, player, state.config.units]);
+  const upgradeCost = upgradeTargetDef ? upgradeTargetDef.cost * 2 : 0;
+  const canAffordUpgrade = player ? player.gold >= upgradeCost : false;
+
   // Calculate available improvements for selected tile (builder)
   const availableImprovements = useMemo(() => {
     if (!isBuilder || !selectedHex) return [];
@@ -198,6 +209,19 @@ export function BottomBar() {
                   color="var(--color-science)"
                   icon="🛡️"
                   onClick={() => dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id })}
+                />
+              )}
+              {upgradeTargetDef && (
+                <ActionButton
+                  label={`Upgrade → ${upgradeTargetDef.name} (${upgradeCost}g)`}
+                  shortcut="U"
+                  color={canAffordUpgrade ? 'var(--color-gold)' : 'var(--color-text-muted)'}
+                  icon="⬆️"
+                  onClick={() => {
+                    if (canAffordUpgrade) {
+                      dispatch({ type: 'UPGRADE_UNIT', unitId: selectedUnit.id });
+                    }
+                  }}
                 />
               )}
             </div>

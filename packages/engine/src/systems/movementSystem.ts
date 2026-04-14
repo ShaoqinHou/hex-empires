@@ -36,6 +36,54 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     };
   }
 
+  if (action.type === 'UPGRADE_UNIT') {
+    const unit = state.units.get(action.unitId);
+    if (!unit || unit.owner !== state.currentPlayerId) {
+      return createInvalidResult(state, 'Unit not found or not yours', 'movement');
+    }
+    const currentDef = state.config.units.get(unit.typeId);
+    if (!currentDef || !currentDef.upgradesTo) {
+      return createInvalidResult(state, 'This unit has no upgrade path', 'movement');
+    }
+    const targetDef = state.config.units.get(currentDef.upgradesTo);
+    if (!targetDef) {
+      return createInvalidResult(state, `Upgrade target '${currentDef.upgradesTo}' not found`, 'movement');
+    }
+    // Check required tech
+    const player = state.players.get(state.currentPlayerId);
+    if (!player) return state;
+    if (targetDef.requiredTech && !player.researchedTechs.includes(targetDef.requiredTech)) {
+      return createInvalidResult(state, `Requires tech: ${targetDef.requiredTech}`, 'movement');
+    }
+    // Cost: 2x the target unit's production cost in gold
+    const upgradeCost = targetDef.cost * 2;
+    if (player.gold < upgradeCost) {
+      return createInvalidResult(state, `Not enough gold (need ${upgradeCost}, have ${Math.floor(player.gold)})`, 'movement');
+    }
+    // Deduct gold and upgrade the unit
+    const updatedPlayers = new Map(state.players);
+    updatedPlayers.set(player.id, { ...player, gold: player.gold - upgradeCost });
+    const updatedUnits = new Map(state.units);
+    updatedUnits.set(unit.id, {
+      ...unit,
+      typeId: currentDef.upgradesTo,
+      movementLeft: 0, // upgrading consumes the whole turn
+      fortified: false,
+    });
+    return {
+      ...state,
+      players: updatedPlayers,
+      units: updatedUnits,
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${currentDef.name} upgraded to ${targetDef.name} for ${upgradeCost}g`,
+        type: 'move' as const,
+      }],
+      lastValidation: null,
+    };
+  }
+
   if (action.type !== 'MOVE_UNIT') return state;
 
   const unit = state.units.get(action.unitId);

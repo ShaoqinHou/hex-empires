@@ -328,6 +328,43 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
+  // 5. Unit upgrades — upgrade units that have an available upgrade path and sufficient gold
+  // Simulate gold after previously queued purchases to avoid over-spending
+  let projectedGold = player.gold;
+  for (const a of actions) {
+    if (a.type === 'PURCHASE_ITEM') {
+      const baseCost =
+        state.config.units.get(a.itemId)?.cost ??
+        state.config.buildings.get(a.itemId)?.cost ??
+        100;
+      projectedGold -= baseCost * 2;
+    }
+  }
+
+  // Collect upgradeable units, prefer damaged/older units (lower health first)
+  const upgradeableUnits = ourUnits
+    .filter(unit => {
+      const def = state.config.units.get(unit.typeId);
+      if (!def || !def.upgradesTo) return false;
+      const targetDef = state.config.units.get(def.upgradesTo);
+      if (!targetDef) return false;
+      if (targetDef.requiredTech && !player.researchedTechs.includes(targetDef.requiredTech)) return false;
+      return true;
+    })
+    .sort((a, b) => a.health - b.health); // damaged units first
+
+  for (const unit of upgradeableUnits) {
+    const def = state.config.units.get(unit.typeId)!;
+    const targetDef = state.config.units.get(def.upgradesTo!)!;
+    const upgradeCost = targetDef.cost * 2;
+    // AI upgrades when it has ample gold (personality.riskTolerance scales the threshold)
+    const goldThreshold = upgradeCost * (1.5 - personality.riskTolerance * 0.5);
+    if (projectedGold >= goldThreshold) {
+      actions.push({ type: 'UPGRADE_UNIT', unitId: unit.id });
+      projectedGold -= upgradeCost;
+    }
+  }
+
   actions.push({ type: 'END_TURN' });
   return actions;
 }
