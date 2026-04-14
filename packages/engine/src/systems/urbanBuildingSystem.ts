@@ -9,6 +9,7 @@ import type {
   PlaceUrbanBuildingActionV2,
 } from '../types/DistrictOverhaul';
 import { coordToKey, distance } from '../hex/HexMath';
+import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
 
 /**
  * Accepted action input for this system. Until Cycle F splices
@@ -117,6 +118,17 @@ export function urbanBuildingSystem(state: GameState, action: UrbanBuildingActio
   const existingUrban: UrbanTileV2 | undefined = city.urbanTiles?.get(tileKey);
   const currentBuildings: ReadonlyArray<BuildingId> = existingUrban?.buildings ?? [];
   if (currentBuildings.length >= 2) {
+    return state;
+  }
+
+  // 5. Final gate: delegate to the M14 BuildingPlacementValidator which
+  //    re-asserts ownership/territory/tile-cap and additionally applies the
+  //    wonder-specific geographic predicates from M13 (Pyramids→desert,
+  //    Stonehenge→adjacent stone, etc.). The duplicate checks are accepted
+  //    as defense-in-depth — this system stays drop-in-safe even if callers
+  //    bypass the pre-flight validator.
+  const placementResult = validateBuildingPlacement(cityId, tile, buildingId, state);
+  if (!placementResult.valid) {
     return state;
   }
 

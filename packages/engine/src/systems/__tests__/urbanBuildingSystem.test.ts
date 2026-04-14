@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { urbanBuildingSystem } from '../urbanBuildingSystem';
-import { createTestState } from './helpers';
-import type { CityState } from '../../types/GameState';
+import { createTestState, setTile } from './helpers';
+import type { CityState, HexTile } from '../../types/GameState';
 import type { PlaceUrbanBuildingActionV2 } from '../../types/DistrictOverhaul';
 import { coordToKey } from '../../hex/HexMath';
 
@@ -298,6 +298,99 @@ describe('urbanBuildingSystem', () => {
       cityId: 'c1',
       tile: { q: 9, r: 9 },
       buildingId: 'granary',
+    });
+
+    expect(next).toBe(state);
+  });
+
+  // ── M14 BuildingPlacementValidator gating (wonder placement rules) ──
+
+  it('still places a non-wonder (granary) on a valid grassland territory tile', () => {
+    const city = createTestCity();
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const tile = { q: 4, r: 3 };
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'granary',
+    });
+
+    const urban = next.cities.get('c1')!.urbanTiles!.get(coordToKey(tile))!;
+    expect(urban.buildings).toEqual(['granary']);
+  });
+
+  it('places Pyramids on a desert tile', () => {
+    const city = createTestCity();
+    const baseState = createTestState({ cities: new Map([['c1', city]]) });
+    const tiles = new Map<string, HexTile>(baseState.map.tiles);
+    const tile = { q: 4, r: 3 };
+    setTile(tiles, tile, 'desert', null);
+    const state = { ...baseState, map: { ...baseState.map, tiles } };
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'pyramids',
+    });
+
+    const urban = next.cities.get('c1')!.urbanTiles!.get(coordToKey(tile))!;
+    expect(urban.buildings).toEqual(['pyramids']);
+  });
+
+  it('rejects Pyramids on a grassland tile (wonder placement predicate fails)', () => {
+    const city = createTestCity();
+    // Default map is all grassland → Pyramids (desert/floodplains-only) must fail.
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const tile = { q: 4, r: 3 };
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'pyramids',
+    });
+
+    expect(next).toBe(state);
+  });
+
+  it('places Stonehenge on a tile adjacent to a stone resource', () => {
+    const city = createTestCity();
+    const baseState = createTestState({ cities: new Map([['c1', city]]) });
+    const tiles = new Map<string, HexTile>(baseState.map.tiles);
+    const placementTile = { q: 4, r: 3 };
+    // Put a 'stone' resource on a neighbour of the placement tile.
+    // Neighbours of {4,3} include {4,2} (see hex neighbour axial offsets).
+    const neighbour = { q: 4, r: 2 };
+    const nKey = coordToKey(neighbour);
+    const nExisting = tiles.get(nKey)!;
+    tiles.set(nKey, { ...nExisting, resource: 'stone' });
+    const state = { ...baseState, map: { ...baseState.map, tiles } };
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile: placementTile,
+      buildingId: 'stonehenge',
+    });
+
+    const urban = next.cities.get('c1')!.urbanTiles!.get(coordToKey(placementTile))!;
+    expect(urban.buildings).toEqual(['stonehenge']);
+  });
+
+  it('rejects Stonehenge when no adjacent tile has a stone resource', () => {
+    const city = createTestCity();
+    // Default map has no resources anywhere → Stonehenge must fail.
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const tile = { q: 4, r: 3 };
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'stonehenge',
     });
 
     expect(next).toBe(state);
