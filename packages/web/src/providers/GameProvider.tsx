@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import type { GameState, GameAction, HexCoord, UnitState, CombatPreview, ValidationResult } from '@hex/engine';
+import type { GameState, GameAction, HexCoord, UnitState, CombatPreview, ValidationResult, CityId } from '@hex/engine';
 import { AnimationManager } from '../canvas/AnimationManager';
 import {
   createTerrainRegistries,
@@ -223,6 +223,10 @@ interface GameContextValue {
   hoveredHex: HexCoord | null;
   setHoveredHex: (hex: HexCoord | null) => void;
   isAltPressed: boolean;
+  // City selection state (moved from App.tsx so canvas and panels share it)
+  selectedCityId: CityId | null;
+  selectedCity: CityState | null;
+  selectCity: (cityId: CityId | null) => void;
   // Combat preview state
   combatPreview: CombatPreview | null;
   setCombatPreview: (preview: CombatPreview | null) => void;
@@ -246,6 +250,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const [state, setState] = useState<GameState | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<CityId | null>(null);
   const [selectedHex, setSelectedHex] = useState<HexCoord | null>(null);
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
@@ -292,6 +297,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setSelectedUnitId(unit?.id ?? null);
   }, []);
 
+  // Derive selectedCity from state — always fresh reference
+  const selectedCity = (selectedCityId && state) ? state.cities.get(selectedCityId) ?? null : null;
+  const selectCity = useCallback((cityId: CityId | null) => {
+    setSelectedCityId(cityId);
+  }, []);
+
   const clearValidation = useCallback(() => {
     setLastValidation(null);
   }, []);
@@ -300,6 +311,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const newState = createInitialState(config);
     setState(newState);
     setSelectedUnitId(null);
+    setSelectedCityId(null);
     setSelectedHex(null);
     setLastValidation(null);
   }, []);
@@ -551,6 +563,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     hoveredHex,
     setHoveredHex,
     isAltPressed,
+    selectedCityId,
+    selectedCity,
+    selectCity,
     combatPreview,
     setCombatPreview,
     combatPreviewPosition,
@@ -561,7 +576,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     animationManager: animationManagerRef.current,
     lastValidation,
     clearValidation,
-  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
+  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
 
   // Expose game state for E2E testing (Playwright can read window.__gameState)
   useEffect(() => {

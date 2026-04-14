@@ -5,11 +5,10 @@ import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
 import { ImprovementPanel } from '../ui/components/ImprovementPanel';
-import { UnitContextMenu } from '../ui/components/UnitContextMenu';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
-import type { HexCoord, UnitState, CityState } from '@hex/engine';
-import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities } from '@hex/engine';
+import type { HexCoord, CityState } from '@hex/engine';
+import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getTileContents, getSelectionCycle } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
@@ -40,11 +39,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
     reachableHexes, animationManager, setHoveredHex: setGlobalHoveredHex,
     combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
+    selectCity,
   } = useGameState();
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [showImprovementPanel, setShowImprovementPanel] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Sync local hover state to global state for combat preview
   useEffect(() => {
@@ -192,7 +191,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     return () => cancelAnimationFrame(animFrame);
   }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, animationManager]);
 
-  // Handle clicks — select units or move them
+  // Handle clicks — unified priority logic using TileContents
   const handleClick = useCallback((screenX: number, screenY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -204,117 +203,126 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     const hex = pixelToHex(world.x, world.y);
     const key = coordToKey(hex);
 
-    // Find ALL player units on this tile
-    const unitsOnTile = [...state.units.values()].filter(
-      u => coordToKey(u.position) === key && u.owner === state.currentPlayerId
-    );
+    const contents = getTileContents(state, hex, state.currentPlayerId);
 
-    // Check if clicked on a city
-    let clickedCity: CityState | null = null;
-    for (const city of state.cities.values()) {
-      if (coordToKey(city.position) === key) {
-        clickedCity = city;
-        break;
+    // 1. If selectedUnit + enemy unit at hex + attackable → ATTACK_UNIT
+    if (selectedUnit && contents.enemyUnits.length > 0) {
+      const attackable = getAttackableUnits(state, selectedUnit.id);
+      const target = contents.enemyUnits.find(e => attackable.some(a => a.unitId === e.id));
+      if (target) {
+        dispatch({ type: 'ATTACK_UNIT', attackerId: selectedUnit.id, targetId: target.id });
+        setSelectedHex(hex);
+        return;
       }
     }
 
-    if (unitsOnTile.length > 0) {
-      // Cycle through units on this tile on repeated clicks
-      if (selectedUnit && unitsOnTile.some(u => u.id === selectedUnit.id)) {
-        // Already have a unit from this tile selected — cycle to next
-        const currentIdx = unitsOnTile.findIndex(u => u.id === selectedUnit.id);
-        const nextIdx = (currentIdx + 1) % (unitsOnTile.length + (clickedCity ? 1 : 0));
-        if (nextIdx < unitsOnTile.length) {
-          // Select next unit
-          setSelectedUnit(unitsOnTile[nextIdx]);
+    // 2. If selectedUnit + enemy city at hex + attackable → ATTACK_CITY (fixes the missing dispatch bug)
+    if (selectedUnit && contents.city && contents.city.owner !== state.currentPlayerId) {
+      const attackableCities = getAttackableCities(state, selectedUnit.id);
+      const canAttack = attackableCities.some(a => a.cityId === contents.city!.id);
+      if (canAttack) {
+        dispatch({ type: 'ATTACK_CITY', attackerId: selectedUnit.id, cityId: contents.city.id });
+        setSelectedHex(hex);
+        return;
+      }
+    }
+
+    // 3. If own units or own city on hex → select/cycle (military → civilian → city)
+    const cycle = getSelectionCycle(contents, state.currentPlayerId);
+    if (cycle.length > 0) {
+      // Find where the current selection sits in the cycle
+      const currentIdxInCycle = cycle.findIndex(e => {
+        if (e.type === 'unit') return selectedUnit?.id === e.id;
+        if (e.type === 'city') return false; // city is never a "selectedUnit"
+        return false;
+      });
+
+      if (currentIdxInCycle >= 0) {
+        // Advance to next in cycle
+        const nextIdx = (currentIdxInCycle + 1) % cycle.length;
+        const next = cycle[nextIdx];
+        if (next.type === 'unit') {
+          const unit = state.units.get(next.id) ?? null;
+          setSelectedUnit(unit);
           setSelectedHex(hex);
           setShowImprovementPanel(false);
-        } else if (clickedCity && clickedCity.owner === state.currentPlayerId) {
-          // Cycled past all units → open city panel
-          onCityClick?.(clickedCity);
+        } else {
+          // city
+          const city = contents.city;
+          if (city) {
+            onCityClick?.(city);
+            selectCity(city.id);
+          }
           setSelectedUnit(null);
           setSelectedHex(hex);
         }
       } else {
-        // First click on this tile — select first unit
-        setSelectedUnit(unitsOnTile[0]);
-        setSelectedHex(hex);
-        setShowImprovementPanel(false);
-      }
-    } else if (clickedCity && clickedCity.owner === state.currentPlayerId) {
-      // No units here, just a city — open city panel
-      onCityClick?.(clickedCity);
-      setSelectedUnit(null);
-      setSelectedHex(hex);
-    } else if (selectedUnit && selectedUnit.movementLeft > 0) {
-      // Check if selected unit is a Builder
-      const unitDef = unitRegistry.get(selectedUnit.typeId);
-      const isBuilder = unitDef?.abilities.includes('build_improvement');
-
-      if (isBuilder) {
-        // Builder: show improvement panel for the clicked tile
-        setSelectedHex(hex);
-        setShowImprovementPanel(true);
-      } else {
-        // Regular unit: check for attack or move
-        // Check if clicking on an enemy unit (attack)
-        let enemyUnit: UnitState | null = null;
-        for (const unit of state.units.values()) {
-          if (coordToKey(unit.position) === key && unit.owner !== state.currentPlayerId) {
-            enemyUnit = unit;
-            break;
-          }
-        }
-
-        if (enemyUnit) {
-          // Attack the enemy
-          dispatch({
-            type: 'ATTACK_UNIT',
-            attackerId: selectedUnit.id,
-            targetId: enemyUnit.id,
-          });
-          // Keep unit selected but it will have 0 movement after attack
+        // Not currently selecting anything on this tile — select first
+        const first = cycle[0];
+        if (first.type === 'unit') {
+          const unit = state.units.get(first.id) ?? null;
+          // Check if the unit is a Builder
+          const unitDef = unit ? unitRegistry.get(unit.typeId) : null;
+          const isBuilder = unitDef?.abilities.includes('build_improvement') ?? false;
+          setSelectedUnit(unit);
           setSelectedHex(hex);
-        } else if (reachableHexes && reachableHexes.has(key)) {
-          // Move selected unit to clicked hex
-          const costFn = (from: HexCoord, to: HexCoord) => {
-            const tile = state.map.tiles.get(coordToKey(to));
-            if (!tile) return null;
-            return getMovementCost(tile);
-          };
-          const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
-          if (path && path.length > 0) {
-            dispatch({
-              type: 'MOVE_UNIT',
-              unitId: selectedUnit.id,
-              path,
-            });
-            // Keep unit selected at new position (will re-read from state via effect below)
-            setSelectedHex(hex);
+          if (isBuilder) {
+            setShowImprovementPanel(true);
+          } else {
+            setShowImprovementPanel(false);
           }
         } else {
-          // Clicked unreachable hex — deselect
+          // city
+          const city = contents.city;
+          if (city) {
+            onCityClick?.(city);
+            selectCity(city.id);
+          }
           setSelectedUnit(null);
           setSelectedHex(hex);
         }
       }
-    } else {
-      // Deselect
-      setSelectedUnit(null);
-      setSelectedHex(hex);
+      return;
     }
-  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedUnit, setSelectedHex]);
+
+    // 4. If selectedUnit + reachable hex → MOVE_UNIT
+    if (selectedUnit && selectedUnit.movementLeft > 0) {
+      // Check if selected unit is a Builder — show improvement panel instead of moving
+      const unitDef = unitRegistry.get(selectedUnit.typeId);
+      const isBuilder = unitDef?.abilities.includes('build_improvement') ?? false;
+
+      if (isBuilder) {
+        setSelectedHex(hex);
+        setShowImprovementPanel(true);
+        return;
+      }
+
+      if (reachableHexes && reachableHexes.has(key)) {
+        const costFn = (_from: HexCoord, to: HexCoord) => {
+          const tile = state.map.tiles.get(coordToKey(to));
+          if (!tile) return null;
+          return getMovementCost(tile);
+        };
+        const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
+        if (path && path.length > 0) {
+          dispatch({ type: 'MOVE_UNIT', unitId: selectedUnit.id, path });
+          setSelectedHex(hex);
+          return;
+        }
+      }
+    }
+
+    // 5. Deselect unit, set selectedHex (show terrain info)
+    setSelectedUnit(null);
+    setSelectedHex(hex);
+  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick]);
 
   // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Left click dismisses context menu
-    if (e.button === 0 && contextMenu) {
-      setContextMenu(null);
-    }
     isDraggingRef.current = true;
     dragDistRef.current = 0;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
-  }, [contextMenu]);
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const canvas = canvasRef.current;
@@ -359,9 +367,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Close any existing context menu first
-    setContextMenu(null);
-
     if (!selectedUnit) {
       setSelectedUnit(null);
       setSelectedHex(null);
@@ -378,30 +383,29 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     const hex = pixelToHex(world.x, world.y);
     const key = coordToKey(hex);
 
-    // Right-click on own unit's hex → show popup menu
-    if (coordToKey(selectedUnit.position) === key) {
-      setContextMenu({ x: e.clientX, y: e.clientY });
-      return;
-    }
+    const contents = getTileContents(state, hex, state.currentPlayerId);
 
-    // Right-click on enemy unit in attack range → attack
-    let enemyUnit: UnitState | null = null;
-    for (const unit of state.units.values()) {
-      if (unit.owner !== state.currentPlayerId && coordToKey(unit.position) === key) {
-        enemyUnit = unit;
-        break;
-      }
-    }
-    if (enemyUnit) {
+    // Right-click on enemy unit in attack range → ATTACK_UNIT
+    if (contents.enemyUnits.length > 0) {
       const attackable = getAttackableUnits(state, selectedUnit.id);
-      const canAttack = attackable.some(a => a.unitId === enemyUnit!.id);
-      if (canAttack) {
-        dispatch({ type: 'ATTACK_UNIT', attackerId: selectedUnit.id, targetId: enemyUnit.id });
+      const target = contents.enemyUnits.find(e => attackable.some(a => a.unitId === e.id));
+      if (target) {
+        dispatch({ type: 'ATTACK_UNIT', attackerId: selectedUnit.id, targetId: target.id });
         return;
       }
     }
 
-    // Right-click on reachable hex → move there
+    // Right-click on enemy city in attack range → ATTACK_CITY
+    if (contents.city && contents.city.owner !== state.currentPlayerId) {
+      const attackableCities = getAttackableCities(state, selectedUnit.id);
+      const canAttack = attackableCities.some(a => a.cityId === contents.city!.id);
+      if (canAttack) {
+        dispatch({ type: 'ATTACK_CITY', attackerId: selectedUnit.id, cityId: contents.city.id });
+        return;
+      }
+    }
+
+    // Right-click on reachable hex → MOVE_UNIT
     if (reachableHexes && reachableHexes.has(key)) {
       const costFn = (_from: HexCoord, to: HexCoord) => {
         const tile = state.map.tiles.get(coordToKey(to));
@@ -412,8 +416,8 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       if (path && path.length > 0) {
         dispatch({ type: 'MOVE_UNIT', unitId: selectedUnit.id, path });
         setSelectedHex(hex);
+        return;
       }
-      return;
     }
 
     // Fallback — deselect
@@ -616,35 +620,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
             setSelectedUnit(null);
             setSelectedHex(null);
           }}
-        />
-      )}
-      {contextMenu && selectedUnit && (
-        <UnitContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          unit={selectedUnit}
-          onClose={() => setContextMenu(null)}
-          onFortify={() => {
-            dispatch({ type: 'FORTIFY_UNIT', unitId: selectedUnit.id });
-            setContextMenu(null);
-          }}
-          onFoundCity={() => {
-            const cityCount = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId).length;
-            dispatch({ type: 'FOUND_CITY', unitId: selectedUnit.id, name: `City ${cityCount + 1}` });
-            setContextMenu(null);
-            setSelectedUnit(null);
-          }}
-          onSkipTurn={() => {
-            dispatch({ type: 'SKIP_UNIT', unitId: selectedUnit.id });
-            setContextMenu(null);
-          }}
-          onDeleteUnit={() => {
-            dispatch({ type: 'DELETE_UNIT', unitId: selectedUnit.id });
-            setContextMenu(null);
-            setSelectedUnit(null);
-            setSelectedHex(null);
-          }}
-          unitRegistry={unitRegistry}
         />
       )}
     </>

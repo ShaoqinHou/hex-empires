@@ -28,7 +28,7 @@ import { HelpPanel } from './ui/panels/HelpPanel';
 type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help';
 
 function GameUI() {
-  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed } = useGame();
+  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
   const state = nullableState!; // GameUI only renders when state is non-null
   const [activePanel, setActivePanel] = useState<Panel>(() => {
     // Auto-show help on first ever game start
@@ -38,9 +38,7 @@ function GameUI() {
     }
     return 'none';
   });
-  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [showYields, setShowYields] = useState(false);
-  const selectedCity = selectedCityId ? state.cities.get(selectedCityId) ?? null : null;
   const cameraRef = useRef<Camera | null>(null);
 
   const togglePanel = (panel: Panel) => setActivePanel(prev => prev === panel ? 'none' : panel);
@@ -103,7 +101,7 @@ function GameUI() {
           showYields={showYields}
           onToggleYields={() => setShowYields(v => !v)}
           onCityClick={(city) => {
-            setSelectedCityId(city.id);
+            selectCity(city.id);
             setActivePanel('city');
           }}
           onToggleTechTree={() => togglePanel('tech')}
@@ -143,7 +141,7 @@ function GameUI() {
         {/* Turn transition and notifications */}
         <TurnTransition />
         <Notifications onCityClick={(cityId) => {
-          setSelectedCityId(cityId);
+          selectCity(cityId);
           setActivePanel('city');
         }} />
         <EnemyActivitySummary />
