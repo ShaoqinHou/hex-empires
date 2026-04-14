@@ -1,0 +1,207 @@
+/**
+ * Commander promotion-tree content — Cycle B of the Commander system.
+ *
+ * Each promotion is a `CommanderPromotionDef` carrying exactly one
+ * `AuraEffectDef`. Trees are DAGs bottom-up: tier-2 nodes list their
+ * tier-1 prerequisites, tier-3 their tier-2 prerequisites. No cross-
+ * tree prerequisites by convention (see rulebook §6.10 and
+ * `commander-system.md` §4.2).
+ *
+ * Cost is expressed in XP. Magnitudes here are placeholder values
+ * chosen to be internally consistent; the real numbers are pinned
+ * when the XP curve lands (see design §9 open question #2 and #5).
+ * The shapes are what cycle D will consume.
+ */
+
+import type { CommanderPromotionDef } from '../../types/Commander';
+
+/**
+ * XP cost per tier — mirrors `PROMOTION_THRESHOLDS` in
+ * `data/units/promotions.ts` for interim parity. The commander
+ * pipeline may diverge once the Civ VII XP curve is pinned.
+ */
+export const COMMANDER_PROMOTION_XP_COST: Readonly<Record<1 | 2 | 3, number>> = {
+  1: 15,
+  2: 30,
+  3: 60,
+} as const;
+
+/** A promotion plus the XP required to pick it. */
+export interface CommanderPromotionEntry {
+  readonly def: CommanderPromotionDef;
+  readonly xpCost: number;
+}
+
+// ── Assault tree (combat-flavor) ──
+
+const ASSAULT_TIER1: CommanderPromotionDef = {
+  id: 'assault_battle_cry',
+  name: 'Battle Cry',
+  description: '+3 combat strength to all friendly units in radius.',
+  tree: 'assault',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: 'all',
+    value: 3,
+    radius: 1,
+  },
+} as const;
+
+const ASSAULT_TIER2: CommanderPromotionDef = {
+  id: 'assault_press_attack',
+  name: 'Press the Attack',
+  description: '+5 melee combat strength to friendly melee units.',
+  tree: 'assault',
+  tier: 2,
+  prerequisites: ['assault_battle_cry'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: 'melee',
+    value: 5,
+    radius: 1,
+  },
+} as const;
+
+const ASSAULT_TIER3: CommanderPromotionDef = {
+  id: 'assault_overwhelming_force',
+  name: 'Overwhelming Force',
+  description: '+8 combat strength to all friendly units in radius.',
+  tree: 'assault',
+  tier: 3,
+  prerequisites: ['assault_press_attack'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: 'all',
+    value: 8,
+    radius: 1,
+  },
+} as const;
+
+// ── Logistics tree (movement + healing) ──
+
+const LOGISTICS_TIER1: CommanderPromotionDef = {
+  id: 'logistics_forced_march',
+  name: 'Forced March',
+  description: '+1 movement to all friendly units in radius.',
+  tree: 'logistics',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_EXTRA_MOVEMENT',
+    target: 'all',
+    value: 1,
+    radius: 1,
+  },
+} as const;
+
+const LOGISTICS_TIER2: CommanderPromotionDef = {
+  id: 'logistics_field_medic',
+  name: 'Field Medic',
+  description: 'Heal 5 HP per turn to friendly units in radius.',
+  tree: 'logistics',
+  tier: 2,
+  prerequisites: ['logistics_forced_march'],
+  aura: {
+    type: 'AURA_HEAL_PER_TURN',
+    target: 'all',
+    amount: 5,
+    radius: 1,
+  },
+} as const;
+
+const LOGISTICS_TIER3: CommanderPromotionDef = {
+  id: 'logistics_supply_lines',
+  name: 'Supply Lines',
+  description: 'Heal 10 HP per turn to friendly units in radius.',
+  tree: 'logistics',
+  tier: 3,
+  prerequisites: ['logistics_field_medic'],
+  aura: {
+    type: 'AURA_HEAL_PER_TURN',
+    target: 'all',
+    amount: 10,
+    radius: 1,
+  },
+} as const;
+
+// ── Bastion tree (defense) ──
+
+const BASTION_TIER1: CommanderPromotionDef = {
+  id: 'bastion_shield_wall',
+  name: 'Shield Wall',
+  description: '+4 fortification strength to friendly units in radius.',
+  tree: 'bastion',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_FORTIFY_BONUS',
+    target: 'all',
+    value: 4,
+    radius: 1,
+  },
+} as const;
+
+const BASTION_TIER2: CommanderPromotionDef = {
+  id: 'bastion_ranged_cover',
+  name: 'Ranged Cover',
+  description: '+4 ranged strength to friendly ranged units in radius.',
+  tree: 'bastion',
+  tier: 2,
+  prerequisites: ['bastion_shield_wall'],
+  aura: {
+    type: 'AURA_MODIFY_RS',
+    target: 'ranged',
+    value: 4,
+    radius: 1,
+  },
+} as const;
+
+// ── Leadership tree (radius / stack) ──
+
+const LEADERSHIP_TIER1: CommanderPromotionDef = {
+  id: 'leadership_commanding_presence',
+  name: 'Commanding Presence',
+  description: "Expands this commander's aura radius by 1.",
+  tree: 'leadership',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_EXPAND_RADIUS',
+    delta: 1,
+  },
+} as const;
+
+const LEADERSHIP_TIER2: CommanderPromotionDef = {
+  id: 'leadership_grand_retinue',
+  name: 'Grand Retinue',
+  description: "Raises this commander's pack capacity by 2 units.",
+  tree: 'leadership',
+  tier: 2,
+  prerequisites: ['leadership_commanding_presence'],
+  aura: {
+    type: 'AURA_EXPAND_STACK',
+    delta: 2,
+  },
+} as const;
+
+/**
+ * All commander promotions, ordered by (tree, tier).
+ *
+ * Kept internal to this cycle. Engine barrel wiring, registry
+ * registration, and system consumption all land with
+ * `commanderPromotionSystem` in cycle C.
+ */
+export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
+  ASSAULT_TIER1,
+  ASSAULT_TIER2,
+  ASSAULT_TIER3,
+  LOGISTICS_TIER1,
+  LOGISTICS_TIER2,
+  LOGISTICS_TIER3,
+  BASTION_TIER1,
+  BASTION_TIER2,
+  LEADERSHIP_TIER1,
+  LEADERSHIP_TIER2,
+] as const;
