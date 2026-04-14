@@ -491,6 +491,16 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         }
       }
 
+      // U — Upgrade selected unit (if has upgrade path)
+      if (key === 'u' || key === 'U') {
+        if (selectedUnit) {
+          const unitDef = unitRegistry.get(selectedUnit.typeId);
+          if (unitDef?.upgradesTo) {
+            dispatch({ type: 'UPGRADE_UNIT', unitId: selectedUnit.id });
+          }
+        }
+      }
+
       // Space — Cycle to next unit with movement left
       if (key === ' ') {
         e.preventDefault();
