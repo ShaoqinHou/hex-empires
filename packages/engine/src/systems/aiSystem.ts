@@ -146,6 +146,19 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     }
   }
 
+  // 0b. Resolve any active crises affecting this player
+  for (const crisis of state.crises) {
+    if (!crisis.active) continue;
+    if (crisis.choices.length === 0) continue;
+    // Pick the first choice (simple AI — could be smarter based on personality)
+    // Aggressive leaders prefer the first choice (often "fight"), peaceful prefer last (often "compromise")
+    const choiceIndex = personality.aggressiveness > 0.6 ? 0 : crisis.choices.length - 1;
+    const choice = crisis.choices[choiceIndex];
+    if (choice) {
+      actions.push({ type: 'RESOLVE_CRISIS', crisisId: crisis.id, choice: choice.id });
+    }
+  }
+
   // 1a2. Civic research — pick cheapest unresearched civic
   if (!player.currentCivic) {
     const researchedCivics = new Set(player.researchedCivics);
