@@ -242,6 +242,38 @@ export const SAM: UnitDef = {
   abilities: ['interception'],
 } as const;
 
+export const HELICOPTER: UnitDef = {
+  id: 'helicopter',
+  name: 'Helicopter',
+  age: 'modern',
+  category: 'cavalry',
+  cost: 330,
+  combat: 60,
+  rangedCombat: 0,
+  range: 0,
+  movement: 6,
+  sightRange: 3,
+  requiredTech: 'combined_arms',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
+export const JET_FIGHTER: UnitDef = {
+  id: 'jet_fighter',
+  name: 'Jet Fighter',
+  age: 'modern',
+  category: 'ranged',
+  cost: 380,
+  combat: 75,
+  rangedCombat: 55,
+  range: 12,
+  movement: 12,
+  sightRange: 3,
+  requiredTech: 'rocketry',
+  upgradesTo: null,
+  abilities: [],
+} as const;
+
 export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   INFANTRY,
   MACHINE_GUN,
@@ -258,4 +290,6 @@ export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   BATTLESHIP,
   PARATROOPERS,
   MECHANIZED_INFANTRY,
+  HELICOPTER,
+  JET_FIGHTER,
 ] as const;

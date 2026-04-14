@@ -13,6 +13,7 @@ export {
   ALL_MODERN_UNITS,
   INFANTRY, MACHINE_GUN, TANK, FIGHTER,
   ROCKET_ARTILLERY, IRONCLAD, BIPLANE,
+  HELICOPTER, JET_FIGHTER,
 } from './modern-units';
 
 import { ALL_ANTIQUITY_UNITS } from './antiquity-units';
