@@ -151,6 +151,32 @@ export interface PlayerState {
   readonly currentCivicMastery: string | null;         // civic currently being mastered
   readonly civicMasteryProgress: number;               // accumulated culture toward civic mastery
   readonly governors: ReadonlyArray<GovernorId>;       // IDs of recruited governors
+
+  /**
+   * ── M12 Integration — optional runtime fields for Religion & Government ──
+   *
+   * Parallel-namespace fields wired in as OPTIONAL so existing PlayerState
+   * construction (engine, web, tests, save files) keeps compiling and
+   * behaving unchanged. The standalone `religionSystem` /
+   * `governmentSystem` keep their graceful no-op paths for players whose
+   * records have not yet opted in.
+   *
+   * - `pantheonId`       — null/undefined until `ADOPT_PANTHEON` is
+   *   dispatched. After a successful pick, the picked pantheon id is
+   *   stored here alongside the faith deduction performed by the system.
+   * - `governmentId`     — null/undefined until `SET_GOVERNMENT` is
+   *   dispatched. Resets per-category slots when switched.
+   * - `slottedPolicies`  — category → slot-array, mirroring the
+   *   GovernmentDef.policySlots shape. `null` entries are empty slots.
+   *
+   * Commander XP and picks live on `UnitState.experience` /
+   * `UnitState.promotions` — the `commanderPromotionSystem` uses those
+   * existing fields, so there is no new PlayerState bookkeeping for
+   * commanders.
+   */
+  readonly pantheonId?: string | null;
+  readonly governmentId?: string | null;
+  readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string | null>>;
 }
 
 // ── Diplomacy ──
@@ -335,7 +361,15 @@ export type GameAction =
   | { readonly type: 'PROMOTE_GOVERNOR'; readonly governorId: GovernorId; readonly abilityId: string }
   | { readonly type: 'SKIP_UNIT'; readonly unitId: UnitId }
   | { readonly type: 'DELETE_UNIT'; readonly unitId: UnitId }
-  | { readonly type: 'UPGRADE_UNIT'; readonly unitId: UnitId };
+  | { readonly type: 'UPGRADE_UNIT'; readonly unitId: UnitId }
+  // ── M12 Integration: religion / government / urban building / commander ──
+  | { readonly type: 'ADOPT_PANTHEON'; readonly playerId: PlayerId; readonly pantheonId: string }
+  | { readonly type: 'SET_GOVERNMENT'; readonly playerId: PlayerId; readonly governmentId: string }
+  | { readonly type: 'SLOT_POLICY'; readonly playerId: PlayerId; readonly category: 'military' | 'economic' | 'diplomatic' | 'wildcard'; readonly slotIndex: number; readonly policyId: string }
+  | { readonly type: 'UNSLOT_POLICY'; readonly playerId: PlayerId; readonly category: 'military' | 'economic' | 'diplomatic' | 'wildcard'; readonly slotIndex: number }
+  | { readonly type: 'PLACE_URBAN_BUILDING'; readonly cityId: CityId; readonly tile: HexCoord; readonly buildingId: string }
+  | { readonly type: 'GAIN_COMMANDER_XP'; readonly commanderId: UnitId; readonly amount: number }
+  | { readonly type: 'PROMOTE_COMMANDER'; readonly commanderId: UnitId; readonly promotionId: string };
 
 // ── Events ──
 

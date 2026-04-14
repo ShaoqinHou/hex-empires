@@ -94,7 +94,7 @@ export { getTileContents, getSelectionCycle, hasStackedEntities } from './state/
 export type { TileContents } from './state/TileContents';
 
 // Engine
-export { GameEngine } from './GameEngine';
+export { GameEngine, DEFAULT_SYSTEMS } from './GameEngine';
 
 // Systems
 export { turnSystem } from './systems/turnSystem';
@@ -126,6 +126,11 @@ export { civicSystem } from './systems/civicSystem';
 export { tradeSystem } from './systems/tradeSystem';
 export { specialistSystem } from './systems/specialistSystem';
 export { governorSystem } from './systems/governorSystem';
+// M12 Integration — newly wired systems
+export { religionSystem, canAdoptPantheon } from './systems/religionSystem';
+export { governmentSystem, canAdoptGovernment, canSlotPolicy, findGovernment, findPolicy } from './systems/governmentSystem';
+export { urbanBuildingSystem } from './systems/urbanBuildingSystem';
+export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRESHOLDS } from './systems/commanderPromotionSystem';
 
 // Governor data
 export { ALL_GOVERNORS } from './data/governors';
@@ -232,3 +237,13 @@ export { ALL_RESOURCES, WHEAT, CATTLE, STONE, IRON, HORSES, NITER, SILK, GEMS, S
 // Leader data
 export type { LeaderDef } from './data/leaders';
 export { ALL_LEADERS } from './data/leaders';
+
+// ── M12 Integration — newly exposed data barrels ──
+// Religion data
+export { ALL_PANTHEONS } from './data/religion';
+// Government data
+export { ALL_GOVERNMENTS, ALL_POLICIES } from './data/governments';
+export type { GovernmentDef, PolicyCategory, PolicySlotCounts, PolicyDef } from './data/governments';
+// Commander data
+export { ALL_COMMANDERS, ALL_COMMANDER_PROMOTIONS, COMMANDER_PROMOTION_XP_COST } from './data/commanders';
+export type { CommanderRole, CommanderUnitDef, CommanderPromotionEntry } from './data/commanders';
