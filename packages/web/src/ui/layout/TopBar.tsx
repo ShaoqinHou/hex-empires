@@ -42,9 +42,10 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
 
   const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
 
-  // Units with remaining movement (for indicator, not for blocking End Turn)
+  // Units still waiting on player orders — has movement AND not fortified (a fortified
+  // unit has already chosen its turn action by holding position).
   const unitsWithMovement = [...state.units.values()].filter(
-    u => u.owner === state.currentPlayerId && u.movementLeft > 0
+    u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified
   ).length;
 
   return (

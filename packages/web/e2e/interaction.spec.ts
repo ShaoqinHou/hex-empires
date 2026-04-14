@@ -429,6 +429,27 @@ test.describe('Keyboard shortcuts', () => {
     expect(sel.unitId).toBeNull(); // city selection clears unit
   });
 
+  test('Space skips fortified units (they have already acted)', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    const warrior = await ownUnit(page, 'warrior');
+
+    // Select warrior and fortify it.
+    const wScr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
+    await page.waitForTimeout(100);
+    await page.keyboard.press('f');
+    await page.waitForTimeout(150);
+    const mid = await getState(page);
+    expect(mid!.units.find(u => u.id === warrior.id)!.fortified).toBe(true);
+
+    // Press Space — cycle should skip the fortified warrior and land on another own unit.
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(200);
+    const sel = await getSelection(page);
+    expect(sel.unitId).not.toBeNull();
+    expect(sel.unitId).not.toBe(warrior.id);
+  });
+
   test('Space cycles selection to a different unit with movement', async ({ page }) => {
     await startGame(page);
     const warrior = await ownUnit(page, 'warrior');

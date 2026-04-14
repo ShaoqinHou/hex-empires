@@ -480,11 +480,13 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         }
       }
 
-      // Space — Cycle to next unit with movement left
+      // Space — Cycle to next unit that still needs orders.
+      // Skips fortified units (they already chose to hold) so Space surfaces only
+      // units waiting on a decision — matches Civ VII "Next Unit" behavior.
       if (key === ' ') {
         e.preventDefault();
         const ownUnits = [...state.units.values()].filter(
-          u => u.owner === state.currentPlayerId && u.movementLeft > 0,
+          u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified,
         );
         if (ownUnits.length === 0) return;
 
