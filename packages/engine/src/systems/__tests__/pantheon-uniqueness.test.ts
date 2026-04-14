@@ -37,7 +37,7 @@ function pantheonClaimsOf(state: GameState): ReadonlyMap<string, string> | undef
 }
 
 describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
-  it.fails(
+  it(
     'records claim: Player A adopting god_of_war sets pantheonClaims.get("god_of_war") === "pA"',
     () => {
       const state = createTestState({
@@ -58,7 +58,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     },
   );
 
-  it.fails(
+  it(
     'rejects duplicate claim: once pA holds god_of_war, pB adopting god_of_war is a no-op',
     () => {
       const base = createTestState({
@@ -89,7 +89,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     },
   );
 
-  it.fails(
+  it(
     'allows distinct pantheon: once pA holds god_of_war, pB adopting god_of_healing succeeds',
     () => {
       const base = createTestState({
@@ -121,7 +121,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     },
   );
 
-  it.fails(
+  it(
     'lazily initializes pantheonClaims on first adoption (map with exactly 1 entry)',
     () => {
       const state = createTestState({
@@ -180,7 +180,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     expect(next.players.get('p1')!.faith).toBe(500);
   });
 
-  it.fails(
+  it(
     'one pantheon per civ: player with existing pantheonId cannot adopt a second',
     () => {
       // Seed pA with an already-taken pantheon slot. The invariant says
@@ -216,7 +216,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     },
   );
 
-  it.fails(
+  it(
     'three players claim three distinct pantheons — claims map has exactly 3 correct entries',
     () => {
       const base = createTestState({

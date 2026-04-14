@@ -128,13 +128,43 @@ function handleAdoptPantheon(
   if (!pantheon) return state;
   if (player.faith < pantheon.faithCost) return state;
 
+  // Per-civ uniqueness: a player may hold at most one pantheon. If this
+  // player already claimed one (written to PlayerState.pantheonId by a
+  // prior ADOPT_PANTHEON), reject silently.
+  if (player.pantheonId) return state;
+
+  // Global uniqueness: first-come-first-served across players. Check
+  // both the religion slot's `pantheonClaims` map (authoritative) AND a
+  // linear scan of `state.players` for any player whose `pantheonId`
+  // already matches this one (defense in depth against desynced state).
+  const existingClaims = state.religion?.pantheonClaims;
+  if (existingClaims?.has(pantheonId)) return state;
+  for (const [otherId, otherPlayer] of state.players) {
+    if (otherId === playerId) continue;
+    if (otherPlayer.pantheonId === pantheonId) return state;
+  }
+
   const updatedPlayer: PlayerState = {
     ...player,
     faith: player.faith - pantheon.faithCost,
+    pantheonId,
   };
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);
+
+  // Lazy-init the religion slot if absent; otherwise preserve existing
+  // religions array and extend pantheonClaims immutably.
+  const prevSlot = state.religion;
+  const prevClaims = prevSlot?.pantheonClaims;
+  const nextClaims: ReadonlyMap<string, string> = prevClaims
+    ? new Map([...prevClaims, [pantheonId, playerId]])
+    : new Map([[pantheonId, playerId]]);
+
+  const updatedReligionSlot: ReligionSlotState = {
+    religions: prevSlot?.religions ?? [],
+    pantheonClaims: nextClaims,
+  };
 
   const event: GameEvent = {
     turn: state.turn,
@@ -147,6 +177,7 @@ function handleAdoptPantheon(
     ...state,
     players: updatedPlayers,
     log: [...state.log, event],
+    religion: updatedReligionSlot,
   };
 }
 
