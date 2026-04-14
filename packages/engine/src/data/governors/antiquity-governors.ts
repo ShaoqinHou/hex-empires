@@ -335,6 +335,96 @@ export const CLEOPATRA: GovernorDef = {
   baseExperience: 100,
 };
 
+/**
+ * TARRUN - Logistics-themed Economic Governor
+ * Keeps caravans moving, granaries stocked, and tiles cheap to purchase.
+ */
+export const TARRUN: GovernorDef = {
+  id: 'tarrun',
+  name: 'Tarrun of the Wainways',
+  title: 'administrator',
+  specialization: 'economic',
+  baseAbilities: [
+    ability(
+      'tarrun_base',
+      'Wainwright Oversight',
+      '+10% Gold and +10% Food yield in assigned city from improved roads',
+      1,
+      { type: 'yield_bonus', value: 10, yieldType: 'gold' },
+    ),
+  ],
+  unlockableAbilities: [
+    ability(
+      'tarrun_convoy',
+      'Convoy Captain',
+      'Trade routes originating in the assigned city gain +1 Food',
+      2,
+      { type: 'yield_bonus', value: 1, yieldType: 'food' },
+    ),
+    ability(
+      'tarrun_granary',
+      'Stocked Granaries',
+      '+20% Food from stockpile buildings in the assigned city',
+      3,
+      { type: 'yield_bonus', value: 20, yieldType: 'food' },
+    ),
+    ability(
+      'tarrun_frontier',
+      'Frontier Survey',
+      'Tile purchase cost reduced by 25% in the assigned city',
+      4,
+      { type: 'special', value: 25 },
+    ),
+  ],
+  maxLevel: 5,
+  baseExperience: 100,
+};
+
+/**
+ * AKAMU - Naval-themed Military Governor
+ * A coastal warden who turns harbor cities into fleet bastions.
+ */
+export const AKAMU: GovernorDef = {
+  id: 'akamu',
+  name: 'Akamu Tidekeeper',
+  title: 'administrator',
+  specialization: 'military',
+  baseAbilities: [
+    ability(
+      'akamu_base',
+      'Harbor Warden',
+      '+15% Production toward naval units in the assigned city',
+      1,
+      { type: 'production_bonus', value: 15 },
+    ),
+  ],
+  unlockableAbilities: [
+    ability(
+      'akamu_tide',
+      'Tide Reader',
+      'Naval units built in the assigned city gain +1 Movement',
+      2,
+      { type: 'special', value: 1 },
+    ),
+    ability(
+      'akamu_dockhand',
+      'Dockhand Discipline',
+      '+2 CS for naval units based in the assigned city',
+      3,
+      { type: 'combat_bonus', value: 2 },
+    ),
+    ability(
+      'akamu_seawall',
+      'Seawall Engineer',
+      '+4 City defense HP when the assigned city is coastal',
+      4,
+      { type: 'special', value: 4 },
+    ),
+  ],
+  maxLevel: 5,
+  baseExperience: 100,
+};
+
 // Barrel export
 export const ALL_ANTIQUITY_GOVERNORS: ReadonlyArray<GovernorDef> = [
   MAGNUS,
@@ -343,4 +433,6 @@ export const ALL_ANTIQUITY_GOVERNORS: ReadonlyArray<GovernorDef> = [
   MICHELANGELO,
   MOSES,
   CLEOPATRA,
+  TARRUN,
+  AKAMU,
 ];

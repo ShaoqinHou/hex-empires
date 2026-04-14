@@ -368,6 +368,96 @@ export const TALLEYRAND: GovernorDef = {
   baseExperience: 150,
 };
 
+/**
+ * ELVIRA_VENTRICA - Age-Transition Helper (Cultural)
+ * A chronicler who stewards civic continuity across age boundaries.
+ */
+export const ELVIRA_VENTRICA: GovernorDef = {
+  id: 'elvira_ventrica',
+  name: 'Elvira Ventrica',
+  title: 'prefect',
+  specialization: 'cultural',
+  baseAbilities: [
+    ability(
+      'elvira_base',
+      'Chronicler of Passages',
+      '+20% Culture yield in assigned city',
+      1,
+      { type: 'yield_bonus', value: 20, yieldType: 'culture' },
+    ),
+  ],
+  unlockableAbilities: [
+    ability(
+      'elvira_continuum',
+      'Legacy Continuum',
+      '+25% Culture from legacy wonders carried forward from previous ages',
+      2,
+      { type: 'yield_bonus', value: 25, yieldType: 'culture' },
+    ),
+    ability(
+      'elvira_milestone',
+      'Milestone Shepherd',
+      'Age progress milestones grant +15% extra progress in the assigned city',
+      3,
+      { type: 'special', value: 15 },
+    ),
+    ability(
+      'elvira_transition',
+      'Graceful Transition',
+      'Happiness penalty on age transition reduced by 2 in the assigned city',
+      4,
+      { type: 'happiness_bonus', value: 2 },
+    ),
+  ],
+  maxLevel: 6,
+  baseExperience: 150,
+};
+
+/**
+ * KJELD_STORMBREAK - Naval-themed Military (Exploration)
+ * An oceanic campaigner who turns ports into armadas.
+ */
+export const KJELD_STORMBREAK: GovernorDef = {
+  id: 'kjeld_stormbreak',
+  name: 'Kjeld Stormbreak',
+  title: 'prefect',
+  specialization: 'military',
+  baseAbilities: [
+    ability(
+      'kjeld_base',
+      'Stormward Admiral',
+      '+25% Production toward naval units in the assigned city',
+      1,
+      { type: 'production_bonus', value: 25 },
+    ),
+  ],
+  unlockableAbilities: [
+    ability(
+      'kjeld_armada',
+      'Armada Doctrine',
+      'Naval units built in the assigned city start with +8 XP',
+      2,
+      { type: 'special', value: 8 },
+    ),
+    ability(
+      'kjeld_shanties',
+      'Saltwind Shanties',
+      '+4 CS for naval units while within 4 tiles of the assigned city',
+      3,
+      { type: 'combat_bonus', value: 4 },
+    ),
+    ability(
+      'kjeld_drydock',
+      'Coastal Drydock',
+      '+30% Production toward coastal harbor buildings',
+      4,
+      { type: 'production_bonus', value: 30 },
+    ),
+  ],
+  maxLevel: 6,
+  baseExperience: 150,
+};
+
 // Barrel export
 export const ALL_EXPLORATION_GOVERNORS: ReadonlyArray<GovernorDef> = [
   MEDICI,
@@ -376,4 +466,6 @@ export const ALL_EXPLORATION_GOVERNORS: ReadonlyArray<GovernorDef> = [
   SHAKESPEARE,
   LUTHER,
   TALLEYRAND,
+  ELVIRA_VENTRICA,
+  KJELD_STORMBREAK,
 ];

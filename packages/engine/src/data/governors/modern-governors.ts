@@ -410,6 +410,51 @@ export const KISSINGER: GovernorDef = {
   baseExperience: 200,
 };
 
+/**
+ * IPPOLITA_VEGA - Modern Logistics-themed Economic Governor
+ * A supply-chain architect optimizing sprawling industrial networks.
+ */
+export const IPPOLITA_VEGA: GovernorDef = {
+  id: 'ippolita_vega',
+  name: 'Ippolita Vega',
+  title: 'viceroy',
+  specialization: 'economic',
+  baseAbilities: [
+    ability(
+      'ippolita_base',
+      'Supply Chain Architect',
+      '+40% Gold yield in assigned city from optimized logistics',
+      1,
+      { type: 'yield_bonus', value: 40, yieldType: 'gold' },
+    ),
+  ],
+  unlockableAbilities: [
+    ability(
+      'ippolita_corridor',
+      'Transport Corridor',
+      'Trade routes originating in the assigned city gain +3 Production',
+      2,
+      { type: 'yield_bonus', value: 3, yieldType: 'production' },
+    ),
+    ability(
+      'ippolita_warehouse',
+      'Warehouse District',
+      '+25% Food and Production from storage buildings',
+      3,
+      { type: 'yield_bonus', value: 25, yieldType: 'production' },
+    ),
+    ability(
+      'ippolita_freightrail',
+      'Freight Rail',
+      'Unit move costs on owned roads reduced by 1 for units based in the city',
+      4,
+      { type: 'special', value: 1 },
+    ),
+  ],
+  maxLevel: 7,
+  baseExperience: 200,
+};
+
 // Barrel export
 export const ALL_MODERN_GOVERNORS: ReadonlyArray<GovernorDef> = [
   ROCKEFELLER,
@@ -418,4 +463,5 @@ export const ALL_MODERN_GOVERNORS: ReadonlyArray<GovernorDef> = [
   PICASSO,
   MOTHER_TERESA,
   KISSINGER,
+  IPPOLITA_VEGA,
 ];
