@@ -263,4 +263,78 @@ describe('movementSystem', () => {
       expect(next.units.get('u1')!.movementLeft).toBe(0);
     });
   });
+
+  describe('UPGRADE_UNIT', () => {
+    it('upgrades a warrior to swordsman with gold cost', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior', movementLeft: 2 })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('swordsman');
+      expect(next.units.get('u1')!.movementLeft).toBe(0);
+      // Upgrade cost is 2x target unit cost (deducted from 500)
+      expect(next.players.get('p1')!.gold).toBeLessThan(500);
+    });
+
+    it('rejects upgrade without required tech', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: [] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      // Unit should not change
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+      expect(next.players.get('p1')!.gold).toBe(500);
+    });
+
+    it('rejects upgrade without enough gold', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 10, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+      expect(next.players.get('p1')!.gold).toBe(10);
+    });
+
+    it('rejects upgrade for unit with no upgrade path', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500 })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'settler' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('settler');
+    });
+
+    it('rejects upgrade for enemy unit', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500 })],
+        ['p2', createTestPlayer({ id: 'p2', gold: 500 })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p2', position: { q: 0, r: 0 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+    });
+  });
 });
