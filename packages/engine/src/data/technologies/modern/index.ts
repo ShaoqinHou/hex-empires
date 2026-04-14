@@ -154,9 +154,112 @@ export const RADAR: TechnologyDef = {
   treePosition: { row: 0, col: 3 },
 };
 
+// --- Rulebook §9.6 expansion: missing modern-age technologies ---
+
+export const ACADEMICS: TechnologyDef = {
+  id: 'academics',
+  name: 'Academics',
+  age: 'modern',
+  cost: 600,
+  prerequisites: ['scientific_theory'],
+  unlocks: ['schoolhouse', 'oxford_university'],
+  description: 'Enables Schoolhouse and Oxford University wonder',
+  treePosition: { row: 5, col: 1 },
+};
+
+export const MILITARY_SCIENCE: TechnologyDef = {
+  id: 'military_science',
+  name: 'Military Science',
+  age: 'modern',
+  cost: 750,
+  prerequisites: ['rifling'],
+  unlocks: ['military_academy', 'pentagon'],
+  description: 'Enables Military Academy and the Pentagon wonder',
+  treePosition: { row: 2, col: 2 },
+};
+
+export const URBANIZATION: TechnologyDef = {
+  id: 'urbanization',
+  name: 'Urbanization',
+  age: 'modern',
+  cost: 800,
+  prerequisites: ['mass_media'],
+  unlocks: ['opera_house', 'museum', 'department_store'],
+  description: 'Enables Opera House, Museum, and Department Store',
+  treePosition: { row: 4, col: 2 },
+};
+
+export const COMBUSTION: TechnologyDef = {
+  id: 'combustion',
+  name: 'Combustion',
+  age: 'modern',
+  cost: 850,
+  prerequisites: ['steam_power'],
+  unlocks: ['destroyer', 'submarine'],
+  description: 'Enables Destroyer and Submarine naval units',
+  treePosition: { row: 3, col: 2 },
+};
+
+export const RADIO: TechnologyDef = {
+  id: 'radio',
+  name: 'Radio',
+  age: 'modern',
+  cost: 750,
+  prerequisites: ['electricity', 'mass_media'],
+  unlocks: ['radio_station', 'broadcast_tower', 'tenement'],
+  description: 'Enables Radio Station, Broadcast Tower, and Tenement',
+  treePosition: { row: 4, col: 3 },
+};
+
+export const MASS_PRODUCTION: TechnologyDef = {
+  id: 'mass_production',
+  name: 'Mass Production',
+  age: 'modern',
+  cost: 850,
+  prerequisites: ['industrialization'],
+  unlocks: ['hospital', 'rail_station'],
+  description: 'Enables Hospital and Rail Station via assembly-line production',
+  treePosition: { row: 1, col: 1 },
+};
+
+export const MOBILIZATION: TechnologyDef = {
+  id: 'mobilization',
+  name: 'Mobilization',
+  age: 'modern',
+  cost: 1000,
+  prerequisites: ['combustion', 'military_science'],
+  unlocks: ['battleship', 'military_base'],
+  description: 'Enables Battleship and Military Base',
+  treePosition: { row: 3, col: 3 },
+};
+
+export const ARMOR: TechnologyDef = {
+  id: 'armor',
+  name: 'Armor',
+  age: 'modern',
+  cost: 1100,
+  prerequisites: ['combined_arms'],
+  unlocks: ['paratroopers', 'mechanized_infantry'],
+  description: 'Enables Paratroopers and Mechanized Infantry',
+  treePosition: { row: 2, col: 4 },
+};
+
+export const AERODYNAMICS: TechnologyDef = {
+  id: 'aerodynamics',
+  name: 'Aerodynamics',
+  age: 'modern',
+  cost: 1100,
+  prerequisites: ['flight', 'combined_arms'],
+  unlocks: ['bomber', 'airport', 'jet_fighter'],
+  description: 'Enables Bomber, Airport, and Jet Fighter',
+  treePosition: { row: 1, col: 4 },
+};
+
 export const ALL_MODERN_TECHS: ReadonlyArray<TechnologyDef> = [
   SCIENTIFIC_THEORY, RIFLING, INDUSTRIALIZATION,
   STEAM_POWER, ELECTRICITY, REPLACEABLE_PARTS,
   FLIGHT, NUCLEAR_FISSION, COMBINED_ARMS, ROCKETRY,
   MASS_CONSUMPTION, MASS_MEDIA, AMPHIBIOUS_WARFARE, RADAR,
+  ACADEMICS, MILITARY_SCIENCE, URBANIZATION, COMBUSTION,
+  RADIO, MASS_PRODUCTION, MOBILIZATION, ARMOR, AERODYNAMICS,
 ];
