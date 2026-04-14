@@ -1,9 +1,22 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { coordToKey } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { hexToPixel } from '../../utils/hexMath';
 
 const MINIMAP_WIDTH = 200;
 const MINIMAP_HEIGHT = 130;
+
+// Match the main renderer terrain palette
+const TERRAIN_PALETTE: Record<string, string> = {
+  grassland: '#5da84e',
+  plains: '#d4b85a',
+  desert: '#e8d5a3',
+  tundra: '#b0c4ce',
+  snow: '#eaf4f4',
+  coast: '#5ba0d0',
+  ocean: '#1e4d7a',
+};
+const TERRAIN_FALLBACK = '#454a52';
 
 interface MinimapProps {
   cameraRef?: React.RefObject<{ x: number; y: number; zoom: number; centerOn: (x: number, y: number) => void } | null>;
@@ -42,15 +55,38 @@ export function Minimap({ cameraRef }: MinimapProps) {
 
     ctx.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
 
-    // Draw terrain
+    // Fill background so unexplored regions still read correctly
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
+
+    // Fetch current player fog-of-war sets
+    const currentPlayer = state.players.get(state.currentPlayerId);
+    const visibility: ReadonlySet<string> | null = currentPlayer?.visibility ?? null;
+    const explored: ReadonlySet<string> | null = currentPlayer?.explored ?? null;
+
+    // Draw terrain using the main-renderer palette
     for (const tile of state.map.tiles.values()) {
       const terrain = terrainRegistry.get(tile.terrain);
       if (!terrain) continue;
       const { x, y } = hexToPixel(tile.coord);
       const mx = (x - minX) * scaleX;
       const my = (y - minY) * scaleY;
-      ctx.fillStyle = terrain.color;
+      ctx.fillStyle = TERRAIN_PALETTE[tile.terrain] ?? TERRAIN_FALLBACK;
       ctx.fillRect(mx - 2, my - 2, 4, 4);
+
+      // Apply fog overlay per tile
+      if (visibility && explored) {
+        const key = coordToKey(tile.coord);
+        if (!explored.has(key)) {
+          // Completely unexplored → 80% black overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.fillRect(mx - 2, my - 2, 4, 4);
+        } else if (!visibility.has(key)) {
+          // Explored but not currently visible → 40% black overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.fillRect(mx - 2, my - 2, 4, 4);
+        }
+      }
     }
 
     // Draw cities
@@ -80,7 +116,7 @@ export function Minimap({ cameraRef }: MinimapProps) {
       ctx.fill();
     }
 
-    // Draw camera viewport rectangle
+    // Draw camera viewport rectangle — thick black outer + white inner for contrast
     if (cameraRef?.current) {
       const cam = cameraRef.current;
       // Use actual window dimensions for viewport calculation
@@ -91,8 +127,13 @@ export function Minimap({ cameraRef }: MinimapProps) {
       const vpW = (vpHalfW * 2) * scaleX;
       const vpH = (vpHalfH * 2) * scaleY;
 
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
+      // Outer black outline
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(vpLeft, vpTop, vpW, vpH);
+      // Inner white inset for contrast
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
       ctx.strokeRect(vpLeft, vpTop, vpW, vpH);
     }
   }, [state, terrainRegistry, cameraRef]);
