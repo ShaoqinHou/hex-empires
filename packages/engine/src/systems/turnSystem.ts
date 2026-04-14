@@ -48,7 +48,7 @@ function handleStartTurn(state: GameState): GameState {
         // Skip healing if unit used all movement last turn (attacked)
         const wasExhausted = unit.movementLeft === 0;
         if (!wasExhausted) {
-          const healAmount = getHealAmount(unit.position, ownedCities, unit.owner, state);
+          const healAmount = getHealAmount(unit.position, ownedCities, unit.owner, state, unit.typeId);
           health = Math.min(100, health + healAmount);
         }
       }
@@ -82,44 +82,82 @@ function handleStartTurn(state: GameState): GameState {
   };
 }
 
-/** Determine healing amount based on unit position relative to owned cities and diplomacy */
+/**
+ * Determine healing amount based on unit position relative to owned cities
+ * and diplomacy, plus rulebook §6.9 "Boosting healing" additive bonuses:
+ *   - Fort Town specialization (+5 on any tile owned by a fort_town city)
+ *   - Partisan unique unit (+10 for units with typeId 'partisan')
+ * Cap of 100 HP is enforced by the caller (see handleStartTurn).
+ */
 function getHealAmount(
   position: { readonly q: number; readonly r: number },
   ownedCities: ReadonlyArray<CityState>,
   unitOwner: string,
   state: GameState,
+  typeId: string,
 ): number {
   const posKey = coordToKey(position);
 
+  let base = 10; // Neutral territory default
+
   // Check if in a city (unit position matches city position)
+  let cityTileMatch = false;
   for (const city of ownedCities) {
     if (coordToKey(city.position) === posKey) {
-      return 20;
+      base = 20;
+      cityTileMatch = true;
+      break;
     }
   }
 
   // Check if in friendly territory (unit position is in any owned city's territory)
-  for (const city of ownedCities) {
-    if (city.territory.includes(posKey)) {
-      return 15;
-    }
-  }
-
-  // Check if in enemy territory (owned by a player at war with the unit owner)
-  for (const city of state.cities.values()) {
-    if (city.owner === unitOwner) continue; // skip own cities (already handled above)
-    if (!city.territory.includes(posKey)) continue;
-    // This tile belongs to another player — check if at war
-    const enemyId = city.owner;
-    for (const [key, rel] of state.diplomacy.relations) {
-      if (rel.status === 'war' && key.includes(unitOwner) && key.includes(enemyId)) {
-        return 5; // enemy territory gives only 5 HP/turn
+  if (!cityTileMatch) {
+    for (const city of ownedCities) {
+      if (city.territory.includes(posKey)) {
+        base = 15;
+        break;
       }
     }
   }
 
-  // Neutral territory
-  return 10;
+  // Check if in enemy territory (owned by a player at war with the unit owner).
+  // Only override if the base is still the neutral default (10): a tile inside
+  // one of the unit owner's own cities/territories is never "enemy" territory.
+  if (base === 10) {
+    for (const city of state.cities.values()) {
+      if (city.owner === unitOwner) continue; // skip own cities (already handled above)
+      if (!city.territory.includes(posKey)) continue;
+      // This tile belongs to another player — check if at war
+      const enemyId = city.owner;
+      for (const [key, rel] of state.diplomacy.relations) {
+        if (rel.status === 'war' && key.includes(unitOwner) && key.includes(enemyId)) {
+          base = 5; // enemy territory gives only 5 HP/turn
+          break;
+        }
+      }
+      if (base === 5) break;
+    }
+  }
+
+  // Additive §6.9 bonuses.
+  let bonus = 0;
+
+  // H8 — Fort Town specialization: +5 HP/turn on tiles belonging to a
+  // fort_town city owned by the unit owner (center or territory).
+  for (const city of ownedCities) {
+    if (city.specialization !== 'fort_town') continue;
+    if (coordToKey(city.position) === posKey || city.territory.includes(posKey)) {
+      bonus += 5;
+      break;
+    }
+  }
+
+  // H9 — Partisan unique unit: +10 HP/turn regardless of territory tier.
+  if (typeId === 'partisan') {
+    bonus += 10;
+  }
+
+  return base + bonus;
 }
 
 function handleEndTurn(state: GameState): GameState {

@@ -383,7 +383,7 @@ describe('H8: Fort Town specialization adds +5 HP/turn to units on its tiles', (
   // A friendly-territory tile in a Fort Town should therefore heal 15+5=20.
   // A city-center tile in a Fort Town should therefore heal 20+5=25, but
   // capped at 100 per the HP cap. We test the non-capped friendly case.
-  it.fails(
+  it(
     'H8: unit at 50 HP on Fort-Town-specialized friendly territory heals +20 (= 15 base + 5 fort-town)',
     () => {
       const fortTown = createCity({
@@ -403,7 +403,6 @@ describe('H8: Fort Town specialization adds +5 HP/turn to units on its tiles', (
       const state = buildState({ units, cities: new Map([['cFT', fortTown]]) });
       const next = turnSystem(state, { type: 'START_TURN' });
       // 15 (friendly) + 5 (fort_town bonus) = +20 → 70 HP.
-      // Current engine ignores fort_town healing bonus, so heals to 65.
       expect(next.units.get('u1')!.health).toBe(70);
     },
   );
@@ -415,7 +414,7 @@ describe('H9: Partisan unique unit receives +10 healing', () => {
   // Rulebook §6.9: "Partisan unique unit: +10 healing." The engine does not
   // plumb unit-type-specific healing bonuses into `getHealAmount`, so a
   // partisan on a neutral tile still heals at the base 10 rather than 20.
-  it.fails(
+  it(
     'H9: partisan unit at 50 HP in neutral territory heals +20 (= 10 base + 10 partisan bonus)',
     () => {
       const units = new Map<string, UnitState>([
@@ -428,7 +427,7 @@ describe('H9: Partisan unique unit receives +10 healing', () => {
       ]);
       const state = buildState({ units });
       const next = turnSystem(state, { type: 'START_TURN' });
-      // Expected: 50 + 10 + 10 = 70. Actual: 50 + 10 = 60.
+      // Expected: 50 + 10 (neutral) + 10 (partisan) = 70.
       expect(next.units.get('u1')!.health).toBe(70);
     },
   );
