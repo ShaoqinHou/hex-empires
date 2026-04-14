@@ -1008,6 +1008,30 @@ export class HexRenderer {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      // ── Production progress ring (outside the city circle) ──
+      if (city.productionQueue.length > 0 && city.productionProgress > 0) {
+        const ringRadius = HEX_SIZE * 0.45;
+        const startAngle = -Math.PI / 2;
+        const progress = Math.min(100, city.productionProgress) / 100;
+        const endAngle = startAngle + Math.PI * 2 * progress;
+
+        // Background ring (remaining portion)
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Filled portion (progress so far) drawn clockwise over the background
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius, startAngle, endAngle);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.lineWidth = 1;
+      }
+
       // ── City banner (nameplate above the hex) ──
       const bannerY = y - HEX_SIZE * 0.85;
       const popText = `${city.population}`;
