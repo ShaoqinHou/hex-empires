@@ -6,6 +6,7 @@ import type { TerrainId, FeatureId } from './Terrain';
 import type { DistrictSlot } from './District';
 import type { Governor } from './Governor';
 import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
+import type { ReligionSlotState } from './Religion';
 
 // ── Turn ──
 
@@ -314,6 +315,17 @@ export interface GameState {
   readonly rng: RngState;
   readonly config: GameConfig;
   readonly lastValidation: ValidationResult | null;
+
+  /**
+   * ── Religion cycle E — optional runtime slot ──
+   *
+   * Optional so pre-religion saves migrate as `undefined` and existing
+   * GameState construction (engine, web, tests, save files) keeps
+   * compiling unchanged. The religionSystem lazily initializes this on
+   * the first successful FOUND_RELIGION (or pantheon claim), so the
+   * slot appears only once a player actually uses the mechanic.
+   */
+  readonly religion?: ReligionSlotState;
 }
 
 // ── Actions ──

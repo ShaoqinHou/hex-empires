@@ -311,3 +311,26 @@ export interface ReligionRecord {
   readonly holyCityId: CityId;
   readonly foundedOnTurn: number;
 }
+
+// ── Religion cycle E — runtime slot attached to GameState.religion ──
+
+/**
+ * The runtime shape of the optional `GameState.religion` slot.
+ *
+ * This is deliberately narrower than the full M16 design-target
+ * `ReligionState` above — it carries only what the current
+ * religionSystem actually writes: the append-only list of founded
+ * religions, and an optional map tracking unique pantheon claims. Later
+ * cycles will grow the slot toward the full design shape.
+ *
+ * Kept additive alongside `ReligionState` so the design-target types
+ * and their unit tests are unaffected while the system ramps up.
+ *
+ * Uniqueness of founder/follower beliefs is enforced by religionSystem
+ * via linear scan of `religions`; `pantheonClaims` records the same
+ * uniqueness for pantheons once ADOPT_PANTHEON wires through.
+ */
+export interface ReligionSlotState {
+  readonly religions: ReadonlyArray<ReligionRecord>;
+  readonly pantheonClaims?: ReadonlyMap<PantheonId, PlayerId>;
+}

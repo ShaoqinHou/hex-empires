@@ -9,12 +9,12 @@
  *  - `ADOPT_PANTHEON` (the "found pantheon" action in the design doc):
  *    validates that the pantheon exists and that the player has enough
  *    faith, then deducts faith and emits a log event.
- *  - `FOUND_RELIGION` (cycle D): validates pantheon prerequisite, 200
+ *  - `FOUND_RELIGION` (cycle E): validates pantheon prerequisite, 200
  *    faith cost, founder/follower belief catalog membership, per-belief
  *    uniqueness across players, and holy-city ownership. Writes a
- *    `ReligionRecord` to `state.religion.religions` IF the host state
- *    exposes that slot; otherwise returns state unchanged after
- *    validation (graceful no-op — widening GameState is out of scope).
+ *    `ReligionRecord` to `state.religion.religions`, lazily initializing
+ *    the optional slot on first use (pre-religion saves migrate as
+ *    `undefined` → fresh empty slot on first successful action).
  *  - All other actions — SPREAD_RELIGION, ENHANCE_RELIGION, etc. — are
  *    pass-through no-ops in this cycle.
  *
@@ -31,7 +31,13 @@
 
 import type { GameState, GameAction, GameEvent, PlayerState } from '../types/GameState';
 import type { PlayerId } from '../types/Ids';
-import type { ReligionAction, PantheonId, PantheonDef, ReligionRecord } from '../types/Religion';
+import type {
+  ReligionAction,
+  PantheonId,
+  PantheonDef,
+  ReligionRecord,
+  ReligionSlotState,
+} from '../types/Religion';
 import { ALL_PANTHEONS } from '../data/religion/pantheons';
 import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
 import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
@@ -42,21 +48,6 @@ import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
  * constants through long chains. Rulebook §18.
  */
 const FOUND_RELIGION_FAITH_COST = 200 as const;
-
-/**
- * Runtime-only view of an optional `religion` slot on GameState. The
- * canonical `GameState` type does not yet include `religion` — widening
- * that interface is out of scope for this cycle. The system still
- * operates on states that carry the slot (tests, later wiring) by
- * reading it through this structural cast.
- */
-interface ReligionSlot {
-  readonly religions: ReadonlyArray<ReligionRecord>;
-}
-
-interface StateWithReligion extends GameState {
-  readonly religion?: ReligionSlot;
-}
 
 /**
  * Widened action type accepted by religionSystem. The pipeline's
@@ -112,9 +103,9 @@ function playerHasFaithField(player: PlayerState): player is PlayerState & { rea
  *
  * Handles `FOUND_RELIGION` with full validation (pantheon prerequisite,
  * faith cost, belief catalog membership, cross-player belief
- * uniqueness, holy city ownership). If the host `GameState` does not
- * expose a `religion` slot, the handler gracefully returns state
- * unchanged after validation — a later cycle widens `GameState.religion`.
+ * uniqueness, holy city ownership). Lazily initializes
+ * `state.religion` on first successful dispatch (optional slot, so
+ * pre-religion saves round-trip as `undefined`).
  */
 export function religionSystem(state: GameState, action: ReligionSystemAction): GameState {
   if (action.type === 'ADOPT_PANTHEON') return handleAdoptPantheon(state, action);
@@ -199,11 +190,9 @@ function handleFoundReligion(
   if (city.owner !== playerId) return state;
 
   // Uniqueness — one civ per belief across the whole game. Consult the
-  // synthetic religion slot if present; otherwise there is nothing to
-  // conflict with.
-  const withReligion = state as StateWithReligion;
+  // religion slot if present; absent slot means no prior claims.
   const existingReligions: ReadonlyArray<ReligionRecord> =
-    withReligion.religion?.religions ?? [];
+    state.religion?.religions ?? [];
 
   const founderTaken = existingReligions.some(
     (r) => r.founderBeliefId === founderBelief,
@@ -215,13 +204,9 @@ function handleFoundReligion(
   );
   if (followerTaken) return state;
 
-  // Graceful no-op: if the host state has not opted into the religion
-  // slot, validation still runs (so tests can assert invalid cases
-  // return `state`) but there is nowhere to write the new record. A
-  // later cycle widens `GameState.religion` and this branch falls away.
-  if (!withReligion.religion) return state;
-
-  // Apply: deduct faith, append religion record, log.
+  // Apply: deduct faith, append religion record, log. Lazily initialize
+  // the religion slot on first use — pre-religion saves carry
+  // `state.religion === undefined` and need no migration.
   const updatedPlayer: PlayerState = {
     ...player,
     faith: player.faith - FOUND_RELIGION_FAITH_COST,
@@ -239,7 +224,8 @@ function handleFoundReligion(
     foundedOnTurn: state.turn,
   };
 
-  const updatedReligionSlot: ReligionSlot = {
+  const updatedReligionSlot: ReligionSlotState = {
+    ...(state.religion ?? { religions: [] }),
     religions: [...existingReligions, newRecord],
   };
 
@@ -250,11 +236,10 @@ function handleFoundReligion(
     type: 'legacy',
   };
 
-  const applied: StateWithReligion = {
+  return {
     ...state,
     players: updatedPlayers,
     log: [...state.log, event],
     religion: updatedReligionSlot,
   };
-  return applied;
 }

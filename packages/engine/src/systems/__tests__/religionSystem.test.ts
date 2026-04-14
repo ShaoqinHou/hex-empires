@@ -28,17 +28,16 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
 }
 
 /**
- * Helper — tack the (out-of-scope-to-widen) `religion` slot onto a
- * GameState via structural cast. Lets tests exercise the "valid"
- * branch of FOUND_RELIGION.
+ * Helper — attach an initial `religion` slot to a GameState. The slot
+ * is now a first-class optional field on GameState (cycle E); this
+ * helper is a thin convenience for tests that want to seed pre-existing
+ * religions.
  */
 function withReligionSlot(
   state: GameState,
   religions: ReadonlyArray<ReligionRecord>,
 ): GameState {
-  return { ...state, religion: { religions } } as GameState & {
-    readonly religion: { readonly religions: ReadonlyArray<ReligionRecord> };
-  };
+  return { ...state, religion: { religions } };
 }
 
 describe('religionSystem', () => {
@@ -341,14 +340,17 @@ describe('religionSystem', () => {
       expect(next.log.length).toBe(state.log.length + 1);
     });
 
-    it('graceful no-op: valid action without a religion slot returns state unchanged', () => {
+    it('lazily initializes state.religion when absent on first successful FOUND_RELIGION', () => {
       const city = createTestCity({ id: 'c1', owner: 'p1' });
       const state = createTestState({
+        turn: 4,
         players: new Map([
           ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: 'god_of_healing' })],
         ]),
         cities: new Map([['c1', city]]),
       });
+      // Precondition: state has no religion slot.
+      expect(state.religion).toBeUndefined();
       const action: ReligionAction = {
         type: 'FOUND_RELIGION',
         playerId: 'p1',
@@ -358,8 +360,12 @@ describe('religionSystem', () => {
         followerBelief: 'jesuit_education',
       };
       const next = religionSystem(state, action);
-      expect(next).toBe(state);
-      expect(next.players.get('p1')!.faith).toBe(500);
+      // Slot now exists, single record appended, faith deducted.
+      expect(next.religion).toBeDefined();
+      expect(next.religion!.religions.length).toBe(1);
+      expect(next.religion!.religions[0].name).toBe('Zen');
+      expect(next.religion!.religions[0].foundedOnTurn).toBe(4);
+      expect(next.players.get('p1')!.faith).toBe(300);
     });
   });
 
