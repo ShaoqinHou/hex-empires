@@ -840,22 +840,180 @@ Resources change effects between Ages. For example:
 
 ### 14.1 Government Selection
 
-- Players choose a Government early in each Age (locked for the Age).
-- Each Government provides: 1 Policy slot + 2 Celebration bonus options.
-- At least 3 Government options per Age.
+- Each Age, the player chooses exactly one **Government** on the
+  first turn of that Age. Governments are locked for the duration of
+  the Age and cleared on age transition.
+- Each Age offers three Government options, gated by civic
+  prerequisites. Governments from earlier Ages cannot be re-selected
+  in a later Age.
+- Each Government provides:
+  - A base Policy slot layout (see §14.2 for category semantics).
+  - Two Celebration bonus options — 10-turn buffs picked at each
+    Celebration (see §4.5).
+  - A passive **Legacy Effect** that applies while the Government is
+    active. On age transition the effect is lost (unlike civilization
+    legacy bonuses which persist).
+
+#### 14.1.1 Antiquity Governments
+
+| Government | Unlock Civic | Slots | Legacy Effect |
+|---|---|---|---|
+| Classical Republic | Code of Laws | 1 economic, 1 wildcard | +1 Culture per City |
+| Despotism | Mysticism | 2 military | +10% Production toward Land Units |
+| Oligarchy | State Service | 1 economic, 1 diplomatic | +1 Gold per Specialist |
+
+#### 14.1.2 Exploration Governments
+
+| Government | Unlock Civic | Slots | Legacy Effect |
+|---|---|---|---|
+| Feudal Monarchy | Feudalism | 2 military, 1 economic | +2 Food per City-Center |
+| Plutocracy | Mercantilism | 2 economic, 1 wildcard | −20% Gold cost of Rush Buying |
+| Theocracy | Scholasticism | 1 military, 1 diplomatic, 1 wildcard | +2 Faith per Temple |
+
+#### 14.1.3 Modern Governments
+
+| Government | Unlock Civic | Slots | Legacy Effect |
+|---|---|---|---|
+| Democracy | Enlightenment | 1 military, 2 economic, 1 diplomatic | +25% Trade Route yields |
+| Fascism | Totalitarianism | 3 military, 1 economic | +20% Combat Strength while defending home territory |
+| Communism | Class Struggle | 2 military, 2 economic | +15% Production in every City |
+
+All nine governments above are mutually exclusive choices within their
+Age; players pick exactly one at the first turn of that Age.
 
 ### 14.2 Social Policies
 
-- Policies are placed in Policy slots (no type restriction -- any policy fits any slot).
-- Base slots: 1 per Age.
-- Additional slots from: Celebrations, Leader Attributes (Diplomatic tier 3), specific Civics/Techs.
-- Policies can be swapped freely between turns.
+- Policies are placed in the Policy slots provided by the current
+  Government. Any Policy may be slotted into any slot whose category
+  matches the Policy's category (or `wildcard`, which accepts any
+  category).
+- **Base slots:** provided by the Government (see §14.1.1–14.1.3).
+- **Additional slots:** each Celebration (§4.5) grants +1 wildcard
+  slot (permanent, carries across ages). Leader Attribute
+  _Diplomatic — Tier 3_ grants +1 additional wildcard slot. Some
+  Civics and Techs add specific slot types (see Civic tree notes).
+- **Swap cost:** Policies may be swapped freely between turns at no
+  cost. A slot cannot hold the same Policy that is already slotted in
+  another slot by the same player.
+- Policies unlock via Civic research (most), Tech research (a few), or
+  Leader Attribute pickups (rare). A Policy remains unlocked
+  permanently once earned.
+
+#### 14.2.1 Policy Categories
+
+| Category | Theme | Typical Effects |
+|---|---|---|
+| Military | Combat, war support, standing armies | +CS, +Production toward units, War Support gain |
+| Economic | Gold, production, growth | +Gold, +Production, +Food, rush-buy discounts |
+| Diplomatic | Influence, treaties, trade | +Influence, treaty cost reduction, trade-route yields |
+| Wildcard | Any category qualifies | Any effect; wildcard slots accept policies of any category |
+
+#### 14.2.2 Policy Roster (minimum shipping set)
+
+Each Age ships with 5–8 policies; players unlock 3–5 over an Age.
+
+**Antiquity policies:**
+- `legion-tradition` (Military) — +2 Combat Strength to Melee units.
+- `conscription` (Military) — +15% Production toward Land Units.
+- `survey` (Economic) — +1 Production per Mine.
+- `caravansary` (Economic) — +2 Gold per Trade Route.
+- `emissaries` (Diplomatic) — +2 Influence per turn.
+- `tribute` (Diplomatic) — +10% Gold from City-States.
+- `ancestor-worship` (Wildcard) — +1 Happiness per Temple.
+
+**Exploration policies:**
+- `retinues` (Military) — +1 Commander aura radius.
+- `naval-tradition` (Military) — +10% Production toward Naval Units
+  and +1 sight to Naval.
+- `guilds` (Economic) — +15% Production toward Buildings.
+- `merchant-confederacy` (Economic) — +2 Gold per Trade Route.
+- `diplomatic-corps` (Diplomatic) — −20% cost of Endeavors.
+- `crusading-zeal` (Diplomatic) — +2 Faith per Specialist when at war.
+- `cloister` (Wildcard) — +1 Science per Temple.
+
+**Modern policies:**
+- `standing-army` (Military) — +10% Combat Strength to all units.
+- `total-war` (Military) — +20% Production toward Military Units;
+  +50% War Weariness.
+- `industrialisation` (Economic) — +2 Production per Factory.
+- `free-market` (Economic) — +15% Trade Route yields.
+- `think-tank` (Diplomatic) — +15% Science; −2 Influence per turn.
+- `propaganda` (Diplomatic) — +1 Happiness per City; +10% Culture.
+- `planned-economy` (Wildcard) — +10% all yields; policies cost 1
+  turn to swap (special restriction).
 
 ### 14.3 Codex System
 
-- Codices are placed in buildings with Codex slots (Library: 2, Academy: 3, Palace: 4).
-- Each Codex provides bonus Science per turn.
-- Codices are unlocked through Tech/Civic Masteries and specific buildings.
+- Codices are placed in buildings that expose **Codex slots**:
+
+| Building | Age | Codex slots |
+|---|---|---|
+| Library | Antiquity | 2 |
+| Academy | Antiquity | 3 |
+| Palace | Ageless | 4 |
+| University | Exploration | 3 |
+| Research Lab | Modern | 4 |
+
+- Each placed Codex yields **+1 Science per turn** to the hosting
+  city. Codex yields stack additively with other Science sources.
+- Codices are earned through **Tech Masteries** and **Civic
+  Masteries**. Completing one mastery grants exactly one Codex,
+  named for the mastered tech or civic (e.g., "Codex of Writing").
+- Earned Codices go into the player's Codex Reservoir. A Codex in
+  the Reservoir yields nothing; it must be slotted to activate.
+- Codices may be moved between slots freely between turns (same
+  cadence as Policies — see §14.2).
+- Codices persist across Age transitions: a Codex earned in Antiquity
+  remains slotted (or in the Reservoir) in Exploration and Modern.
+
+### 14.4 Celebration Government Bonuses (cross-reference §4.5)
+
+Each Celebration grants the player a choice between two **10-turn**
+bonuses tied to the **current** Government. The bonus is locked in at
+grant time — changing Government (via Age transition) does not cancel
+it. The bonus expires at the end of the 10th turn after grant.
+
+The nine Governments defined in §14.1 each expose a 2-option
+Celebration bonus pair. The six options given in §4.5's examples map
+to the six Antiquity/Exploration Governments. The Modern-era
+Governments add:
+
+| Government | Option A | Option B |
+|---|---|---|
+| Democracy | +25% Culture | +20% Trade Route yield |
+| Fascism | +30% Production toward Units | +15% Combat Strength |
+| Communism | +20% Production in every City | +15% Science |
+
+### 14.5 Government Change Rules
+
+- On Age transition, the previous Government's Legacy Effect is
+  removed. Slotted Policies clear. Celebration bonus in progress
+  continues to expire (§14.4). Earned Codices remain in the
+  Reservoir or their slots.
+- The player must select a new Government on the first turn of the
+  new Age. Until a selection is made, the player has **zero Policy
+  slots** and no Government Legacy Effect.
+- Governments unlocked in earlier Ages become unavailable once the
+  Age advances past them (civic-tree-gated).
+- There is no anarchy or cooldown cost for the forced Government
+  change at Age transition.
+
+### 14.6 Summary of Slot Maths
+
+| Source | Slot count | Slot type |
+|---|---|---|
+| Government base | 1–4 (see §14.1) | per-category |
+| Celebration | +1 per Celebration (permanent) | wildcard |
+| Leader Attribute — Diplomatic Tier 3 | +1 | wildcard |
+| Civic: _Divine Right_ (Exploration) | +1 | diplomatic |
+| Civic: _Nationalism_ (Modern) | +1 | military |
+| Tech: _Printing Press_ (Exploration) | +1 | wildcard |
+
+The above minimum set ensures a Modern-era player who has completed
+the full civic tree, earned multiple Celebrations, and picked
+Diplomatic Tier 3 should end up with approximately 6–8 Policy slots
+— enough variety to meaningfully customize but not so many that
+slotting becomes a trivial "check all boxes" exercise.
 
 ---
 
@@ -903,6 +1061,167 @@ Leaders persist across all three Ages, accumulating attribute points throughout 
 - Each choice has gameplay effects (positive and negative).
 - **Crisis Policies**: Sometimes forced policy changes that reduce Happiness.
 - **Revolts Crisis**: Unhappy settlements may revolt if unaddressed.
+
+---
+
+## 18. Religion and Pantheons
+
+Religion layers on top of the core economy via the `Faith` yield.
+Every player accrues Faith from Shrines, Temples, certain wonders and
+natural features; the pool is spent on three mutually-reinforcing
+tiers: a **Pantheon** (passive empire bonus), a **Religion** (founded
+faith with beliefs), and **Religious Units** (Missionaries and
+Apostles that spread the religion abroad).
+
+### 18.1 The Faith yield
+
+- `Faith` is one of the base yields listed in §5.1.
+- Sources: Shrine, Temple, Holy Site districts, Religious Site town
+  specialization (§2.3), certain natural wonders, Legacy bonuses, and
+  several civ/leader abilities.
+- Faith accumulates in a per-player pool. Unlike Gold it is not spent
+  on production queue buys — only on religion-specific choices.
+
+### 18.2 Pantheons (Antiquity tier)
+
+- First time a player's Faith pool crosses the pantheon threshold
+  (default **25 Faith** [UNCONFIRMED — may scale by game speed]), the
+  player opens the Pantheon Pick panel.
+- The player picks exactly one `PantheonDef` from the unpicked pool.
+  The Faith threshold cost is deducted.
+- The pantheon's `bonus` (a single `EffectDef`) applies empire-wide
+  for the rest of the game — including through age transitions.
+- **One pantheon per player**, permanent, non-transferable.
+- **First-come, first-served:** once a pantheon is picked it is no
+  longer available to other players. The global registry of picks
+  lives on `ReligionState.pantheons`.
+- **Default list (10 pantheons):** named examples include
+  *God of Healing*, *Goddess of the Harvest*, *God of the Forge*,
+  *God of War*, *Religious Settlements*, *God of the Open Sky*,
+  *Stone Circles*, *Goddess of Festivals*, *God of Craftsmen*,
+  *Fertility Rites*. Concrete numbers are deferred to content cycle.
+
+### 18.3 Founding a Religion (Antiquity / Exploration boundary)
+
+- A player who has adopted a pantheon and built a **Holy Site** or a
+  **Temple** may found a religion by spending **200 Faith**
+  [UNCONFIRMED] at the city containing their first Holy Site.
+- Founding requires:
+  1. An unclaimed religion slot (see §18.8 "Religion slot count").
+  2. The founding city to contain a Temple or Holy Site district.
+  3. The player to hold a pantheon.
+- The founding player chooses:
+  - A display name (free text, e.g. "Buddhism", "Zoroastrianism").
+  - One **founder belief** (affects only the founder, empire-wide).
+  - One **follower belief** (affects every city that follows the
+    religion, regardless of who owns it).
+- The city becomes the religion's **Holy City**. The holy city
+  receives passive pressure bonuses and cannot be changed.
+- The founded religion persists through age transitions and civ
+  swaps — it is keyed to the founding civ, not the active civ.
+
+### 18.4 Enhancing a Religion (Exploration tier)
+
+- Once the religion has spread to some minimum number of cities
+  [UNCONFIRMED — Civ VI used 5; likely similar], the founder may spend
+  **400 Faith** [UNCONFIRMED] to enhance it.
+- Enhancement picks two more beliefs:
+  - One **enhancer belief** (another founder-only bonus).
+  - One **worship belief** (unlocks a unique "worship building" the
+    founder can construct in every city that follows the religion).
+- Enhanced religions have four beliefs total
+  (founder / follower / enhancer / worship). This is the `MAX_RELIGION_BELIEFS`
+  constant in code.
+
+### 18.5 Religious Units
+
+Two religious unit archetypes are trained by spending Faith at a city
+with the appropriate building:
+
+- **Missionary** — Exploration age. Spreads the religion once per
+  target city; consumed on use. Cannot engage in theological combat.
+  Each Missionary carries **3 spread charges** [UNCONFIRMED].
+- **Apostle** — Exploration / Modern age. Stronger spread (+2 pressure
+  per spread); can promote by spending charges; can initiate
+  **theological combat** against enemy Apostles in an adjacent hex.
+
+Religious units ignore terrain movement costs [UNCONFIRMED — Civ VI
+convention, verify for VII] and cannot be targeted by normal combat
+units. They are destroyed only by theological combat or when their
+charges run out.
+
+### 18.6 Religious spread — pressure
+
+Each turn, every city emits **religious pressure** for its dominant
+religion to neighboring cities. Pressure spreads via three channels:
+
+1. **Proximity.** Every city within **10 hexes** of a city with a
+   dominant religion receives passive pressure per turn, scaled by
+   distance (linear falloff). Range is `RELIGIOUS_PRESSURE_RADIUS`.
+2. **Trade routes.** A trade route whose endpoint has a dominant
+   religion delivers pressure to the other endpoint regardless of
+   distance.
+3. **Religious units.** A Missionary or Apostle on a city tile adds a
+   large one-shot pressure spike for the unit's religion.
+
+Pressure accumulates on `CityReligiousState.pressure`. At end of turn
+the religion with highest pressure in a city promotes one citizen to
+its follower count (`followers`). When a religion passes
+50% + 1 of a city's pop it becomes `dominant` for that city.
+
+### 18.7 Theological combat
+
+Two enemy Apostles on adjacent hexes may initiate **theological
+combat** (an `INITIATE_THEOLOGICAL_COMBAT` action). Resolution is
+independent of normal combat:
+
+- Strength is the Apostle's religious strength, modified by nearby
+  Holy Sites, relevant promotions, and belief bonuses.
+- Damage is applied as **charge loss**, not HP. An Apostle at 0
+  charges is removed from the game.
+- Winning theological combat spreads some of the winner's religion
+  pressure to adjacent enemy cities [UNCONFIRMED].
+
+### 18.8 Religion slot count
+
+- The number of religion slots per game is bounded. Convention:
+  **(player count − 1)** religions may exist in Antiquity; may grow
+  by +1 on Exploration transition [UNCONFIRMED].
+- `ReligionState.availableReligionSlots` tracks the remaining pool.
+- Players who cannot afford the founding cost before slots run out
+  are locked out of religion-tier play; their Pantheon persists.
+
+### 18.9 Capture of a Holy City
+
+- If a Holy City is captured in war, the religion's `founderId` does
+  **not** change — the religion remains keyed to its original civ.
+- The captor receives the city's normal yields but does not gain the
+  founder's founder/enhancer beliefs.
+- If the captor follows a different religion, the captured city
+  becomes a pressure battleground: the captured city emits the
+  founder's religion at a dampened rate and receives full pressure
+  from the captor's neighbors.
+
+### 18.10 Interactions with age transitions
+
+- **Pantheons persist across ages.** The pantheon bonus remains
+  active in Exploration and Modern regardless of civ swap.
+- **Religions persist across ages.** Founder-keyed bonuses remain
+  with the founding civ even after that civ has transitioned out.
+- **Religious Legacy Path [UNCONFIRMED]:** Civ VII may include a
+  Religious Legacy Path in Exploration with milestones tied to
+  number of converted cities and theological combats won. Schema
+  TBD.
+
+### 18.11 Summary table
+
+| Tier | Unlock gate | Faith cost | Slots | Effects |
+|------|-------------|-----------|-------|---------|
+| Pantheon | Faith ≥ 25 | 25 | 1 per player | 1 empire-wide bonus |
+| Religion founding | Pantheon + Holy Site | 200 | player count − 1 | founder + follower belief |
+| Religion enhancement | Spread to 5 cities | 400 | once per religion | enhancer + worship belief |
+| Missionary | Exploration + Temple | Faith buy | per training | 3 spread charges |
+| Apostle | Exploration + Temple | Faith buy | per training | spread + combat |
 
 ---
 
