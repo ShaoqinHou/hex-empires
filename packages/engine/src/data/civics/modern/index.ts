@@ -66,7 +66,56 @@ export const FUTURE_CIVIC: CivicDef = {
   treePosition: { row: 1, col: 3 },
 };
 
+/**
+ * Rulebook §12 (Military Victory) — Adopting an Ideology requires the
+ * Political Theory civic. Foundation piece of the Modern civic tree.
+ */
+export const POLITICAL_THEORY: CivicDef = {
+  id: 'political_theory',
+  name: 'Political Theory',
+  age: 'modern',
+  cost: 350,
+  prerequisites: [],
+  unlocks: ['adopt_ideology'],
+  description:
+    'Systematic study of the legitimacy and structure of the state. Required to adopt an Ideology.',
+  treePosition: { row: 1, col: 0 },
+};
+
+/**
+ * Rulebook §14.1.3 — unlocks the Democracy Government for the Modern Age.
+ * Intellectual successor to Political Theory.
+ */
+export const ENLIGHTENMENT: CivicDef = {
+  id: 'enlightenment',
+  name: 'Enlightenment',
+  age: 'modern',
+  cost: 450,
+  prerequisites: ['political_theory'],
+  unlocks: ['government_democracy'],
+  description:
+    'Liberty, reason, and the consent of the governed. Unlocks the Democracy government.',
+  treePosition: { row: 1, col: 1 },
+};
+
+/**
+ * Rulebook §14.1.3 — unlocks the Communism Government for the Modern Age.
+ * Mass-mobilisation branch that parallels Totalitarianism.
+ */
+export const CLASS_STRUGGLE: CivicDef = {
+  id: 'class_struggle',
+  name: 'Class Struggle',
+  age: 'modern',
+  cost: 550,
+  prerequisites: ['political_theory'],
+  unlocks: ['government_communism'],
+  description:
+    'Organises society along the axis of productive labour versus capital. Unlocks the Communism government.',
+  treePosition: { row: 2, col: 2 },
+};
+
 export const ALL_MODERN_CIVICS: ReadonlyArray<CivicDef> = [
   IDEOLOGY, SUFFRAGE, TOTALITARIANISM,
   ENVIRONMENTALISM, GLOBALIZATION, FUTURE_CIVIC,
+  POLITICAL_THEORY, ENLIGHTENMENT, CLASS_STRUGGLE,
 ];

@@ -88,7 +88,41 @@ export const NATIONALISM: CivicDef = {
   treePosition: { row: 1, col: 4 },
 };
 
+/**
+ * Rulebook §14.1.2 — unlocks the Feudal Monarchy Government for the
+ * Exploration Age. Sits on the military / governance branch with
+ * Nationalism as a natural successor.
+ */
+export const FEUDALISM: CivicDef = {
+  id: 'feudalism',
+  name: 'Feudalism',
+  age: 'exploration',
+  cost: 140,
+  prerequisites: ['humanism'],
+  unlocks: ['government_feudal_monarchy'],
+  description:
+    'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Feudal Monarchy government.',
+  treePosition: { row: 1, col: 1 },
+};
+
+/**
+ * Rulebook §14.1.2 — unlocks the Theocracy Government for the Exploration
+ * Age. Follows from Divine Right on the faith branch.
+ */
+export const SCHOLASTICISM: CivicDef = {
+  id: 'scholasticism',
+  name: 'Scholasticism',
+  age: 'exploration',
+  cost: 180,
+  prerequisites: ['divine_right'],
+  unlocks: ['government_theocracy'],
+  description:
+    'Synthesises faith and reason into a unified ecclesiastical doctrine. Unlocks the Theocracy government.',
+  treePosition: { row: 0, col: 3 },
+};
+
 export const ALL_EXPLORATION_CIVICS: ReadonlyArray<CivicDef> = [
   HUMANISM, MERCANTILISM, DIVINE_RIGHT, EXPLORATION_CIVIC,
   REFORMED_CHURCH, COLONIALISM, CIVIL_ENGINEERING, NATIONALISM,
+  FEUDALISM, SCHOLASTICISM,
 ];

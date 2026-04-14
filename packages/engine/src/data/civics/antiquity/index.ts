@@ -88,6 +88,23 @@ export const RECORDED_HISTORY: CivicDef = {
   treePosition: { row: 0, col: 4 },
 };
 
+/**
+ * Rulebook §14.1.1 — unlocks the Oligarchy Government for the Antiquity Age.
+ * Distinct from `state_workforce`: Workforce governs construction labor;
+ * State Service governs the administrative apparatus the Oligarchy relies on.
+ */
+export const STATE_SERVICE: CivicDef = {
+  id: 'state_service',
+  name: 'State Service',
+  age: 'antiquity',
+  cost: 100,
+  prerequisites: ['early_empire'],
+  unlocks: ['government_oligarchy'],
+  description:
+    'Establishes a professional class of administrators. Unlocks the Oligarchy government.',
+  treePosition: { row: 1, col: 4 },
+};
+
 // ── Civ-Unique Civics ──
 
 /** Rome-only: Reflects Roman senatorial government — unique to the Roman civilization. */
@@ -132,5 +149,6 @@ export const ATHENIAN_DEMOCRACY: CivicDef = {
 export const ALL_ANTIQUITY_CIVICS: ReadonlyArray<CivicDef> = [
   CODE_OF_LAWS, CRAFTSMANSHIP, FOREIGN_TRADE, EARLY_EMPIRE,
   MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
+  STATE_SERVICE,
   ROMAN_SENATE, DIVINE_KINGSHIP, ATHENIAN_DEMOCRACY,
 ];
