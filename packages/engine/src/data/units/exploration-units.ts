@@ -105,7 +105,7 @@ export const CROSSBOWMAN: UnitDef = {
   age: 'exploration',
   category: 'ranged',
   cost: 100,
-  combat: 30,
+  combat: 25,
   rangedCombat: 35,
   range: 2,
   movement: 2,
