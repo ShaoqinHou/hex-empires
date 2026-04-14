@@ -190,9 +190,13 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
       // Pick a civilization from the next age
       const nextAgeCivs = [...state.config.civilizations.values()].filter(c => c.age === nextAge);
       if (nextAgeCivs.length > 0) {
-        // Pick a random civ (deterministic based on turn + player id)
-        const civIndex = (state.turn + player.id.charCodeAt(player.id.length - 1)) % nextAgeCivs.length;
-        actions.push({ type: 'TRANSITION_AGE', newCivId: nextAgeCivs[civIndex].id });
+        // Avoid picking civs already used by other players
+        const usedCivIds = new Set([...state.players.values()].map(p => p.civilizationId));
+        const availableCivs = nextAgeCivs.filter(c => !usedCivIds.has(c.id));
+        const pool = availableCivs.length > 0 ? availableCivs : nextAgeCivs;
+        // Deterministic pick based on turn + player id
+        const civIndex = (state.turn + player.id.charCodeAt(player.id.length - 1)) % pool.length;
+        actions.push({ type: 'TRANSITION_AGE', newCivId: pool[civIndex].id });
       }
     }
   }
