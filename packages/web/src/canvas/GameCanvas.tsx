@@ -190,11 +190,16 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         ? new Set(reachableHexes.keys())
         : null;
 
+      // When combatPreview is active it means the hovered hex holds an attackable enemy.
+      // In that case show the red attack target; suppress the yellow MOVE preview so we
+      // don't send mixed signals.
+      const attackTarget: HexCoord | null = combatPreview && combatPreview.canAttack ? hoveredHex : null;
+
       // Compute the move-path preview: when a unit is selected AND the hovered hex is
       // within its reach, find the path so the renderer can draw it. Recomputed per
       // frame — pathfinding on a small 3–6 step grid is cheap (<1ms), so no need to memo.
       let pathPreview: ReadonlyArray<HexCoord> | null = null;
-      if (selectedUnit && hoveredHex && reachableSet) {
+      if (!attackTarget && selectedUnit && hoveredHex && reachableSet) {
         const hoveredKey = coordToKey(hoveredHex);
         if (reachableSet.has(hoveredKey) && hoveredKey !== coordToKey(selectedUnit.position)) {
           const costFn = (_from: HexCoord, to: HexCoord) => {
@@ -217,6 +222,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         reachableHexes: reachableSet,
         hoveredHex,
         pathPreview,
+        attackTarget,
         visibility: player?.visibility ?? null,
         explored: player?.explored ?? null,
         showYields,

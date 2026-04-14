@@ -21,6 +21,10 @@ export interface RenderContext {
    *  Null if there's no active preview. Drawn as chevron dots so the player sees
    *  where a right-click will move them. */
   pathPreview: ReadonlyArray<HexCoord> | null;
+  /** If the hovered hex is an enemy the selected unit CAN attack, this is that hex.
+   *  Renderer paints a pulsing red overlay + crossed-swords marker to signal that
+   *  the next right-click will ATTACK rather than MOVE. */
+  attackTarget: HexCoord | null;
   visibility: ReadonlySet<string> | null;  // currently visible tiles
   explored: ReadonlySet<string> | null;    // ever-seen tiles
   showYields: boolean;
@@ -147,6 +151,12 @@ export class HexRenderer {
     // Draw path preview (after selection + hover so it sits on top of both overlays)
     if (rc.pathPreview && rc.pathPreview.length > 0) {
       this.drawPathPreview(rc);
+    }
+
+    // Attack target overlay wins over path preview — if an enemy is attackable we want
+    // to signal ATTACK not MOVE, so we stop drawing the yellow path and paint red instead.
+    if (rc.attackTarget) {
+      this.drawAttackTarget(rc.attackTarget, rc.turnNumber);
     }
 
     ctx.restore();
@@ -787,6 +797,36 @@ export class HexRenderer {
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
+  }
+
+  /** Pulsing red outline + crossed-swords marker on an attackable enemy hex. */
+  private drawAttackTarget(hex: HexCoord, turnNumber: number): void {
+    const ctx = this.ctx;
+    const { x, y } = hexToPixel(hex);
+    // Pulse amplitude derived from wall-clock time so it's independent of turn ticks.
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 220);
+    ctx.save();
+    // Filled red tint.
+    drawHexPath(ctx, x, y);
+    ctx.fillStyle = `rgba(239, 68, 68, ${0.22 + 0.15 * pulse})`;
+    ctx.fill();
+    // Outer glow ring.
+    ctx.shadowColor = 'rgba(239, 68, 68, 0.9)';
+    ctx.shadowBlur = 18;
+    drawHexPath(ctx, x, y);
+    ctx.strokeStyle = `rgba(255, 99, 99, ${0.85 + 0.15 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Crossed-swords glyph (rendered as text so we avoid an extra sprite sheet).
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255, 240, 240, 0.95)';
+    ctx.fillText('⚔', x, y - 2);
+    ctx.restore();
+    // Reference turnNumber so TSC knows it's intentional (kept for future: flash on new turn).
+    void turnNumber;
   }
 
   /** Render the move path as bright chevron dots along hex centers — shows the player

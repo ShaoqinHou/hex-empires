@@ -440,6 +440,37 @@ test.describe('Hover & tooltip', () => {
   });
 });
 
+// ── Visual overlays (path preview, attack target) ────────────────────────────
+
+test.describe('Visual overlays', () => {
+  test('hovering a reachable hex with unit selected renders no console errors', async ({ page }) => {
+    // Verifies that the pathPreview rendering path runs without blowing up — the
+    // overlay itself is canvas-pixel so we can't easily assert colors, but a zero
+    // console-error run is the practical contract.
+    await startGame(page, { seed: 2 });
+    const errs: string[] = [];
+    page.on('pageerror', (e) => errs.push(String(e)));
+    page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+
+    const warrior = await ownUnit(page, 'warrior');
+    const wScr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
+    await page.waitForTimeout(150);
+
+    // Move mouse across a handful of reachable-looking neighbors to exercise the
+    // per-frame pathfinding + draw path.
+    const nb = await reachableNeighbor(page, warrior.position);
+    if (nb) {
+      const nbScr = await hexScreen(page, nb.q, nb.r);
+      await page.mouse.move(nbScr!.x, nbScr!.y);
+      await page.waitForTimeout(120);
+      await page.mouse.move(nbScr!.x + 30, nbScr!.y + 10);
+      await page.waitForTimeout(120);
+    }
+    expect(errs).toEqual([]);
+  });
+});
+
 // ── Robustness ───────────────────────────────────────────────────────────────
 
 test.describe('Robustness', () => {
