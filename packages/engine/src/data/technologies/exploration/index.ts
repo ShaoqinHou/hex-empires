@@ -132,8 +132,75 @@ export const MILITARY_SCIENCE: TechnologyDef = {
   treePosition: { row: 1, col: 3 },
 };
 
+export const MACHINERY: TechnologyDef = {
+  id: 'machinery',
+  name: 'Machinery',
+  age: 'exploration',
+  cost: 220,
+  prerequisites: [],
+  unlocks: ['catapult', 'gristmill', 'sawmill'],
+  description: 'Enables Catapult siege unit, Gristmill and Sawmill buildings',
+  treePosition: { row: 4, col: 0 },
+};
+
+export const CASTLES: TechnologyDef = {
+  id: 'castles',
+  name: 'Castles',
+  age: 'exploration',
+  cost: 260,
+  prerequisites: ['feudalism'],
+  unlocks: ['crossbowman', 'dungeon'],
+  description: 'Enables Crossbowman ranged unit and Dungeon building',
+  treePosition: { row: 5, col: 1 },
+};
+
+export const FEUDALISM: TechnologyDef = {
+  id: 'feudalism',
+  name: 'Feudalism',
+  age: 'exploration',
+  cost: 240,
+  prerequisites: [],
+  unlocks: ['inn'],
+  description: 'Enables Inn building and medieval infrastructure',
+  treePosition: { row: 5, col: 0 },
+};
+
+export const GUILDS: TechnologyDef = {
+  id: 'guilds',
+  name: 'Guilds',
+  age: 'exploration',
+  cost: 300,
+  prerequisites: ['apprenticeship'],
+  unlocks: ['guildhall'],
+  description: 'Enables Guildhall building for merchant networks',
+  treePosition: { row: 1, col: 2 },
+};
+
+export const SHIPBUILDING: TechnologyDef = {
+  id: 'shipbuilding',
+  name: 'Shipbuilding',
+  age: 'exploration',
+  cost: 280,
+  prerequisites: ['cartography'],
+  unlocks: ['shipyard'],
+  description: 'Enables Shipyard for naval production',
+  treePosition: { row: 3, col: 2 },
+};
+
+export const METAL_CASTING: TechnologyDef = {
+  id: 'metal_casting',
+  name: 'Metal Casting',
+  age: 'exploration',
+  cost: 320,
+  prerequisites: ['metallurgy'],
+  unlocks: ['pikeman', 'lancer'],
+  description: 'Enables Pikeman anti-cavalry infantry and Lancer cavalry',
+  treePosition: { row: 2, col: 2 },
+};
+
 export const ALL_EXPLORATION_TECHS: ReadonlyArray<TechnologyDef> = [
   PRINTING, APPRENTICESHIP, GUNPOWDER, BANKING,
   EDUCATION, ASTRONOMY, MILITARY_TACTICS, METALLURGY,
   CARTOGRAPHY, ECONOMICS, MILITARY_SCIENCE, SIEGE_TACTICS,
+  MACHINERY, CASTLES, FEUDALISM, GUILDS, SHIPBUILDING, METAL_CASTING,
 ];
