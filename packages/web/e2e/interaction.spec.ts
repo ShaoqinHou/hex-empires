@@ -24,7 +24,16 @@ async function startGame(page: Page, opts: { seed?: number } = {}) {
   const seed = opts.seed ?? 2;
   const url = `http://localhost:5174/?seed=${seed}`;
   await page.goto(url);
-  await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
+  await page.evaluate(() => {
+    // Clear any autosave from prior tests in this browser context — the SetupScreen
+    // would otherwise show "Resume" as primary, breaking the /start game/i lookup.
+    localStorage.removeItem('hex-empires-save');
+    localStorage.removeItem('hex-empires-save-meta');
+    localStorage.setItem('helpShown', 'true');
+  });
+  // Reload so the Setup component re-evaluates its readSaveInfo() effect against the
+  // freshly-cleared storage.
+  await page.reload();
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: /start game/i }).click();
   await page.waitForSelector('canvas', { timeout: 10000 });
