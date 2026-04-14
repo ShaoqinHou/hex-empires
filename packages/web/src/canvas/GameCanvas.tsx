@@ -151,6 +151,17 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         y: rect.top + (wy - cam.y) * cam.zoom + c.height / 2,
       };
     };
+    // Debug hook: centers camera on any hex from tests.
+    (window as any).__centerCameraOn = (q: number, r: number) => {
+      const cam = cameraRef.current;
+      if (!cam) return;
+      const { x, y } = hexToPixel({ q, r });
+      cam.centerOn(x, y);
+    };
+    (window as any).__cameraState = () => {
+      const cam = cameraRef.current;
+      return cam ? { x: cam.x, y: cam.y, zoom: cam.zoom } : null;
+    };
 
     return () => {
       window.removeEventListener('resize', resize);

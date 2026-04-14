@@ -584,6 +584,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (window as any).__gameDispatch = dispatch;
   }, [state, dispatch]);
 
+  // Expose current selection so tests can verify UI intent (which unit/hex/city is selected)
+  // without scraping potentially-flaky body text. Read-only for tests.
+  useEffect(() => {
+    (window as any).__selection = {
+      unitId: selectedUnit?.id ?? null,
+      hex: selectedHex,
+      cityId: selectedCityId ?? null,
+    };
+  }, [selectedUnit, selectedHex, selectedCityId]);
+
   return (
     <GameContext.Provider value={value}>
       {children}
