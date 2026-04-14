@@ -276,16 +276,41 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
   return { percent, flat };
 }
 
-/** Flanking bonus: +2 strength per friendly unit adjacent to the defender, capped at +6 */
+/**
+ * Flanking bonus per rulebook §6.7:
+ *   - Unlocked after researching `military_training` (F9).
+ *   - Applies only when the attacker is a melee/cavalry unit (F7 — §6.7
+ *     "Melee combat creates a Battlefront...").
+ *   - Requires 2+ friendly MILITARY units adjacent to the defender (F2, F5).
+ *     Civilian / religious units do NOT contribute.
+ *   - The attacker itself is never counted as its own flanker.
+ * Bonus: +2 CS per qualifying flanker, capped at +6 (3 flankers).
+ */
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
+  // F7: attacker must be melee/cavalry for flanking to apply at all.
+  const attackerDef = state.config.units.get(attacker.typeId);
+  const attackerCategory = attackerDef?.category;
+  if (attackerCategory !== 'melee' && attackerCategory !== 'cavalry') return 0;
+
+  // F9: attacker's owner must have researched Military Training.
+  const attackerPlayer = state.players.get(attacker.owner);
+  if (!attackerPlayer) return 0;
+  if (!attackerPlayer.researchedTechs.includes('military_training')) return 0;
+
   const defNeighbors = neighbors(defenderPosition);
   let flankingCount = 0;
   for (const [, u] of state.units) {
     if (u.id === attacker.id) continue;           // exclude the attacker itself
     if (u.owner !== attacker.owner) continue;      // only count friendly units
+    // F5: civilians and religious units do not contribute to flanking.
+    const uDef = state.config.units.get(u.typeId);
+    const uCategory = uDef?.category;
+    if (uCategory === 'civilian' || uCategory === 'religious') continue;
     const isAdjacent = defNeighbors.some(n => n.q === u.position.q && n.r === u.position.r);
     if (isAdjacent) flankingCount++;
   }
+  // F2: rulebook requires 2+ friendly flankers — a single flanker grants nothing.
+  if (flankingCount < 2) return 0;
   return Math.min(flankingCount * 2, 6);
 }
 

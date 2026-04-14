@@ -56,6 +56,7 @@ function buildFlankingScenario(opts: {
   defenderPosition?: { q: number; r: number };
   flankers?: ReadonlyArray<FlankerSpec>;
   attackerHealth?: number;                 // defaults to 99 (avoids +5 first-strike)
+  attackerHasMilitaryTraining?: boolean;   // defaults to true (F9 overrides to false)
 }): GameState {
   const attackerPos = opts.attackerPosition ?? { q: 3, r: 3 };
   const defenderPos = opts.defenderPosition ?? { q: 4, r: 3 };
@@ -84,8 +85,15 @@ function buildFlankingScenario(opts: {
       health: 100,
     }));
   }
+  // Give the attacker's owner Military Training so flanking is unlocked
+  // (per §6.7). The F9 test overrides this to false to verify the tech gate.
+  const hasMT = opts.attackerHasMilitaryTraining ?? true;
   const players = new Map([
-    ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+    ['p1', createTestPlayer({
+      id: 'p1',
+      leaderId: 'cleopatra',
+      researchedTechs: hasMT ? ['military_training'] : [],
+    })],
     ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
   ]);
   return createTestState({
@@ -153,7 +161,7 @@ describe('F1: flanking bonus scales with count of friendlies adjacent to defende
 // ── F2: Minimum 2 friendly units required (§6.7 bullet 2) ───────────────────
 
 describe('F2: a single friendly flanker grants NO bonus (rulebook requires 2+ adjacent) (§6.7)', () => {
-  it.fails('one flanker alone should grant zero bonus — engine currently grants +2 CS from 1 flanker', () => {
+  it('one flanker alone should grant zero bonus', () => {
     // Rulebook §6.7: "Requires 2+ friendly units adjacent to the target."
     // With only one friendly adjacent, flanking should NOT apply at all.
     // BUG: calculateFlankingBonus gives `flankingCount * 2`, so a single
@@ -219,7 +227,7 @@ describe('F4: the attacker is not counted as a flanker (§6.7)', () => {
 // ── F5: Civilian units do NOT contribute flanking ───────────────────────────
 
 describe('F5: civilian units do NOT contribute flanking bonus (§6.7 — only combat units flank)', () => {
-  it.fails('an adjacent settler (civilian) should contribute 0 flanking — engine counts it as +2', () => {
+  it('an adjacent settler (civilian) should contribute 0 flanking', () => {
     // Rulebook §6.7 speaks of combat units forming a Battlefront; civilians
     // cannot participate in the flank. A settler/civilian beside the
     // defender should NOT boost the attacker's CS.
@@ -269,7 +277,7 @@ describe('F6: enemy units adjacent to defender do NOT grant attacker flanking (�
 // ── F7: Flanking applies to melee attackers; rulebook limits it to melee ────
 
 describe('F7: flanking applies to MELEE attacks only (§6.7 bullet 3: "Melee combat creates a Battlefront")', () => {
-  it.fails('ranged archer attacker should NOT receive flanking bonus — engine currently does', () => {
+  it('ranged archer attacker should NOT receive flanking bonus', () => {
     // Rulebook §6.7: "Melee combat creates a Battlefront. Attacks from the
     // side or rear gain flanking bonus." The flanking bonus is thus scoped
     // to melee attacks. A ranged attacker should not benefit.
@@ -325,23 +333,26 @@ describe('F8: flanking stacks additively with fortification / terrain defense (�
 // ── F9: Military Training tech required to unlock flanking ──────────────────
 
 describe('F9: flanking is gated behind Military Training tech (§6.7 bullet 1)', () => {
-  it.fails('attacker without Military Training researched should get zero flanking — engine ignores tech gate', () => {
+  it('attacker without Military Training researched should get zero flanking', () => {
     // Rulebook §6.7: "Unlocked after researching Military Training." Before
     // the attacker's owner has researched that tech, no flanking bonus
     // should apply.
     // BUG: calculateFlankingBonus has no tech-gate check — it applies from
     // turn 1 regardless of research state.
-    const baseline = damageTo(buildFlankingScenario({ seed: 53 }));
+    const baseline = damageTo(buildFlankingScenario({
+      seed: 53,
+      attackerHasMilitaryTraining: false,
+    }));
     const withFlankersNoTech = damageTo(buildFlankingScenario({
       seed: 53,
+      attackerHasMilitaryTraining: false,
       flankers: [
         { id: 'f1', position: FLANK_POS_A },
         { id: 'f2', position: FLANK_POS_B },
       ],
     }));
-    // Without Military Training researched (test players have empty
-    // researchedTechs), flanking should NOT apply, so damage should equal
-    // the zero-flanker baseline.
+    // Without Military Training researched, flanking should NOT apply,
+    // so damage should equal the zero-flanker baseline.
     expect(withFlankersNoTech).toBe(baseline);
   });
 });

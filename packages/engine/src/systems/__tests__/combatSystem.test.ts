@@ -208,8 +208,9 @@ describe('combatSystem — flanking bonus', () => {
       units.set(fid, createTestUnit({ id: fid, owner: 'p1', typeId: 'warrior', position: flankerPositions[i], movementLeft: 2 }));
     }
 
+    // Rulebook §6.7: flanking requires Military Training researched.
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: ['military_training'] })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
 
@@ -217,7 +218,7 @@ describe('combatSystem — flanking bonus', () => {
   }
 
   it('0 flankers: no bonus (baseline)', () => {
-    // We just verify the test runs; baseline is established by comparing against 1-flanker case.
+    // We just verify the test runs; baseline is established by comparing against 2-flanker case.
     const state = buildFlankedState(0);
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const defender = next.units.get('d1');
@@ -225,26 +226,25 @@ describe('combatSystem — flanking bonus', () => {
     if (defender) expect(defender.health).toBeLessThan(100);
   });
 
-  it('1 flanker: defender takes more damage than with 0 flankers', () => {
+  it('1 flanker: no bonus applied (rulebook §6.7 requires 2+ flankers)', () => {
     const state0 = buildFlankedState(0);
     const state1 = buildFlankedState(1);
-    // Use same RNG seed — both states share seed:42, counter:0 so results are deterministic
+    // Same RNG seed; 1 flanker grants 0 bonus, so damage should be identical.
     const next0 = combatSystem(state0, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const next1 = combatSystem(state1, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const def0HP = next0.units.get('d1')?.health ?? 0;
     const def1HP = next1.units.get('d1')?.health ?? 0;
-    // With 1 flanker the attacker is stronger → defender HP is lower (more damage)
-    expect(def1HP).toBeLessThan(def0HP);
+    expect(def1HP).toBe(def0HP);
   });
 
-  it('2 flankers: defender takes more damage than with 1 flanker', () => {
-    const state1 = buildFlankedState(1);
+  it('2 flankers: defender takes more damage than with 0 flankers (2+ threshold met)', () => {
+    const state0 = buildFlankedState(0);
     const state2 = buildFlankedState(2);
-    const next1 = combatSystem(state1, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next0 = combatSystem(state0, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const next2 = combatSystem(state2, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const def1HP = next1.units.get('d1')?.health ?? 0;
+    const def0HP = next0.units.get('d1')?.health ?? 0;
     const def2HP = next2.units.get('d1')?.health ?? 0;
-    expect(def2HP).toBeLessThan(def1HP);
+    expect(def2HP).toBeLessThan(def0HP);
   });
 
   it('3 flankers: defender takes more damage than with 2 flankers', () => {

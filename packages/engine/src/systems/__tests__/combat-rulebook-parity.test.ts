@@ -428,22 +428,24 @@ describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', ()
     flankerCoords.forEach((pos, i) => {
       units.set(`f${i}`, createTestUnit({ id: `f${i}`, owner: 'p1', typeId: 'warrior', position: pos, movementLeft: 2, health: 100 }));
     });
+    // Rulebook §6.7: flanking requires Military Training researched.
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra', researchedTechs: ['military_training'] })],
       ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
     ]);
     return createTestState({ units, players, currentPlayerId: 'p1', rng: { seed, counter: 0 } });
   }
 
-  it('1 flanker increases damage vs 0 flankers', () => {
-    let dmg0 = 0, dmg1 = 0;
+  it('2 flankers increases damage vs 0 flankers (2+ threshold met)', () => {
+    // Rulebook §6.7 requires 2+ flankers; a single flanker grants no bonus.
+    let dmg0 = 0, dmg2 = 0;
     for (let seed = 1; seed <= 100; seed++) {
       const r0 = combatSystem(buildFlankedScenario(0, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      const r1 = combatSystem(buildFlankedScenario(1, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+      const r2 = combatSystem(buildFlankedScenario(2, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
       dmg0 += (100 - (r0.units.get('d1')?.health ?? 0));
-      dmg1 += (100 - (r1.units.get('d1')?.health ?? 0));
+      dmg2 += (100 - (r2.units.get('d1')?.health ?? 0));
     }
-    expect(dmg1).toBeGreaterThan(dmg0);
+    expect(dmg2).toBeGreaterThan(dmg0);
   });
 
   it('4 flankers deal same damage as 3 flankers (cap at +6)', () => {
@@ -457,22 +459,22 @@ describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', ()
     expect(dmg4).toBe(dmg3);
   });
 
-  it('R67a: flanking bonus magnitude ≈ +2 CS per flanker (1 flanker → +2 CS over baseline)', () => {
+  it('R67a: flanking bonus magnitude ≈ +4 CS at the 2-flanker threshold', () => {
     // Baseline: no flankers. Warrior vs warrior, avg damage ≈ 30.
-    // With 1 flanker: attacker CS 22, diff +2, avg ≈ 30 × e^(2/25) ≈ 32.5.
+    // With 2 flankers (minimum per §6.7): +4 CS, avg ≈ 30 × e^(4/25) ≈ 35.2.
     let total = 0, totalFl = 0;
     for (let seed = 1; seed <= 200; seed++) {
       const base = combatSystem(buildFlankedScenario(0, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      const fl = combatSystem(buildFlankedScenario(1, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+      const fl = combatSystem(buildFlankedScenario(2, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
       total += 100 - base.units.get('d1')!.health;
       totalFl += 100 - fl.units.get('d1')!.health;
     }
     const avg = total / 200;
     const avgFl = totalFl / 200;
     const delta = avgFl - avg;
-    // Expected delta: 32.5 - 30 = 2.5. Allow ±2.
-    expect(delta).toBeGreaterThan(0.5);
-    expect(delta).toBeLessThan(4.5);
+    // Expected delta: ≈ 35.2 - 30 = 5.2. Allow a generous margin.
+    expect(delta).toBeGreaterThan(1);
+    expect(delta).toBeLessThan(10);
   });
 });
 
