@@ -233,6 +233,81 @@ export const FORBIDDEN_CITY: BuildingDef = {
   greatPersonPoints: { type: 'scientist', amount: 1 },
 } as const;
 
+export const ANGKOR_WAT: BuildingDef = {
+  id: 'angkor_wat',
+  name: 'Angkor Wat',
+  age: 'exploration',
+  cost: 500,
+  maintenance: 0,
+  yields: { faith: 3, food: 2 },
+  effects: ['Must be placed adjacent to a River', '+1 Food on all Farms in this city'],
+  requiredTech: 'apprenticeship',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
+export const HAGIA_SOPHIA: BuildingDef = {
+  id: 'hagia_sophia',
+  name: 'Hagia Sophia',
+  age: 'exploration',
+  cost: 520,
+  maintenance: 0,
+  yields: { faith: 6, culture: 2 },
+  effects: ['Missionaries gain +2 spread charges', 'Religion spreads 50% faster from this city'],
+  requiredTech: 'printing',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
+export const GREAT_WALL: BuildingDef = {
+  id: 'great_wall',
+  name: 'Great Wall',
+  age: 'exploration',
+  cost: 550,
+  maintenance: 0,
+  yields: { culture: 3, production: 2 },
+  effects: ['+6 Defense on this city', 'Enemy land units lose 1 Movement when entering adjacent tiles'],
+  requiredTech: 'siege_tactics',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'general', amount: 1 },
+} as const;
+
+export const TERRACOTTA_ARMY: BuildingDef = {
+  id: 'terracotta_army',
+  name: 'Terracotta Army',
+  age: 'exploration',
+  cost: 500,
+  maintenance: 0,
+  yields: { culture: 2, production: 3 },
+  effects: ['Grants one free unit of each current-age land unit type', 'All land units receive +1 promotion'],
+  requiredTech: 'military_tactics',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'general', amount: 1 },
+} as const;
+
+export const ST_BASILS_CATHEDRAL: BuildingDef = {
+  id: 'st_basils_cathedral',
+  name: "St Basil's Cathedral",
+  age: 'exploration',
+  cost: 530,
+  maintenance: 0,
+  yields: { culture: 3, faith: 3 },
+  effects: ['Tundra and Snow tiles in this city yield +1 Production', '+1 Great Work slot for Relics'],
+  requiredTech: 'printing',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
 export const GRISTMILL: BuildingDef = {
   id: 'gristmill',
   name: 'Gristmill',
@@ -370,4 +445,5 @@ export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
   BANK, STOCK_EXCHANGE, BARRACKS, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
   GRISTMILL, SAWMILL, STONECUTTER, WHARF, INN, TEMPLE, MENAGERIE, BAZAAR, GUILDHALL, DUNGEON,
   NOTRE_DAME, VENETIAN_ARSENAL, ALHAMBRA, TAJ_MAHAL, FORBIDDEN_CITY,
+  ANGKOR_WAT, HAGIA_SOPHIA, GREAT_WALL, TERRACOTTA_ARMY, ST_BASILS_CATHEDRAL,
 ] as const;

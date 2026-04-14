@@ -222,6 +222,81 @@ export const UN_HEDQUARTERS: BuildingDef = {
   greatPersonPoints: { type: 'diplomat', amount: 1 },
 } as const;
 
+export const BRANDENBURG_GATE: BuildingDef = {
+  id: 'brandenburg_gate',
+  name: 'Brandenburg Gate',
+  age: 'modern',
+  cost: 900,
+  maintenance: 0,
+  yields: { culture: 4, production: 3 },
+  effects: ['Requires a Military Academy in this city', 'All land units gain +5 Combat Strength in friendly territory'],
+  requiredTech: 'combined_arms',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'general', amount: 1 },
+} as const;
+
+export const SYDNEY_OPERA_HOUSE: BuildingDef = {
+  id: 'sydney_opera_house',
+  name: 'Sydney Opera House',
+  age: 'modern',
+  cost: 850,
+  maintenance: 0,
+  yields: { culture: 8 },
+  effects: ['Must be placed on a Coastal urban tile', '+1 Culture on every Coast tile in this city'],
+  requiredTech: 'mass_media',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
+export const PANAMA_CANAL: BuildingDef = {
+  id: 'panama_canal',
+  name: 'Panama Canal',
+  age: 'modern',
+  cost: 1100,
+  maintenance: 0,
+  yields: { gold: 6, production: 2 },
+  effects: ['Allows naval units to cross between oceans', '+4 Gold per Trade Route'],
+  requiredTech: 'industrialization',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'engineer', amount: 1 },
+} as const;
+
+export const BROADWAY: BuildingDef = {
+  id: 'broadway',
+  name: 'Broadway',
+  age: 'modern',
+  cost: 800,
+  maintenance: 0,
+  yields: { culture: 6, gold: 2 },
+  effects: ['Requires an Opera House in this city', '+2 Culture on Theatre-type buildings empire-wide'],
+  requiredTech: 'mass_media',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'writer', amount: 1 },
+} as const;
+
+export const CRISTO_REDENTOR: BuildingDef = {
+  id: 'cristo_redentor',
+  name: 'Cristo Redentor',
+  age: 'modern',
+  cost: 850,
+  maintenance: 0,
+  yields: { faith: 4, culture: 2 },
+  effects: ['Must be placed adjacent to a Mountain', 'All Trade Routes grant +1 Religion spread'],
+  requiredTech: 'flight',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
 export const MILITARY_ACADEMY: BuildingDef = {
   id: 'military_academy',
   name: 'Military Academy',
@@ -361,4 +436,5 @@ export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
   MILITARY_ACADEMY, AERODROME, CITY_PARK, DEPARTMENT_STORE, RADIO_STATION, MUSEUM, OPERA_HOUSE, SCHOOLHOUSE, RAIL_STATION, TENEMENT,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
+  BRANDENBURG_GATE, SYDNEY_OPERA_HOUSE, PANAMA_CANAL, BROADWAY, CRISTO_REDENTOR,
 ] as const;
