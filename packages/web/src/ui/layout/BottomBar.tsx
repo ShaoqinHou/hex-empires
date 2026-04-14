@@ -1,12 +1,13 @@
 import { useGameState } from '../../providers/GameProvider';
-import { coordToKey, ALL_IMPROVEMENTS, ALL_TECHNOLOGIES, ALL_CIVICS } from '@hex/engine';
-import type { YieldSet } from '@hex/engine';
+import { coordToKey, ALL_IMPROVEMENTS, ALL_TECHNOLOGIES, ALL_CIVICS, getTileContents, hasStackedEntities } from '@hex/engine';
+import type { YieldSet, UnitState } from '@hex/engine';
+import type { UnitDef } from '@hex/engine';
 import { useMemo } from 'react';
 
 const SHORTCUT_LINE = 'WASD: pan | Scroll: zoom | Enter: end turn | Space: next unit | T: tech | Esc: deselect';
 
 export function BottomBar() {
-  const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry } = useGameState();
+  const { selectedUnit, selectedHex, state, dispatch, terrainRegistry, featureRegistry, unitRegistry, setSelectedUnit, setSelectedHex } = useGameState();
 
   const player = state.players.get(state.currentPlayerId);
 
@@ -88,9 +89,21 @@ export function BottomBar() {
     };
   }, [state, player]);
 
+  // Stack picker: compute tile contents for the selected hex
+  const selectedTileHex = selectedUnit?.position ?? selectedHex ?? null;
+  const tileContents = useMemo(() => {
+    if (!selectedTileHex) return null;
+    return getTileContents(state, selectedTileHex, state.currentPlayerId);
+  }, [state, selectedTileHex]);
+
+  const showStackPicker = tileContents ? hasStackedEntities(tileContents, state.currentPlayerId) : false;
+
+  // Derive a stable selected entity id for highlighting in the portrait strip
+  const selectedEntityId = selectedUnit?.id ?? null;
+
   return (
     <div
-      className="h-16 flex flex-col select-none"
+      className="flex flex-col select-none"
       style={{
         background: 'linear-gradient(0deg, var(--color-bg) 0%, var(--color-surface) 100%)',
         borderTop: '2px solid var(--color-border)',
@@ -98,8 +111,51 @@ export function BottomBar() {
         zIndex: 100,
       }}
     >
+      {/* ── Stack picker portrait strip (shown when 2+ entities on selected tile) ── */}
+      {showStackPicker && tileContents && (
+        <div
+          className="flex items-center gap-1.5 px-4 overflow-x-auto"
+          style={{
+            height: '32px',
+            borderBottom: '1px solid rgba(139,148,158,0.2)',
+            background: 'rgba(0,0,0,0.2)',
+            flexShrink: 0,
+          }}
+        >
+          <span className="text-[10px] font-mono shrink-0" style={{ color: 'rgba(139,148,158,0.5)' }}>
+            On tile:
+          </span>
+          {tileContents.ownUnits.map(unit => (
+            <StackPortrait
+              key={unit.id}
+              label={state.config.units.get(unit.typeId)?.name ?? unit.typeId}
+              icon={getUnitIcon(unit, state.config.units)}
+              isSelected={selectedEntityId === unit.id}
+              onClick={() => {
+                setSelectedUnit(unit);
+                setSelectedHex(unit.position);
+              }}
+            />
+          ))}
+          {tileContents.city && tileContents.city.owner === state.currentPlayerId && (
+            <StackPortrait
+              key={tileContents.city.id}
+              label={tileContents.city.name}
+              icon="🏰"
+              isSelected={false /* TODO Phase C: selectedCity?.id === tileContents.city.id */}
+              onClick={() => {
+                // TODO Phase C: selectCity(tileContents.city!.id) when selectCity is in context
+                // For now: deselect unit and set hex so terrain/city info shows
+                setSelectedUnit(null);
+                setSelectedHex(tileContents.city!.position);
+              }}
+            />
+          )}
+        </div>
+      )}
+
       {/* ── Main content row ── */}
-      <div className="flex-1 flex items-center px-4 gap-3 min-h-0 overflow-hidden">
+      <div className="flex-1 flex items-center px-4 gap-3 min-h-0 overflow-hidden" style={{ minHeight: '44px' }}>
 
         {/* ── UNIT SELECTED ── */}
         {selectedUnit && unitDef && (
@@ -429,6 +485,63 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
       </span>
     </button>
   );
+}
+
+/**
+ * Single portrait button in the stack picker strip.
+ * Highlighted when this entity is the currently selected one.
+ */
+function StackPortrait({
+  label,
+  icon,
+  isSelected,
+  onClick,
+}: {
+  label: string;
+  icon: string;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition-all hover:scale-105 shrink-0"
+      style={{
+        background: isSelected ? 'rgba(88,166,255,0.25)' : 'rgba(255,255,255,0.06)',
+        border: isSelected
+          ? '1px solid rgba(88,166,255,0.6)'
+          : '1px solid rgba(139,148,158,0.2)',
+        color: isSelected ? 'var(--color-accent)' : 'var(--color-text)',
+        fontWeight: isSelected ? 700 : 400,
+        boxShadow: isSelected ? '0 0 6px rgba(88,166,255,0.3)' : 'none',
+      }}
+    >
+      <span>{icon}</span>
+      <span style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+      {isSelected && (
+        <span style={{ fontSize: '8px', color: 'rgba(88,166,255,0.8)', marginLeft: '1px' }}>●</span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * Pick a representative emoji icon for a unit based on its category / abilities.
+ */
+function getUnitIcon(unit: UnitState, unitDefs: ReadonlyMap<string, UnitDef>): string {
+  const def = unitDefs.get(unit.typeId);
+  if (!def) return '⚔️';
+  if (def.abilities?.includes('found_city')) return '🏘️';
+  if (def.abilities?.includes('build_improvement')) return '⚒️';
+  if (def.category === 'naval') return '⛵';
+  if (def.category === 'ranged') return '🏹';
+  if (def.category === 'siege') return '💣';
+  if (def.category === 'civilian') return '🧑';
+  if (def.category === 'religious') return '✝️';
+  return '⚔️';
 }
 
 function YieldDisplay({ yields }: { yields: Partial<YieldSet> }) {
