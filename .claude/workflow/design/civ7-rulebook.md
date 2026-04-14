@@ -1225,6 +1225,250 @@ independent of normal combat:
 
 ---
 
+## 19. Wonders
+
+### 19.1 Overview
+
+**Wonders** are unique, world-first buildings representing humanity's great achievements.
+Each wonder can be constructed by **only one civilization per game**: once a rival finishes
+it first, every other player's queue entry is invalidated. Wonders sit inside the urban
+footprint of a city (they occupy an urban tile like any other building) but are treated
+as a separate category for cost, visibility, and scoring purposes.
+
+Key properties:
+
+- **Uniqueness** — first-to-build wins; the wonder is permanently owned by that city.
+- **Urban placement** — wonders consume an urban tile slot; they cannot be placed on
+  rural/improved tiles. Some wonders have stricter adjacency/terrain requirements
+  (see §19.2).
+- **Expensive** — wonder Production cost is materially higher than a standard age-tier
+  building (typically 2–4x an age-equivalent specialist building).
+- **No gold purchase** — wonders can only be completed by Production. Gold rush-buying
+  is disabled on wonder queue entries.
+- **Permanent** — a completed wonder is not destroyed by city conquest; ownership
+  transfers to whoever holds the city. It persists across ages (unlike many
+  age-specific buildings, wonders are never "overbuilt" in later ages).
+- **Score / legacy** — wonders count toward the **Wonders of the Ancient World**
+  Cultural Legacy path in Antiquity (§12) and toward the overall Score victory.
+- **Age restriction** — each wonder has an `age` field. A wonder whose age has passed
+  generally cannot be started in a later age (design rule; *needs research* on whether
+  Civ VII allows carry-over for unfinished antique wonders).
+
+Adjacency bonus: many standard buildings (Library, Academy, Monument, Amphitheatre,
+Kiln, Market, Garden, Bath — see §8) gain **+1 to their main yield per adjacent Wonder**,
+making wonder placement a meaningful urban-planning lever.
+
+### 19.2 Placement Rules
+
+Every wonder has, at minimum, the standard **urban tile** requirement (flat or
+mildly-sloped, non-water, within city territory, not occupied by another building or
+district). Beyond that baseline, many wonders impose a **terrain- or adjacency-specific**
+constraint that can force interesting city-placement decisions.
+
+Categories of constraints seen in Civ VII:
+
+| Constraint type | Example wonders | Description |
+|-----------------|-----------------|-------------|
+| Adjacent resource | Stonehenge (Stone), Colossus (Coast + harbor) | Must be adjacent to a specific resource tile |
+| Terrain type | Pyramids (flat Desert), Machu Picchu (Mountain adj.) | Must be built on (or next to) a specific terrain |
+| River / Coast | Hanging Gardens (River), Great Bath (River) | Must be on River, Coast, or Lake |
+| Adjacent feature | Mausoleum (Coast), Temple of Artemis (Woods/Forest) | Must neighbor a natural feature |
+| Building prereq | Oracle (Altar in city), Taj Mahal (Temple) | City must already contain a specific building |
+| Civic / Tech prereq | Notre Dame (Gothic Architecture), Eiffel Tower (Steel) | Unlock requires researching a civic or tech |
+| No additional restriction | Pyramids of the Sun, Broadway | Standard urban tile only |
+
+Notes:
+
+- If a wonder requires an adjacent resource, the resource tile does **not** need to be
+  improved — raw presence of the resource in an adjacent hex is sufficient.
+- Coastal wonders require an **ocean- or coast-adjacent urban tile** (not merely a
+  lake, unless the wonder text specifies Lake).
+- Placement validity is **re-evaluated every turn**: if the triggering tile is
+  pillaged or its feature removed, production halts (*needs research* — exact rule
+  for mid-build invalidation).
+
+### 19.3 Costs and Production
+
+**Production scaling by age** (representative figures — see §8.1 for the
+building-cost baseline each wonder is compared against):
+
+| Age | Typical wonder cost | Equivalent standard building |
+|-----|--------------------|-------------------------------|
+| Antiquity | ~400 Production | ~90–195 (specialist), ~55 (warehouse) |
+| Exploration | ~900 Production | ~175–250 |
+| Modern | ~1,800 Production | ~500–700 |
+
+Exact per-wonder numbers are not all documented — *needs research* on final values
+from 2K's patch notes.
+
+Production rules specific to wonders:
+
+- **No gold purchase.** The standard `PURCHASE_ITEM` path (§5) is blocked for items
+  whose `category === 'wonder'`. Wonders must be completed entirely through
+  Production output.
+- **No overflow carry between ages.** If a wonder is being built at the moment an
+  age transition fires (§16), any accumulated Production on that wonder is forfeit
+  if the wonder's age is the age that just ended. Production invested in a
+  current-age wonder that carries forward is preserved (*needs research* on the
+  exact rule — Civ VII's "age reset" clears many queues).
+- **Lost-race refund.** If a rival civilization completes a wonder while you are
+  mid-build, **half of your invested Production is refunded** to that city's
+  treasury-of-Production (typically redirected to the next queue item). The queue
+  entry itself is removed.
+- **Production bonuses stack.** The following multipliers apply to wonder
+  production (see §5, §8.1):
+  - Amphitheatre / Kiln: **+10% Production toward Wonders**.
+  - Classical Republic government: **+15% Production toward Wonders** (§14).
+  - Ivory resource: **+10% Production toward Wonders on Tropical/Plains/Desert**
+    (§13).
+  - Certain civ/leader abilities (see §15, §17 registries) grant additional
+    `DISCOUNT_PRODUCTION` effects targeted at wonders.
+- **Only one wonder per city at a time.** A city can hold no more than **one**
+  active wonder queue entry. (You can still queue non-wonder items alongside.)
+
+### 19.4 Antiquity Age Wonders
+
+Representative Antiquity wonders. All cost ~400 Production (see §19.3).
+
+| Name | Cost | Placement | Ability |
+|------|------|-----------|---------|
+| Pyramids | 400 | Flat Desert tile inside city | +2 Science per adjacent Desert; +1 Culture on all Wonders |
+| Hanging Gardens | 400 | Adjacent to River | +15% Growth Rate in this city; +2 Food on adjacent tiles |
+| Oracle | 400 | Requires Altar in city; Hills preferred | +1 of each yield on Altars empire-wide; reveals one free Pantheon belief |
+| Colossus | 400 | Coastal urban tile adjacent to Harbor | +3 Gold on the city; +1 Trade Route capacity |
+| Stonehenge | 400 | Adjacent to Stone resource | Instant Pantheon founding; +2 Faith on the tile |
+| Great Bath | 400 | Adjacent to River | +4 Happiness city-wide; triggers a Celebration at founding |
+| Mausoleum of Halicarnassus | 400 | Coastal urban tile | +2 Culture, +2 Gold; leader of this civ gains +1 Attribute point |
+| Pyramid of the Sun | 400 | Standard urban tile | +3 Production on the city; +1 Production on all districts *needs research* |
+
+Notes:
+
+- Antiquity lists are the most stable slice; Exploration/Modern lists were
+  expanded across DLC and may differ by edition.
+- Machu Picchu is listed in Exploration below (Inca-associated wonder), though
+  some sources place it in Antiquity — *needs research* on the canonical age
+  assignment post-DLC.
+
+### 19.5 Exploration Age Wonders
+
+Representative Exploration wonders. All cost ~900 Production.
+
+| Name | Cost | Placement | Ability |
+|------|------|-----------|---------|
+| Notre Dame | 900 | Requires Temple in city; urban tile | +4 Faith, +4 Culture on the city; adjacent Quarter buildings +1 Culture |
+| Angkor Wat | 900 | Adjacent to River | +3 Faith; +1 Food on all Farms in this city |
+| Taj Mahal | 900 | Requires Temple in city | Grants a free Golden Age on completion; +3 Happiness city-wide |
+| Temple of Artemis | 900 | Adjacent to Woods / Forest | +4 Culture; +1 Food on every Woods tile in this city |
+| Forbidden City | 900 | Urban tile in a City (not Town) | +5 Influence per turn; -1 Happiness cost on all buildings |
+| Hagia Sophia | 900 | Requires Temple + founded Religion | Missionaries gain +2 spread charges; religion spreads +50% faster from this city |
+| Great Wall | 900 | Urban tile bordering map edge or Frontier | +6 Defense on this city; each segment tile blocks enemy movement *needs research* |
+| Terracotta Army | 900 | Requires Barracks in city | Grants one free unit of each current-age land unit type |
+| Machu Picchu | 900 | Urban tile adjacent to Mountain | +1 Culture, +1 Gold on all Mountains in this city |
+| St Basil's Cathedral | 900 | Urban tile, cold/temperate biome | +3 Culture, +3 Faith; Tundra/Snow tiles yield +1 Production *needs research* |
+
+Notes:
+
+- Civ VII's Exploration age places heavy emphasis on religion and distant-lands
+  trade — several wonders interact with those systems directly.
+- Exact placement constraints for Great Wall (how "segments" work on hex grid vs
+  square grid) and St Basil's biome rule are under-documented — *needs research*.
+
+### 19.6 Modern Age Wonders
+
+Representative Modern wonders. All cost ~1,800 Production.
+
+| Name | Cost | Placement | Ability |
+|------|------|-----------|---------|
+| Eiffel Tower | 1,800 | Urban tile in capital | +3 Happiness to every city; +10 Influence per turn |
+| Statue of Liberty | 1,800 | Coastal urban tile | Immigrants: +1 specialist slot in every city on the continent |
+| Brandenburg Gate | 1,800 | Urban tile; requires Military Academy | All land units +5 Combat Strength when fighting in friendly territory |
+| Sydney Opera House | 1,800 | Coastal urban tile | +8 Culture; +1 Culture on every Coast tile in city |
+| Panama Canal | 1,800 | Isthmus tile (land tile with ocean on both sides, within city) | Allows naval units to cross between oceans; +4 Gold per Trade Route |
+| Hollywood | 1,800 | Urban tile in a City; requires Broadcast Tower *needs research* | +10 Culture; broadcasts Tourism to all met civs |
+| Broadway | 1,800 | Urban tile; requires Opera House in city | +8 Culture; Theatre-type buildings +2 Culture empire-wide |
+| Cristo Redentor | 1,800 | Mountain-adjacent urban tile | +4 Faith, +4 Happiness; all Trade Routes +1 Religion spread |
+| Big Ben | 1,800 | Urban tile in capital; requires Bank in city | +50% Gold stockpile increase; +4 Gold on every Bank empire-wide |
+
+Notes:
+
+- Modern-age wonder abilities frequently grant **empire-wide** (not city-local)
+  effects, reflecting their endgame weight.
+- The Panama Canal's hex-grid adaptation (what counts as an "isthmus" tile)
+  is a game-specific rule adaptation — *needs research*.
+
+### 19.7 Natural Wonders
+
+**Natural wonders** are distinct from player-built wonders: they are pre-placed
+on the map at world-generation time and cannot be constructed, destroyed, or
+relocated. They are impassable to all land units and naval units (unless an
+ability explicitly grants pass-through), and they grant bonuses to the player
+whose territory contains them.
+
+Key differences from built wonders:
+
+- Placed during map generation (seeded RNG — §MapGenerator).
+- Discovery: revealed when a unit enters visibility range.
+- Territory bonus: the natural wonder's yields apply to the city whose territory
+  contains its tile. Territory can be acquired via normal city growth,
+  tile-purchase, or Culture Bomb.
+- Adjacency bonus: standard buildings that key off "Natural Wonder" adjacency
+  (Monument, Amphitheatre — §8) gain their full bonus per adjacent Natural
+  Wonder tile.
+- Do **not** count toward the Wonders of the Ancient World legacy path.
+
+Representative natural wonders:
+
+| Name | Terrain | Yields (per tile) | Notes |
+|------|---------|-------------------|-------|
+| Grand Canyon | Desert / Canyon | +3 Gold, +2 Culture | Impassable; visible at long range |
+| Mount Everest | Mountain | +3 Faith, +2 Science | Impassable; adjacent tiles +1 Culture |
+| Great Barrier Reef | Coast | +2 Food, +2 Science | Naval passage allowed *needs research* |
+| Galápagos Islands | Coast | +2 Science, +2 Food | Unique biome — adjacent tiles +1 Food |
+| Uluru | Desert | +3 Culture, +1 Faith | Impassable |
+
+Exact Civ VII natural-wonder roster varies by DLC — the above are stable across
+base-game editions. *Needs research* on full list and exact numerical yields.
+
+### 19.8 Wonder Visibility
+
+Wonder visibility rules are deliberately **global**, because the race to build
+each wonder is a core driver of player decision-making.
+
+Completion notification:
+
+- When **any** civilization completes a wonder, **every** player receives a game
+  notification naming the wonder and the builder civilization.
+- The notification fires the same turn as the completion.
+- Any civilization currently building the same wonder sees their queue entry
+  replaced with the lost-race refund event (§19.3).
+
+Map visibility:
+
+- Once a wonder is completed, its 3D model renders on the map for all players,
+  **regardless of fog of war**. This includes players who have never scouted
+  the owning civ's territory.
+- The wonder tile itself is still fog-of-war'd (terrain, units, and adjacent
+  tiles remain hidden if unexplored) — only the wonder's geometry/icon is
+  revealed.
+- Natural wonders, by contrast, are **only** revealed when a unit enters their
+  sight range (§fog-of-war). They do not broadcast globally.
+
+Under-construction visibility:
+
+- Work in progress on a wonder is **not** visible to rivals. The race is
+  information-asymmetric: you learn someone else is building the wonder only
+  by scouting their city, via espionage (*needs research* on whether Civ VII
+  supports a "wonder progress" intel action), or when they finish it.
+
+Consequence for AI:
+
+- The AI treats global wonder notifications as planning inputs for its next
+  production pick, and the `enemy activity summary` panel (§web UI) surfaces
+  wonder completions as a headline event for the human player's end-of-turn
+  review.
+
+---
+
 ## Sources
 
 - [Civilization Wiki - Fandom](https://civilization.fandom.com/wiki/Civilization_VII)
