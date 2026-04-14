@@ -22,8 +22,8 @@ const SECTIONS: Section[] = [
     title: 'Controls',
     icon: '🎮',
     items: [
-      { key: 'Left-click', label: 'Select a unit or hex' },
-      { key: 'Right-click', label: 'Move unit / attack / context menu' },
+      { key: 'Left-click', label: 'Select / cycle units & cities (RTS-style — never moves or attacks)' },
+      { key: 'Right-click', label: 'Move selected unit, or attack enemy in range' },
       { key: 'Space', label: 'Cycle through units with moves remaining' },
       { key: 'Enter', label: 'End turn' },
       { key: 'WASD / Arrows', label: 'Pan camera' },

@@ -143,4 +143,32 @@ test.describe('Selection System: Unified TileContents', () => {
     const menuCount = await page.locator('[data-testid="unit-context-menu"], [role="menu"]').count();
     expect(menuCount).toBe(0);
   });
+
+  test('RTS semantics: right-click with no selection is a no-op (never deselects)', async ({ page }) => {
+    await startGame(page);
+
+    // Ensure no selection exists.
+    await page.evaluate(() => {
+      const api = (window as any).__selectionAPI;
+      if (api?.clearSelection) api.clearSelection();
+    });
+
+    const canvas = page.locator('canvas').first();
+    const box = await canvas.boundingBox();
+
+    const stateBefore = await getState(page);
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.up({ button: 'right' });
+    await page.waitForTimeout(150);
+
+    // Right-click without a selected unit must not mutate gameplay state (no move, no attack,
+    // no accidental deselection popup, no phase change).
+    const stateAfter = await getState(page);
+    expect(stateAfter!.turn).toBe(stateBefore!.turn);
+    expect(stateAfter!.units.length).toBe(stateBefore!.units.length);
+    for (let i = 0; i < stateBefore!.units.length; i++) {
+      expect(stateAfter!.units[i].position).toEqual(stateBefore!.units[i].position);
+    }
+  });
 });

@@ -86,47 +86,50 @@ Alt hold expands:
   + combat preview if enemy
 ```
 
-### Click selection — formalized priority
+### Click selection — modern RTS semantics (StarCraft / AoE / WC3)
+
+**Left-click = SELECT ONLY.** Never moves, never attacks. Pure selection or deselection.
 
 ```
-onTileClick(hex):
+onLeftClick(hex):
   const c = getTileContents(state, hex, playerId);
-  const selected = currentSelection;
-  
-  # 1. Enemy attack takes priority (no selection change)
-  if (selected.unit && c.enemyUnits.length > 0 && canAttackUnit(selected.unit, c.enemyUnits[0])):
-    dispatch(ATTACK_UNIT, target = best enemy)
+  const cycle = getSelectionCycle(c, playerId);
+
+  if (cycle.length === 0):
+    # Empty tile — deselect + show terrain info
+    clear unit selection
+    selectedHex = hex
     return
-  
-  # 2. Attack enemy city (NEW — fixes bug)
-  if (selected.unit && c.city && c.city.owner !== playerId && canAttackCity(selected.unit, c.city)):
-    dispatch(ATTACK_CITY, target = c.city)
+
+  # Own entities on tile — select / cycle
+  if currently selected unit is in cycle:
+    select next in cycle  (military → civilian → city)
+  else:
+    select cycle[0]  (military first)
+```
+
+**Right-click = CONTEXTUAL ACTION.** Attack if enemy in range, else move. Never deselects.
+
+```
+onRightClick(hex):
+  if (!selectedUnit): return  (no-op — ESC or left-click empty tile to deselect)
+
+  const c = getTileContents(state, hex, playerId);
+
+  if (c.enemyUnits.length > 0 && canAttackUnit(selectedUnit, c.enemyUnits[0])):
+    dispatch(ATTACK_UNIT)
     return
-  
-  # 3. Select/cycle own entities on this tile
-  if (c.ownUnits.length > 0 || (c.city && c.city.owner === playerId)):
-    const entities = [...c.ownUnits, ...(c.city?.owner === playerId ? [c.city] : [])]
-    if (selected is in entities):
-      select next in cycle
-    else:
-      select first (ownUnits[0] = top military unit)
+
+  if (c.city && c.city.owner !== playerId && canAttackCity(selectedUnit, c.city)):
+    dispatch(ATTACK_CITY)   # previously silent bug — now handled on right-click
     return
-  
-  # 4. Move selected unit to empty reachable hex
-  if (selected.unit && hex is reachable):
+
+  if (hex is reachable):
     dispatch(MOVE_UNIT, path)
     return
-  
-  # 5. Deselect + show terrain info
-  select hex (for tile info), clear unit/city selection
+
+  # Invalid target — preserve selection, do nothing
 ```
-
-### Right-click — remove context menu
-
-Right-click becomes pure "move/attack/deselect":
-- Enemy in range → ATTACK
-- Reachable empty hex → MOVE
-- Otherwise → deselect
 
 **Remove `UnitContextMenu` component entirely.** All unit actions (fortify, found city, skip, delete, upgrade) live in BottomBar, which is already visible when a unit is selected.
 
