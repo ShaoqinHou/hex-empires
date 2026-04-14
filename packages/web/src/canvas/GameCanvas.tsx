@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useGameState } from '../providers/GameProvider';
 import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
@@ -565,11 +565,30 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     };
   }, []);
 
+  // Dynamic cursor — communicates what a click will do right now:
+  //   crosshair → right-click here will ATTACK (enemy in range)
+  //   pointer   → left-click here will select an own entity
+  //   grab      → default (drag to pan; active:grabbing kicks in via Tailwind)
+  const cursor = useMemo<'grab' | 'pointer' | 'crosshair'>(() => {
+    if (combatPreview?.canAttack) return 'crosshair';
+    if (!hoveredHex) return 'grab';
+    const hoverKey = coordToKey(hoveredHex);
+    // Pointer when hovering any own entity — invites a left-click to select/cycle.
+    for (const unit of state.units.values()) {
+      if (unit.owner === state.currentPlayerId && coordToKey(unit.position) === hoverKey) return 'pointer';
+    }
+    for (const city of state.cities.values()) {
+      if (city.owner === state.currentPlayerId && coordToKey(city.position) === hoverKey) return 'pointer';
+    }
+    return 'grab';
+  }, [state, hoveredHex, combatPreview]);
+
   return (
     <>
       <canvas
         ref={canvasRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        style={cursor !== 'grab' ? { cursor } : undefined}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

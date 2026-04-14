@@ -19,7 +19,10 @@ import { test, expect, Page } from '@playwright/test';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function startGame(page: Page, opts: { seed?: number } = {}) {
-  const url = opts.seed != null ? `http://localhost:5174/?seed=${opts.seed}` : 'http://localhost:5174';
+  // Default to seed=2 (grassland start, known reachable neighbors, foundable) so every
+  // test is deterministic. Any test that needs a different scenario can pass its own.
+  const seed = opts.seed ?? 2;
+  const url = `http://localhost:5174/?seed=${seed}`;
   await page.goto(url);
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(400);
@@ -232,7 +235,8 @@ test.describe('Left-click: select only', () => {
 
 test.describe('Right-click: action only', () => {
   test('right-click reachable neighbor MOVES unit AND preserves selection', async ({ page }) => {
-    await startGame(page);
+    // Use the deterministic seed so reachableNeighbor always finds a valid hex.
+    await startGame(page, { seed: 2 });
     const warrior = await ownUnit(page, 'warrior');
     const nb = await reachableNeighbor(page, warrior.position);
     expect(nb).toBeTruthy();
@@ -437,6 +441,38 @@ test.describe('Hover & tooltip', () => {
       await page.waitForTimeout(80);
     }
     expect(errs).toEqual([]);
+  });
+});
+
+// ── Cursor feedback ──────────────────────────────────────────────────────────
+
+test.describe('Cursor feedback', () => {
+  test('hovering own warrior with no selection shows pointer cursor', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    const warrior = await ownUnit(page, 'warrior');
+    const scr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.move(scr!.x, scr!.y);
+    await page.waitForTimeout(120);
+    const cursor = await page.evaluate(() => {
+      const c = document.querySelector('canvas') as HTMLCanvasElement;
+      // Read the computed style — inline style wins over the Tailwind class when set.
+      return getComputedStyle(c).cursor;
+    });
+    expect(cursor).toBe('pointer');
+  });
+
+  test('hovering empty tile returns to grab cursor (default)', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+    const far = await distantHex(page);
+    expect(far).toBeTruthy();
+    const scr = await hexScreen(page, far!.q, far!.r);
+    await page.mouse.move(scr!.x, scr!.y);
+    await page.waitForTimeout(120);
+    const cursor = await page.evaluate(() => {
+      const c = document.querySelector('canvas') as HTMLCanvasElement;
+      return getComputedStyle(c).cursor;
+    });
+    expect(cursor).toBe('grab');
   });
 });
 
