@@ -413,27 +413,33 @@ function ClampedTooltipPositioner({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Reset nudge before measuring so we don't compound offsets across re-renders.
-    // We take the element's current rect as-if it's in its default position.
     const rect = el.getBoundingClientRect();
     const margin = 8;
     let dx = 0;
     let dy = 0;
     let below = false;
 
+    // Step 1: if the default (above) position overflows the top edge, flip below.
     if (rect.top < margin) {
-      // Flip below: move down by (tooltip height + 2 × 12 padding). translateY handled via
-      // swapping from -100% to 0% and adding +12 instead of -12.
       below = true;
     }
+    // Step 2: horizontal clamp.
     if (rect.left < margin) {
       dx = margin - rect.left;
     } else if (rect.right > window.innerWidth - margin) {
       dx = window.innerWidth - margin - rect.right;
     }
-    if (below && rect.bottom + rect.height + 24 > window.innerHeight - margin) {
-      // Even below would overflow bottom: clamp to bottom of viewport.
-      dy = window.innerHeight - margin - rect.bottom - rect.height - 24;
+    // Step 3: ABSOLUTE vertical clamp — covers the case where the anchor itself sits off-
+    // screen (e.g. hovering a corner that maps to an off-map hex whose anchor is at y=-300).
+    // Compute the predicted top after flip + dy nudge, then push it inside if needed.
+    const predictedTop = below
+      ? anchorY + 12 + dy
+      : anchorY - rect.height - 12 + dy;
+    const predictedBottom = predictedTop + rect.height;
+    if (predictedTop < margin) {
+      dy += margin - predictedTop;
+    } else if (predictedBottom > window.innerHeight - margin) {
+      dy -= predictedBottom - (window.innerHeight - margin);
     }
     if (dx !== 0 || below || dy !== 0) setNudge({ dx, dy, below });
   }, [anchorX, anchorY, children]);
@@ -445,6 +451,7 @@ function ClampedTooltipPositioner({
   return (
     <div
       ref={ref}
+      data-testid="tooltip-overlay"
       className="fixed z-50 pointer-events-none"
       style={{ left: anchorX, top: anchorY, transform: baseTransform }}
     >

@@ -553,7 +553,7 @@ test.describe('Hover & tooltip', () => {
       await page.mouse.move(c.x, c.y);
       await page.waitForTimeout(120);
       const rect = await page.evaluate(() => {
-        const el = document.querySelector('.fixed.z-50.pointer-events-none') as HTMLElement | null;
+        const el = document.querySelector('[data-testid="tooltip-overlay"]') as HTMLElement | null;
         if (!el) return null;
         const r = el.getBoundingClientRect();
         return { top: r.top, left: r.left, right: r.right, bottom: r.bottom, vw: window.innerWidth, vh: window.innerHeight };
