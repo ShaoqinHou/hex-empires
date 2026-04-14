@@ -16,7 +16,22 @@ async function startGame(page: Page) {
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: /start game/i }).click();
   await page.waitForSelector('canvas', { timeout: 10000 });
+  // Park the cursor in the canvas centre so the 3-pixel edge-scroll trigger doesn't
+  // drift the camera before tests grab hex screen coords. (Same fix as in interaction.spec.ts.)
+  const canvas = page.locator('canvas').first();
+  const box = await canvas.boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.waitForTimeout(300);
+}
+
+/** Hex→screen with auto-recenter (edge-scroll-proof). */
+async function hexToScreen(page: Page, q: number, r: number) {
+  await page.evaluate(({ q, r }) => (window as any).__centerCameraOn(q, r), { q, r });
+  const canvas = page.locator('canvas').first();
+  const box = await canvas.boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(60);
+  return page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), { q, r });
 }
 
 async function getState(page: Page) {
@@ -39,24 +54,6 @@ async function getState(page: Page) {
 async function dispatch(page: Page, action: Record<string, any>) {
   await page.evaluate((a) => (window as any).__gameDispatch(a), action);
   await page.waitForTimeout(100);
-}
-
-/** Screen pixel coords for a hex, via the canvas renderer's transform. */
-async function hexToScreen(page: Page, q: number, r: number) {
-  return page.evaluate(
-    ({ q, r }) => {
-      // axial → pixel (flat-top, matches HexRenderer)
-      const HEX_SIZE = 32;
-      const x = HEX_SIZE * Math.sqrt(3) * (q + r / 2);
-      const y = HEX_SIZE * 1.5 * r;
-      const cam = (window as any).__camera;
-      if (!cam) return null;
-      const screenX = (x - cam.x) * cam.zoom + window.innerWidth / 2;
-      const screenY = (y - cam.y) * cam.zoom + window.innerHeight / 2;
-      return { x: screenX, y: screenY };
-    },
-    { q, r },
-  );
 }
 
 test.describe('Selection System: Unified TileContents', () => {
@@ -171,13 +168,13 @@ test.describe('Selection System: Unified TileContents', () => {
     expect(target).toBeTruthy();
 
     // Left-click the warrior's hex to select it.
-    const wScr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), warrior!.position);
+    const wScr = await hexToScreen(page, warrior!.position.q, warrior!.position.r);
     expect(wScr).toBeTruthy();
     await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
     await page.waitForTimeout(150);
 
     // Right-click the target to issue MOVE.
-    const tScr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), target!);
+    const tScr = await hexToScreen(page, target!.q, target!.r);
     expect(tScr).toBeTruthy();
     await page.mouse.click(tScr!.x, tScr!.y, { button: 'right' });
     await page.waitForTimeout(300);
@@ -194,7 +191,7 @@ test.describe('Selection System: Unified TileContents', () => {
     // Select a unit first so handleContextMenu takes its main path.
     const state = await getState(page);
     const warrior = state!.units.find(u => u.owner === state!.currentPlayerId && u.typeId === 'warrior')!;
-    const scr = await page.evaluate(({ q, r }) => (window as any).__hexToScreen(q, r), warrior.position);
+    const scr = await hexToScreen(page, warrior.position.q, warrior.position.r);
     await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
     await page.waitForTimeout(100);
 

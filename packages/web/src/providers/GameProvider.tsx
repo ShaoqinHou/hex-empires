@@ -308,7 +308,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initGame = useCallback((config: GameSetupConfig) => {
-    const newState = createInitialState(config);
+    // Optional deterministic seed via ?seed=<int> URL param — useful for E2E tests
+    // that need stable starting positions across runs.
+    const seedParam = new URLSearchParams(window.location.search).get('seed');
+    const seed = seedParam ? Number(seedParam) : undefined;
+    const newState = createInitialState(config, Number.isFinite(seed) ? seed : undefined);
     setState(newState);
     setSelectedUnitId(null);
     setSelectedCityId(null);

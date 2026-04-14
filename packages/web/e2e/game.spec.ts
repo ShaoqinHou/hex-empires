@@ -80,6 +80,8 @@ test.describe('Game interactions', () => {
     await startGame(page);
 
     await page.keyboard.press('t');
+    // TechTreePanel is lazy-loaded — wait for the dynamic chunk to load and mount.
+    await page.waitForFunction(() => /Technology Tree/.test(document.body.innerText), { timeout: 5000 });
 
     const text = await page.locator('body').innerText();
     expect(text).toContain('Technology Tree');

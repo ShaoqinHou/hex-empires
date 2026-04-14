@@ -18,8 +18,9 @@ import { test, expect, Page } from '@playwright/test';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function startGame(page: Page) {
-  await page.goto('http://localhost:5174');
+async function startGame(page: Page, opts: { seed?: number } = {}) {
+  const url = opts.seed != null ? `http://localhost:5174/?seed=${opts.seed}` : 'http://localhost:5174';
+  await page.goto(url);
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: /start game/i }).click();
@@ -103,15 +104,21 @@ async function reachableNeighbor(page: Page, pos: { q: number; r: number }) {
     const occupied = (q: number, r: number) =>
       [...s.units.values()].some((u: any) => u.position.q === q && u.position.r === r) ||
       [...s.cities.values()].some((c: any) => c.position.q === q && c.position.r === r);
+    // Prefer feature-less flat tiles (cost 1) so a 2-MP warrior can move twice in a turn.
+    // Fall back to any passable land if no flat neighbor is found.
+    const candidates: Array<{ q: number; r: number; flat: boolean }> = [];
     for (const d of DIRS) {
       const q = pos.q + d.dq, r = pos.r + d.dr;
       const tile = s.map.tiles.get(`${q},${r}`);
       if (!tile) continue;
       if (['ocean','coast','reef','mountains'].includes(tile.terrain)) continue;
       if (occupied(q, r)) continue;
-      return { q, r };
+      // Features that add movement cost: hills, forest, jungle, marsh.
+      const heavyFeature = tile.feature && ['hills','forest','jungle','marsh'].includes(tile.feature);
+      candidates.push({ q, r, flat: !heavyFeature });
     }
-    return null;
+    const pick = candidates.find(c => c.flat) ?? candidates[0];
+    return pick ? { q: pick.q, r: pick.r } : null;
   }, { pos });
 }
 
@@ -175,36 +182,49 @@ test.describe('Left-click: select only', () => {
     expect(after!.units.find(u => u.id === warrior.id)!.position).toEqual(warrior.position);
   });
 
-  test('click-cycle: stacked warrior + settler cycles military → civilian → military', async ({ page }) => {
-    await startGame(page);
-    const warrior = await ownUnit(page, 'warrior');
+  test('click-cycle: warrior + own city on same hex cycles unit → city → unit', async ({ page }) => {
+    // Engine enforces "Cannot stack friendly units" — civilian onto military is NOT allowed.
+    // The legitimate stacking case is unit+city: a unit can occupy a city tile. Test that.
+    await startGame(page, { seed: 2 });
     const settler = await ownUnit(page, 'settler');
+    const warrior = await ownUnit(page, 'warrior');
 
-    const dq = warrior.position.q - settler.position.q;
-    const dr = warrior.position.r - settler.position.r;
+    // Found city on the settler's tile.
+    const cityTile = settler.position;
+    await dispatch(page, { type: 'FOUND_CITY', unitId: settler.id, name: 'TestCity' });
+    const afterFound = await getState(page);
+    if (afterFound!.cityCount === 0) test.skip(true, 'founding rejected on this seed');
+
+    // Walk the warrior onto the city tile (within 1-MP move if adjacent).
+    const dq = cityTile.q - warrior.position.q;
+    const dr = cityTile.r - warrior.position.r;
     const dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(-dq - dr)) / 2;
-    if (dist !== 1) test.skip(true, `settler/warrior ${dist} apart on this seed`);
-
-    await dispatch(page, { type: 'MOVE_UNIT', unitId: settler.id, path: [warrior.position] });
-    const stacked = await getState(page);
-    const s2 = stacked!.units.find(u => u.id === settler.id)!;
-    if (s2.position.q !== warrior.position.q || s2.position.r !== warrior.position.r) {
-      test.skip(true, 'engine rejected settler move into warrior hex');
+    if (dist !== 1) test.skip(true, `warrior ${dist} from city — multi-hop not supported in this test`);
+    await dispatch(page, { type: 'MOVE_UNIT', unitId: warrior.id, path: [cityTile] });
+    const afterMove = await getState(page);
+    const w2 = afterMove!.units.find(u => u.id === warrior.id)!;
+    if (w2.position.q !== cityTile.q || w2.position.r !== cityTile.r) {
+      test.skip(true, 'engine rejected warrior move into own city tile');
     }
 
-    const scr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    const scr = await hexScreen(page, cityTile.q, cityTile.r);
 
+    // First click → unit (military first).
     await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
     await page.waitForTimeout(150);
-    expect((await getSelection(page)).unitId).toBe(warrior.id); // military first
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
 
+    // Second click → city.
+    await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
+    await page.waitForTimeout(200);
+    const sel2 = await getSelection(page);
+    expect(sel2.cityId).not.toBeNull();
+    expect(sel2.unitId).toBeNull(); // city selection clears unit selection
+
+    // Third click → wraps to unit again.
     await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
     await page.waitForTimeout(150);
-    expect((await getSelection(page)).unitId).toBe(settler.id); // civilian next
-
-    await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
-    await page.waitForTimeout(150);
-    expect((await getSelection(page)).unitId).toBe(warrior.id); // wrap
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
   });
 });
 
@@ -354,8 +374,9 @@ test.describe('Keyboard shortcuts', () => {
     expect(after!.units.find(u => u.id === warrior.id)!.fortified).toBe(true);
   });
 
-  test('B founds a city with a selected settler (or skips if invalid site)', async ({ page }) => {
-    await startGame(page);
+  test('B founds a city with a selected settler', async ({ page }) => {
+    // seed=2 starts the settler on grassland — guaranteed valid founding site.
+    await startGame(page, { seed: 2 });
     const settler = await ownUnit(page, 'settler');
     const scr = await hexScreen(page, settler.position.q, settler.position.r);
     await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
@@ -365,10 +386,7 @@ test.describe('Keyboard shortcuts', () => {
     await page.keyboard.press('b');
     await page.waitForTimeout(300);
     const after = await getState(page);
-    if (after!.cityCount === before!.cityCount) {
-      test.skip(true, 'settler start tile invalid for founding (engine rule)');
-    }
-    expect(after!.cityCount).toBeGreaterThan(before!.cityCount);
+    expect(after!.cityCount).toBe(before!.cityCount + 1);
     expect(after!.units.find(u => u.id === settler.id)).toBeUndefined(); // settler consumed
   });
 
