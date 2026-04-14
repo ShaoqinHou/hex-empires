@@ -46,7 +46,9 @@ function GameUI() {
 
   const togglePanel = (panel: Panel) => setActivePanel(prev => prev === panel ? 'none' : panel);
 
-  // H key — toggle help panel
+  // H key — toggle help panel. ESC — smart close: if a panel is open, close it
+  // FIRST (and stop propagation so GameCanvas's ESC handler doesn't also deselect).
+  // If no panel is open, GameCanvas's ESC handler runs normally and clears selection.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = document.activeElement?.tagName;
@@ -54,10 +56,15 @@ function GameUI() {
       if (e.key === 'h' || e.key === 'H') {
         togglePanel('help');
       }
+      if (e.key === 'Escape' && activePanel !== 'none') {
+        setActivePanel('none');
+        e.stopPropagation();
+      }
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
+    // Capture phase so we intercept ESC before GameCanvas's bubble-phase handler runs.
+    window.addEventListener('keydown', handleKey, true);
+    return () => window.removeEventListener('keydown', handleKey, true);
+  }, [activePanel]);
 
   // Determine if we should show combat preview
   const combatPreviewTarget = useMemo(() => {

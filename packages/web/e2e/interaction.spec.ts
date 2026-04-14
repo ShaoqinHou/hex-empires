@@ -351,6 +351,32 @@ test.describe('Drag & pan', () => {
 // ── Keyboard shortcuts ───────────────────────────────────────────────────────
 
 test.describe('Keyboard shortcuts', () => {
+  test('ESC closes open panel first, then deselects on second press', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+
+    // Select a unit + open the tech tree panel.
+    const warrior = await ownUnit(page, 'warrior');
+    const scr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
+    await page.waitForTimeout(100);
+    await page.keyboard.press('t');
+    await page.waitForFunction(() => /Technology Tree/.test(document.body.innerText), { timeout: 5000 });
+    // Selection still holds AND panel is up.
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
+
+    // First ESC — closes panel, keeps unit selected.
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    const afterFirstEsc = await page.locator('body').innerText();
+    expect(afterFirstEsc).not.toContain('Technology Tree');
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
+
+    // Second ESC — now that no panel is open, clears selection.
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    expect((await getSelection(page)).unitId).toBeNull();
+  });
+
   test('ESC clears selection', async ({ page }) => {
     await startGame(page);
     const warrior = await ownUnit(page, 'warrior');
