@@ -15,17 +15,13 @@ const SPECIALIZATION_ICONS: Record<string, string> = {
   diplomatic: '🤝',
 };
 
-// TODO(panel-manager-audit GovernorPanel.tsx:17–24): swap raw hex
-// specialization colors for `var(--color-*)` tokens once
-// panel-tokens.css exposes a specialization palette. Migration to
-// PanelShell did not introduce these tokens to keep scope narrow.
 const SPECIALIZATION_COLORS: Record<string, string> = {
-  economic: '#fbbf24',
-  military: '#ef4444',
-  scientific: '#3b82f6',
-  cultural: '#a855f7',
-  religious: '#f59e0b',
-  diplomatic: '#10b981',
+  economic: 'var(--panel-spec-economic)',
+  military: 'var(--panel-spec-military)',
+  scientific: 'var(--panel-spec-scientific)',
+  cultural: 'var(--panel-spec-cultural)',
+  religious: 'var(--panel-spec-religious)',
+  diplomatic: 'var(--panel-spec-diplomatic)',
 };
 
 export function GovernorPanel({ onClose }: GovernorPanelProps) {

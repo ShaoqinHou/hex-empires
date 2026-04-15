@@ -20,17 +20,13 @@ const STATUS_LABELS: Record<DiplomaticStatus, string> = {
   war: 'At War',
 };
 
-// TODO(panel-manager-audit DiplomacyPanel.tsx:22–29): swap raw hex
-// status colors for `var(--color-*)` tokens once panel-tokens.css
-// exposes a diplomatic-status palette. Migration to PanelShell did
-// not introduce these tokens to keep scope narrow.
 const STATUS_COLORS: Record<DiplomaticStatus, string> = {
-  helpful: '#4ade80',      // green
-  friendly: '#60a5fa',     // blue
-  neutral: '#9ca3af',      // grey
-  unfriendly: '#fb923c',   // orange
-  hostile: '#ef4444',      // red
-  war: '#dc2626',          // dark red
+  helpful: 'var(--panel-status-helpful)',
+  friendly: 'var(--panel-status-friendly)',
+  neutral: 'var(--panel-status-neutral)',
+  unfriendly: 'var(--panel-status-unfriendly)',
+  hostile: 'var(--panel-status-hostile)',
+  war: 'var(--panel-status-war)',
 };
 
 export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {

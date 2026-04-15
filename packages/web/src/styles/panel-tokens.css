@@ -44,4 +44,24 @@
   --panel-z-info: 90;
   --panel-z-overlay: 110;
   --panel-z-modal: 210;
+
+  /* Diplomacy relationship status palette — used by DiplomacyPanel badges.
+   * Values match the hues previously hard-coded in DiplomacyPanel's
+   * STATUS_COLORS map; migrated here in M33 follow-up. */
+  --panel-status-war:        #dc2626; /* dark red */
+  --panel-status-hostile:    #ef4444; /* red */
+  --panel-status-unfriendly: #fb923c; /* orange */
+  --panel-status-neutral:    #9ca3af; /* grey */
+  --panel-status-friendly:   #60a5fa; /* blue */
+  --panel-status-helpful:    #4ade80; /* green */
+
+  /* Governor specialization palette — used by GovernorPanel badges.
+   * Values match the hues previously hard-coded in GovernorPanel's
+   * SPECIALIZATION_COLORS map; migrated here in M33 follow-up. */
+  --panel-spec-economic:   #fbbf24; /* gold */
+  --panel-spec-military:   #ef4444; /* red */
+  --panel-spec-scientific: #3b82f6; /* blue */
+  --panel-spec-cultural:   #a855f7; /* purple */
+  --panel-spec-religious:  #f59e0b; /* amber */
+  --panel-spec-diplomatic: #10b981; /* green */
 }
