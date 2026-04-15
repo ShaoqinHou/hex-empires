@@ -83,12 +83,23 @@
    * CombatPreviewPanel. Bar colors are for attacker/defender strength
    * comparison visuals (blue = attacker, purple = defender). Damage
    * numbers read in red for damage-to-defender, orange for retaliation
-   * (damage-to-attacker). Text token for bright emphasis (the "VS"
-   * glyph, outcome ribbons). All tuned to the darker HUD background so
-   * they glance-read at speed. */
+   * (damage-to-attacker). */
   --hud-combat-attacker-bar: #3b82f6;    /* blue-500  */
   --hud-combat-defender-bar: #8b5cf6;    /* violet-500 */
   --hud-combat-damage-positive: #ef4444; /* red-500 — damage to defender */
   --hud-combat-damage-negative: #f97316; /* orange-500 — retaliation */
   --hud-combat-text: #f0f6fc;            /* bright emphasis text */
+
+  /* ── Validation feedback ───────────────────────────────────────────
+   * Tokens for the ValidationFeedback overlay (category-agnostic base
+   * + per-category accent icons). */
+  --hud-validation-bg: rgba(15, 23, 42, 0.96);
+  --hud-validation-border: rgba(239, 68, 68, 0.55);
+  --hud-validation-text: #f0f6fc;
+  --hud-validation-text-muted: rgba(240, 246, 252, 0.75);
+  --hud-validation-icon-error: #ef4444;        /* combat — red  */
+  --hud-validation-icon-warn: #f59e0b;         /* movement — amber */
+  --hud-validation-icon-production: #3b82f6;   /* production — blue */
+  --hud-validation-icon-general: #94a3b8;      /* general — slate */
+  --hud-validation-shake-tint: rgba(239, 68, 68, 0.05);
 }
