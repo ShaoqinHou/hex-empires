@@ -1,5 +1,14 @@
 import { useGameState } from '../../providers/GameProvider';
 import type { CrisisState } from '@hex/engine';
+import { PanelShell } from './PanelShell';
+import type { PanelId } from './panelRegistry';
+
+// CrisisPanel doesn't have a dedicated entry in panelRegistry yet (the
+// crisis modal is mounted always-on, gated by `state.crises`). We reuse
+// the closest semantically modal id — `age` — purely so the shell's
+// data-testid / data-panel-id attributes are non-empty. A follow-up
+// cycle can add a `crisis` entry to the registry.
+const PANEL_ID = 'age' as PanelId;
 
 export function CrisisPanel() {
   const { state, dispatch } = useGameState();
@@ -13,12 +22,16 @@ export function CrisisPanel() {
     dispatch({ type: 'RESOLVE_CRISIS', crisisId: activeCrisis.id, choice: choiceId });
   };
 
-  return (
-    <div className="absolute inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
-      <div className="rounded-xl p-8 text-center max-w-lg"
-        style={{ backgroundColor: 'var(--color-surface)', border: '2px solid var(--color-accent)' }}>
+  // Crises must be resolved by picking a choice — there is no plain
+  // dismissal. The shell still requires an `onClose`, so we pass a no-op.
+  // Clicking the X / backdrop does nothing; only choice buttons advance.
+  const handleClose = () => {
+    /* no-op: crises require an explicit choice */
+  };
 
+  return (
+    <PanelShell id={PANEL_ID} title={activeCrisis.name} onClose={handleClose} priority="modal">
+      <div className="text-center">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
           {activeCrisis.name}
         </h1>
@@ -57,7 +70,7 @@ export function CrisisPanel() {
           Turn {activeCrisis.turn}
         </p>
       </div>
-    </div>
+    </PanelShell>
   );
 }
 

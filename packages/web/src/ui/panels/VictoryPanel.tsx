@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
+import { PanelShell } from './PanelShell';
+import type { PanelId } from './panelRegistry';
+
+// VictoryPanel uses the `victoryProgress` registry id since the registry
+// doesn't carry a separate `victory` entry — both views share the same
+// modal slot conceptually.
+const PANEL_ID: PanelId = 'victoryProgress';
 
 export function VictoryPanel() {
   const { state } = useGameState();
@@ -9,11 +16,14 @@ export function VictoryPanel() {
 
   const winner = state.players.get(state.victory.winner);
 
+  // VictoryPanel has no external `onClose` prop — its dismissal is purely
+  // internal state. The shell's close button reuses the same "Continue
+  // Playing" affordance: flip `dismissed` so the panel unmounts.
+  const handleClose = () => setDismissed(true);
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
-      <div className="rounded-xl p-8 text-center max-w-md"
-        style={{ backgroundColor: 'var(--color-surface)', border: '2px solid var(--color-accent)' }}>
+    <PanelShell id={PANEL_ID} title="Victory!" onClose={handleClose} priority="modal">
+      <div className="text-center">
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
           Victory!
         </h1>
@@ -67,6 +77,6 @@ export function VictoryPanel() {
           </button>
         </div>
       </div>
-    </div>
+    </PanelShell>
   );
 }
