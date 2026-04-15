@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validateBuildingPlacement,
   listValidBuildingsForTile,
+  listValidTilesForBuilding,
 } from '../BuildingPlacementValidator';
 import { createTestState } from '../../systems/__tests__/helpers';
 import type { GameState, CityState, HexTile } from '../../types/GameState';
@@ -259,5 +260,62 @@ describe('listValidBuildingsForTile', () => {
     state = withTerrain(state, tile, 'desert');
     const onDesert = listValidBuildingsForTile('c1', tile, state);
     expect(onDesert.includes('pyramids')).toBe(true);
+  });
+});
+
+describe('listValidTilesForBuilding', () => {
+  it('returns tiles inside city territory for a commonly-valid building', () => {
+    const city = makeCity();
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const tiles = listValidTilesForBuilding('c1', 'granary', state);
+    expect(tiles.length).toBeGreaterThan(0);
+    // Every returned tile must be present in the city's territory.
+    const territorySet = new Set(city.territory);
+    for (const t of tiles) {
+      expect(territorySet.has(coordToKey(t))).toBe(true);
+    }
+    // Every returned tile must itself validate.
+    for (const t of tiles) {
+      const r = validateBuildingPlacement('c1', t, 'granary', state);
+      expect(r.valid).toBe(true);
+    }
+  });
+
+  it('returns [] when the city is unknown', () => {
+    const state = createTestState();
+    const tiles = listValidTilesForBuilding('c-missing', 'granary', state);
+    expect(tiles).toEqual([]);
+  });
+
+  it('returns [] for an unknown buildingId', () => {
+    const city = makeCity();
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const tiles = listValidTilesForBuilding('c1', 'not_a_real_building', state);
+    expect(tiles).toEqual([]);
+  });
+
+  it('shrinks as territory tiles fill to the 2-building cap', () => {
+    // Fill one territory tile to cap — the returned list must drop that tile.
+    const tile = { q: 4, r: 3 };
+    const urbanTiles = new Map<string, UrbanTileV2>();
+    urbanTiles.set(coordToKey(tile), {
+      cityId: 'c1',
+      coord: tile,
+      buildings: ['granary', 'barracks'],
+      specialistAssigned: false,
+      walled: false,
+    });
+    const cityCapped = makeCity({ urbanTiles });
+    const stateCapped = createTestState({ cities: new Map([['c1', cityCapped]]) });
+
+    const cityOpen = makeCity();
+    const stateOpen = createTestState({ cities: new Map([['c1', cityOpen]]) });
+
+    const openTiles = listValidTilesForBuilding('c1', 'monument', stateOpen);
+    const cappedTiles = listValidTilesForBuilding('c1', 'monument', stateCapped);
+
+    expect(cappedTiles.length).toBe(openTiles.length - 1);
+    const cappedKeys = new Set(cappedTiles.map(coordToKey));
+    expect(cappedKeys.has(coordToKey(tile))).toBe(false);
   });
 });

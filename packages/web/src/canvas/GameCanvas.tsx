@@ -8,7 +8,7 @@ import { ImprovementPanel } from '../ui/components/ImprovementPanel';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
 import type { HexCoord, CityState } from '@hex/engine';
-import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getTileContents, getSelectionCycle } from '@hex/engine';
+import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getTileContents, getSelectionCycle, listValidTilesForBuilding } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
@@ -40,10 +40,32 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     reachableHexes, animationManager, setHoveredHex: setGlobalHoveredHex,
     combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
     selectCity,
+    placementMode, enterPlacementMode, exitPlacementMode,
   } = useGameState();
+
+  // Expose placement-mode entry/exit for E2E tests so Playwright can drive
+  // the canvas overlay without having to click through CityPanel's build
+  // list (which doesn't land until Cycle 5).
+  useEffect(() => {
+    (window as any).__enterPlacementMode = enterPlacementMode;
+    (window as any).__exitPlacementMode = exitPlacementMode;
+    (window as any).__placementMode = placementMode;
+  }, [enterPlacementMode, exitPlacementMode, placementMode]);
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
   const [showImprovementPanel, setShowImprovementPanel] = useState(false);
+
+  // ── Building placement overlay (Cycle 4) ──
+  //
+  // When placementMode is active, pre-compute the set of valid tile keys for
+  // the chosen building/city pair. Memoed on placementMode + state so we
+  // don't re-walk territory every frame. Null when inactive — the renderer
+  // short-circuits.
+  const placementValidTiles = useMemo<ReadonlySet<string> | null>(() => {
+    if (!placementMode) return null;
+    const tiles = listValidTilesForBuilding(placementMode.cityId, placementMode.buildingId, state);
+    return new Set(tiles.map(coordToKey));
+  }, [placementMode, state]);
 
   // Sync local hover state to global state for combat preview
   useEffect(() => {
@@ -227,6 +249,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         explored: player?.explored ?? null,
         showYields,
         turnNumber: state.turn,
+        placementCityId: placementMode?.cityId ?? null,
+        placementValidTiles,
+        placementHovered: placementMode ? hoveredHex : null,
       });
 
       // Render animations on top
@@ -239,7 +264,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, animationManager]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, animationManager, placementMode, placementValidTiles]);
 
   // ── Modern-RTS click semantics ──
   // LEFT-CLICK = SELECT ONLY. Never moves, never attacks. It picks/cycles own entities on
@@ -253,6 +278,28 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     const sy = screenY - rect.top;
     const world = cameraRef.current.screenToWorld(sx, sy);
     const hex = pixelToHex(world.x, world.y);
+
+    // ── Placement-mode short-circuit (Cycle 4) ──
+    //
+    // When the player is in building placement mode, left-click either
+    // commits the placement by dispatching SET_PRODUCTION with the chosen
+    // tile (Cycle 1 engine path then auto-places on completion) or, on an
+    // invalid tile, silently exits placement so the player can retry.
+    // Normal selection/cycling is suppressed entirely.
+    if (placementMode && placementValidTiles) {
+      const hexKey = coordToKey(hex);
+      if (placementValidTiles.has(hexKey)) {
+        dispatch({
+          type: 'SET_PRODUCTION',
+          cityId: placementMode.cityId,
+          itemId: placementMode.buildingId,
+          itemType: 'building',
+          tile: hex,
+        });
+      }
+      exitPlacementMode();
+      return;
+    }
 
     const contents = getTileContents(state, hex, state.currentPlayerId);
     const cycle = getSelectionCycle(contents, state.currentPlayerId);
@@ -288,7 +335,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       setSelectedHex(hex);
       setShowImprovementPanel(false);
     }
-  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick]);
+  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick, placementMode, placementValidTiles, dispatch, exitPlacementMode]);
 
   // Mouse handlers — left button drives drag-pan + click-select; right button is reserved
   // for handleContextMenu (RTS-style action). Middle button is ignored.
@@ -348,6 +395,14 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   // a no-op (use ESC or left-click empty terrain to clear selection).
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+
+    // Building placement mode (Cycle 4): right-click cancels placement,
+    // matching the ESC behaviour in GameProvider. Suppresses normal
+    // unit-action routing so the player can bail without side effects.
+    if (placementMode) {
+      exitPlacementMode();
+      return;
+    }
 
     if (!selectedUnit) return;
 
@@ -420,7 +475,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     }
 
     // No valid action for this target — preserve selection (modern RTS semantics).
-  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedHex, unitRegistry]);
+  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedHex, unitRegistry, placementMode, exitPlacementMode]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const canvas = canvasRef.current;
@@ -654,6 +709,8 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     <>
       <canvas
         ref={canvasRef}
+        data-testid="game-canvas"
+        data-placement-mode={placementMode ? 'active' : 'inactive'}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
         style={cursor !== 'grab' ? { cursor } : undefined}
         onMouseDown={handleMouseDown}

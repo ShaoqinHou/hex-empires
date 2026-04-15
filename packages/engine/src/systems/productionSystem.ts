@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, UnitState, HexTile } from '../types/GameState';
+import type { GameState, GameAction, CityState, UnitState, HexTile, ProductionItem } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import { coordToKey } from '../hex/HexMath';
@@ -33,7 +33,7 @@ function createInvalidResult(
 export function productionSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'SET_PRODUCTION':
-      return handleSetProduction(state, action.cityId, action.itemId, action.itemType);
+      return handleSetProduction(state, action.cityId, action.itemId, action.itemType, action.tile);
     case 'CANCEL_BUILDING_PLACEMENT':
       return handleCancelBuildingPlacement(state, action.cityId);
     case 'PURCHASE_ITEM':
@@ -101,6 +101,7 @@ function handleSetProduction(
   cityId: string,
   itemId: string,
   itemType: 'unit' | 'building' | 'wonder' | 'district',
+  tile?: HexCoord,
 ): GameState {
   const city = state.cities.get(cityId);
   if (!city) return createInvalidResult(state, 'City not found', 'production');
@@ -144,10 +145,23 @@ function handleSetProduction(
     }
   }
 
+  // ── Building-placement rework (Cycle 4) — attach locked tile ──
+  //
+  // When the caller passes a `tile` (via the additive SET_PRODUCTION field),
+  // store it on the queue item as `lockedTile`. productionSystem Cycle 1
+  // then auto-places the building on this tile when production completes.
+  // Only applied for 'building' / 'wonder'; for other item types the tile
+  // is ignored (units spawn at the city centre; districts have their own
+  // placement flow).
+  const attachTile = tile && (itemType === 'building' || itemType === 'wonder');
+  const queueItem: ProductionItem = attachTile
+    ? { type: itemType, id: itemId, lockedTile: tile }
+    : { type: itemType, id: itemId };
+
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, {
     ...city,
-    productionQueue: [{ type: itemType, id: itemId }],
+    productionQueue: [queueItem],
     // Keep existing progress when switching production (no waste)
     productionProgress: city.productionProgress,
   });

@@ -46,6 +46,56 @@ describe('productionSystem', () => {
       expect(updatedCity.productionQueue).toEqual([{ type: 'unit', id: 'warrior' }]);
       expect(updatedCity.productionProgress).toBe(0);
     });
+
+    it('attaches tile as lockedTile on a building queue item', () => {
+      // Building-placement rework Cycle 4: SET_PRODUCTION with tile stores
+      // lockedTile on the queued item so Cycle 1 auto-places on completion.
+      const city = createTestCity();
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const tile = { q: 4, r: 3 };
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'granary',
+        itemType: 'building',
+        tile,
+      });
+      const updatedCity = next.cities.get('c1')!;
+      expect(updatedCity.productionQueue.length).toBe(1);
+      expect(updatedCity.productionQueue[0]).toEqual({
+        type: 'building',
+        id: 'granary',
+        lockedTile: tile,
+      });
+    });
+
+    it('ignores tile for unit queue items (units spawn at city centre)', () => {
+      const city = createTestCity();
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'warrior',
+        itemType: 'unit',
+        tile: { q: 4, r: 3 },
+      });
+      const updatedCity = next.cities.get('c1')!;
+      expect(updatedCity.productionQueue[0]).toEqual({ type: 'unit', id: 'warrior' });
+      expect((updatedCity.productionQueue[0] as any).lockedTile).toBeUndefined();
+    });
+
+    it('building without tile still works (legacy path)', () => {
+      const city = createTestCity();
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'granary',
+        itemType: 'building',
+      });
+      const updatedCity = next.cities.get('c1')!;
+      expect(updatedCity.productionQueue[0]).toEqual({ type: 'building', id: 'granary' });
+    });
   });
 
   describe('END_TURN production', () => {

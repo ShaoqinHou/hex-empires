@@ -92,6 +92,12 @@ export {
 export type { CombatPreview, CombatOdds, CombatModifiers, CombatTarget, AttackableTarget } from './state/CombatPreview';
 export { getTileContents, getSelectionCycle, hasStackedEntities } from './state/TileContents';
 export type { TileContents } from './state/TileContents';
+export {
+  validateBuildingPlacement,
+  listValidBuildingsForTile,
+  listValidTilesForBuilding,
+} from './state/BuildingPlacementValidator';
+export type { PlacementResult } from './state/BuildingPlacementValidator';
 
 // Engine
 export { GameEngine, DEFAULT_SYSTEMS } from './GameEngine';

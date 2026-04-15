@@ -116,3 +116,32 @@ export function listValidBuildingsForTile(
   }
   return valid;
 }
+
+/**
+ * Return every tile in the given city's territory on which `buildingId`
+ * may legally be placed right now. Inverse of `listValidBuildingsForTile`.
+ *
+ * Used by the canvas placement overlay (building-placement rework, Cycle 4)
+ * to pre-compute the green-highlight set for a chosen building. Pure —
+ * walks `city.territory`, defers to `validateBuildingPlacement` per tile.
+ *
+ * Returns `[]` for an unknown city.
+ */
+export function listValidTilesForBuilding(
+  cityId: CityId,
+  buildingId: string,
+  state: GameState,
+): ReadonlyArray<HexCoord> {
+  const city = state.cities.get(cityId);
+  if (!city) return [];
+  const valid: HexCoord[] = [];
+  for (const tileKey of city.territory) {
+    const tile = state.map.tiles.get(tileKey);
+    if (!tile) continue;
+    const result = validateBuildingPlacement(cityId, tile.coord, buildingId, state);
+    if (result.valid) {
+      valid.push(tile.coord);
+    }
+  }
+  return valid;
+}

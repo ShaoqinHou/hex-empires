@@ -957,3 +957,122 @@ test.describe('Newly-wired panels (Religion / Government / Commanders)', () => {
     await expect(page.locator('text=Pantheon').first()).toBeVisible();
   });
 });
+
+// ── Building placement overlay (Cycle 4) ─────────────────────────────────────
+
+test.describe('Building placement overlay (Cycle 4)', () => {
+  /** Found a city at the settler's current tile so placement mode has a territory. */
+  async function setupCity(page: Page) {
+    await startGame(page, { seed: 2 });
+    const settler = await ownUnit(page, 'settler');
+    const cityTile = settler.position;
+    await dispatch(page, { type: 'FOUND_CITY', unitId: settler.id, name: 'TestCity' });
+    const after = await getState(page);
+    if (after!.cityCount === 0) test.skip(true, 'founding rejected on this seed');
+    // Return the first own city.
+    const cityId = await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      const cities = [...s.cities.values()] as Array<{ id: string; owner: string }>;
+      const owned = cities.find(c => c.owner === s.currentPlayerId);
+      return owned?.id ?? null;
+    });
+    if (!cityId) test.skip(true, 'no owned city after founding');
+    return { cityId: cityId as string, cityTile };
+  }
+
+  test('placement mode renders without crashing and flips canvas data attribute', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(String(err)));
+
+    const { cityId } = await setupCity(page);
+
+    // Enter placement mode for granary via the test hook.
+    await page.evaluate(({ cityId }) => {
+      (window as any).__enterPlacementMode(cityId, 'granary');
+    }, { cityId });
+    await page.waitForTimeout(150);
+
+    // Canvas data-attribute reflects placement mode is active.
+    const canvas = page.getByTestId('game-canvas');
+    await expect(canvas).toHaveAttribute('data-placement-mode', 'active');
+
+    // No render-time pageerror happened — overlay is drawing cleanly.
+    expect(errors).toEqual([]);
+  });
+
+  test('left-click on a valid tile dispatches SET_PRODUCTION with tile and exits placement', async ({ page }) => {
+    const { cityId, cityTile } = await setupCity(page);
+
+    // Enter placement mode.
+    await page.evaluate(({ cityId }) => {
+      (window as any).__enterPlacementMode(cityId, 'granary');
+    }, { cityId });
+    await page.waitForTimeout(100);
+
+    // Grab a valid tile from the engine helper path — fall back to the city centre
+    // which is always inside territory and validates for most non-wonder buildings.
+    const validTile = await page.evaluate(({ cityId, cityTile }) => {
+      const s = (window as any).__gameState;
+      const city = s.cities.get(cityId);
+      if (!city) return null;
+      // Prefer the city centre, it is always in territory.
+      const territory = city.territory as string[];
+      const key = `${cityTile.q},${cityTile.r}`;
+      if (territory.includes(key)) return cityTile;
+      const first = territory[0];
+      const [q, r] = first.split(',').map(Number);
+      return { q, r };
+    }, { cityId, cityTile });
+    expect(validTile).not.toBeNull();
+
+    const scr = await hexScreen(page, validTile!.q, validTile!.r);
+    await page.mouse.click(scr!.x, scr!.y, { button: 'left' });
+    await page.waitForTimeout(200);
+
+    // Placement mode was exited.
+    const canvas = page.getByTestId('game-canvas');
+    await expect(canvas).toHaveAttribute('data-placement-mode', 'inactive');
+
+    // Production queue has granary with a lockedTile pointing at the clicked hex.
+    const queue = await page.evaluate(({ cityId }) => {
+      const s = (window as any).__gameState;
+      const city = s.cities.get(cityId);
+      if (!city) return null;
+      const item = city.productionQueue[0];
+      return item ? { type: item.type, id: item.id, lockedTile: item.lockedTile ?? null } : null;
+    }, { cityId });
+    expect(queue).toEqual({ type: 'building', id: 'granary', lockedTile: validTile });
+  });
+
+  test('right-click during placement exits placement mode without dispatching', async ({ page }) => {
+    const { cityId } = await setupCity(page);
+
+    // Capture queue-length before.
+    const queueBefore = await page.evaluate(({ cityId }) => {
+      const s = (window as any).__gameState;
+      return s.cities.get(cityId)?.productionQueue?.length ?? 0;
+    }, { cityId });
+
+    await page.evaluate(({ cityId }) => {
+      (window as any).__enterPlacementMode(cityId, 'granary');
+    }, { cityId });
+    await page.waitForTimeout(100);
+
+    const canvasActive = page.getByTestId('game-canvas');
+    await expect(canvasActive).toHaveAttribute('data-placement-mode', 'active');
+
+    // Right-click anywhere on the canvas.
+    const box = await canvasActive.boundingBox();
+    await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2, { button: 'right' });
+    await page.waitForTimeout(150);
+
+    await expect(canvasActive).toHaveAttribute('data-placement-mode', 'inactive');
+
+    // Queue unchanged.
+    const queueAfter = await page.evaluate(({ cityId }) => {
+      const s = (window as any).__gameState;
+      return s.cities.get(cityId)?.productionQueue?.length ?? 0;
+    }, { cityId });
+    expect(queueAfter).toBe(queueBefore);
+  });
+});

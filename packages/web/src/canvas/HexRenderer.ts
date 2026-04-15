@@ -29,6 +29,24 @@ export interface RenderContext {
   explored: ReadonlySet<string> | null;    // ever-seen tiles
   showYields: boolean;
   turnNumber: number;  // Track turn changes for glow effects
+  /**
+   * Building-placement rework (Cycle 4) — placement overlay inputs.
+   *
+   * `placementCityId` — when non-null, the renderer draws the placement
+   *   overlay scoped to this city's territory. Passed separately from
+   *   `placementValidTiles` so the renderer can dim invalid territory
+   *   tiles without re-walking the map.
+   * `placementValidTiles` — set of hex keys (via `coordToKey`) that are
+   *   valid candidates for the chosen building. Green fill + bright stroke.
+   * `placementHovered` — the tile currently under the cursor when in
+   *   placement mode. If it's a valid tile, it gets a pulsing highlight.
+   *
+   * All three are null when placement mode is inactive — the overlay
+   * pass short-circuits and normal rendering proceeds unchanged.
+   */
+  placementCityId: string | null;
+  placementValidTiles: ReadonlySet<string> | null;
+  placementHovered: HexCoord | null;
 }
 
 /** Convert axial hex coordinate to pixel position (center of hex) */
@@ -131,6 +149,12 @@ export class HexRenderer {
 
     // Draw districts (below cities/units so markers appear on top)
     this.drawDistricts(rc, viewport);
+
+    // Building-placement overlay (Cycle 4) — sits above terrain/districts
+    // but below units and cities so sprites remain visible over the tint.
+    if (rc.placementCityId && rc.placementValidTiles) {
+      this.drawPlacementOverlay(rc, viewport);
+    }
 
     // Draw cities (only visible/explored, viewport culled)
     this.drawCities(rc, viewport);
@@ -827,6 +851,76 @@ export class HexRenderer {
     ctx.restore();
     // Reference turnNumber so TSC knows it's intentional (kept for future: flash on new turn).
     void turnNumber;
+  }
+
+  /**
+   * Building-placement rework (Cycle 4) — placement overlay.
+   *
+   * For every tile in the placement-mode city's territory, paint:
+   *   - Valid tiles: translucent green fill + brighter green stroke.
+   *   - Invalid territory tiles: dark dim overlay (no stroke).
+   * Tiles outside the city's territory are left untouched so the player
+   * keeps spatial context of the map. The hovered valid tile gets a
+   * pulsing highlight (same sin-based pulse as the attack target).
+   */
+  private drawPlacementOverlay(rc: RenderContext, viewport: ViewportBounds): void {
+    const ctx = this.ctx;
+    if (!rc.placementCityId || !rc.placementValidTiles) return;
+    const city = rc.state.cities.get(rc.placementCityId);
+    if (!city) return;
+
+    // Paint the dim + valid fills per territory tile.
+    for (const tileKey of city.territory) {
+      const tile = rc.state.map.tiles.get(tileKey);
+      if (!tile) continue;
+      if (
+        tile.coord.q < viewport.minQ ||
+        tile.coord.q > viewport.maxQ ||
+        tile.coord.r < viewport.minR ||
+        tile.coord.r > viewport.maxR
+      ) {
+        continue;
+      }
+
+      const { x, y } = hexToPixel(tile.coord);
+      const isValid = rc.placementValidTiles.has(tileKey);
+
+      if (isValid) {
+        // Valid tile: green fill + green stroke.
+        drawHexPath(ctx, x, y);
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.22)';
+        ctx.fill();
+        drawHexPath(ctx, x, y);
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        // Invalid territory tile: dim overlay.
+        drawHexPath(ctx, x, y);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fill();
+      }
+    }
+
+    // Hover pulse on a valid tile — reuses the attack-target pulse pattern.
+    if (rc.placementHovered) {
+      const hoverKey = coordToKey(rc.placementHovered);
+      if (rc.placementValidTiles.has(hoverKey)) {
+        const { x, y } = hexToPixel(rc.placementHovered);
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 220);
+        ctx.save();
+        drawHexPath(ctx, x, y);
+        ctx.fillStyle = `rgba(134, 239, 172, ${0.28 + 0.18 * pulse})`;
+        ctx.fill();
+        ctx.shadowColor = 'rgba(74, 222, 128, 0.85)';
+        ctx.shadowBlur = 16;
+        drawHexPath(ctx, x, y);
+        ctx.strokeStyle = `rgba(187, 247, 208, ${0.85 + 0.15 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
   }
 
   /** Render the move path as bright chevron dots along hex centers — shows the player
