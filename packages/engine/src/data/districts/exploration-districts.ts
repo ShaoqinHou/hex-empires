@@ -112,7 +112,7 @@ export const EXPANDED_ENCAMPMENT_DISTRICT: DistrictDef = {
   yields: Y(0, 3, 0, 0, 0, 0, 0, 2, 0),
   adjacencyYields: Y(0, 1, 0, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
-  allowedBuildings: ['barracks', 'stable', 'armory', 'military_academy'],
+  allowedBuildings: ['barracks_exp', 'stable', 'armory', 'military_academy'],
   placementConstraint: {
     minDistanceFromCity: 1,
     maxDistanceFromCity: 3,
@@ -221,7 +221,7 @@ export const EXPANDED_INDUSTRIAL_DISTRICT: DistrictDef = {
   yields: Y(0, 5, 1, 0, 0, 0, 0, 2, 0),
   adjacencyYields: Y(0, 1, 0, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
-  allowedBuildings: ['workshop', 'factory', 'power_plant', 'steel_mill'],
+  allowedBuildings: ['workshop_exp', 'factory', 'power_plant', 'steel_mill'],
   placementConstraint: {
     minDistanceFromCity: 1,
     maxDistanceFromCity: 4,

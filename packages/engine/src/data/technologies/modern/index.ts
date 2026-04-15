@@ -168,7 +168,7 @@ export const ACADEMICS: TechnologyDef = {
 };
 
 export const MILITARY_SCIENCE: TechnologyDef = {
-  id: 'military_science',
+  id: 'military_science_modern',
   name: 'Military Science',
   age: 'modern',
   cost: 750,
@@ -227,7 +227,7 @@ export const MOBILIZATION: TechnologyDef = {
   name: 'Mobilization',
   age: 'modern',
   cost: 1000,
-  prerequisites: ['combustion', 'military_science'],
+  prerequisites: ['combustion', 'military_science_modern'],
   unlocks: ['battleship', 'military_base'],
   description: 'Enables Battleship and Military Base',
   treePosition: { row: 3, col: 3 },

@@ -136,7 +136,7 @@ export const MILITARY_BASE_DISTRICT: DistrictDef = {
   yields: Y(0, 5, 0, 1, 0, 0, 0, 3, 0),
   adjacencyYields: Y(0, 2, 0, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
-  allowedBuildings: ['barracks', 'stable', 'armory', 'military_academy', 'war_college', 'missile_silo'],
+  allowedBuildings: ['barracks_exp', 'stable', 'armory', 'military_academy', 'war_college', 'missile_silo'],
   placementConstraint: {
     minDistanceFromCity: 2,
     maxDistanceFromCity: 6,

@@ -92,7 +92,7 @@ export const CATHEDRAL: BuildingDef = {
 } as const;
 
 export const MARKET: BuildingDef = {
-  id: 'market',
+  id: 'market_exp',
   name: 'Market',
   age: 'exploration',
   cost: 120,
@@ -105,7 +105,7 @@ export const MARKET: BuildingDef = {
 } as const;
 
 export const WORKSHOP: BuildingDef = {
-  id: 'workshop',
+  id: 'workshop_exp',
   name: 'Workshop',
   age: 'exploration',
   cost: 150,
@@ -144,7 +144,7 @@ export const MONASTERY: BuildingDef = {
 } as const;
 
 export const BARRACKS: BuildingDef = {
-  id: 'barracks',
+  id: 'barracks_exp',
   name: 'Barracks',
   age: 'exploration',
   cost: 140,

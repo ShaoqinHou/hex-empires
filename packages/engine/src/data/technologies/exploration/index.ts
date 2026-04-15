@@ -116,7 +116,7 @@ export const APPRENTICESHIP: TechnologyDef = {
   age: 'exploration',
   cost: 250,
   prerequisites: ['printing'],
-  unlocks: ['workshop'],
+  unlocks: ['workshop_exp'],
   description: 'Enables Workshop building',
   treePosition: { row: 1, col: 1 },
 };
@@ -127,7 +127,7 @@ export const MILITARY_SCIENCE: TechnologyDef = {
   age: 'exploration',
   cost: 450,
   prerequisites: ['military_tactics', 'education'],
-  unlocks: ['barracks'],
+  unlocks: ['barracks_exp'],
   description: 'Enables Barracks building',
   treePosition: { row: 1, col: 3 },
 };
