@@ -166,12 +166,14 @@ export class AnimationRenderer {
     }
 
     // Draw target unit with shake effect
+    // Shake is derived from currentTime to be deterministic across replays
+    // (Math.sin / Math.cos give a natural oscillation without true randomness)
     if (progress > 0.4 && progress < 0.6) {
       const shakeAmount = Math.sin((progress - 0.4) / 0.2 * Math.PI) * 3;
       this.ctx.globalAlpha = 1;
       this.ctx.translate(
-        (Math.random() - 0.5) * shakeAmount,
-        (Math.random() - 0.5) * shakeAmount
+        Math.sin(currentTime * 0.053) * shakeAmount,
+        Math.cos(currentTime * 0.071) * shakeAmount
       );
       drawUnitIcon(this.ctx, anim.targetTypeId, HEX_SIZE, 0, animOpts(targetColor));
     }

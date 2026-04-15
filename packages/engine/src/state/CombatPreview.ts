@@ -1,7 +1,8 @@
-import type { GameState, UnitState, HexTile, CityState } from '../types/GameState';
+import type { GameState, UnitState, HexTile, CityState, RngState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
+import { nextRandom } from './SeededRng';
 
 /**
  * Target type for combat preview.
@@ -263,7 +264,7 @@ export function calculateCombatPreview(
   const defenderWillDie = attackerDamageMin >= defender.health;
   const attackerWillDie = !isRanged && defenderDamageMin >= attacker.health;
 
-  // Calculate odds using Monte Carlo approximation
+  // Calculate odds using Monte Carlo approximation (deterministic via state.rng)
   const odds = calculateCombatOdds(
     attacker.health,
     defender.health,
@@ -271,6 +272,7 @@ export function calculateCombatPreview(
     attackerDamageMax,
     defenderDamageMin,
     defenderDamageMax,
+    state.rng,
   );
 
   // Gather modifiers for display
@@ -318,6 +320,7 @@ export function calculateCombatPreview(
 /**
  * Calculate combat odds using discrete probability distribution.
  * Samples the damage range to estimate win/draw/loss percentages.
+ * Uses a seeded RNG snapshot so results are deterministic and replayable.
  */
 function calculateCombatOdds(
   attackerHP: number,
@@ -326,6 +329,7 @@ function calculateCombatOdds(
   attackerDmgMax: number,
   defenderDmgMin: number,
   defenderDmgMax: number,
+  rng: RngState,
 ): CombatOdds {
   const SAMPLES = 100;
   let attackerWins = 0;
@@ -333,11 +337,15 @@ function calculateCombatOdds(
   let draws = 0;
   let totalDefenderHP = 0;
   let totalAttackerHP = 0;
+  let currentRng = rng;
 
   for (let i = 0; i < SAMPLES; i++) {
-    // Random damage within range
-    const attackerDmg = attackerDmgMin + Math.random() * (attackerDmgMax - attackerDmgMin);
-    const defenderDmg = defenderDmgMin + Math.random() * (defenderDmgMax - defenderDmgMin);
+    // Deterministic damage within range using seeded RNG
+    const { value: r1, rng: rng2 } = nextRandom(currentRng);
+    const { value: r2, rng: rng3 } = nextRandom(rng2);
+    currentRng = rng3;
+    const attackerDmg = attackerDmgMin + r1 * (attackerDmgMax - attackerDmgMin);
+    const defenderDmg = defenderDmgMin + r2 * (defenderDmgMax - defenderDmgMin);
 
     const newDefenderHP = Math.max(0, defenderHP - attackerDmg);
     const newAttackerHP = Math.max(0, attackerHP - defenderDmg);
