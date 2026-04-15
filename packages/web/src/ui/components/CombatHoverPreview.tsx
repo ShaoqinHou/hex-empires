@@ -1,4 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
+import { TooltipShell } from '../hud/TooltipShell';
 import type { CombatPreview } from '@hex/engine';
 
 interface CombatHoverPreviewProps {
@@ -7,9 +8,22 @@ interface CombatHoverPreviewProps {
 }
 
 /**
- * Hover-style combat preview tooltip.
- * Shows compact combat information when hovering over attackable targets.
- * Displays near the cursor/target unit.
+ * Combat preview overlay.
+ *
+ * Shows detailed combat math (attacker vs. defender strengths, damage
+ * ranges, odds, outcome, modifiers) when a unit is selected and the
+ * cursor hovers an attackable enemy. The content is dense enough to
+ * occlude the hovered tile, so the overlay renders in the viewport's
+ * fixed bottom-right corner via `<TooltipShell position="fixed-corner">`.
+ *
+ * `sticky` is set because the caller (GameCanvas) owns the dismiss
+ * lifecycle — the overlay clears when the cursor leaves attack range,
+ * not on pointer-leave of the tooltip itself.
+ *
+ * Z-index drops from the audit-flagged `1000` to
+ * `var(--hud-z-fixed-corner)` (120, set by TooltipShell) so modal
+ * panels at 210 correctly cover the preview during age transitions,
+ * victory, and crises.
  */
 export function CombatHoverPreview({ preview, position }: CombatHoverPreviewProps) {
   const { state, unitRegistry } = useGameState();
@@ -29,195 +43,254 @@ export function CombatHoverPreview({ preview, position }: CombatHoverPreviewProp
   }
 
   const defenderName = defenderDef ? defenderDef.name : city?.name ?? 'Unknown';
+
   const oddsColor = preview.odds.attackerWinPercent >= 70
-    ? 'rgba(34, 197, 94, 0.9)'  // green
+    ? 'var(--hud-accent-friendly)'
     : preview.odds.attackerWinPercent >= 40
-    ? 'rgba(234, 179, 8, 0.9)'   // yellow
-    : 'rgba(239, 68, 68, 0.9)';  // red
+    ? 'var(--hud-text-emphasis)'
+    : 'var(--hud-accent-enemy)';
 
   const strengthDiffColor = preview.attackerStrength > preview.defenderStrength
-    ? 'rgba(34, 197, 94, 1)'
+    ? 'var(--hud-accent-friendly)'
     : preview.attackerStrength < preview.defenderStrength
-    ? 'rgba(239, 68, 68, 1)'
-    : 'rgba(156, 163, 175, 1)';
-
-  // Position tooltip near cursor but keep on screen
-  const tooltipStyle: React.CSSProperties = {
-    position: 'fixed',
-    left: Math.min(position.x + 20, window.innerWidth - 320),
-    top: Math.min(position.y + 20, window.innerHeight - 300),
-    zIndex: 1000,
-  };
+    ? 'var(--hud-accent-enemy)'
+    : 'var(--hud-accent-neutral)';
 
   return (
-    <div
-      className="rounded-lg shadow-xl p-3 min-w-[280px] max-w-[320px]"
-      style={{
-        backgroundColor: 'rgba(17, 24, 39, 0.95)',
-        border: '1px solid rgba(75, 85, 99, 0.5)',
-        backdropFilter: 'blur(8px)',
-        ...tooltipStyle,
-      }}
+    <TooltipShell
+      id="combatPreview"
+      anchor={{ kind: 'screen', x: 0, y: 0 }}
+      position="fixed-corner"
+      tier="detailed"
+      sticky
     >
-      {/* Header - Attacker vs Defender */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
-        <div className="text-xs font-semibold text-gray-400">{attackerDef.name}</div>
-        <div className="text-xs font-bold text-white">VS</div>
-        <div className="text-xs font-semibold text-gray-400">{defenderName}</div>
-      </div>
-
-      {/* Strength comparison */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-center">
-          <div className="text-xl font-bold" style={{ color: 'rgba(59, 130, 246, 1)' }}>
-            {preview.attackerStrength}
+      <div className="min-w-[260px] max-w-[320px]">
+        {/* Header - Attacker vs Defender */}
+        <div
+          className="flex items-center justify-between mb-3 pb-2"
+          style={{ borderBottom: '1px solid var(--hud-border)' }}
+        >
+          <div className="text-xs font-semibold" style={{ color: 'var(--hud-text-muted)' }}>
+            {attackerDef.name}
           </div>
-          <div className="text-xs text-gray-500">Attack</div>
-        </div>
-        <div className="text-xs text-gray-600">strength</div>
-        <div className="text-center">
-          <div className="text-xl font-bold" style={{ color: 'rgba(139, 92, 246, 1)' }}>
-            {preview.defenderStrength}
+          <div className="text-xs font-bold" style={{ color: 'var(--hud-combat-text)' }}>
+            VS
           </div>
-          <div className="text-xs text-gray-500">Defense</div>
+          <div className="text-xs font-semibold" style={{ color: 'var(--hud-text-muted)' }}>
+            {defenderName}
+          </div>
         </div>
-      </div>
 
-      {/* Strength difference indicator */}
-      <div className="mb-3 flex items-center justify-center gap-2">
-        <div className="text-xs text-gray-400">
-          Diff: <span style={{ color: strengthDiffColor, fontWeight: 600 }}>
-            {preview.strengthDifference !== undefined
-              ? (preview.strengthDifference > 0 ? '+' : '') + preview.strengthDifference
-              : (preview.attackerStrength - preview.defenderStrength > 0 ? '+' : '') +
-                (preview.attackerStrength - preview.defenderStrength)
-            }
-          </span>
+        {/* Strength comparison */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-center">
+            <div className="text-xl font-bold" style={{ color: 'var(--hud-combat-attacker-bar)' }}>
+              {preview.attackerStrength}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--hud-text-muted)' }}>Attack</div>
+          </div>
+          <div className="text-xs" style={{ color: 'var(--hud-text-muted)' }}>strength</div>
+          <div className="text-center">
+            <div className="text-xl font-bold" style={{ color: 'var(--hud-combat-defender-bar)' }}>
+              {preview.defenderStrength}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--hud-text-muted)' }}>Defense</div>
+          </div>
         </div>
-      </div>
 
-      {/* Damage preview */}
-      <div className="mb-3 space-y-2">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-400">Damage to enemy:</span>
-          <span className="font-bold" style={{ color: 'rgba(239, 68, 68, 1)' }}>
-            {preview.expectedDamageToDefender}
-            <span className="text-xs text-gray-500 ml-1">
-              ({preview.minDamageToDefender}-{preview.maxDamageToDefender})
-            </span>
-          </span>
-        </div>
-        {!preview.isRanged && (
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-400">Retaliation:</span>
-            <span className="font-bold" style={{ color: 'rgba(249, 115, 22, 1)' }}>
-              {preview.expectedDamageToAttacker}
-              <span className="text-xs text-gray-500 ml-1">
-                ({preview.minDamageToAttacker}-{preview.maxDamageToAttacker})
-              </span>
+        {/* Strength difference indicator */}
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <div className="text-xs" style={{ color: 'var(--hud-text-muted)' }}>
+            Diff:{' '}
+            <span style={{ color: strengthDiffColor, fontWeight: 600 }}>
+              {preview.strengthDifference !== undefined
+                ? (preview.strengthDifference > 0 ? '+' : '') + preview.strengthDifference
+                : (preview.attackerStrength - preview.defenderStrength > 0 ? '+' : '') +
+                  (preview.attackerStrength - preview.defenderStrength)}
             </span>
           </div>
-        )}
-        {preview.isRanged && (
+        </div>
+
+        {/* Damage preview */}
+        <div className="mb-3 space-y-2">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-400">Retaliation:</span>
-            <span className="font-medium text-gray-500">None (ranged)</span>
+            <span style={{ color: 'var(--hud-text-muted)' }}>Damage to enemy:</span>
+            <span className="font-bold" style={{ color: 'var(--hud-combat-damage-positive)' }}>
+              {preview.expectedDamageToDefender}
+              <span className="text-xs ml-1" style={{ color: 'var(--hud-text-muted)' }}>
+                ({preview.minDamageToDefender}-{preview.maxDamageToDefender})
+              </span>
+            </span>
+          </div>
+          {!preview.isRanged && (
+            <div className="flex justify-between items-center text-sm">
+              <span style={{ color: 'var(--hud-text-muted)' }}>Retaliation:</span>
+              <span className="font-bold" style={{ color: 'var(--hud-combat-damage-negative)' }}>
+                {preview.expectedDamageToAttacker}
+                <span className="text-xs ml-1" style={{ color: 'var(--hud-text-muted)' }}>
+                  ({preview.minDamageToAttacker}-{preview.maxDamageToAttacker})
+                </span>
+              </span>
+            </div>
+          )}
+          {preview.isRanged && (
+            <div className="flex justify-between items-center text-sm">
+              <span style={{ color: 'var(--hud-text-muted)' }}>Retaliation:</span>
+              <span className="font-medium" style={{ color: 'var(--hud-text-muted)' }}>
+                None (ranged)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Victory probability bar */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs" style={{ color: 'var(--hud-text-muted)' }}>
+              Victory chance:
+            </span>
+            <span className="text-sm font-bold" style={{ color: oddsColor }}>
+              {preview.odds.attackerWinPercent}%
+            </span>
+          </div>
+          <div className="w-full h-2 rounded overflow-hidden" style={{ backgroundColor: 'var(--hud-border)' }}>
+            <div
+              className="h-full transition-all duration-200"
+              style={{
+                width: `${preview.odds.attackerWinPercent}%`,
+                backgroundColor: oddsColor,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Outcome indicators */}
+        <div className="flex gap-2 text-xs">
+          {preview.defenderWillDie && (
+            <div
+              className="flex-1 text-center py-1 rounded font-medium"
+              style={{
+                backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                color: 'var(--hud-accent-friendly)',
+              }}
+            >
+              ✓ Enemy destroyed
+            </div>
+          )}
+          {preview.attackerWillDie && !preview.defenderWillDie && (
+            <div
+              className="flex-1 text-center py-1 rounded font-medium"
+              style={{
+                backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                color: 'var(--hud-accent-enemy)',
+              }}
+            >
+              ⚠ Risk of death
+            </div>
+          )}
+          {preview.isRanged && (
+            <div
+              className="flex-1 text-center py-1 rounded font-medium"
+              style={{
+                backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                color: 'var(--hud-combat-attacker-bar)',
+              }}
+            >
+              🏹 Ranged attack
+            </div>
+          )}
+        </div>
+
+        {/* Modifier badges (compact) */}
+        {(preview.modifiers.flankingBonus > 0 ||
+          preview.modifiers.terrainDefenseBonus > 0 ||
+          preview.modifiers.riverPenalty ||
+          preview.modifiers.firstStrikeBonus ||
+          preview.modifiers.warSupportPenalty > 0 ||
+          preview.modifiers.adjacentAlly) && (
+          <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--hud-border)' }}>
+            <div className="flex flex-wrap gap-1">
+              {preview.modifiers.flankingBonus > 0 && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-accent-friendly)',
+                  }}
+                >
+                  Flanking +{preview.modifiers.flankingBonus}
+                </span>
+              )}
+              {preview.modifiers.terrainDefenseBonus > 0 && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-combat-defender-bar)',
+                  }}
+                >
+                  Terrain +{preview.modifiers.terrainDefenseBonus}%
+                </span>
+              )}
+              {preview.modifiers.riverPenalty && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-accent-enemy)',
+                  }}
+                >
+                  River -15%
+                </span>
+              )}
+              {preview.modifiers.firstStrikeBonus && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-text-emphasis)',
+                  }}
+                >
+                  First Strike +5
+                </span>
+              )}
+              {preview.modifiers.adjacentAlly && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-combat-attacker-bar)',
+                  }}
+                >
+                  Adjacent Ally
+                </span>
+              )}
+              {preview.modifiers.warSupportPenalty > 0 && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-accent-enemy)',
+                  }}
+                >
+                  War Support -{preview.modifiers.warSupportPenalty}
+                </span>
+              )}
+              {preview.modifiers.defenderFortified && (
+                <span
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: 'var(--hud-cycle-indicator-bg)',
+                    color: 'var(--hud-accent-neutral)',
+                  }}
+                >
+                  Fortified +5
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Victory probability bar */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-400">Victory chance:</span>
-          <span className="text-sm font-bold" style={{ color: oddsColor }}>
-            {preview.odds.attackerWinPercent}%
-          </span>
-        </div>
-        <div className="w-full h-2 bg-gray-800 rounded overflow-hidden">
-          <div
-            className="h-full transition-all duration-200"
-            style={{
-              width: `${preview.odds.attackerWinPercent}%`,
-              backgroundColor: oddsColor,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Outcome indicators */}
-      <div className="flex gap-2 text-xs">
-        {preview.defenderWillDie && (
-          <div className="flex-1 text-center py-1 rounded bg-green-900/50 text-green-400 font-medium">
-            ✓ Enemy destroyed
-          </div>
-        )}
-        {preview.attackerWillDie && !preview.defenderWillDie && (
-          <div className="flex-1 text-center py-1 rounded bg-red-900/50 text-red-400 font-medium">
-            ⚠ Risk of death
-          </div>
-        )}
-        {preview.isRanged && (
-          <div className="flex-1 text-center py-1 rounded bg-blue-900/50 text-blue-400 font-medium">
-            🏹 Ranged attack
-          </div>
-        )}
-      </div>
-
-      {/* Modifier badges (compact) */}
-      {(preview.modifiers.flankingBonus > 0 ||
-        preview.modifiers.terrainDefenseBonus > 0 ||
-        preview.modifiers.riverPenalty ||
-        preview.modifiers.firstStrikeBonus ||
-        preview.modifiers.warSupportPenalty > 0 ||
-        preview.modifiers.adjacentAlly) && (
-        <div className="mt-2 pt-2 border-t border-gray-700">
-          <div className="flex flex-wrap gap-1">
-            {preview.modifiers.flankingBonus > 0 && (
-              <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">
-                Flanking +{preview.modifiers.flankingBonus}
-              </span>
-            )}
-            {preview.modifiers.terrainDefenseBonus > 0 && (
-              <span className="px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">
-                Terrain +{preview.modifiers.terrainDefenseBonus}%
-              </span>
-            )}
-            {preview.modifiers.riverPenalty && (
-              <span className="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-400">
-                River -15%
-              </span>
-            )}
-            {preview.modifiers.firstStrikeBonus && (
-              <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/50 text-yellow-400">
-                First Strike +5
-              </span>
-            )}
-            {preview.modifiers.adjacentAlly && (
-              <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">
-                Adjacent Ally
-              </span>
-            )}
-            {preview.modifiers.warSupportPenalty > 0 && (
-              <span className="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-400">
-                War Support -{preview.modifiers.warSupportPenalty}
-              </span>
-            )}
-            {preview.modifiers.defenderFortified && (
-              <span className="px-2 py-0.5 rounded text-xs bg-gray-700/50 text-gray-400">
-                Fortified +5
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    </TooltipShell>
   );
-}
-
-/**
- * Strength difference calculator (for display)
- */
-function getStrengthDifference(preview: CombatPreview): number {
-  return preview.attackerStrength - preview.defenderStrength;
 }

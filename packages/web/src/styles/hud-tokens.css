@@ -83,7 +83,9 @@
    * CombatPreviewPanel. Bar colors are for attacker/defender strength
    * comparison visuals (blue = attacker, purple = defender). Damage
    * numbers read in red for damage-to-defender, orange for retaliation
-   * (damage-to-attacker). */
+   * (damage-to-attacker). Text token for bright emphasis (the "VS"
+   * glyph, outcome ribbons). All tuned to the darker HUD background so
+   * they glance-read at speed. */
   --hud-combat-attacker-bar: #3b82f6;    /* blue-500  */
   --hud-combat-defender-bar: #8b5cf6;    /* violet-500 */
   --hud-combat-damage-positive: #ef4444; /* red-500 — damage to defender */
