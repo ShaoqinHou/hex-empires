@@ -48,7 +48,11 @@ export function createInitialState(config: GameSetupConfig, seed?: number): Game
     researchedCivics: [] as string[],
     currentCivic: null as string | null,
     civicProgress: 0,
-    gold: 100, science: 0, culture: 0, faith: 0, influence: 0,
+    // Starting Influence pool lets a fresh civ execute opening diplomacy
+    // (endeavors, sanctions, or a surprise war) — M28's action costs
+    // (100/200 for formal/surprise war) would otherwise block every
+    // turn-1 action. 200 covers one surprise war or two formal actions.
+    gold: 100, science: 0, culture: 0, faith: 0, influence: 200,
     ageProgress: 0,
     legacyBonuses: [] as ActiveEffect[],
     legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
