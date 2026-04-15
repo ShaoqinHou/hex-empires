@@ -10,8 +10,9 @@
  * - Individual animation types: each interpolates specific properties
  */
 
-import type { HexCoord, UnitState, CityState } from '@hex/engine';
+import type { HexCoord } from '@hex/engine';
 import { hexToPixel } from './HexRenderer';
+import { RANGED_PROJECTILE_COLOR } from './canvasTokens';
 
 // ── Easing Functions ──
 
@@ -370,7 +371,7 @@ export class AnimationManager {
     targetOwnerId: string,
     from: HexCoord,
     to: HexCoord,
-    projectileColor: string = '#ff5722',
+    projectileColor: string = RANGED_PROJECTILE_COLOR,
     duration: number = 300,
   ): RangedAttackAnimation {
     return {

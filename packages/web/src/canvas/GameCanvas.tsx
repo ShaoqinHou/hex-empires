@@ -5,6 +5,8 @@ import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
+import { animationEventBus } from '../hooks/AnimationEventBus';
+import { RANGED_PROJECTILE_COLOR } from './canvasTokens';
 import type { HexCoord, CityState } from '@hex/engine';
 import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getTileContents, getSelectionCycle, listValidTilesForBuilding } from '@hex/engine';
 
@@ -37,7 +39,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
   const {
     state, dispatch, terrainRegistry, featureRegistry, unitRegistry, resourceRegistry,
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
-    reachableHexes, animationManager, setHoveredHex: setGlobalHoveredHex,
+    reachableHexes, setHoveredHex: setGlobalHoveredHex,
     combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
     selectCity,
     placementMode, enterPlacementMode, exitPlacementMode,
@@ -139,7 +141,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     // Initialize render cache for performance optimization
     renderCacheRef.current = new RenderCache();
     rendererRef.current = new HexRenderer(ctx, renderCacheRef.current);
-    animationManagerRef.current = animationManager ?? new AnimationManager();
+    // AnimationManager is owned here — not by GameProvider. It's a purely
+    // visual concern of the canvas layer.
+    animationManagerRef.current = new AnimationManager();
     animationRendererRef.current = new AnimationRenderer(ctx);
 
     const resize = () => {
@@ -188,6 +192,157 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
       window.removeEventListener('resize', resize);
       delete (window as any).__hexToScreen;
     };
+  }, []);
+
+  // ── Animation event subscription ──
+  //
+  // Subscribe to the AnimationEventBus so we can enqueue animations after
+  // each action without GameProvider needing to import AnimationManager.
+  // The unitRegistry ref keeps the subscriber stable across re-renders.
+  const unitRegistryRef = useRef(unitRegistry);
+  useEffect(() => {
+    unitRegistryRef.current = unitRegistry;
+  }, [unitRegistry]);
+
+  useEffect(() => {
+    const unsubscribe = animationEventBus.subscribe(({ action, prevState, nextState }) => {
+      const am = animationManagerRef.current;
+      if (!am) return;
+      const reg = unitRegistryRef.current;
+
+      switch (action.type) {
+        case 'MOVE_UNIT': {
+          const unit = nextState.units.get(action.unitId);
+          if (unit && action.path.length > 0) {
+            am.add(am.createUnitMoveAnimation(action.unitId, unit.owner, unit.typeId, action.path, 400));
+          }
+          break;
+        }
+
+        case 'ATTACK_UNIT': {
+          const attacker = nextState.units.get(action.attackerId);
+          const target = prevState.units.get(action.targetId); // may be dead in nextState
+
+          if (attacker && target) {
+            const attackerDef = reg.get(attacker.typeId);
+            const isRanged = attackerDef?.category === 'ranged' || attackerDef?.category === 'siege';
+
+            if (isRanged) {
+              am.add(am.createRangedAttackAnimation(
+                action.attackerId, attacker.typeId, attacker.owner,
+                action.targetId, target.typeId, target.owner,
+                attacker.position, target.position,
+                RANGED_PROJECTILE_COLOR, 500,
+              ));
+            } else {
+              am.add(am.createMeleeAttackAnimation(
+                action.attackerId, attacker.typeId, attacker.owner,
+                action.targetId, target.typeId, target.owner,
+                attacker.position, target.position, 300,
+              ));
+            }
+
+            am.add(am.createDamageFlashAnimation(action.targetId, target.position, false, 200));
+
+            // Floating damage on target
+            const nextTarget = nextState.units.get(action.targetId);
+            const dealtToTarget = nextTarget
+              ? Math.max(0, target.health - nextTarget.health)
+              : target.health;
+            if (dealtToTarget > 0) {
+              am.add(am.createFloatingDamageAnimation(action.targetId, target.position, dealtToTarget));
+            }
+
+            // Melee retaliation damage on attacker
+            const prevAttacker = prevState.units.get(action.attackerId);
+            const nextAttacker = nextState.units.get(action.attackerId);
+            if (prevAttacker && nextAttacker) {
+              const dealtToAttacker = Math.max(0, prevAttacker.health - nextAttacker.health);
+              if (dealtToAttacker > 0) {
+                am.add(am.createFloatingDamageAnimation(action.attackerId, prevAttacker.position, dealtToAttacker));
+              }
+            }
+          }
+
+          // Unit death
+          if (!nextState.units.has(action.targetId) && prevState.units.has(action.targetId)) {
+            const deadUnit = prevState.units.get(action.targetId);
+            if (deadUnit) {
+              am.add(am.createUnitDeathAnimation(action.targetId, deadUnit.position, deadUnit.owner, deadUnit.typeId, 600));
+            }
+          }
+          break;
+        }
+
+        case 'ATTACK_CITY': {
+          const city = nextState.cities.get(action.cityId);
+          const prevCity = prevState.cities.get(action.cityId);
+          if (city) {
+            am.add(am.createDamageFlashAnimation(action.cityId, city.position, true, 300));
+            if (prevCity) {
+              const dealt = Math.max(0, prevCity.defenseHP - city.defenseHP);
+              if (dealt > 0) {
+                am.add(am.createFloatingDamageAnimation(action.cityId, city.position, dealt));
+              }
+            }
+          }
+          break;
+        }
+
+        case 'FOUND_CITY': {
+          const newCity = Array.from(nextState.cities.values()).find(c =>
+            !prevState.cities.has(c.id) && c.name === action.name,
+          );
+          if (newCity) {
+            am.add(am.createCityFoundedAnimation(newCity.id, newCity.position, newCity.owner, action.name, 800));
+          }
+          break;
+        }
+
+        case 'SET_PRODUCTION': {
+          const city = nextState.cities.get(action.cityId);
+          if (city && city.productionProgress >= 100) {
+            am.add(am.createProductionCompleteAnimation(action.cityId, city.position, action.itemId, action.itemType, 800));
+          }
+          break;
+        }
+      }
+
+      // Detect turn-processing state changes (city growth, production, age transitions)
+      // that happen as side-effects of END_TURN / AI turns.
+      for (const [cityId, city] of nextState.cities) {
+        const prevCity = prevState.cities.get(cityId);
+
+        // City population growth
+        if (prevCity && city.population > prevCity.population) {
+          am.add(am.createCityGrowthAnimation(cityId, city.position, prevCity.population, city.population, 400));
+        }
+
+        // Production completion during turn processing
+        if (prevCity && prevCity.productionProgress < 100 && city.productionProgress >= 100) {
+          const currentItem = city.productionQueue[0];
+          if (currentItem) {
+            am.add(am.createProductionCompleteAnimation(cityId, city.position, currentItem.id, currentItem.type, 800));
+          }
+        }
+
+        // New city founded during AI turn
+        if (!prevState.cities.has(cityId)) {
+          am.add(am.createCityFoundedAnimation(cityId, city.position, city.owner, city.name, 600));
+        }
+      }
+
+      // Age transition flash
+      if (prevState.age.currentAge !== nextState.age.currentAge) {
+        for (const [cityId, city] of nextState.cities) {
+          if (city.owner === nextState.currentPlayerId) {
+            am.add(am.createDamageFlashAnimation(`age-transition-${cityId}`, city.position, true, 400));
+          }
+        }
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   // Render loop
@@ -263,7 +418,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, animationManager, placementMode, placementValidTiles]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, placementMode, placementValidTiles]);
 
   // ── Modern-RTS click semantics ──
   // LEFT-CLICK = SELECT ONLY. Never moves, never attacks. It picks/cycles own entities on

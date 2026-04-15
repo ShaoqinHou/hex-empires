@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import type { GameState, GameAction, HexCoord, UnitState, CombatPreview, ValidationResult, CityId } from '@hex/engine';
-import { AnimationManager } from '../canvas/AnimationManager';
+import { animationEventBus } from '../hooks/AnimationEventBus';
 import {
   createTerrainRegistries,
   ALL_BASE_TERRAINS,
@@ -75,88 +75,6 @@ function processAITurns(eng: GameEngine, state: GameState): GameState {
   return next;
 }
 
-// ── Animation Detection Helper ──
-
-/**
- * Detect state changes during turn processing and trigger appropriate animations.
- * This handles animations for events that occur during END_TURN processing,
- * such as city growth, production completion, etc.
- */
-function detectAndTriggerTurnAnimations(
-  animationManager: AnimationManager,
-  prev: GameState,
-  next: GameState,
-  action: GameAction,
-): void {
-  // Check for city population growth
-  for (const [cityId, city] of next.cities) {
-    const prevCity = prev.cities.get(cityId);
-    if (prevCity && city.population > prevCity.population) {
-      // City grew
-      const growthAnim = animationManager.createCityGrowthAnimation(
-        cityId,
-        city.position,
-        prevCity.population,
-        city.population,
-        400
-      );
-      animationManager.add(growthAnim);
-    }
-  }
-
-  // Check for production completion (cities that finished production)
-  for (const [cityId, city] of next.cities) {
-    const prevCity = prev.cities.get(cityId);
-    if (prevCity && prevCity.productionProgress < 100 && city.productionProgress >= 100) {
-      // Production just completed - get the item from the production queue
-      const currentItem = city.productionQueue[0];
-      if (!currentItem) continue;
-
-      const itemDef = next.config.units.get(currentItem.id);
-
-      const prodAnim = animationManager.createProductionCompleteAnimation(
-        cityId,
-        city.position,
-        currentItem.id,
-        currentItem.type,
-        800
-      );
-      animationManager.add(prodAnim);
-    }
-  }
-
-  // Check for new cities founded during turn processing
-  for (const [cityId, city] of next.cities) {
-    if (!prev.cities.has(cityId)) {
-      // New city founded
-      const cityAnim = animationManager.createCityFoundedAnimation(
-        cityId,
-        city.position,
-        city.owner,
-        city.name,
-        600
-      );
-      animationManager.add(cityAnim);
-    }
-  }
-
-  // Check for age transitions
-  if (prev.age.currentAge !== next.age.currentAge) {
-    // Age transition - flash effect on all player cities
-    for (const [cityId, city] of next.cities) {
-      if (city.owner === next.currentPlayerId) {
-        const flashAnim = animationManager.createDamageFlashAnimation(
-          `age-transition-${cityId}`,
-          city.position,
-          true,
-          400
-        );
-        animationManager.add(flashAnim);
-      }
-    }
-  }
-}
-
 // ── Context ──
 
 interface GameContextValue {
@@ -187,7 +105,6 @@ interface GameContextValue {
   reachableHexes: ReadonlyMap<string, number> | null;
   saveGame: () => void;
   loadGame: () => void;
-  animationManager: AnimationManager | null;
   lastValidation: ValidationResult | null;
   clearValidation: () => void;
   // ── Building placement mode (Cycle 3 of building-placement rework) ──
@@ -228,16 +145,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const exitPlacementMode = useCallback(() => {
     setPlacementMode(null);
   }, []);
-
-  // Create and maintain AnimationManager instance
-  const animationManagerRef = useRef<AnimationManager | null>(null);
-  if (!animationManagerRef.current) {
-    animationManagerRef.current = new AnimationManager();
-  }
-
-  // Track previous action and state for sound effects
-  const previousActionRef = useRef<GameAction | null>(null);
-  const previousStateRef = useRef<GameState | null>(null);
 
   // Alt key tracking for tooltips
   useEffect(() => {
@@ -313,35 +220,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const dispatch = useCallback((action: GameAction) => {
-    const animationManager = animationManagerRef.current;
-    if (!animationManager) {
-      // Fallback if animation manager not initialized
-      setState(prev => {
-        if (!prev) return prev;
-        let next = engine.applyAction(prev, action);
-
-        // Track validation result for feedback
-        if (next.lastValidation) {
-          setLastValidation(next.lastValidation);
-        } else {
-          setLastValidation(null);
-        }
-
-        // After END_TURN, process AI players, then start human turn
-        if (action.type === 'END_TURN') {
-          next = processAITurns(engine, next);
-        }
-
-        return next;
-      });
-      return;
-    }
-
     setState(prev => {
       if (!prev) return prev;
-      // Track previous state for sound effects
-      previousStateRef.current = prev;
-      previousActionRef.current = action;
 
       let next = engine.applyAction(prev, action);
 
@@ -352,204 +232,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setLastValidation(null);
       }
 
-      // Trigger animations based on action type
-      // Note: We trigger animations AFTER the state update, using 'prev' to get the old state
-      // and 'next' to get the new state. Animations are purely visual and don't affect game logic.
-
-      switch (action.type) {
-        case 'MOVE_UNIT': {
-          const unit = next.units.get(action.unitId);
-          if (unit && action.path.length > 0) {
-            // Create movement animation from old position along the path
-            const moveAnim = animationManager.createUnitMoveAnimation(
-              action.unitId,
-              unit.owner,
-              unit.typeId,
-              action.path,
-              400
-            );
-            animationManager.add(moveAnim);
-          }
-          break;
-        }
-
-        case 'ATTACK_UNIT': {
-          const attacker = next.units.get(action.attackerId);
-          const target = prev.units.get(action.targetId); // Target might be dead in 'next'
-
-          if (attacker && target) {
-            const attackerDef = unitRegistry.get(attacker.typeId);
-            const isRanged = attackerDef?.category === 'ranged' || attackerDef?.category === 'siege';
-
-            if (isRanged) {
-              // Ranged attack animation
-              const rangedAnim = animationManager.createRangedAttackAnimation(
-                action.attackerId,
-                attacker.typeId,
-                attacker.owner,
-                action.targetId,
-                target.typeId,
-                target.owner,
-                attacker.position,
-                target.position,
-                '#ff5722',
-                500
-              );
-              animationManager.add(rangedAnim);
-            } else {
-              // Melee attack animation
-              const meleeAnim = animationManager.createMeleeAttackAnimation(
-                action.attackerId,
-                attacker.typeId,
-                attacker.owner,
-                action.targetId,
-                target.typeId,
-                target.owner,
-                attacker.position,
-                target.position,
-                300
-              );
-              animationManager.add(meleeAnim);
-            }
-
-            // Damage flash on target
-            const flashAnim = animationManager.createDamageFlashAnimation(
-              action.targetId,
-              target.position,
-              false,
-              200
-            );
-            animationManager.add(flashAnim);
-
-            // Floating damage number on target — compute delta from prev→next health.
-            // If the target died (removed from next), use the full previous health as damage.
-            const nextTarget = next.units.get(action.targetId);
-            const dealtToTarget = nextTarget
-              ? Math.max(0, target.health - nextTarget.health)
-              : target.health;
-            if (dealtToTarget > 0) {
-              animationManager.add(
-                animationManager.createFloatingDamageAnimation(
-                  action.targetId,
-                  target.position,
-                  dealtToTarget,
-                ),
-              );
-            }
-            // Melee combat also damages the attacker (retaliation). Surface that too.
-            const prevAttacker = prev.units.get(action.attackerId);
-            const nextAttacker = next.units.get(action.attackerId);
-            if (prevAttacker && nextAttacker) {
-              const dealtToAttacker = Math.max(0, prevAttacker.health - nextAttacker.health);
-              if (dealtToAttacker > 0) {
-                animationManager.add(
-                  animationManager.createFloatingDamageAnimation(
-                    action.attackerId,
-                    prevAttacker.position,
-                    dealtToAttacker,
-                  ),
-                );
-              }
-            }
-          }
-
-          // Check if target unit died
-          if (!next.units.has(action.targetId) && prev.units.has(action.targetId)) {
-            const deadUnit = prev.units.get(action.targetId);
-            if (deadUnit) {
-              const deathAnim = animationManager.createUnitDeathAnimation(
-                action.targetId,
-                deadUnit.position,
-                deadUnit.owner,
-                deadUnit.typeId,
-                600
-              );
-              animationManager.add(deathAnim);
-            }
-          }
-          break;
-        }
-
-        case 'ATTACK_CITY': {
-          const attacker = next.units.get(action.attackerId);
-          const city = next.cities.get(action.cityId);
-          const prevCity = prev.cities.get(action.cityId);
-
-          if (attacker && city) {
-            // City attack animation
-            const cityAnim = animationManager.createDamageFlashAnimation(
-              action.cityId,
-              city.position,
-              true,
-              300
-            );
-            animationManager.add(cityAnim);
-
-            // Floating damage number on the city using defenseHP delta.
-            if (prevCity) {
-              const dealt = Math.max(0, prevCity.defenseHP - city.defenseHP);
-              if (dealt > 0) {
-                animationManager.add(
-                  animationManager.createFloatingDamageAnimation(
-                    action.cityId,
-                    city.position,
-                    dealt,
-                  ),
-                );
-              }
-            }
-          }
-          break;
-        }
-
-        case 'FOUND_CITY': {
-          // City founded animation - find the newly created city
-          const newCity = Array.from(next.cities.values()).find(c =>
-            !prev.cities.has(c.id) && c.name === action.name
-          );
-          if (newCity) {
-            const cityAnim = animationManager.createCityFoundedAnimation(
-              newCity.id,
-              newCity.position,
-              newCity.owner,
-              action.name,
-              800
-            );
-            animationManager.add(cityAnim);
-          }
-          break;
-        }
-
-        case 'SET_PRODUCTION': {
-          // Check if production completes immediately (rare case)
-          const city = next.cities.get(action.cityId);
-          if (city && city.productionProgress >= 100) {
-            // Production complete animation - use the item type from action
-            const prodAnim = animationManager.createProductionCompleteAnimation(
-              action.cityId,
-              city.position,
-              action.itemId,
-              action.itemType,
-              800
-            );
-            animationManager.add(prodAnim);
-          }
-          break;
-        }
-      }
-
-      // Detect and trigger animations for state changes during turn processing
-      // (City growth, production completion, etc.)
-      detectAndTriggerTurnAnimations(animationManager, prev, next, action);
-
       // After END_TURN, process AI players, then start human turn
       if (action.type === 'END_TURN') {
         next = processAITurns(engine, next);
       }
 
+      // Notify the canvas layer so it can enqueue animations based on the
+      // state diff. The bus decouples Provider from AnimationManager — the
+      // canvas owns that dependency, not the provider.
+      // Schedule after the setState updater returns (microtask) so the bus
+      // call is outside the React state batch.
+      const prevSnapshot = prev;
+      const nextSnapshot = next;
+      Promise.resolve().then(() => {
+        animationEventBus.emit(action, prevSnapshot, nextSnapshot);
+      });
+
       return next;
     });
-  }, [unitRegistry]);
+  }, []);
 
   const saveGame = useCallback(() => {
     if (!state) return;
@@ -615,7 +316,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     reachableHexes,
     saveGame,
     loadGame,
-    animationManager: animationManagerRef.current,
     lastValidation,
     clearValidation,
     placementMode,
