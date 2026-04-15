@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import type { GameState, GameAction, HexCoord, UnitState, CombatPreview, ValidationResult, CityId } from '@hex/engine';
 import { animationEventBus } from '../hooks/AnimationEventBus';
+import { useAltKey } from '../hooks/useAltKey';
 import {
   createTerrainRegistries,
   ALL_BASE_TERRAINS,
@@ -133,7 +134,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [selectedCityId, setSelectedCityId] = useState<CityId | null>(null);
   const [selectedHex, setSelectedHex] = useState<HexCoord | null>(null);
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
-  const [isAltPressed, setIsAltPressed] = useState(false);
+  const isAltPressed = useAltKey();
   const [combatPreview, setCombatPreview] = useState<CombatPreview | null>(null);
   const [combatPreviewPosition, setCombatPreviewPosition] = useState<{ x: number; y: number } | null>(null);
   const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
@@ -144,29 +145,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const exitPlacementMode = useCallback(() => {
     setPlacementMode(null);
-  }, []);
-
-  // Alt key tracking for tooltips
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        setIsAltPressed(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        setIsAltPressed(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
   }, []);
 
   // ── ESC cancels placement mode at window capture phase ──
