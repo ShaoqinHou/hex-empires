@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { TooltipShell } from '../hud/TooltipShell';
 
 interface ActionButtonProps {
   label: string;
@@ -12,7 +13,10 @@ interface ActionButtonProps {
 
 /**
  * ActionButton with built-in disabled state feedback and tooltip.
- * When disabled, shows the reason on hover.
+ * When disabled, shows the reason on hover. The disabled-reason tooltip
+ * is rendered through `TooltipShell` (id: `tooltip`) so positioning,
+ * z-index, and chrome tokens are owned by the canonical HUD shell —
+ * no per-component magic offsets / raw colors / `z-50`.
  */
 export function ActionButton({
   label,
@@ -24,10 +28,21 @@ export function ActionButton({
   onClick,
 }: ActionButtonProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  const updateAnchor = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    // Anchor at the button's horizontal center, near its top edge — the
+    // shell decides the diagonal offset and viewport clamping.
+    setAnchor({ x: rect.left + rect.width / 2, y: rect.top });
+  };
 
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         className={`px-3 py-1 text-xs rounded font-bold cursor-pointer flex items-center gap-1 ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
@@ -40,7 +55,11 @@ export function ActionButton({
             onClick();
           }
         }}
-        onMouseEnter={() => disabled && disabledReason && setShowTooltip(true)}
+        onMouseEnter={() => {
+          if (!disabled || !disabledReason) return;
+          updateAnchor();
+          setShowTooltip(true);
+        }}
         onMouseLeave={() => setShowTooltip(false)}
         title={disabled ? disabledReason : undefined}
       >
@@ -48,19 +67,19 @@ export function ActionButton({
         {shortcut && <span className="opacity-50 text-[10px]">[{shortcut}]</span>}
       </button>
 
-      {/* Tooltip for disabled state */}
-      {showTooltip && disabledReason && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded text-xs whitespace-nowrap z-50"
-          style={{
-            backgroundColor: 'var(--color-health-low)',
-            color: 'var(--color-bg)',
-          }}>
+      {/* Disabled-state tooltip. Goes through TooltipShell so positioning,
+          viewport clamping, and chrome tokens are shared with every other
+          tooltip-shaped overlay. */}
+      {showTooltip && disabledReason && anchor && (
+        <TooltipShell
+          id="tooltip"
+          anchor={{ kind: 'screen', x: anchor.x, y: anchor.y }}
+          position="floating"
+          tier="compact"
+          offset="small"
+        >
           {disabledReason}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-health-low"
-            style={{
-              borderTopColor: 'var(--color-health-low)',
-            }} />
-        </div>
+        </TooltipShell>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-export { Tooltip, TooltipContent } from '../Tooltip';
+export { TooltipContent } from '../Tooltip';
 export type { TooltipPosition, TooltipSection, TooltipItem } from '../Tooltip';
 
 export { UnitTooltip, UnitStateTooltip } from './UnitTooltip';

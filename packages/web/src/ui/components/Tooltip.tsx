@@ -1,181 +1,29 @@
-/** The canonical generic Tooltip primitive. For game-hover tile/unit tooltips, use TooltipOverlay → TooltipShell (HUD layer). */
-import React, { useState, useRef, useEffect } from 'react';
+/**
+ * TooltipContent — standardized body layout for game-element tooltips
+ * (units, buildings, technologies, terrains, resources). Used by the
+ * components in `tooltips/*` to render a title + subtitle + sectioned
+ * stat list with consistent typography and spacing.
+ *
+ * Cycle (C8) of the post-HUD UI cleanup retired the legacy `Tooltip`
+ * wrapper component that used to live alongside `TooltipContent` here.
+ * That wrapper duplicated `TooltipShell` (positioning math, viewport
+ * clamping) and registered its own window-level `keydown` listener for
+ * Alt-tracking, both of which are now owned by the canonical HUD
+ * foundation (`packages/web/src/ui/hud/TooltipShell.tsx`,
+ * `packages/web/src/hooks/useAltKey.ts`). All real tooltip surfaces in
+ * the tree now route through `TooltipShell`; this file is kept solely
+ * for the body-layout helper that downstream `tooltips/*` modules still
+ * compose.
+ *
+ * If you need a hover/floating tooltip surface, wrap your content in
+ * `<TooltipShell>` and (optionally) compose `<TooltipContent>` inside
+ * it for the standardized stat-list body layout.
+ */
+import React from 'react';
 
 export interface TooltipPosition {
   x: number;
   y: number;
-}
-
-interface TooltipProps {
-  content: React.ReactNode;
-  children: React.ReactElement;
-  position?: 'top' | 'bottom' | 'left' | 'right' | 'cursor';
-  delay?: number; // ms before showing tooltip
-  disabled?: boolean;
-  showOnAltOnly?: boolean; // Only show when Alt key is pressed
-  className?: string;
-}
-
-/**
- * Rich tooltip component following Civ VII style.
- * Shows content on hover with optional delay and Alt-key requirement.
- */
-export function Tooltip({
-  content,
-  children,
-  position = 'top',
-  delay = 500,
-  disabled = false,
-  showOnAltOnly = false,
-  className = '',
-}: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState<TooltipPosition>({ x: 0, y: 0 });
-  const [isAltPressed, setIsAltPressed] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        setIsAltPressed(true);
-        // If Alt is pressed and we're hovering, show immediately
-        if (isVisible && showOnAltOnly) {
-          showTooltip();
-        }
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        setIsAltPressed(false);
-        if (showOnAltOnly) {
-          hideTooltip();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [isVisible, showOnAltOnly]);
-
-  const showTooltip = () => {
-    if (disabled) return;
-    if (showOnAltOnly && !isAltPressed) return;
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    let x = 0;
-    let y = 0;
-
-    switch (position) {
-      case 'top':
-        x = rect.left + rect.width / 2;
-        y = rect.top;
-        break;
-      case 'bottom':
-        x = rect.left + rect.width / 2;
-        y = rect.bottom;
-        break;
-      case 'left':
-        x = rect.left;
-        y = rect.top + rect.height / 2;
-        break;
-      case 'right':
-        x = rect.right;
-        y = rect.top + rect.height / 2;
-        break;
-      case 'cursor':
-        x = rect.left + rect.width / 2;
-        y = rect.bottom + 10;
-        break;
-    }
-
-    setTooltipPos({ x, y });
-    setIsVisible(true);
-  };
-
-  const hideTooltip = () => {
-    setIsVisible(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-
-  const handleMouseEnter = () => {
-    if (disabled) return;
-
-    if (showOnAltOnly && !isAltPressed) {
-      // Just mark as ready to show, don't show yet
-      return;
-    }
-
-    if (delay > 0) {
-      timeoutRef.current = setTimeout(showTooltip, delay);
-    } else {
-      showTooltip();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    hideTooltip();
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (position === 'cursor' && isVisible) {
-      setTooltipPos({ x: e.clientX, y: e.clientY + 15 });
-    }
-  };
-
-  return (
-    <>
-      <div
-        ref={containerRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onMouseMove={handleMouseMove}
-        className={className}
-        style={{ display: 'inline-block' }}
-      >
-        {children}
-      </div>
-
-      {isVisible && (
-        <div
-          className="fixed z-50 pointer-events-none"
-          style={{
-            left: tooltipPos.x,
-            top: tooltipPos.y,
-            transform: position === 'top' || position === 'bottom'
-              ? 'translateX(-50%) translateY(-100%)'
-              : position === 'left'
-              ? 'translateX(-100%) translateY(-50%)'
-              : position === 'right'
-              ? 'translateY(-50%)'
-              : 'translateX(-50%)',
-            marginTop: position === 'top' ? '-8px' : position === 'bottom' ? '8px' : '0',
-            marginLeft: position === 'left' ? '-8px' : position === 'right' ? '8px' : '0',
-          }}
-        >
-          {content}
-        </div>
-      )}
-    </>
-  );
-}
-
-interface TooltipContentProps {
-  title: string;
-  subtitle?: string;
-  sections?: TooltipSection[];
-  children?: React.ReactNode;
 }
 
 export interface TooltipSection {
@@ -190,9 +38,17 @@ export interface TooltipItem {
   icon?: string;
 }
 
+interface TooltipContentProps {
+  title: string;
+  subtitle?: string;
+  sections?: TooltipSection[];
+  children?: React.ReactNode;
+}
+
 /**
- * TooltipContent provides a standardized layout for tooltip content.
- * Used by all game element tooltips.
+ * TooltipContent provides a standardized layout for tooltip body
+ * content. Used by all game element tooltips inside `tooltips/*`. Pure
+ * markup — owns no positioning, no keyboard listeners, no z-index.
  */
 export function TooltipContent({ title, subtitle, sections, children }: TooltipContentProps) {
   return (

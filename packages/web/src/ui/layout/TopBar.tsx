@@ -102,8 +102,14 @@ export function TopBar() {
             ⋯
           </button>
           {showMoreMenu && (
-            <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 z-50 min-w-36"
-              style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+            <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 min-w-36"
+              style={{
+                backgroundColor: 'var(--panel-bg)',
+                border: '1px solid var(--panel-border)',
+                boxShadow: 'var(--panel-shadow)',
+                borderRadius: 'var(--panel-radius)',
+                zIndex: 'var(--panel-z-overlay)' as unknown as number,
+              }}>
               <MenuButton label="👑 Governors" panelId="governors" onClick={() => openFromMenu('governors')} />
               <MenuButton label="🙏 Religion (R)" testId="open-religion" panelId="religion" onClick={() => openFromMenu('religion')} />
               <MenuButton label="🏛 Government (G)" testId="open-government" panelId="government" onClick={() => openFromMenu('government')} />
@@ -143,15 +149,23 @@ export function TopBar() {
         </button>
       </div>
 
-      {/* Save toast */}
+      {/* Save toast — tokenized chrome, no raw hex, no magic z-index.
+          C4 of the post-HUD UI cleanup: a follow-up cycle (HUD f) will
+          add a push API to the toast manager and route this through
+          `Notifications`; for now the local 2s self-dismissing toast
+          remains here with token-driven chrome. The status-helpful
+          panel token doubles as a "save succeeded" green so the
+          existing aesthetic is preserved while raw hex disappears. */}
       {saveToast && (
         <div
-          className="absolute top-14 right-4 px-4 py-2 rounded-lg z-50"
+          className="absolute top-14 right-4 px-4 py-2"
           style={{
-            backgroundColor: '#22c55e',
-            color: '#fff',
-            boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
+            backgroundColor: 'var(--panel-status-helpful)',
+            color: 'var(--color-bg)',
+            borderRadius: 'var(--panel-radius)',
+            boxShadow: 'var(--panel-shadow)',
             animation: 'fadeInOut 2s ease-out',
+            zIndex: 'var(--panel-z-overlay)' as unknown as number,
           }}
         >
           {saveToast}
