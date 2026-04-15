@@ -277,6 +277,7 @@ function TechCard({
 
   return (
     <button
+      type="button"
       className="rounded-lg p-2 text-left transition-all relative overflow-hidden"
       style={{
         gridColumn: tech.treePosition.col + 1,
@@ -289,7 +290,7 @@ function TechCard({
         animation: isActive ? 'techPulse 2s ease-in-out infinite' : undefined,
       }}
       onClick={onSelect}
-      disabled={isResearched || isActive || !prereqsMet}
+      disabled={!canResearch}
     >
       {/* Researched checkmark overlay */}
       {isResearched && (

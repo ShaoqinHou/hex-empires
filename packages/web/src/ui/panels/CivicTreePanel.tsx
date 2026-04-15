@@ -283,6 +283,7 @@ function CivicCard({
 
   return (
     <button
+      type="button"
       className="rounded-lg p-2 text-left transition-all relative overflow-hidden"
       style={{
         gridColumn: civic.treePosition.col + 1,
@@ -295,7 +296,7 @@ function CivicCard({
         animation: isActive ? 'civicPulse 2s ease-in-out infinite' : undefined,
       }}
       onClick={onSelect}
-      disabled={isResearched || isActive || !prereqsMet}
+      disabled={!canResearch}
     >
       {/* Researched checkmark overlay */}
       {isResearched && (
