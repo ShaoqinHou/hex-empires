@@ -3,10 +3,10 @@
 /**
  * VictoryPanel — smoke test for the PanelShell migration (cycle 3 batch 1).
  *
- * VictoryPanel has no `onClose` prop — it dismisses via internal state.
- * The shell still exposes a close button which we wire to the same
- * "dismissed" flag. We assert the shell is present and clicking close
- * removes the panel (state-based dismissal).
+ * After the C3 cleanup cycle, VictoryPanel is registered as its own
+ * `'victory'` panel id and visibility is owned by PanelManager. The
+ * panel now takes an `onClose` prop (no internal `dismissed` flag) and
+ * clicking the shell close button invokes the callback.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -57,15 +57,15 @@ afterEach(() => {
 describe('VictoryPanel (PanelShell)', () => {
   it('renders inside PanelShell with the shell title when a winner exists', () => {
     mockRef.state = makeWinningState();
-    const { getByTestId } = render(<VictoryPanel />);
-    expect(getByTestId('panel-shell-victoryProgress')).toBeTruthy();
+    const { getByTestId } = render(<VictoryPanel onClose={() => {}} />);
+    expect(getByTestId('panel-shell-victory')).toBeTruthy();
   });
 
-  it('dismisses the panel when the shell close button is clicked', () => {
+  it('invokes onClose when the shell close button is clicked', () => {
     mockRef.state = makeWinningState();
-    const { getByTestId, queryByTestId } = render(<VictoryPanel />);
-    fireEvent.click(getByTestId('panel-close-victoryProgress'));
-    // After dismissal the shell unmounts (panel returns null).
-    expect(queryByTestId('panel-shell-victoryProgress')).toBeNull();
+    const onClose = vi.fn();
+    const { getByTestId } = render(<VictoryPanel onClose={onClose} />);
+    fireEvent.click(getByTestId('panel-close-victory'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

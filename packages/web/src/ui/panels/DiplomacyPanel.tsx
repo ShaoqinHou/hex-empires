@@ -85,13 +85,13 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                   </span>
                   {hasAlliance && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded mt-0.5 block"
-                      style={{ color: '#60a5fa', backgroundColor: 'var(--color-bg)' }}>
+                      style={{ color: 'var(--panel-accent-info)', backgroundColor: 'var(--color-bg)' }}>
                       Allied
                     </span>
                   )}
                   {hasFriendship && !hasAlliance && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded mt-0.5 block"
-                      style={{ color: '#4ade80', backgroundColor: 'var(--color-bg)' }}>
+                      style={{ color: 'var(--panel-accent-success)', backgroundColor: 'var(--color-bg)' }}>
                       Friends
                     </span>
                   )}

@@ -279,7 +279,7 @@ function TechCard({
       {isResearched && (
         <div
           className="absolute top-1 right-1.5 text-sm leading-none"
-          style={{ color: '#22c55e', textShadow: '0 0 4px #22c55e' }}
+          style={{ color: 'var(--tech-state-researched)', textShadow: '0 0 4px var(--tech-state-researched)' }}
         >
           ✓
         </div>
@@ -329,14 +329,14 @@ function TechCard({
               className="h-full rounded-full transition-all"
               style={{
                 width: `${progressPct}%`,
-                backgroundColor: '#3b82f6',
-                boxShadow: '0 0 4px #3b82f6',
+                backgroundColor: 'var(--tech-state-selected)',
+                boxShadow: '0 0 4px var(--tech-state-selected)',
               }}
             />
           </div>
           <div
             className="text-[9px] mt-0.5 text-right tabular-nums"
-            style={{ color: '#93c5fd' }}
+            style={{ color: 'var(--panel-accent-info-soft)' }}
           >
             {progressPct}%
           </div>

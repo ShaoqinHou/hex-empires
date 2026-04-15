@@ -285,7 +285,7 @@ function CivicCard({
       {isResearched && (
         <div
           className="absolute top-1 right-1.5 text-sm leading-none"
-          style={{ color: '#22c55e', textShadow: '0 0 4px #22c55e' }}
+          style={{ color: 'var(--tech-state-researched)', textShadow: '0 0 4px var(--tech-state-researched)' }}
         >
           ✓
         </div>
@@ -342,7 +342,7 @@ function CivicCard({
           </div>
           <div
             className="text-[9px] mt-0.5 text-right tabular-nums"
-            style={{ color: '#e599f7' }}
+            style={{ color: 'var(--panel-accent-pink)' }}
           >
             {progressPct}%
           </div>

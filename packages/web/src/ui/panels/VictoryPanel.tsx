@@ -1,28 +1,25 @@
-import { useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import { PanelShell } from './PanelShell';
-import type { PanelId } from './panelRegistry';
 
-// VictoryPanel uses the `victoryProgress` registry id since the registry
-// doesn't carry a separate `victory` entry — both views share the same
-// modal slot conceptually.
-const PANEL_ID: PanelId = 'victoryProgress';
+interface VictoryPanelProps {
+  readonly onClose: () => void;
+}
 
-export function VictoryPanel() {
+/**
+ * VictoryPanel — the "game won" modal. Registered as its own `'victory'`
+ * panel id (distinct from the TopBar-triggered `'victoryProgress'` overview).
+ * Visibility is owned by the PanelManager; App.tsx auto-opens this panel
+ * when `state.victory.winner` becomes truthy.
+ */
+export function VictoryPanel({ onClose }: VictoryPanelProps) {
   const { state } = useGameState();
-  const [dismissed, setDismissed] = useState(false);
 
-  if (!state.victory.winner || dismissed) return null;
+  if (!state.victory.winner) return null;
 
   const winner = state.players.get(state.victory.winner);
 
-  // VictoryPanel has no external `onClose` prop — its dismissal is purely
-  // internal state. The shell's close button reuses the same "Continue
-  // Playing" affordance: flip `dismissed` so the panel unmounts.
-  const handleClose = () => setDismissed(true);
-
   return (
-    <PanelShell id={PANEL_ID} title="Victory!" onClose={handleClose} priority="modal">
+    <PanelShell id="victory" title="Victory!" onClose={onClose} priority="modal">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
           Victory!
@@ -71,7 +68,7 @@ export function VictoryPanel() {
           <button
             className="flex-1 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer transition-colors"
             style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
-            onClick={() => setDismissed(true)}
+            onClick={onClose}
           >
             Continue Playing
           </button>

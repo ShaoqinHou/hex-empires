@@ -5,7 +5,6 @@ import { GameCanvas } from './canvas/GameCanvas';
 import { Camera } from './canvas/Camera';
 import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
-import { VictoryPanel } from './ui/panels/VictoryPanel';
 import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
 import { YieldsToggle } from './ui/components/YieldsToggle';
@@ -37,6 +36,7 @@ const GovernmentPanel = lazy(() => import('./ui/panels/GovernmentPanel').then(m 
 const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m => ({ default: m.CommanderPanel })));
 const ImprovementPanel = lazy(() => import('./ui/panels/ImprovementPanel').then(m => ({ default: m.ImprovementPanel })));
 const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').then(m => ({ default: m.AudioSettingsPanel })));
+const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
@@ -56,6 +56,18 @@ function GameUI() {
     // openPanel is stable from useCallback; we intentionally only run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-open the victory modal when a winner is determined. Visibility is
+  // owned by the PanelManager (no local `dismissed` flag); dismissing the
+  // panel via ESC / close button / "Continue Playing" calls closePanel() and
+  // the panel stays closed for the rest of the session.
+  const winnerId = state.victory.winner;
+  useEffect(() => {
+    if (winnerId) {
+      openPanel('victory');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winnerId]);
 
   // Keyboard shortcuts for panel toggles. ESC is handled inside
   // PanelManagerProvider (capture phase) so it's not duplicated here.
@@ -172,12 +184,14 @@ function GameUI() {
           {activePanel === 'audioSettings' && (
             <AudioSettingsPanel onClose={closePanel} />
           )}
+          {activePanel === 'victory' && (
+            <VictoryPanel onClose={closePanel} />
+          )}
          </div>
         </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />
         <CrisisPanel />
-        <VictoryPanel />
 
         {/* Turn transition and notifications */}
         <TurnTransition />

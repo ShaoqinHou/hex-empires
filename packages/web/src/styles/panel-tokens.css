@@ -102,6 +102,7 @@
   --panel-muted-strong:    #475569;                   /* slate-600 — stronger muted text/border (alias of --panel-accent-neutral) */
   --panel-muted-border:    rgba(71, 85, 105, 0.30);  /* slate-600 @ 30% — card-interior border */
 
+
   /* Tech / civic tree node-state aliases. Reuse the accent palette
    * but give call-sites a semantic name for node state (researched /
    * selected / locked / unique). Per ui-cleanup-remaining.md C13,

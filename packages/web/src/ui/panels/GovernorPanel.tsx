@@ -95,7 +95,7 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
                 <button
                   onClick={() => dispatch({ type: 'RECRUIT_GOVERNOR', governorId: def.id })}
                   className="text-xs px-3 py-1.5 rounded cursor-pointer font-semibold"
-                  style={{ backgroundColor: '#22c55e', color: '#000' }}>
+                  style={{ backgroundColor: 'var(--panel-accent-success-bright)', color: '#000' }}>
                   Recruit
                 </button>
               </div>
@@ -157,7 +157,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
             <span className="text-xs">📍 {assignedCityName}</span>
             <button onClick={onUnassign}
               className="text-xs px-2 py-0.5 rounded cursor-pointer"
-              style={{ backgroundColor: '#ef444433', color: '#ef4444' }}>
+              style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--panel-accent-danger)' }}>
               Recall
             </button>
           </>
@@ -189,7 +189,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
       {/* Promotable abilities */}
       {promotableAbilities.length > 0 && (
         <div>
-          <p className="text-xs font-semibold mb-1" style={{ color: '#fbbf24' }}>Available Promotions:</p>
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--panel-accent-gold-soft)' }}>Available Promotions:</p>
           {promotableAbilities.map((a: GovernorAbility) => (
             <div key={a.id} className="flex items-center justify-between py-0.5">
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -198,7 +198,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
               <button
                 onClick={() => onPromote(a.id)}
                 className="text-xs px-2 py-0.5 rounded cursor-pointer"
-                style={{ backgroundColor: '#fbbf2433', color: '#fbbf24' }}>
+                style={{ backgroundColor: 'rgba(251, 191, 36, 0.2)', color: 'var(--panel-accent-gold-soft)' }}>
                 Unlock
               </button>
             </div>
