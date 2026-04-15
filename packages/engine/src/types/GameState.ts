@@ -115,6 +115,23 @@ export interface CityState {
 export interface ProductionItem {
   readonly type: 'unit' | 'building' | 'wonder' | 'district';
   readonly id: string;
+  /**
+   * ── Building-placement rework (Cycle 1) — optional locked tile ──
+   *
+   * Records the tile at which a building or wonder will materialise
+   * when production completes. Civ VII commits tile-first; this field
+   * is the on-queue memory of that commitment.
+   *
+   * - For `type: 'building'` and `type: 'wonder'`: optional for now
+   *   (legacy SET_PRODUCTION dispatches without a tile remain valid);
+   *   later cycles will make it required at the action layer.
+   * - For `type: 'unit'` and `type: 'district'`: should remain absent.
+   *
+   * When present on a building/wonder queue item and still valid at
+   * completion, `productionSystem` auto-places the building on that
+   * tile — no separate PLACE_BUILDING action required.
+   */
+  readonly lockedTile?: HexCoord;
 }
 
 // ── Players ──

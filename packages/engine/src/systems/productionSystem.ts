@@ -1,6 +1,9 @@
-import type { GameState, GameAction, CityState, UnitState } from '../types/GameState';
+import type { GameState, GameAction, CityState, UnitState, HexTile } from '../types/GameState';
+import type { HexCoord } from '../types/HexCoord';
+import type { BuildingId } from '../types/Ids';
 import { coordToKey } from '../hex/HexMath';
 import { calculateCityYields } from '../state/YieldCalculator';
+import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
 
 /** Generate deterministic unit ID from state */
 function nextUnitId(state: GameState, cityId: string): string {
@@ -211,23 +214,50 @@ function handlePurchaseItem(
   };
 }
 
+/**
+ * Apply the auto-placement state mutation for a building whose queue item
+ * carried a valid `lockedTile`. Mirrors `buildingPlacementSystem`'s map-tile
+ * write; inlined here because systems cannot import each other (see
+ * `.claude/rules/import-boundaries.md`). Pure — returns a new state.
+ *
+ * Pre-condition: `validateBuildingPlacement` has already returned `valid: true`
+ * for (cityId, tile, buildingId, state). Caller is responsible for having
+ * already added the building to `city.buildings`.
+ */
+function applyAutoPlacement(
+  tiles: Map<string, HexTile>,
+  tile: HexCoord,
+  buildingId: BuildingId,
+  state: GameState,
+): void {
+  const tileKey = coordToKey(tile);
+  const existingTile = tiles.get(tileKey) ?? state.map.tiles.get(tileKey);
+  if (!existingTile) return;
+  tiles.set(tileKey, { ...existingTile, building: buildingId });
+}
+
 function processProduction(state: GameState): GameState {
   const updatedCities = new Map(state.cities);
   const updatedUnits = new Map(state.units);
+  const updatedTiles = new Map<string, HexTile>();
+  let updatedBuiltWonders: BuildingId[] | null = null;
   const newLog = [...state.log];
   let changed = false;
+  let mapChanged = false;
 
   for (const [cityId, city] of state.cities) {
     if (city.owner !== state.currentPlayerId) continue;
     if (city.settlementType === 'town') continue; // Towns cannot produce via queue
     if (city.productionQueue.length === 0) continue;
 
-    const currentItem = city.productionQueue[0];
-    const yields = calculateCityYields(city, state);
+    // Read the freshest city snapshot (an earlier iteration may have updated it).
+    const currentCity = updatedCities.get(cityId) ?? city;
+    const currentItem = currentCity.productionQueue[0];
+    const yields = calculateCityYields(currentCity, state);
     let productionPerTurn = yields.production;
 
     // Barracks: +10% production toward military land units
-    if (city.buildings.includes('barracks') && currentItem.type === 'unit') {
+    if (currentCity.buildings.includes('barracks') && currentItem.type === 'unit') {
       const unitDef = state.config.units.get(currentItem.id);
       if (unitDef) {
         const militaryCategories: ReadonlyArray<string> = ['melee', 'ranged', 'cavalry', 'siege'];
@@ -238,17 +268,17 @@ function processProduction(state: GameState): GameState {
     }
 
     // Workshop: +10% production toward all buildings
-    if (city.buildings.includes('workshop') && currentItem.type === 'building') {
+    if (currentCity.buildings.includes('workshop') && currentItem.type === 'building') {
       productionPerTurn = Math.floor(productionPerTurn * 1.1);
     }
 
     // Celebration bonus: +celebrationBonus% production toward everything
-    const player = state.players.get(city.owner);
+    const player = state.players.get(currentCity.owner);
     if (player && player.celebrationBonus > 0) {
       productionPerTurn = Math.floor(productionPerTurn * (100 + player.celebrationBonus) / 100);
     }
 
-    const newProgress = city.productionProgress + productionPerTurn;
+    const newProgress = currentCity.productionProgress + productionPerTurn;
     const cost = getProductionCost(state, currentItem.id);
 
     if (newProgress >= cost) {
@@ -258,8 +288,8 @@ function processProduction(state: GameState): GameState {
         const newUnit: UnitState = {
           id: unitId,
           typeId: currentItem.id,
-          owner: city.owner,
-          position: city.position,
+          owner: currentCity.owner,
+          position: currentCity.position,
           movementLeft: 0, // refreshed next turn
           health: 100,
           experience: 0,
@@ -270,92 +300,140 @@ function processProduction(state: GameState): GameState {
 
         newLog.push({
           turn: state.turn,
-          playerId: city.owner,
-          message: `${city.name} produced ${currentItem.id}`,
+          playerId: currentCity.owner,
+          message: `${currentCity.name} produced ${currentItem.id}`,
           type: 'production',
         });
-      } else if (currentItem.type === 'building') {
-        // Check if this is a wonder (has isWonder flag)
-        const buildingDef = state.config.buildings.get(currentItem.id);
-        const isWonder = buildingDef?.isWonder === true;
-
-        // Add building to city
-        const wallsBonus = currentItem.id === 'walls' ? 100 : 0;
-        const updatedBuildings = [...city.buildings, currentItem.id];
 
         // Production overflow carries to next project (Civ VII rule)
         updatedCities.set(cityId, {
-          ...city,
-          buildings: updatedBuildings,
-          productionQueue: city.productionQueue.slice(1),
+          ...currentCity,
+          productionQueue: currentCity.productionQueue.slice(1),
           productionProgress: newProgress - cost,
-          defenseHP: city.defenseHP + wallsBonus,
+        });
+        changed = true;
+      } else if (currentItem.type === 'building' || currentItem.type === 'wonder') {
+        // Check if this is a wonder (has isWonder flag) — also triggers when
+        // the queue item is typed as 'wonder', which is the new data-driven
+        // path for the building-placement rework.
+        const buildingDef = state.config.buildings.get(currentItem.id);
+        const isWonder = currentItem.type === 'wonder' || buildingDef?.isWonder === true;
+
+        // ── Building-placement rework (Cycle 1) — auto-place on lockedTile ──
+        //
+        // If the queue item carries a locked tile, re-validate it *now*. A
+        // tile locked at SET_PRODUCTION time may be invalid at completion if
+        // the world changed (culture bomb, conquest, terrain crisis, a
+        // sibling queue item landed on the same tile this same turn, etc.).
+        // On failure, fall back to the legacy "completed but not placed"
+        // state — player will place it manually via PLACE_BUILDING.
+        const lockedTile = currentItem.lockedTile;
+        let autoPlaceTile: HexCoord | null = null;
+        if (lockedTile) {
+          const placementResult = validateBuildingPlacement(cityId, lockedTile, currentItem.id, state);
+          // Additional late-validation: the *live* tile (including any
+          // auto-placements from earlier iterations this same END_TURN) must
+          // still have no building. `validateBuildingPlacement` checks the
+          // V2 `urbanTiles` cap but not the legacy map-tile `building` field.
+          const lockedKey = coordToKey(lockedTile);
+          const liveTile = updatedTiles.get(lockedKey) ?? state.map.tiles.get(lockedKey);
+          const tileFree = liveTile ? (liveTile.building === null || liveTile.building === undefined) : false;
+          if (placementResult.valid && tileFree) {
+            autoPlaceTile = lockedTile;
+          }
+        }
+
+        // Add building to city
+        const wallsBonus = currentItem.id === 'walls' ? 100 : 0;
+        const updatedBuildings = [...currentCity.buildings, currentItem.id as BuildingId];
+
+        // Production overflow carries to next project (Civ VII rule)
+        updatedCities.set(cityId, {
+          ...currentCity,
+          buildings: updatedBuildings,
+          productionQueue: currentCity.productionQueue.slice(1),
+          productionProgress: newProgress - cost,
+          defenseHP: currentCity.defenseHP + wallsBonus,
         });
         changed = true;
 
         newLog.push({
           turn: state.turn,
-          playerId: city.owner,
-          message: `${city.name} built ${currentItem.id}${isWonder ? ' 🏆' : ''}`,
+          playerId: currentCity.owner,
+          message: `${currentCity.name} built ${currentItem.id}${isWonder ? ' 🏆' : ''}`,
           type: 'production',
         });
 
-        // If it's a wonder, add to global builtWonders
-        if (isWonder) {
-          return {
-            ...state,
-            cities: updatedCities,
-            units: updatedUnits,
-            log: newLog,
-            builtWonders: [...state.builtWonders, currentItem.id],
-          };
+        // Apply the auto-placement (writes the building onto the map tile).
+        if (autoPlaceTile) {
+          applyAutoPlacement(updatedTiles, autoPlaceTile, currentItem.id as BuildingId, state);
+          mapChanged = true;
+          newLog.push({
+            turn: state.turn,
+            playerId: currentCity.owner,
+            message: `Placed ${buildingDef?.name ?? currentItem.id} at (${autoPlaceTile.q}, ${autoPlaceTile.r})`,
+            type: 'production',
+          });
         }
-        continue;
+
+        // If it's a wonder, accumulate onto builtWonders (emitted at the end).
+        if (isWonder) {
+          updatedBuiltWonders = [...(updatedBuiltWonders ?? state.builtWonders), currentItem.id as BuildingId];
+        }
       } else if (currentItem.type === 'district') {
         // District production complete - trigger placement mode
         // For now, we'll just log it and remove from queue
         // The actual placement will be handled by PLACE_DISTRICT action
         updatedCities.set(cityId, {
-          ...city,
-          productionQueue: city.productionQueue.slice(1),
+          ...currentCity,
+          productionQueue: currentCity.productionQueue.slice(1),
           productionProgress: newProgress - cost,
         });
         changed = true;
 
         newLog.push({
           turn: state.turn,
-          playerId: city.owner,
-          message: `${city.name} completed ${currentItem.id} - ready to place`,
+          playerId: currentCity.owner,
+          message: `${currentCity.name} completed ${currentItem.id} - ready to place`,
           type: 'production',
         });
-        continue;
       }
-
-      // Production overflow carries to next project (Civ VII rule)
-      updatedCities.set(cityId, {
-        ...city,
-        productionQueue: city.productionQueue.slice(1),
-        productionProgress: newProgress - cost,
-      });
-      changed = true;
     } else {
       updatedCities.set(cityId, {
-        ...city,
+        ...currentCity,
         productionProgress: newProgress,
       });
       changed = true;
     }
   }
 
-  if (!changed && updatedUnits.size === state.units.size) return state;
+  if (!changed && updatedUnits.size === state.units.size && !mapChanged && updatedBuiltWonders === null) {
+    return state;
+  }
+
+  // Merge map tile updates (only if something was placed this turn).
+  const nextMap = mapChanged
+    ? { ...state.map, tiles: mergeTiles(state.map.tiles, updatedTiles) }
+    : state.map;
 
   return {
     ...state,
     cities: updatedCities,
     units: updatedUnits,
+    map: nextMap,
     log: newLog,
+    builtWonders: updatedBuiltWonders ?? state.builtWonders,
     lastValidation: null,
   };
+}
+
+function mergeTiles(
+  base: ReadonlyMap<string, HexTile>,
+  overrides: ReadonlyMap<string, HexTile>,
+): Map<string, HexTile> {
+  const merged = new Map(base);
+  for (const [k, v] of overrides) merged.set(k, v);
+  return merged;
 }
 
 /** Production cost for items — driven by state.config.units, state.config.buildings, and state.config.districts */

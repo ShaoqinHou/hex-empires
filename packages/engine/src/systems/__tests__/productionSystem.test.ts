@@ -85,6 +85,24 @@ describe('productionSystem', () => {
       expect(next.cities.get('c1')!.buildings).toContain('granary');
     });
 
+    it('adds building without lockedTile does NOT mutate any territory tile', () => {
+      // Regression guard for Cycle 1 of the building-placement rework:
+      // existing queue items (no lockedTile) must keep the legacy
+      // "completed but not placed" behaviour — no map-tile write.
+      const city = createTestCity({
+        productionQueue: [{ type: 'building', id: 'granary' }],
+        productionProgress: 54,
+      });
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = productionSystem(state, { type: 'END_TURN' });
+      const updated = next.cities.get('c1')!;
+      expect(updated.buildings).toContain('granary');
+      for (const tileKey of updated.territory) {
+        const tile = next.map.tiles.get(tileKey);
+        expect(tile?.building ?? null).toBe(null);
+      }
+    });
+
     it('does nothing with empty queue', () => {
       const city = createTestCity({ productionQueue: [] });
       const state = createTestState({ cities: new Map([['c1', city]]) });
