@@ -180,4 +180,47 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     expect(shell?.getAttribute('data-position')).toBe('floating');
     expect(shell?.getAttribute('data-tier')).toBe('compact');
   });
+
+  // ── Stack-cycle pill (cycle d) ────────────────────────────────────────
+
+  it('does NOT render the stack-cycle pill when only one entity sits on the tile', () => {
+    const warrior = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([warrior]);
+
+    const { container } = render(
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
+    );
+
+    expect(container.querySelector('[data-testid="tooltip-cycle-pill"]')).toBeNull();
+  });
+
+  it('renders the stack-cycle pill in the exact "1 / N — Tab to cycle" format when stack > 1', () => {
+    // 2 warriors + 1 settler = 3 entities total → pill reads "(1 / 3 — Tab to cycle)".
+    const w1 = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const w2 = makeUnit({ id: 'w2', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const settler = makeUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([w1, w2, settler]);
+
+    const { container } = render(
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
+    );
+
+    const pill = container.querySelector('[data-testid="tooltip-cycle-pill"]');
+    expect(pill).not.toBeNull();
+    expect(pill?.textContent).toBe('(1 / 3 — Tab to cycle)');
+  });
 });

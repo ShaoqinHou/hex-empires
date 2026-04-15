@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { HexCoord, GameState } from '@hex/engine';
+import type { HexCoord, GameState, HexTile, UnitState, UnitDef } from '@hex/engine';
 import {
   getTileContents,
   calculateCityYields,
@@ -28,9 +28,154 @@ interface TooltipOverlayProps {
   state: GameState;
 }
 
-// ─── Lightweight (always-on) tooltip body ───────────────────────────────────
+// ─── Yield aggregation helpers (pure) ─────────────────────────────────────
 
-function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }) {
+/** A single yield source contribution, broken out for the detailed tier. */
+interface YieldSourceContribution {
+  readonly label: string;
+  readonly food?: number;
+  readonly production?: number;
+  readonly gold?: number;
+  readonly science?: number;
+  readonly culture?: number;
+  readonly faith?: number;
+}
+
+/**
+ * Enumerate every yield contribution on the tile with its human label.
+ * Powers the detailed-tier per-source breakdown
+ * ("Grassland +2, Forest +1, Farm +1, River +1") AND the compact-tier
+ * summed yields. Pure — reads only the tile and engine data arrays.
+ */
+function collectYieldSources(tile: HexTile): ReadonlyArray<YieldSourceContribution> {
+  const sources: YieldSourceContribution[] = [];
+
+  const terrain = ALL_BASE_TERRAINS.find(t => t.id === tile.terrain);
+  if (terrain) {
+    const y = terrain.baseYields;
+    if (y.food || y.production || y.gold) {
+      sources.push({
+        label: terrain.name,
+        food: y.food,
+        production: y.production,
+        gold: y.gold,
+      });
+    }
+  }
+
+  if (tile.feature) {
+    const feature = ALL_FEATURES.find(f => f.id === tile.feature);
+    if (feature) {
+      const y = feature.yieldModifiers;
+      if (y.food || y.production || y.gold) {
+        sources.push({
+          label: feature.name,
+          food: y.food,
+          production: y.production,
+          gold: y.gold,
+        });
+      }
+    }
+  }
+
+  if (tile.improvement) {
+    const improvement = ALL_IMPROVEMENTS.find(i => i.id === tile.improvement);
+    if (improvement) {
+      const y = improvement.yields;
+      if (y.food || y.production || y.gold || y.science || y.culture || y.faith) {
+        sources.push({
+          label: improvement.name,
+          food: y.food,
+          production: y.production,
+          gold: y.gold,
+          science: y.science,
+          culture: y.culture,
+          faith: y.faith,
+        });
+      }
+    }
+  }
+
+  if (tile.resource) {
+    const resource = ALL_RESOURCES.find(r => r.id === tile.resource);
+    if (resource) {
+      // ResourceDef.yieldBonus matches YieldCalculator's expectation; fall
+      // back to {} if the test fixture's ResourceDef omits it.
+      const rd = resource as unknown as {
+        readonly yieldBonus?: Partial<{ food: number; production: number; gold: number }>;
+      };
+      const y = rd.yieldBonus ?? {};
+      if (y.food || y.production || y.gold) {
+        sources.push({
+          label: resource.name,
+          food: y.food,
+          production: y.production,
+          gold: y.gold,
+        });
+      }
+    }
+  }
+
+  if (tile.river.length > 0) {
+    // Matches YieldCalculator: rivers grant +1 gold.
+    sources.push({ label: 'River', gold: 1 });
+  }
+
+  return sources;
+}
+
+interface YieldTotals {
+  food: number;
+  production: number;
+  gold: number;
+  science: number;
+  culture: number;
+  faith: number;
+}
+
+function sumYieldSources(sources: ReadonlyArray<YieldSourceContribution>): YieldTotals {
+  const total: YieldTotals = {
+    food: 0, production: 0, gold: 0, science: 0, culture: 0, faith: 0,
+  };
+  for (const s of sources) {
+    total.food += s.food ?? 0;
+    total.production += s.production ?? 0;
+    total.gold += s.gold ?? 0;
+    total.science += s.science ?? 0;
+    total.culture += s.culture ?? 0;
+    total.faith += s.faith ?? 0;
+  }
+  return total;
+}
+
+function formatSourceYields(s: YieldSourceContribution): string {
+  const parts: string[] = [];
+  if (s.food)       parts.push(`🌾 +${s.food}`);
+  if (s.production) parts.push(`🔨 +${s.production}`);
+  if (s.gold)       parts.push(`💰 +${s.gold}`);
+  if (s.science)    parts.push(`🔬 +${s.science}`);
+  if (s.culture)    parts.push(`🎭 +${s.culture}`);
+  if (s.faith)      parts.push(`⛪ +${s.faith}`);
+  return parts.join(' ');
+}
+
+// ─── Entity splitting (civilian vs military) ──────────────────────────────
+
+function isCivilianUnit(typeId: string): boolean {
+  const def = ALL_UNITS.find(u => u.id === typeId);
+  return def?.category === 'civilian' || def?.category === 'religious';
+}
+
+// ─── Compact (always-on) tooltip body ─────────────────────────────────────
+
+function LightweightTooltipBody({
+  state, hex, stackSize, cycleIndex,
+}: {
+  state: GameState;
+  hex: HexCoord;
+  stackSize: number;
+  cycleIndex: number;
+}) {
   const contents = useMemo(
     () => getTileContents(state, hex, state.currentPlayerId),
     [state, hex],
@@ -46,37 +191,21 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
     ? ALL_IMPROVEMENTS.find(i => i.id === contents.improvement)
     : null;
 
-  // Aggregate tile yields: terrain base + feature modifiers
-  const food =
-    (terrain?.baseYields.food ?? 0) + (feature?.yieldModifiers.food ?? 0);
-  const production =
-    (terrain?.baseYields.production ?? 0) + (feature?.yieldModifiers.production ?? 0);
-  const gold =
-    (terrain?.baseYields.gold ?? 0) + (feature?.yieldModifiers.gold ?? 0);
-
+  // Header: "Terrain (Feature, River)" inline.
   const terrainLabel = terrain?.name ?? tile.terrain;
-  const featureLabel = feature?.name;
+  const inlineFeatures: string[] = [];
+  if (feature) inlineFeatures.push(feature.name);
+  if (tile.river.length > 0) inlineFeatures.push('River');
+  const headerSuffix = inlineFeatures.length > 0 ? ` (${inlineFeatures.join(', ')})` : '';
 
-  // City ownership label
-  let cityColor = 'text-slate-300';
-  if (contents.city) {
-    if (contents.city.owner === state.currentPlayerId) cityColor = 'text-green-400';
-    else {
-      const ownerPlayer = state.players.get(contents.city.owner);
-      if (ownerPlayer) cityColor = 'text-red-400';
-      else cityColor = 'text-slate-400';
-    }
-  }
+  // Summed yields across every source (terrain + feature + improvement +
+  // resource + river). Only non-zero yield types are rendered.
+  const sources = collectYieldSources(tile);
+  const totals = sumYieldSources(sources);
 
-  // Split own + enemy units into military vs civilian so the tooltip can show
-  // each category separately. Without this split, a warrior+settler stack would
-  // render as "Warrior ×2" (the top unit's name with the combined count), misreading
-  // the settler as a duplicate warrior. Preserves the M37-B regression fix.
-  const isCivilianUnit = (typeId: string): boolean => {
-    const def = ALL_UNITS.find(u => u.id === typeId);
-    return def?.category === 'civilian' || def?.category === 'religious';
-  };
-
+  // Per-category entity split preserves the M37-B regression fix: a
+  // warrior + settler stack must show BOTH, not "Warrior ×2". Compact
+  // tier still shows one entry per category (not the whole list).
   const ownMilitary = contents.ownUnits.filter(u => !isCivilianUnit(u.typeId));
   const ownCivilian = contents.ownUnits.filter(u => isCivilianUnit(u.typeId));
   const enemyMilitary = contents.enemyUnits.filter(u => !isCivilianUnit(u.typeId));
@@ -87,24 +216,54 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
   const topEnemyMilitary = enemyMilitary[0] ?? null;
   const topEnemyCivilian = enemyCivilian[0] ?? null;
 
-  const topOwnMilitaryDef = topOwnMilitary ? ALL_UNITS.find(u => u.id === topOwnMilitary.typeId) : null;
-  const topOwnCivilianDef = topOwnCivilian ? ALL_UNITS.find(u => u.id === topOwnCivilian.typeId) : null;
-  const topEnemyMilitaryDef = topEnemyMilitary ? ALL_UNITS.find(u => u.id === topEnemyMilitary.typeId) : null;
-  const topEnemyCivilianDef = topEnemyCivilian ? ALL_UNITS.find(u => u.id === topEnemyCivilian.typeId) : null;
+  const defFor = (u: UnitState | null): UnitDef | undefined =>
+    u ? ALL_UNITS.find(d => d.id === u.typeId) : undefined;
+
+  const topOwnMilitaryDef = defFor(topOwnMilitary);
+  const topOwnCivilianDef = defFor(topOwnCivilian);
+  const topEnemyMilitaryDef = defFor(topEnemyMilitary);
+  const topEnemyCivilianDef = defFor(topEnemyCivilian);
+
+  // City ownership colour hint.
+  let cityColor = 'text-slate-300';
+  if (contents.city) {
+    if (contents.city.owner === state.currentPlayerId) cityColor = 'text-green-400';
+    else if (state.players.get(contents.city.owner)) cityColor = 'text-red-400';
+    else cityColor = 'text-slate-400';
+  }
+
+  // Stack-cycle pill: shown whenever the combined stack has >1 entity.
+  // cycleIndex is supplied by HUDManager; Tab wiring already lives in the
+  // manager (see HUDManager.tsx). `(i / N — Tab to cycle)` is one-indexed
+  // for human readability.
+  const showCyclePill = stackSize > 1;
+  const displayIndex = stackSize > 0 ? (cycleIndex % stackSize) + 1 : 1;
 
   return (
-    <div className="text-xs" style={{ minWidth: '140px', lineHeight: '1.5' }}>
-      {/* Line 1: Terrain + feature */}
+    <div
+      data-testid="tooltip-body-compact"
+      className="text-xs"
+      style={{ minWidth: '160px', lineHeight: '1.5' }}
+    >
+      {/* Header: Terrain + inline features */}
       <div className="font-semibold text-amber-300">
         {terrainLabel}
-        {featureLabel && <span className="font-normal text-slate-300"> + {featureLabel}</span>}
+        {headerSuffix && (
+          <span className="font-normal text-slate-300">{headerSuffix}</span>
+        )}
       </div>
 
-      {/* Line 2: Compact yields (always shown even if all zero) */}
-      <div className="flex gap-2 text-slate-300 mt-0.5">
-        <span>🍖{food}</span>
-        <span>⚙️{production}</span>
-        <span>💰{gold}</span>
+      {/* Summed yields — one per type, non-zero only. */}
+      <div
+        data-testid="tooltip-yields-compact"
+        className="flex flex-wrap gap-2 text-slate-300 mt-0.5"
+      >
+        {totals.food !== 0       && <span>🌾 {totals.food}</span>}
+        {totals.production !== 0 && <span>🔨 {totals.production}</span>}
+        {totals.gold !== 0       && <span>💰 {totals.gold}</span>}
+        {totals.science !== 0    && <span>🔬 {totals.science}</span>}
+        {totals.culture !== 0    && <span>🎭 {totals.culture}</span>}
+        {totals.faith !== 0      && <span>⛪ {totals.faith}</span>}
       </div>
 
       {/* Resource */}
@@ -125,7 +284,8 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
         </div>
       )}
 
-      {/* Own military unit */}
+      {/* Own military — per-category count. M37-B: keeps civilian line
+          distinct so a warrior + settler pair renders BOTH. */}
       {topOwnMilitary && topOwnMilitaryDef && (
         <div className="text-green-300 mt-0.5">
           ⚔ {topOwnMilitaryDef.name} ({topOwnMilitary.health}hp)
@@ -135,8 +295,7 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
         </div>
       )}
 
-      {/* Own civilian unit (separate line — a settler stacked with a warrior must
-          show as its own entry, not collapse into the military count) */}
+      {/* Own civilian */}
       {topOwnCivilian && topOwnCivilianDef && (
         <div className="text-green-200 mt-0.5">
           👤 {topOwnCivilianDef.name} ({topOwnCivilian.health}hp)
@@ -146,7 +305,7 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
         </div>
       )}
 
-      {/* Enemy military unit */}
+      {/* Enemy military */}
       {topEnemyMilitary && topEnemyMilitaryDef && (
         <div className="text-red-400 mt-0.5">
           ⚔ {topEnemyMilitaryDef.name} ({topEnemyMilitary.health}hp)
@@ -156,7 +315,7 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
         </div>
       )}
 
-      {/* Enemy civilian unit */}
+      {/* Enemy civilian */}
       {topEnemyCivilian && topEnemyCivilianDef && (
         <div className="text-red-300 mt-0.5">
           👤 {topEnemyCivilianDef.name} ({topEnemyCivilian.health}hp)
@@ -165,13 +324,31 @@ function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoor
           )}
         </div>
       )}
+
+      {/* Stack-cycle pill — rendering only; Tab wiring lives in HUDManager. */}
+      {showCyclePill && (
+        <div
+          data-testid="tooltip-cycle-pill"
+          className="mt-1 text-slate-400"
+          style={{ fontSize: '11px' }}
+        >
+          ({displayIndex} / {stackSize} — Tab to cycle)
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Alt-expanded detailed tooltip body ─────────────────────────────────────
+// ─── Alt-expanded detailed tooltip body ───────────────────────────────────
 
-function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }) {
+function DetailedTooltipBody({
+  state, hex, stackSize, cycleIndex,
+}: {
+  state: GameState;
+  hex: HexCoord;
+  stackSize: number;
+  cycleIndex: number;
+}) {
   const contents = useMemo(
     () => getTileContents(state, hex, state.currentPlayerId),
     [state, hex],
@@ -186,13 +363,45 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
   const improvement = contents.improvement
     ? ALL_IMPROVEMENTS.find(i => i.id === contents.improvement)
     : null;
-  const building = tile.building
+  const tileBuilding = tile.building
     ? ALL_BUILDINGS.find(b => b.id === tile.building)
     : null;
 
+  const inlineFeatures: string[] = [];
+  if (feature) inlineFeatures.push(feature.name);
+  if (tile.river.length > 0) inlineFeatures.push('River');
+  const headerSuffix = inlineFeatures.length > 0 ? ` (${inlineFeatures.join(', ')})` : '';
+
+  const sources = collectYieldSources(tile);
+
+  // Per-source breakdown for the detailed tier — spec (e):
+  // "Grassland +1, Farm +1, River +1" listing by contributor.
   const cityYields = contents.city ? calculateCityYields(contents.city, state) : null;
 
-  // Gather all own + enemy units with their defs for full stat display
+  // Buildings inside the city (for detailed tier). Lists name +
+  // maintenance so the player can read their building roster without
+  // opening the city panel.
+  const cityBuildings = useMemo(() => {
+    if (!contents.city) return [];
+    return contents.city.buildings
+      .map(id => ALL_BUILDINGS.find(b => b.id === id))
+      .filter((b): b is NonNullable<typeof b> => b !== undefined);
+  }, [contents.city]);
+
+  // District on this tile — adjacency preview: the current adjacency
+  // bonus stored on the district plus its type/level. Detailed per-
+  // neighbour computation lives in `packages/engine/src/state/DistrictAdjacency.ts`
+  // and is read through `DistrictSlot.adjacencyBonus` (already persisted
+  // by the adjacency system) rather than re-evaluated in the view layer.
+  const district = contents.district;
+  const districtDef = useMemo(() => {
+    if (!district) return null;
+    const cfg = state.config as unknown as {
+      readonly districts?: ReadonlyMap<string, { readonly name: string; readonly type: string }>;
+    };
+    return cfg.districts?.get(district.type) ?? null;
+  }, [district, state]);
+
   const allUnitsWithDefs = [
     ...contents.ownUnits.map(u => ({
       unit: u,
@@ -206,15 +415,24 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
     })),
   ];
 
+  const showCyclePill = stackSize > 1;
+  const displayIndex = stackSize > 0 ? (cycleIndex % stackSize) + 1 : 1;
+
   return (
-    <div className="text-xs" style={{ minWidth: '220px', lineHeight: '1.6' }}>
-      {/* Terrain header */}
+    <div
+      data-testid="tooltip-body-detailed"
+      className="text-xs"
+      style={{ minWidth: '260px', lineHeight: '1.55' }}
+    >
+      {/* Header */}
       <div className="font-bold text-sm text-amber-400 mb-1">
         {terrain?.name ?? tile.terrain}
-        {feature && <span className="text-slate-300 font-normal"> + {feature.name}</span>}
+        {headerSuffix && (
+          <span className="text-slate-300 font-normal">{headerSuffix}</span>
+        )}
       </div>
 
-      {/* Terrain details */}
+      {/* Terrain stats */}
       <div className="text-slate-400 space-y-0.5 mb-2">
         <div className="flex justify-between">
           <span>Movement cost</span>
@@ -230,41 +448,28 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
         </div>
       </div>
 
-      {/* Yield breakdown */}
-      <div className="border-t border-slate-700 pt-2 mb-2">
-        <div className="text-slate-400 font-semibold mb-1">Tile Yields</div>
-        <div className="grid grid-cols-3 gap-1 text-slate-300">
-          {(terrain?.baseYields.food ?? 0) > 0 && (
-            <div>🌾 {terrain!.baseYields.food}</div>
-          )}
-          {(terrain?.baseYields.production ?? 0) > 0 && (
-            <div>🔨 {terrain!.baseYields.production}</div>
-          )}
-          {(terrain?.baseYields.gold ?? 0) > 0 && (
-            <div>💰 {terrain!.baseYields.gold}</div>
-          )}
-          {(feature?.yieldModifiers.food ?? 0) > 0 && (
-            <div className="text-green-300">🌾 +{feature!.yieldModifiers.food}</div>
-          )}
-          {(feature?.yieldModifiers.production ?? 0) > 0 && (
-            <div className="text-green-300">🔨 +{feature!.yieldModifiers.production}</div>
-          )}
-          {(feature?.yieldModifiers.gold ?? 0) > 0 && (
-            <div className="text-green-300">💰 +{feature!.yieldModifiers.gold}</div>
-          )}
-          {improvement?.yields.food && improvement.yields.food > 0 && (
-            <div className="text-blue-300">🌾 +{improvement.yields.food}</div>
-          )}
-          {improvement?.yields.production && improvement.yields.production > 0 && (
-            <div className="text-blue-300">🔨 +{improvement.yields.production}</div>
-          )}
-          {improvement?.yields.gold && improvement.yields.gold > 0 && (
-            <div className="text-blue-300">💰 +{improvement.yields.gold}</div>
-          )}
+      {/* Per-source yield breakdown — the detailed tier's headline. */}
+      {sources.length > 0 && (
+        <div
+          data-testid="tooltip-yields-breakdown"
+          className="border-t border-slate-700 pt-2 mb-2"
+        >
+          <div className="text-slate-400 font-semibold mb-1">Yield Breakdown</div>
+          <div className="space-y-0.5">
+            {sources.map((s, idx) => (
+              <div
+                key={`${s.label}-${idx}`}
+                className="flex justify-between gap-3 text-slate-300"
+              >
+                <span className="text-slate-400">{s.label}</span>
+                <span>{formatSourceYields(s)}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Resource */}
+      {/* Resource detail */}
       {resource && (
         <div className="border-t border-slate-700 pt-2 mb-2">
           <div className="flex items-center gap-2">
@@ -292,16 +497,43 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
         </div>
       )}
 
-      {/* Building (tile-placed) */}
-      {building && (
+      {/* Tile-placed building (rarer — most buildings live in city/district). */}
+      {tileBuilding && (
         <div className="border-t border-slate-700 pt-2 mb-2">
-          <div className="text-purple-300">🏗 {building.name}</div>
+          <div className="text-purple-300 font-semibold">🏗 {tileBuilding.name}</div>
+          {tileBuilding.maintenance > 0 && (
+            <div className="text-slate-400">
+              Maintenance: {tileBuilding.maintenance} gold/turn
+            </div>
+          )}
         </div>
       )}
 
-      {/* City */}
+      {/* District adjacency preview */}
+      {district && (
+        <div
+          data-testid="tooltip-district-adjacency"
+          className="border-t border-slate-700 pt-2 mb-2"
+        >
+          <div className="font-semibold text-purple-300">
+            {districtDef?.name ?? district.type} (Lv {district.level})
+          </div>
+          <div className="text-slate-400">
+            Adjacency bonus:{' '}
+            <span className={district.adjacencyBonus >= 0 ? 'text-green-400' : 'text-red-400'}>
+              {district.adjacencyBonus >= 0 ? '+' : ''}
+              {district.adjacencyBonus}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* City detail */}
       {contents.city && (
-        <div className="border-t border-slate-700 pt-2 mb-2">
+        <div
+          data-testid="tooltip-city-detail"
+          className="border-t border-slate-700 pt-2 mb-2"
+        >
           <div className="font-bold text-amber-400 mb-1">{contents.city.name}</div>
           <div className="space-y-0.5 text-slate-400">
             <div className="flex justify-between">
@@ -351,6 +583,27 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
               <div>⛪ {cityYields.faith.toFixed(1)}</div>
             </div>
           )}
+          {cityBuildings.length > 0 && (
+            <div
+              data-testid="tooltip-city-buildings"
+              className="mt-2 pt-2 border-t border-slate-700 space-y-1"
+            >
+              <div className="text-slate-400 font-semibold">Buildings</div>
+              {cityBuildings.slice(0, 6).map(b => (
+                <div key={b.id} className="flex justify-between gap-2 text-slate-300">
+                  <span>🏛 {b.name}</span>
+                  <span className="text-slate-400">
+                    {b.maintenance > 0 ? `−${b.maintenance}💰` : 'free'}
+                  </span>
+                </div>
+              ))}
+              {cityBuildings.length > 6 && (
+                <div className="text-slate-500">
+                  …and {cityBuildings.length - 6} more
+                </div>
+              )}
+            </div>
+          )}
           {contents.city.productionQueue.length > 0 &&
             contents.city.settlementType === 'city' && (
               <div className="mt-2">
@@ -362,48 +615,61 @@ function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }
         </div>
       )}
 
-      {/* All units (own + enemy, full stats) */}
+      {/* Full unit stats — UnitStateTooltip surfaces hp/xp/movement/
+          promotions in one consistent sub-widget. */}
       {allUnitsWithDefs.length > 0 && (
-        <div className="border-t border-slate-700 pt-2 space-y-2">
+        <div
+          data-testid="tooltip-unit-detail"
+          className="border-t border-slate-700 pt-2 space-y-2"
+        >
           {allUnitsWithDefs.map(({ unit, def, isEnemy }) => (
             <div key={unit.id}>
               {def ? (
                 <UnitStateTooltip unitState={unit} unitDef={def} />
               ) : (
                 <div className={isEnemy ? 'text-red-400' : 'text-green-300'}>
-                  {unit.typeId} ({unit.health}hp)
+                  {unit.typeId} ({unit.health}hp, xp {unit.experience}, mv {unit.movementLeft})
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Stack-cycle pill mirrors compact-tier. */}
+      {showCyclePill && (
+        <div
+          data-testid="tooltip-cycle-pill"
+          className="mt-1 text-slate-400"
+          style={{ fontSize: '11px' }}
+        >
+          ({displayIndex} / {stackSize} — Tab to cycle)
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────────
+// ─── Main export ─────────────────────────────────────────────────────────
 
 /**
  * Hover tooltip for map hexes — tile terrain, entity snapshot, unit stats.
  *
- * Migrated to use {@link TooltipShell} for positioning (cycle (c) of the HUD
- * audit). The shell owns quadrant-aware diagonal offset, viewport clamping,
- * pointer-events discipline, and context-menu suppression. The old
- * `ClampedTooltipPositioner` with `translate(-50%, -100%)` placed the tooltip
- * directly above the anchor and covered the top of the hovered hex — the #1
- * audit complaint. `TooltipShell` offsets diagonally away from viewport edges
- * so the focal hex stays visible.
+ * Cycles (d) + (e) of the HUD UI rethink — expanded tooltip bodies.
  *
- * TODO(cycle-e): migrate the Alt-held detailed tier to
- * `position="fixed-corner"` so the detailed body does not occlude the hex at
- * all. Cycle (c) ships compact-tier positioning only; detailed tier keeps the
- * same anchor for now, just at tier="detailed" (slightly wider padding).
+ *   • Compact tier (default): terrain name + inline features, summed
+ *     yields one-per-type, resource/improvement/city summaries, per-
+ *     category top entity (preserves M37-B civilian+military split),
+ *     stack-cycle pill `(i / N — Tab to cycle)` when stack > 1.
+ *   • Detailed tier (Alt-held): everything compact shows PLUS per-source
+ *     yield breakdown, full unit stats via `UnitStateTooltip`, building
+ *     detail (maintenance), district adjacency preview.
  *
- * This component lives in `ui/hud/` rather than `canvas/` because it wraps
- * `TooltipShell` (also in `ui/hud/`); the `canvas/ → ui/` import boundary
- * forbids the reverse. The camera / hex-to-screen conversion is now taken as
- * a `hexToScreen` function prop so the component stays canvas-free.
+ * Tier is routed through `TooltipShell` (cycle (c)); the shell adjusts
+ * padding + max-width. Anchor and projector stay identical across tiers
+ * so toggling Alt does not jump the overlay. Tab-to-cycle wiring lives
+ * in `HUDManager`; this component just reads the cycle index and renders
+ * the indicator pill.
  */
 export function TooltipOverlay({
   hexToScreen,
@@ -442,6 +708,12 @@ export function TooltipOverlay({
   const projected = hexToScreen(hoveredHex.q, hoveredHex.r);
   if (!projected) return null;
 
+  // Stack size + cycle index derived from TileContents (same source the
+  // bodies use to render per-category entity lines).
+  const contents = getTileContents(state, hoveredHex, state.currentPlayerId);
+  const stackSize = contents.ownUnits.length + contents.enemyUnits.length;
+  const cycleIndex = anchorKey !== null ? hud.cycleIndex(anchorKey) : 0;
+
   return (
     <TooltipShell
       id="tileTooltip"
@@ -452,9 +724,19 @@ export function TooltipOverlay({
       hexToScreen={hexToScreen}
     >
       {isAltPressed ? (
-        <DetailedTooltipBody state={state} hex={hoveredHex} />
+        <DetailedTooltipBody
+          state={state}
+          hex={hoveredHex}
+          stackSize={stackSize}
+          cycleIndex={cycleIndex}
+        />
       ) : (
-        <LightweightTooltipBody state={state} hex={hoveredHex} />
+        <LightweightTooltipBody
+          state={state}
+          hex={hoveredHex}
+          stackSize={stackSize}
+          cycleIndex={cycleIndex}
+        />
       )}
     </TooltipShell>
   );
