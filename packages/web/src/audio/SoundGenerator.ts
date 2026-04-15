@@ -4,12 +4,15 @@
  */
 
 export class SoundGenerator {
-  private audioContext: AudioContext | null = null;
+  private audioContext: AudioContext | null;
 
-  constructor() {
-    if (typeof window !== 'undefined' && 'AudioContext' in window) {
-      this.audioContext = new AudioContext();
-    }
+  /**
+   * @param ctx - Shared AudioContext provided by AudioManager. SoundGenerator
+   *              does NOT create its own context — the caller is responsible for
+   *              the context lifecycle and for closing it on dispose.
+   */
+  constructor(ctx: AudioContext | null = null) {
+    this.audioContext = ctx;
   }
 
   playTone(frequency: number, duration: number, volume: number = 0.1): void {
@@ -31,19 +34,47 @@ export class SoundGenerator {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
-  playClick(): void {
+  // ---------------------------------------------------------------------------
+  // Named methods matching the bare-name convention used by AudioManager.
+  // ---------------------------------------------------------------------------
+
+  click(): void {
     this.playTone(800, 0.1, 0.05);
   }
 
-  playConfirm(): void {
+  confirm(): void {
     this.playTone(1000, 0.15, 0.08);
   }
 
-  playSelect(): void {
+  select(): void {
     this.playTone(600, 0.1, 0.06);
   }
 
-  playError(): void {
+  error(): void {
     this.playTone(200, 0.2, 0.08);
+  }
+
+  unitMove(): void {
+    this.playTone(400, 0.12, 0.06);
+  }
+
+  attack(): void {
+    this.playTone(150, 0.18, 0.1);
+  }
+
+  death(): void {
+    this.playTone(100, 0.3, 0.08);
+  }
+
+  cityFound(): void {
+    this.playTone(1200, 0.25, 0.1);
+  }
+
+  victory(): void {
+    this.playTone(1500, 0.4, 0.12);
+  }
+
+  defeat(): void {
+    this.playTone(80, 0.5, 0.1);
   }
 }
