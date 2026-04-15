@@ -1,6 +1,7 @@
 import type { GameState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import { WONDER_PLACEMENT_RULES } from '../data/wonders/placement-rules';
+import { evaluateWonderRule } from './WonderPlacement';
 
 /**
  * Result of validating a wonder placement candidate.
@@ -36,7 +37,7 @@ export function isWonderPlacementValid(
     return { valid: true };
   }
 
-  if (rule.canPlace(tile, state)) {
+  if (evaluateWonderRule(rule, tile, state)) {
     return { valid: true };
   }
 
