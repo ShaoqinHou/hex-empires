@@ -24,9 +24,9 @@
  * scaffolding forward-compatible.
  *
  * Import boundaries:
- *  - Imports only from `../types/`, `../data/religion/` (same precedent
- *    as `crisisSystem`, `improvementSystem`, …), and nothing from other
- *    systems.
+ *  - Imports only from `../types/` and nothing from other systems.
+ *  - Belief content is accessed through `state.config.founderBeliefs` and
+ *    `state.config.followerBeliefs` — no direct data barrel imports.
  */
 
 import type { GameState, GameAction, GameEvent, PlayerState } from '../types/GameState';
@@ -38,8 +38,6 @@ import type {
   ReligionRecord,
   ReligionSlotState,
 } from '../types/Religion';
-import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
-import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
 
 /**
  * Faith cost to found a religion. Mirrors RELIGION_FOUND_FAITH_COST in
@@ -211,8 +209,8 @@ function handleFoundReligion(
 
   // Belief existence — both belief IDs must be in their respective
   // catalogues.
-  if (!ALL_FOUNDER_BELIEFS.some((b) => b.id === founderBelief)) return state;
-  if (!ALL_FOLLOWER_BELIEFS.some((b) => b.id === followerBelief)) return state;
+  if (!state.config.founderBeliefs.has(founderBelief)) return state;
+  if (!state.config.followerBeliefs.has(followerBelief)) return state;
 
   // Holy city must exist and be owned by the founding player.
   const city = state.cities.get(cityId);

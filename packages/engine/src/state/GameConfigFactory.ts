@@ -12,6 +12,8 @@ import type { ImprovementDef } from '../types/Improvement';
 import type { PantheonDef } from '../types/Religion';
 import type { GovernmentDef } from '../data/governments/governments';
 import type { PolicyDef } from '../data/governments/policies';
+import type { FounderBeliefDef } from '../data/religion/founder-beliefs';
+import type { FollowerBeliefDef } from '../data/religion/follower-beliefs';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 import { ALL_UNITS } from '../data/units';
@@ -29,6 +31,8 @@ import { ALL_LEADERS } from '../data/leaders';
 import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { ALL_PANTHEONS } from '../data/religion';
 import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
+import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
+import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -80,5 +84,11 @@ export function createGameConfig(): GameConfig {
   const policies = new Map<string, PolicyDef>();
   for (const p of ALL_POLICIES) policies.set(p.id, p);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies };
+  const founderBeliefs = new Map<string, FounderBeliefDef>();
+  for (const f of ALL_FOUNDER_BELIEFS) founderBeliefs.set(f.id, f);
+
+  const followerBeliefs = new Map<string, FollowerBeliefDef>();
+  for (const f of ALL_FOLLOWER_BELIEFS) followerBeliefs.set(f.id, f);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs };
 }

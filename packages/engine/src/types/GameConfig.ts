@@ -11,6 +11,8 @@ import type { ImprovementDef } from './Improvement';
 import type { PantheonDef } from './Religion';
 import type { GovernmentDef } from '../data/governments/governments';
 import type { PolicyDef } from '../data/governments/policies';
+import type { FounderBeliefDef } from '../data/religion/founder-beliefs';
+import type { FollowerBeliefDef } from '../data/religion/follower-beliefs';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 
@@ -36,4 +38,6 @@ export interface GameConfig {
   readonly pantheons: ReadonlyMap<string, PantheonDef>;
   readonly governments: ReadonlyMap<string, GovernmentDef>;
   readonly policies: ReadonlyMap<string, PolicyDef>;
+  readonly founderBeliefs: ReadonlyMap<string, FounderBeliefDef>;
+  readonly followerBeliefs: ReadonlyMap<string, FollowerBeliefDef>;
 }
