@@ -18,13 +18,11 @@ The full rule set is `.claude/rules/ui-overlays.md`. The audit motivating the pa
 
 - Familiarity with `.claude/rules/ui-overlays.md` (the rules) and `.claude/rules/tech-conventions.md` (no raw hex).
 - Familiarity with `.claude/rules/panels.md` — the HUD layer mirrors the panel layer's vocabulary.
-- **Foundation check.** Confirm the HUD foundation exists in the tree:
-  - `packages/web/src/ui/hud/HUDManager.tsx`
-  - `packages/web/src/ui/hud/TooltipShell.tsx`
-  - `packages/web/src/ui/hud/hudRegistry.ts`
-  - `packages/web/src/styles/hud-tokens.css`
-
-  If any of those are missing, **this skill is blocked** on the HUD audit migration landing (`.claude/workflow/design/hud-ui-audit.md`). Do not freelance a replacement — wait for the foundation, or contribute to the migration cycle. In the meantime, any overlay work should at minimum (a) use only CSS tokens from `panel-tokens.css`, (b) avoid magic-number `position: absolute`, (c) not hold visibility state in local `useState<boolean>`, so migration later is mechanical.
+- The HUD foundation lives in the tree (shipped across HUD cycles a–k, M-HUD1 → M-HUD3):
+  - `packages/web/src/ui/hud/HUDManager.tsx` — context + ESC
+  - `packages/web/src/ui/hud/TooltipShell.tsx` — shared tooltip chrome
+  - `packages/web/src/ui/hud/hudRegistry.ts` — `HUDElementId` union + metadata
+  - `packages/web/src/styles/hud-tokens.css` — HUD-specific design tokens
 - You know what overlay type you are adding (see Step 1).
 - The dev server is runnable: `npm run dev:web` (port 5174).
 
@@ -321,8 +319,7 @@ export function PlacementHint({ anchor, scores, tier = 'compact' }: PlacementHin
 
 Copy this into your PR description or commit message body.
 
-- [ ] Foundation exists: `HUDManager`, `TooltipShell`, `hudRegistry`, `hud-tokens.css` all in the tree (if not, this cycle is blocked on the audit migration)
-- [ ] `HUDElementId` added to `hudRegistry.ts` union and `HUD_REGISTRY` map (with type, defaultPosition, supportsCycle, supportsTiers, sticky)
+- [ ] `HUDElementId` added to `hudRegistry.ts` union and `HUD_REGISTRY` map (with priority and any optional `defaultTimeout`)
 - [ ] Component wraps body in `<TooltipShell>` (or appropriate shell) with matching `id`
 - [ ] Position strategy chosen at design time (floating / fixed-corner / side), not conditionally
 - [ ] No local `useState<boolean>` for visibility — caller decides when to mount
@@ -346,9 +343,11 @@ Copy this into your PR description or commit message body.
 - Sibling rules (the panel layer this mirrors): `.claude/rules/panels.md`
 - Audit / migration plan: `.claude/workflow/design/hud-ui-audit.md`
 - Running catalogue: `.claude/workflow/design/hud-elements.md`
-- Implementation (planned):
+- Implementation (in tree):
   - `packages/web/src/ui/hud/HUDManager.tsx`
   - `packages/web/src/ui/hud/TooltipShell.tsx`
   - `packages/web/src/ui/hud/hudRegistry.ts`
+  - `packages/web/src/ui/hud/TooltipOverlay.tsx` — reference floating tooltip with stack-cycle + tier
+  - `packages/web/src/ui/hud/UrbanPlacementHintBadge.tsx` — reference floating hint badge
   - `packages/web/src/styles/hud-tokens.css`
 - Reference for tokens-only chrome discipline: `ReligionPanel.tsx`, `GovernmentPanel.tsx` (same philosophy, panel side).

@@ -2,13 +2,13 @@
 
 ## The Rule
 
-HUD and overlay elements in `packages/web/src/` — tooltips, notifications, toasts, validation feedback, hover previews, turn transitions, minimap, hint badges — are managed by a single React context (`HUDManager`, planned), wrapped in a shared chrome component (`TooltipShell`, planned) when the element is tooltip-shaped, styled exclusively from tokens in `packages/web/src/styles/hud-tokens.css` (planned) plus the existing `panel-tokens.css`, and positioned through a shared strategy — never via ad-hoc `position: absolute` with magic-number offsets.
+HUD and overlay elements in `packages/web/src/` — tooltips, notifications, toasts, validation feedback, hover previews, turn transitions, minimap, hint badges — are managed by a single React context (`HUDManager`), wrapped in a shared chrome component (`TooltipShell`) when the element is tooltip-shaped, styled exclusively from tokens in `packages/web/src/styles/hud-tokens.css` plus the existing `panel-tokens.css`, and positioned through a shared strategy — never via ad-hoc `position: absolute` with magic-number offsets.
 
 Panels (explicit player-triggered surfaces that block panel-level interaction) are governed by `.claude/rules/panels.md`. This document governs everything else — the transient, cursor-driven, engine-driven overlays that float over the map.
 
-**Implementation status:** the foundation (`HUDManager`, `TooltipShell`, `hud-tokens.css`) does not yet exist in the tree. The HUD UI audit (`.claude/workflow/design/hud-ui-audit.md`) catalogues the current ad-hoc overlays and their drift. This rule doc defines the target pattern that audit implementation will land on, and that all new HUD work should anticipate. Where the rule refers to `HUDManager` or `TooltipShell` as existing APIs, read it as "the target shape" until the audit migration lands. New overlays written today should already use CSS tokens, already avoid magic positioning, and already keep visibility concerns out of local component state — so migration later is mechanical.
+The foundation shipped across HUD cycles a–k (M-HUD1 → M-HUD3): `HUDManager`, `TooltipShell`, `hudRegistry`, and `hud-tokens.css` all live in the tree, and every overlay catalogued by the audit has been migrated. The running registry of every HUD element currently in the tree is `.claude/workflow/design/hud-elements.md` — cross-check it whenever you add or rename one.
 
-These rules exist because, in parallel with the panel manager audit (M31 → M33), the HUD layer has accumulated the same class of drift: three tooltip positioning strategies, two duplicate-content bugs (M37-B regression test still in place), validation feedback that steals focus from the canvas, minimap components re-implementing `user-select: none` locally, and at least four overlays with hard-coded pixel offsets that clip at small viewports. The HUD audit quantifies the exact list.
+These rules exist because, in parallel with the panel manager audit (M31 → M33), the HUD layer had accumulated the same class of drift: three tooltip positioning strategies, two duplicate-content bugs (M37-B regression test still in place), validation feedback that stole focus from the canvas, minimap components re-implementing `user-select: none` locally, and at least four overlays with hard-coded pixel offsets that clipped at small viewports. The audit (`.claude/workflow/design/hud-ui-audit.md`) catalogued that drift; HUD cycles a–k retired it. Following the rules below keeps it from re-accumulating.
 
 ---
 
@@ -36,13 +36,13 @@ Do NOT include (these are panels, governed by `.claude/rules/panels.md`):
 
 ---
 
-## HUDManager Context (planned)
+## HUDManager Context
 
-**Location (planned):** `packages/web/src/ui/hud/HUDManager.tsx`
+**Location:** `packages/web/src/ui/hud/HUDManager.tsx`
 
 A single React context that owns HUD-level state and coordinated dismiss. Provider is mounted once near the top of the React tree, same nesting level as `PanelManagerProvider`.
 
-### Target API
+### API
 
 ```typescript
 interface HUDManagerValue {
@@ -88,13 +88,13 @@ Per-overlay ESC handlers are forbidden. One handler at the manager level, period
 
 ---
 
-## TooltipShell Component (planned)
+## TooltipShell Component
 
-**Location (planned):** `packages/web/src/ui/hud/TooltipShell.tsx`
+**Location:** `packages/web/src/ui/hud/TooltipShell.tsx`
 
 Shared chrome for tooltip-shaped overlays. Not every HUD element uses it — toasts and the minimap have their own shell patterns — but every hover tooltip, combat preview, placement hint, and validation bubble does.
 
-### Target props
+### Props
 
 ```typescript
 interface TooltipShellProps {
@@ -173,7 +173,7 @@ export function TileTooltip({ anchor, tile }: TileTooltipProps) {
 
 Positioning is the #1 drift vector. These are non-negotiable:
 
-1. **No ad-hoc `absolute` positioning with magic numbers.** Every overlay goes through `TooltipShell` (tooltip-shaped) or one of the named shells that will land in `packages/web/src/ui/hud/` for toasts/minimap/turn-transition. Inline `style={{ position: 'absolute', top: 16, right: 24 }}` is forbidden.
+1. **No ad-hoc `absolute` positioning with magic numbers.** Every overlay goes through `TooltipShell` (tooltip-shaped) or, for toasts / minimap / turn-transition surfaces that have their own shell pattern, through the existing fixed-position helpers in `packages/web/src/ui/hud/` and `packages/web/src/ui/components/`. Inline `style={{ position: 'absolute', top: 16, right: 24 }}` is forbidden.
 2. **Overlays must not cover their anchor.** For a hovered tile, the overlay either offsets far enough to keep the tile visible, or switches to `fixed-corner`. The threshold is ~30% visible-tile occlusion; `TooltipShell` computes this and auto-switches when needed.
 3. **Stack-cycle support.** When the anchor has multiple entities (two units on a hex, a unit + a district), the overlay must indicate cycle-ability (`Tab to cycle`, or on-click arrows) and render through `HUDManager.cycleIndex`. Never silently show only one entity; never duplicate-render (regression test in `packages/web/src/__tests__/playwright/tooltip.spec.ts` guards the duplicate-content bug fixed in M37-B).
 4. **Clamp to viewport.** Every shell clamps its final position into viewport bounds minus a small margin. No overlay may be partially or fully off-screen.
@@ -199,9 +199,9 @@ Overlays inherit the panel layer's game-feel rules and add their own:
 The rule mirrors panels: **tokens only, never raw hex**.
 
 - **Chrome-adjacent surfaces** (shell bg, border, divider, typography base) → `var(--panel-*)` tokens from `panel-tokens.css` so HUD chrome matches panel chrome; the two systems share the dark-slate aesthetic.
-- **HUD-specific values** (tooltip arrow color, toast fade timing, validation-red accent, stack-cycle indicator pill) → `var(--hud-*)` tokens from `hud-tokens.css` (planned). When the audit lands, it will populate this file; until then, reuse panel tokens and avoid hard-coded values.
+- **HUD-specific values** (tooltip arrow color, toast fade timing, validation-red accent, stack-cycle indicator pill) → `var(--hud-*)` tokens from `hud-tokens.css`. Add new tokens here before introducing a new HUD-specific value anywhere in code.
 - **Game-data display** (faction colors in a player-activity toast, yield icons in a combat preview) → existing global tokens in `packages/web/src/index.css` (`--color-gold`, `--color-surface`), same as panels.
-- **Never raw hex.** Not in inline styles, not in className utilities (`bg-red-500/20`), not in lookup tables. The panel audit logged six violations; the HUD audit already has three tracked (validation feedback's red, toast success green, turn-transition overlay opacity).
+- **Never raw hex.** Not in inline styles, not in className utilities (`bg-red-500/20`), not in lookup tables. The panel audit logged six violations; the HUD audit logged three (validation feedback's red, toast success green, turn-transition overlay opacity), all retired during HUD cycles a–k. Do not regress.
 
 ```tsx
 // GOOD
@@ -276,7 +276,7 @@ Smoke tests live next to the overlay:
 packages/web/src/ui/hud/__tests__/<OverlayName>.test.tsx
 ```
 
-Wrap in a test `HUDManagerProvider` (once built) with an `initialCycleIndex` or mocked register, so the overlay renders in isolation. Verify:
+Wrap in a test `HUDManagerProvider` with an `initialCycleIndex` or mocked register, so the overlay renders in isolation. Verify:
 
 - The body renders the expected content for a known state.
 - The correct tier shows the correct fields (compact vs detailed).
@@ -302,10 +302,11 @@ The HUD has a small set of game-feel invariants that only an E2E can confirm. Co
 
 ## References
 
-- **Audit / migration plan:** `.claude/workflow/design/hud-ui-audit.md` — the current-state catalogue of HUD drift and the plan to land `HUDManager`, `TooltipShell`, `hud-tokens.css`.
+- **Audit / migration plan:** `.claude/workflow/design/hud-ui-audit.md` — the original catalogue of HUD drift and the plan that landed `HUDManager`, `TooltipShell`, `hud-tokens.css`.
+- **Running registry:** `.claude/workflow/design/hud-elements.md` — every HUD element currently in the tree, with shell mode, tier, sticky flag, and source file. Cross-checked against `hudRegistry.ts`.
 - **Sibling rules:** `.claude/rules/panels.md` — the panel layer this doc mirrors. Read both; they share vocabulary and philosophy.
 - **Skill (step-by-step):** `.claude/skills/add-hud-element/SKILL.md` — add a new tooltip, notification, or hint overlay following the canonical pattern. Invoke as `/add-hud-element`.
-- **Implementation (planned, not yet in tree):**
+- **Implementation:**
   - `packages/web/src/ui/hud/HUDManager.tsx` — context + ESC
   - `packages/web/src/ui/hud/TooltipShell.tsx` — chrome for tooltip-shaped overlays
   - `packages/web/src/ui/hud/hudRegistry.ts` — id union + metadata
