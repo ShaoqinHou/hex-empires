@@ -9,8 +9,8 @@ export const SPAIN: CivilizationDef = {
     description: 'Trade routes provide +3 gold.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },
-  uniqueUnit: 'conquistador',
-  uniqueBuilding: 'mission',
+  uniqueUnit: null, // TODO(content): add unique unit conquistador when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building mission when content batch lands
   legacyBonus: {
     name: 'Colonial Wealth',
     description: '+3 gold in all cities in future ages',
@@ -28,8 +28,8 @@ export const ENGLAND: CivilizationDef = {
     description: '+1 movement for all naval units.',
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 }],
   },
-  uniqueUnit: 'redcoat',
-  uniqueBuilding: 'royal_navy_dockyard',
+  uniqueUnit: null, // TODO(content): add unique unit redcoat when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building royal_navy_dockyard when content batch lands
   legacyBonus: {
     name: 'Workshop of the World',
     description: '+2 production for coastal cities in future ages',
@@ -47,8 +47,8 @@ export const FRANCE: CivilizationDef = {
     description: '+2 culture per wonder in your empire.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
   },
-  uniqueUnit: 'garde_imperiale',
-  uniqueBuilding: 'chateau',
+  uniqueUnit: null, // TODO(content): add unique unit garde_imperiale when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building chateau when content batch lands
   legacyBonus: {
     name: 'French Enlightenment',
     description: '+3 culture in all cities in future ages',
@@ -66,8 +66,8 @@ export const OTTOMAN: CivilizationDef = {
     description: '+5 combat strength for siege units.',
     effects: [{ type: 'MODIFY_COMBAT', target: 'siege', value: 5 }],
   },
-  uniqueUnit: 'janissary',
-  uniqueBuilding: 'grand_bazaar',
+  uniqueUnit: null, // TODO(content): add unique unit janissary when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building grand_bazaar when content batch lands
   legacyBonus: {
     name: 'Ottoman Trade',
     description: '+2 gold in all cities in future ages',
@@ -85,8 +85,8 @@ export const JAPAN: CivilizationDef = {
     description: '+5 combat strength for units at full health.',
     effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 5 }],
   },
-  uniqueUnit: 'samurai',
-  uniqueBuilding: 'electronics_factory',
+  uniqueUnit: null, // TODO(content): add unique unit samurai when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building electronics_factory when content batch lands
   legacyBonus: {
     name: 'Way of the Warrior',
     description: '+2 production in all cities in future ages',
@@ -104,8 +104,8 @@ export const MONGOLIA: CivilizationDef = {
     description: '+3 movement for cavalry units.',
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'cavalry', value: 3 }],
   },
-  uniqueUnit: 'keshig',
-  uniqueBuilding: 'ordu',
+  uniqueUnit: null, // TODO(content): add unique unit keshig when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building ordu when content batch lands
   legacyBonus: {
     name: 'Steppe Legacy',
     description: '+1 movement for cavalry units in future ages',

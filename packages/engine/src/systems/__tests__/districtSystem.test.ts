@@ -241,17 +241,18 @@ describe('districtSystem', () => {
     });
 
     it('rejects placement when required civic is not researched', () => {
+      // commercial district requires state_workforce civic (audit 1A: drama_poetry was removed as broken ref)
       const state = stateWithCity({}, []); // no civics
       const next = districtSystem(state, {
         type: 'PLACE_DISTRICT',
         cityId: 'c1',
-        districtId: 'theater', // requires drama_poetry civic
+        districtId: 'commercial', // requires state_workforce civic
         tile: { q: 4, r: 3 },
       });
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('drama_poetry');
+      expect(next.lastValidation!.reason).toContain('state_workforce');
     });
 
     it('rejects placement when city population is insufficient', () => {

@@ -180,18 +180,24 @@ describe('Civic catalog audit — rulebook §9.3 / §14 / §12', () => {
   });
 
   it('9. Newly-added government-unlock civics declare their unlock', () => {
+    // Unlocks updated in audit batch 1A: 'government_X' prefix stripped to match GovernmentDef ids.
+    // 'class_struggle' unlocks removed (communism GovernmentDef not yet defined — TODO(content)).
+    // 'political_theory' unlocks removed (adopt_ideology mechanic id not yet defined — TODO(content)).
     const byId = new Map(ALL_CIVICS.map((c) => [c.id, c]));
     const governmentUnlocks: ReadonlyArray<readonly [string, string]> = [
-      ['state_service', 'government_oligarchy'],
-      ['feudalism', 'government_feudal_monarchy'],
-      ['scholasticism', 'government_theocracy'],
-      ['enlightenment', 'government_democracy'],
-      ['class_struggle', 'government_communism'],
+      ['state_service', 'oligarchy'],
+      ['feudalism', 'monarchy'],
+      ['scholasticism', 'theocracy'],
+      ['enlightenment', 'democracy'],
     ];
     for (const [civicId, unlockId] of governmentUnlocks) {
       const c = byId.get(civicId);
       expect(c, civicId).toBeDefined();
       expect(c?.unlocks, `${civicId} unlocks`).toContain(unlockId);
     }
+    // class_struggle: no communism government yet — verify unlocks is empty
+    const classStruggle = byId.get('class_struggle');
+    expect(classStruggle, 'class_struggle').toBeDefined();
+    expect(classStruggle?.unlocks, 'class_struggle unlocks should be empty until communism is defined').toHaveLength(0);
   });
 });

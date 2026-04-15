@@ -99,9 +99,9 @@ export const FEUDALISM: CivicDef = {
   age: 'exploration',
   cost: 140,
   prerequisites: ['humanism'],
-  unlocks: ['government_feudal_monarchy'],
+  unlocks: ['monarchy'],
   description:
-    'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Feudal Monarchy government.',
+    'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Monarchy government.',
   treePosition: { row: 1, col: 1 },
 };
 
@@ -115,7 +115,7 @@ export const SCHOLASTICISM: CivicDef = {
   age: 'exploration',
   cost: 180,
   prerequisites: ['divine_right'],
-  unlocks: ['government_theocracy'],
+  unlocks: ['theocracy'],
   description:
     'Synthesises faith and reason into a unified ecclesiastical doctrine. Unlocks the Theocracy government.',
   treePosition: { row: 0, col: 3 },

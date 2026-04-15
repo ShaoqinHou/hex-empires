@@ -103,7 +103,7 @@ export const FINANCIAL_HUB_DISTRICT: DistrictDef = {
   type: 'downtown',
   age: 'modern',
   cost: 450,
-  requiredTech: 'globalization',
+  // TODO(content): requiredCivic: 'globalization' (field-type was wrong: globalization is a CivicId not TechId)
   populationCost: 2,
   yields: Y(0, 3, 6, 1, 1, 0, 2, 3, 0),
   adjacencyYields: Y(0, 0, 2, 0, 0, 0, 0, 0, 0),
@@ -160,7 +160,8 @@ export const ECO_DISTRICT_DISTRICT: DistrictDef = {
   type: 'preserve',
   age: 'modern',
   cost: 350,
-  requiredTech: 'environmentalism',
+  // TODO(content): requiredCivic: 'environmentalism' (field was named requiredTech but environmentalism is a CivicId)
+  requiredCivic: 'environmentalism',
   populationCost: 2,
   yields: Y(3, 1, 1, 1, 3, 0, 1, 2, 2),
   adjacencyYields: Y(1, 0, 0, 0, 1, 0, 0, 0, 0),
@@ -188,7 +189,7 @@ export const DIPLOMATIC_QUARTER_DISTRICT: DistrictDef = {
   type: 'government',
   age: 'modern',
   cost: 400,
-  requiredCivic: 'diplomacy',
+  // TODO(content): add requiredCivic: 'diplomacy' when civic is defined
   populationCost: 2,
   yields: Y(0, 2, 2, 1, 2, 0, 4, 2, 3),
   adjacencyYields: Y(0, 0, 0, 0, 0, 0, 1, 0, 1),
@@ -216,7 +217,7 @@ export const MEDICAL_CENTER_DISTRICT: DistrictDef = {
   type: 'entertainment',
   age: 'modern',
   cost: 350,
-  requiredTech: 'pharmaceuticals',
+  // TODO(content): add requiredTech: 'pharmaceuticals' when tech is defined
   populationCost: 2,
   yields: Y(3, 1, 1, 1, 1, 0, 0, 3, 0),
   adjacencyYields: Y(1, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -272,7 +273,7 @@ export const SACRED_GROUNDS_DISTRICT: DistrictDef = {
   type: 'holy_site',
   age: 'modern',
   cost: 400,
-  requiredCivic: 'religious_tolerance',
+  // TODO(content): add requiredCivic: 'religious_tolerance' when civic is defined
   populationCost: 2,
   yields: Y(0, 1, 1, 0, 1, 6, 0, 3, 0),
   adjacencyYields: Y(0, 0, 0, 0, 0, 2, 0, 0, 0),

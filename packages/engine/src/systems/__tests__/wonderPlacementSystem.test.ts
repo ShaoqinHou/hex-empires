@@ -168,28 +168,22 @@ describe('isWonderPlacementValid — oracle', () => {
 });
 
 describe('isWonderPlacementValid — machu_picchu', () => {
-  it('valid on plains adjacent to mountains', () => {
-    const state = withTiles([
-      { coord: { q: 2, r: 2 }, terrain: 'plains' },
-      { coord: { q: 3, r: 2 }, terrain: 'plains', feature: 'mountains' },
-    ]);
+  // Audit batch 1A: MACHU_PICCHU_RULE removed because no BuildingDef 'machu_picchu' exists.
+  // Without a placement rule the wonder is unconstrained (returns valid:true for any tile).
+  // TODO(content): restore specific placement tests when machu_picchu BuildingDef is added.
+
+  it('returns valid:true (unconstrained — no BuildingDef exists yet)', () => {
+    const state = withTiles([{ coord: { q: 2, r: 2 }, terrain: 'plains' }]);
     const result = isWonderPlacementValid('machu_picchu', { q: 2, r: 2 }, state);
     expect(result.valid).toBe(true);
   });
 
-  it('invalid on plains with no adjacent mountain', () => {
-    const state = withTiles([{ coord: { q: 2, r: 2 }, terrain: 'plains' }]);
-    const result = isWonderPlacementValid('machu_picchu', { q: 2, r: 2 }, state);
-    expect(result.valid).toBe(false);
-  });
-
-  it('invalid on grassland even if adjacent to mountain', () => {
+  it('returns valid:true even on non-plains with no mountain (unconstrained)', () => {
     const state = withTiles([
       { coord: { q: 3, r: 2 }, terrain: 'plains', feature: 'mountains' },
     ]);
-    // (2,2) is grassland (default), not plains — should fail.
     const result = isWonderPlacementValid('machu_picchu', { q: 2, r: 2 }, state);
-    expect(result.valid).toBe(false);
+    expect(result.valid).toBe(true);
   });
 });
 

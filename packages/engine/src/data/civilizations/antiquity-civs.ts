@@ -9,7 +9,7 @@ export const ROME: CivilizationDef = {
     description: 'Trade routes to your capital provide bonus gold. +1 production in all cities.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
   },
-  uniqueUnit: 'legion',
+  uniqueUnit: null, // TODO(content): add unique unit legion when content batch lands
   uniqueBuilding: 'bath',
   legacyBonus: {
     name: 'Roman Engineering',
@@ -28,8 +28,8 @@ export const EGYPT: CivilizationDef = {
     description: '+15% production toward wonders. Floodplains provide extra culture.',
     effects: [{ type: 'DISCOUNT_PRODUCTION', target: 'wonder', percent: 15 }],
   },
-  uniqueUnit: 'chariot_archer',
-  uniqueBuilding: 'sphinx',
+  uniqueUnit: null, // TODO(content): add unique unit chariot_archer when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building sphinx when content batch lands
   legacyBonus: {
     name: 'Monument Builders',
     description: '+2 culture in all cities in future ages',
@@ -47,8 +47,8 @@ export const GREECE: CivilizationDef = {
     description: 'One extra wildcard policy slot. +1 science in every city.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 }],
   },
-  uniqueUnit: 'hoplite',
-  uniqueBuilding: 'acropolis',
+  uniqueUnit: null, // TODO(content): add unique unit hoplite when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building acropolis when content batch lands
   legacyBonus: {
     name: 'Athenian Thought',
     description: '+2 science in all cities in future ages',
@@ -66,8 +66,8 @@ export const PERSIA: CivilizationDef = {
     description: '+2 gold and +1 culture in all cities during a Golden Age.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
   },
-  uniqueUnit: 'immortal',
-  uniqueBuilding: 'pairidaeza',
+  uniqueUnit: null, // TODO(content): add unique unit immortal when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building pairidaeza when content batch lands
   legacyBonus: {
     name: 'Royal Road',
     description: '+3 gold in all cities in future ages',
@@ -85,8 +85,8 @@ export const INDIA: CivilizationDef = {
     description: 'Cities gain follower bonuses from all religions. +2 faith.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 }],
   },
-  uniqueUnit: 'varu',
-  uniqueBuilding: 'stepwell',
+  uniqueUnit: null, // TODO(content): add unique unit varu when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building stepwell when content batch lands
   legacyBonus: {
     name: 'Spiritual Tradition',
     description: '+3 faith in all cities in future ages',
@@ -104,7 +104,7 @@ export const CHINA: CivilizationDef = {
     description: 'Eurekas and inspirations provide 60% instead of 50%.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 }],
   },
-  uniqueUnit: 'crouching_tiger',
+  uniqueUnit: null, // TODO(content): add unique unit crouching_tiger when content batch lands
   uniqueBuilding: 'great_wall',
   legacyBonus: {
     name: 'Mandate of Heaven',

@@ -16,8 +16,8 @@ export const AMERICA: CivilizationDef = {
       { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 1 },
     ],
   },
-  uniqueUnit: 'minuteman',
-  uniqueBuilding: 'film_studio',
+  uniqueUnit: null, // TODO(content): add unique unit minuteman when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building film_studio when content batch lands
   legacyBonus: {
     name: 'American Dream',
     description: '+2 culture in all cities in future ages',
@@ -35,8 +35,8 @@ export const GERMANY: CivilizationDef = {
     description: '+1 production per specialty district.',
     effects: [{ type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 1 }],
   },
-  uniqueUnit: 'u_boat',
-  uniqueBuilding: 'hansa',
+  uniqueUnit: null, // TODO(content): add unique unit u_boat when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building hansa when content batch lands
   legacyBonus: {
     name: 'German Engineering',
     description: '+3 production in all cities in future ages',
@@ -57,8 +57,8 @@ export const RUSSIA: CivilizationDef = {
       { type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 },
     ],
   },
-  uniqueUnit: 'cossack',
-  uniqueBuilding: 'lavra',
+  uniqueUnit: null, // TODO(content): add unique unit cossack when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building lavra when content batch lands
   legacyBonus: {
     name: 'Russian Orthodoxy',
     description: '+3 faith in all cities in future ages',
@@ -76,8 +76,8 @@ export const BRAZIL: CivilizationDef = {
     description: '+1 adjacency bonus per rainforest tile.',
     effects: [{ type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 }],
   },
-  uniqueUnit: 'minas_geraes',
-  uniqueBuilding: 'street_carnival',
+  uniqueUnit: null, // TODO(content): add unique unit minas_geraes when content batch lands
+  uniqueBuilding: null, // TODO(content): add unique building street_carnival when content batch lands
   legacyBonus: {
     name: 'Carnival Spirit',
     description: '+2 culture in all cities in future ages',

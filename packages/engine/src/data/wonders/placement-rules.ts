@@ -217,15 +217,7 @@ const ORACLE_RULE: WonderPlacementRule = {
   description: 'Must be placed on Hills.',
 };
 
-const MACHU_PICCHU_RULE: WonderPlacementRule = {
-  wonderId: 'machu_picchu',
-  canPlace: (tile, state) => {
-    const t = tileAt(state, tile);
-    if (!t) return false;
-    return t.terrain === 'plains' && isAdjacentToMountain(state, tile);
-  },
-  description: 'Must be placed on Plains adjacent to a Mountain.',
-};
+// TODO(content): add MACHU_PICCHU_RULE when BuildingDef 'machu_picchu' is defined
 
 const VENETIAN_ARSENAL_RULE: WonderPlacementRule = {
   wonderId: 'venetian_arsenal',
@@ -316,7 +308,6 @@ export const WONDER_PLACEMENT_RULES: ReadonlyMap<string, WonderPlacementRule> = 
   [COLOSSUS_RULE.wonderId, COLOSSUS_RULE],
   [STONEHENGE_RULE.wonderId, STONEHENGE_RULE],
   [ORACLE_RULE.wonderId, ORACLE_RULE],
-  [MACHU_PICCHU_RULE.wonderId, MACHU_PICCHU_RULE],
   [VENETIAN_ARSENAL_RULE.wonderId, VENETIAN_ARSENAL_RULE],
   [NOTRE_DAME_RULE.wonderId, NOTRE_DAME_RULE],
   [EIFFEL_TOWER_RULE.wonderId, EIFFEL_TOWER_RULE],

@@ -99,7 +99,7 @@ export const STATE_SERVICE: CivicDef = {
   age: 'antiquity',
   cost: 100,
   prerequisites: ['early_empire'],
-  unlocks: ['government_oligarchy'],
+  unlocks: ['oligarchy'],
   description:
     'Establishes a professional class of administrators. Unlocks the Oligarchy government.',
   treePosition: { row: 1, col: 4 },
@@ -127,7 +127,8 @@ export const DIVINE_KINGSHIP: CivicDef = {
   age: 'antiquity',
   cost: 70,
   prerequisites: ['mysticism'],
-  unlocks: ['sphinx'],
+  // TODO(content): add unlocks: ['sphinx'] when building is defined
+  unlocks: [],
   description: '+3 culture in the capital and -50% wonder production cost (Egypt only)',
   treePosition: { row: 3, col: 2 },
   civId: 'egypt',
@@ -140,7 +141,8 @@ export const ATHENIAN_DEMOCRACY: CivicDef = {
   age: 'antiquity',
   cost: 90,
   prerequisites: ['early_empire'],
-  unlocks: ['acropolis'],
+  // TODO(content): add unlocks: ['acropolis'] when building is defined
+  unlocks: [],
   description: '+2 science in every city and +1 culture for each civic researched (Greece only)',
   treePosition: { row: 1, col: 3 },
   civId: 'greece',

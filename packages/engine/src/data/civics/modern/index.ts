@@ -76,7 +76,8 @@ export const POLITICAL_THEORY: CivicDef = {
   age: 'modern',
   cost: 350,
   prerequisites: [],
-  unlocks: ['adopt_ideology'],
+  // TODO(content): add unlocks: ['adopt_ideology'] when ideology adoption mechanic id is defined
+  unlocks: [],
   description:
     'Systematic study of the legitimacy and structure of the state. Required to adopt an Ideology.',
   treePosition: { row: 1, col: 0 },
@@ -92,7 +93,7 @@ export const ENLIGHTENMENT: CivicDef = {
   age: 'modern',
   cost: 450,
   prerequisites: ['political_theory'],
-  unlocks: ['government_democracy'],
+  unlocks: ['democracy'],
   description:
     'Liberty, reason, and the consent of the governed. Unlocks the Democracy government.',
   treePosition: { row: 1, col: 1 },
@@ -108,9 +109,10 @@ export const CLASS_STRUGGLE: CivicDef = {
   age: 'modern',
   cost: 550,
   prerequisites: ['political_theory'],
-  unlocks: ['government_communism'],
+  // TODO(content): add unlocks: ['communism'] when Communism GovernmentDef is defined
+  unlocks: [],
   description:
-    'Organises society along the axis of productive labour versus capital. Unlocks the Communism government.',
+    'Organises society along the axis of productive labour versus capital. Unlocks the Communism government when defined.',
   treePosition: { row: 2, col: 2 },
 };
 

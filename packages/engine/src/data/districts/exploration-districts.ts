@@ -79,7 +79,7 @@ export const PRESERVE_DISTRICT: DistrictDef = {
   type: 'preserve',
   age: 'exploration',
   cost: 180,
-  requiredCivic: 'naturalism',
+  // TODO(content): add requiredCivic: 'naturalism' when civic is defined
   populationCost: 1,
   yields: Y(2, 0, 1, 0, 2, 0, 0, 0, 1),
   adjacencyYields: Y(1, 0, 0, 0, 1, 0, 0, 0, 0),
@@ -107,7 +107,7 @@ export const EXPANDED_ENCAMPMENT_DISTRICT: DistrictDef = {
   type: 'encampment',
   age: 'exploration',
   cost: 180,
-  requiredTech: 'military_engineering',
+  // TODO(content): add requiredTech: 'military_engineering' when tech is defined
   populationCost: 2,
   yields: Y(0, 3, 0, 0, 0, 0, 0, 2, 0),
   adjacencyYields: Y(0, 1, 0, 0, 0, 0, 0, 0, 0),
@@ -161,7 +161,7 @@ export const EXPANDED_THEATER_DISTRICT: DistrictDef = {
   type: 'theater',
   age: 'exploration',
   cost: 200,
-  requiredCivic: 'enlightenment',
+  // TODO(content): add requiredCivic: 'enlightenment' when forward-age ref is resolved
   populationCost: 2,
   yields: Y(0, 1, 1, 0, 4, 0, 1, 2, 0),
   adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0, 0),
@@ -188,7 +188,7 @@ export const EXPANDED_HOLY_SITE_DISTRICT: DistrictDef = {
   type: 'holy_site',
   age: 'exploration',
   cost: 200,
-  requiredCivic: 'medieval_faires',
+  // TODO(content): add requiredCivic: 'medieval_faires' when civic is defined
   populationCost: 2,
   yields: Y(0, 0, 1, 0, 1, 4, 0, 2, 0),
   adjacencyYields: Y(0, 0, 0, 0, 0, 1, 0, 0, 0),
