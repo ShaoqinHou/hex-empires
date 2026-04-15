@@ -35,6 +35,7 @@ const HelpPanel = lazy(() => import('./ui/panels/HelpPanel').then(m => ({ defaul
 const ReligionPanel = lazy(() => import('./ui/panels/ReligionPanel').then(m => ({ default: m.ReligionPanel })));
 const GovernmentPanel = lazy(() => import('./ui/panels/GovernmentPanel').then(m => ({ default: m.GovernmentPanel })));
 const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m => ({ default: m.CommanderPanel })));
+const ImprovementPanel = lazy(() => import('./ui/panels/ImprovementPanel').then(m => ({ default: m.ImprovementPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
@@ -163,6 +164,9 @@ function GameUI() {
           )}
           {activePanel === 'victoryProgress' && (
             <VictoryProgressPanel onClose={closePanel} />
+          )}
+          {activePanel === 'improvement' && selectedUnit && (
+            <ImprovementPanel builderUnitId={selectedUnit.id} onClose={closePanel} />
           )}
          </div>
         </Suspense>

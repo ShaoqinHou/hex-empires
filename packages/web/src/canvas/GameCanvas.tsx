@@ -4,7 +4,7 @@ import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
-import { ImprovementPanel } from '../ui/components/ImprovementPanel';
+import { usePanelManager } from '../ui/panels/PanelManager';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
 import type { HexCoord, CityState } from '@hex/engine';
@@ -53,7 +53,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, [enterPlacementMode, exitPlacementMode, placementMode]);
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
-  const [showImprovementPanel, setShowImprovementPanel] = useState(false);
+
+  // ImprovementPanel is a registered panel owned by PanelManager. Selecting
+  // a builder opens it; selecting any other entity closes it.
+  const { openPanel, closePanel, isOpen } = usePanelManager();
 
   // ── Building placement overlay (Cycle 4) ──
   //
@@ -308,7 +311,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     if (cycle.length === 0) {
       setSelectedUnit(null);
       setSelectedHex(hex);
-      setShowImprovementPanel(false);
+      if (isOpen('improvement')) closePanel();
       return;
     }
 
@@ -323,7 +326,11 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       const isBuilder = unitDef?.abilities.includes('build_improvement') ?? false;
       setSelectedUnit(unit);
       setSelectedHex(hex);
-      setShowImprovementPanel(isBuilder);
+      if (isBuilder) {
+        openPanel('improvement');
+      } else if (isOpen('improvement')) {
+        closePanel();
+      }
     } else {
       // city
       const city = contents.city;
@@ -333,9 +340,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       }
       setSelectedUnit(null);
       setSelectedHex(hex);
-      setShowImprovementPanel(false);
+      if (isOpen('improvement')) closePanel();
     }
-  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick, placementMode, placementValidTiles, dispatch, exitPlacementMode]);
+  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick, placementMode, placementValidTiles, dispatch, exitPlacementMode, openPanel, closePanel, isOpen]);
 
   // Mouse handlers — left button drives drag-pan + click-select; right button is reserved
   // for handleContextMenu (RTS-style action). Middle button is ignored.
@@ -728,16 +735,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
         <CombatHoverPreview
           preview={combatPreview}
           position={combatPreviewPosition}
-        />
-      )}
-      {showImprovementPanel && selectedUnit && (
-        <ImprovementPanel
-          builderUnitId={selectedUnit.id}
-          onClose={() => {
-            setShowImprovementPanel(false);
-            setSelectedUnit(null);
-            setSelectedHex(null);
-          }}
         />
       )}
     </>

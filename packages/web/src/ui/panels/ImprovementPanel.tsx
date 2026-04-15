@@ -1,137 +1,89 @@
+/**
+ * ImprovementPanel — build-improvement chooser for a selected builder unit.
+ *
+ * Migrated from `ui/components/ImprovementPanel.tsx` in the panel-cleanup
+ * cycle. Now wraps `PanelShell`, drops its hand-rolled fixed-center
+ * positioning and raw-hex chrome, and opens via `usePanelManager()` rather
+ * than a local `useState<boolean>` in `GameCanvas`. Registered as
+ * `'improvement'` in `panelRegistry.ts`.
+ */
+
+import { useMemo } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import { coordToKey } from '@hex/engine';
-import { ALL_IMPROVEMENTS } from '@hex/engine';
+import { coordToKey, ALL_IMPROVEMENTS } from '@hex/engine';
 import type { ImprovementDef } from '@hex/engine';
-import { useState, useMemo } from 'react';
+import { PanelShell } from './PanelShell';
 
 interface ImprovementPanelProps {
-  builderUnitId: string;
-  onClose: () => void;
+  readonly builderUnitId: string;
+  readonly onClose: () => void;
 }
 
 export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelProps) {
   const { state, dispatch, selectedHex } = useGameState();
-  const [selectedImprovement, setSelectedImprovement] = useState<string | null>(null);
 
   const builder = state.units.get(builderUnitId);
   const currentTile = selectedHex ? state.map.tiles.get(coordToKey(selectedHex)) : null;
 
-  // Filter improvements that can be built on this tile
-  const availableImprovements = useMemo(() => {
+  // Filter improvements that can be built on this tile.
+  const availableImprovements = useMemo<ReadonlyArray<ImprovementDef>>(() => {
     if (!currentTile || !builder || !selectedHex) return [];
 
     const player = state.players.get(state.currentPlayerId);
     if (!player) return [];
 
     return ALL_IMPROVEMENTS.filter(improvement => {
-      // Check tech prerequisite
       if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) {
         return false;
       }
-
-      // Check terrain prerequisite
       if (improvement.prerequisites.terrain) {
-        if (!improvement.prerequisites.terrain.includes(currentTile.terrain)) {
-          return false;
-        }
+        if (!improvement.prerequisites.terrain.includes(currentTile.terrain)) return false;
       }
-
-      // Check feature prerequisite
       if (improvement.prerequisites.feature) {
         if (!currentTile.feature || !improvement.prerequisites.feature.includes(currentTile.feature)) {
           return false;
         }
       }
-
-      // Check resource prerequisite
       if (improvement.prerequisites.resource) {
         if (!currentTile.resource || !improvement.prerequisites.resource.includes(currentTile.resource)) {
           return false;
         }
       }
-
-      // Check if improvement already exists
-      if (currentTile.improvement) {
-        return false;
-      }
-
+      if (currentTile.improvement) return false;
       return true;
     });
-  }, [currentTile, builder, state, state.currentPlayerId]);
+  }, [currentTile, builder, selectedHex, state]);
 
   const handleBuildImprovement = (improvementId: string) => {
     if (!selectedHex) return;
-
     dispatch({
       type: 'BUILD_IMPROVEMENT',
       unitId: builderUnitId,
       tile: selectedHex,
       improvementId,
     });
-
     onClose();
   };
 
+  // No builder / no tile selected — render empty-state inside the shell so
+  // ESC, close button, and chrome still behave.
   if (!builder || !currentTile) {
     return (
-      <div
-        className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-2xl p-6 z-50"
-        style={{
-          backgroundColor: 'var(--color-panel-bg)',
-          border: '2px solid var(--color-border)',
-          minWidth: '400px',
-        }}
-      >
-        <div className="text-lg font-bold mb-4" style={{ color: 'var(--color-text)' }}>
-          Build Improvement
-        </div>
-        <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+      <PanelShell id="improvement" title="Build Improvement" onClose={onClose} priority="overlay" width="wide">
+        <div style={{ color: 'var(--panel-muted-color)', fontSize: '13px' }}>
           No tile selected
         </div>
-        <button
-          className="mt-4 px-4 py-2 rounded text-sm font-bold cursor-pointer"
-          style={{
-            background: 'linear-gradient(135deg, var(--color-text-muted) 0%, #6e7681 100%)',
-            color: '#0d1117',
-          }}
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
+      </PanelShell>
     );
   }
 
   return (
-    <div
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-2xl p-6 z-50"
-      style={{
-        backgroundColor: 'var(--color-panel-bg)',
-        border: '2px solid var(--color-border)',
-        minWidth: '500px',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-      }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-            🏗️ Build Improvement
-          </div>
-          {selectedHex && (
-            <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-              Location: ({selectedHex.q}, {selectedHex.r})
-            </div>
-          )}
+    <PanelShell id="improvement" title="Build Improvement" onClose={onClose} priority="overlay" width="wide">
+      {selectedHex && (
+        <div style={{ color: 'var(--panel-muted-color)', fontSize: '12px', marginBottom: 'var(--panel-padding-md)' }}>
+          Location: ({selectedHex.q}, {selectedHex.r})
         </div>
-        <button
-          className="text-2xl font-bold cursor-pointer hover:scale-110 transition-transform"
-          style={{ color: 'var(--color-text-muted)' }}
-          onClick={onClose}
-        >
-          ✕
-        </button>
-      </div>
+      )}
 
       {currentTile.improvement ? (
         <div
@@ -156,7 +108,7 @@ export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelPro
           <div className="text-sm" style={{ color: 'var(--color-gold)' }}>
             ℹ️ No improvements can be built on this tile
           </div>
-          <div className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="text-xs mt-2" style={{ color: 'var(--panel-muted-color)' }}>
             Requirements: Check terrain, features, resources, and technologies
           </div>
         </div>
@@ -171,30 +123,25 @@ export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelPro
           ))}
         </div>
       )}
-
-      <button
-        className="mt-4 px-4 py-2 rounded text-sm font-bold cursor-pointer w-full"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-text-muted) 0%, #6e7681 100%)',
-          color: '#0d1117',
-        }}
-        onClick={onClose}
-      >
-        Cancel
-      </button>
-    </div>
+    </PanelShell>
   );
 }
 
-function ImprovementCard({ improvement, onBuild }: { improvement: any; onBuild: () => void }) {
-  const getYieldDisplay = () => {
-    const yields = [];
-    if (improvement.yields.food) yields.push(`🌾 +${improvement.yields.food}`);
-    if (improvement.yields.production) yields.push(`🔨 +${improvement.yields.production}`);
-    if (improvement.yields.gold) yields.push(`💰 +${improvement.yields.gold}`);
-    if (improvement.yields.science) yields.push(`🔬 +${improvement.yields.science}`);
-    if (improvement.yields.culture) yields.push(`🎭 +${improvement.yields.culture}`);
-    if (improvement.yields.faith) yields.push(`🙏 +${improvement.yields.faith}`);
+interface ImprovementCardProps {
+  readonly improvement: ImprovementDef;
+  readonly onBuild: () => void;
+}
+
+function ImprovementCard({ improvement, onBuild }: ImprovementCardProps) {
+  const getYieldDisplay = (): string => {
+    const yields: string[] = [];
+    const y = improvement.yields;
+    if (y.food)       yields.push(`🌾 +${y.food}`);
+    if (y.production) yields.push(`🔨 +${y.production}`);
+    if (y.gold)       yields.push(`💰 +${y.gold}`);
+    if (y.science)    yields.push(`🔬 +${y.science}`);
+    if (y.culture)    yields.push(`🎭 +${y.culture}`);
+    if (y.faith)      yields.push(`🙏 +${y.faith}`);
     return yields.join(' ');
   };
 
@@ -210,7 +157,7 @@ function ImprovementCard({ improvement, onBuild }: { improvement: any; onBuild: 
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
+            <span className="font-bold text-sm" style={{ color: 'var(--panel-text-color)' }}>
               {improvement.name}
             </span>
             <span
@@ -225,7 +172,7 @@ function ImprovementCard({ improvement, onBuild }: { improvement: any; onBuild: 
             </span>
           </div>
 
-          <div className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="text-xs mt-2" style={{ color: 'var(--panel-muted-color)' }}>
             {getYieldDisplay()}
           </div>
 
@@ -242,10 +189,11 @@ function ImprovementCard({ improvement, onBuild }: { improvement: any; onBuild: 
         </div>
 
         <button
+          type="button"
           className="px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
-            color: '#0d1117',
+            color: 'var(--panel-bg)',
             border: '1px solid rgba(88, 166, 255, 0.3)',
             boxShadow: '0 2px 4px rgba(88, 166, 255, 0.2)',
           }}
