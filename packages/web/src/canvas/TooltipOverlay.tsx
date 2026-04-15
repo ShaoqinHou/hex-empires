@@ -61,11 +61,29 @@ function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord })
     }
   }
 
-  const topOwnUnit = contents.ownUnits[0] ?? null;
-  const topEnemyUnit = contents.enemyUnits[0] ?? null;
+  // Split own + enemy units into military vs civilian so the tooltip can show
+  // each category separately. Without this split, a warrior+settler stack would
+  // render as "Warrior ×2" (the top unit's name with the combined count), misreading
+  // the settler as a duplicate warrior.
+  const isCivilianUnit = (typeId: string): boolean => {
+    const def = ALL_UNITS.find(u => u.id === typeId);
+    return def?.category === 'civilian' || def?.category === 'religious';
+  };
 
-  const topOwnUnitDef = topOwnUnit ? ALL_UNITS.find(u => u.id === topOwnUnit.typeId) : null;
-  const topEnemyUnitDef = topEnemyUnit ? ALL_UNITS.find(u => u.id === topEnemyUnit.typeId) : null;
+  const ownMilitary = contents.ownUnits.filter(u => !isCivilianUnit(u.typeId));
+  const ownCivilian = contents.ownUnits.filter(u => isCivilianUnit(u.typeId));
+  const enemyMilitary = contents.enemyUnits.filter(u => !isCivilianUnit(u.typeId));
+  const enemyCivilian = contents.enemyUnits.filter(u => isCivilianUnit(u.typeId));
+
+  const topOwnMilitary = ownMilitary[0] ?? null;
+  const topOwnCivilian = ownCivilian[0] ?? null;
+  const topEnemyMilitary = enemyMilitary[0] ?? null;
+  const topEnemyCivilian = enemyCivilian[0] ?? null;
+
+  const topOwnMilitaryDef = topOwnMilitary ? ALL_UNITS.find(u => u.id === topOwnMilitary.typeId) : null;
+  const topOwnCivilianDef = topOwnCivilian ? ALL_UNITS.find(u => u.id === topOwnCivilian.typeId) : null;
+  const topEnemyMilitaryDef = topEnemyMilitary ? ALL_UNITS.find(u => u.id === topEnemyMilitary.typeId) : null;
+  const topEnemyCivilianDef = topEnemyCivilian ? ALL_UNITS.find(u => u.id === topEnemyCivilian.typeId) : null;
 
   return (
     <div
@@ -110,22 +128,43 @@ function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord })
         </div>
       )}
 
-      {/* Own units */}
-      {topOwnUnit && topOwnUnitDef && (
+      {/* Own military unit */}
+      {topOwnMilitary && topOwnMilitaryDef && (
         <div className="text-green-300 mt-0.5">
-          ⚔ {topOwnUnitDef.name} ({topOwnUnit.health}hp)
-          {contents.ownUnits.length > 1 && (
-            <span className="text-slate-400"> ×{contents.ownUnits.length}</span>
+          ⚔ {topOwnMilitaryDef.name} ({topOwnMilitary.health}hp)
+          {ownMilitary.length > 1 && (
+            <span className="text-slate-400"> ×{ownMilitary.length}</span>
           )}
         </div>
       )}
 
-      {/* Enemy units */}
-      {topEnemyUnit && topEnemyUnitDef && (
+      {/* Own civilian unit (separate line — a settler stacked with a warrior must
+          show as its own entry, not collapse into the military count) */}
+      {topOwnCivilian && topOwnCivilianDef && (
+        <div className="text-green-200 mt-0.5">
+          👤 {topOwnCivilianDef.name} ({topOwnCivilian.health}hp)
+          {ownCivilian.length > 1 && (
+            <span className="text-slate-400"> ×{ownCivilian.length}</span>
+          )}
+        </div>
+      )}
+
+      {/* Enemy military unit */}
+      {topEnemyMilitary && topEnemyMilitaryDef && (
         <div className="text-red-400 mt-0.5">
-          ⚔ {topEnemyUnitDef.name} ({topEnemyUnit.health}hp)
-          {contents.enemyUnits.length > 1 && (
-            <span className="text-red-300"> ×{contents.enemyUnits.length}</span>
+          ⚔ {topEnemyMilitaryDef.name} ({topEnemyMilitary.health}hp)
+          {enemyMilitary.length > 1 && (
+            <span className="text-red-300"> ×{enemyMilitary.length}</span>
+          )}
+        </div>
+      )}
+
+      {/* Enemy civilian unit */}
+      {topEnemyCivilian && topEnemyCivilianDef && (
+        <div className="text-red-300 mt-0.5">
+          👤 {topEnemyCivilianDef.name} ({topEnemyCivilian.health}hp)
+          {enemyCivilian.length > 1 && (
+            <span className="text-red-300"> ×{enemyCivilian.length}</span>
           )}
         </div>
       )}
