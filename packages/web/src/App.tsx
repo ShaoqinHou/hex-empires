@@ -16,6 +16,7 @@ import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './canvas/TooltipOverlay';
 import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
+import { HUDManagerProvider } from './ui/hud/HUDManager';
 import { VictoryProgressPanel } from './ui/panels/VictoryProgressPanel';
 
 // Lazy-loaded panels — they only mount when the user opens them, so split them out
@@ -206,7 +207,9 @@ function AppInner() {
 
   return (
     <PanelManagerProvider>
-      <GameUI />
+      <HUDManagerProvider>
+        <GameUI />
+      </HUDManagerProvider>
     </PanelManagerProvider>
   );
 }

@@ -64,4 +64,31 @@
   /* Animation timing — all HUD fades / slides share one duration so the
    * layer feels consistent. Short enough not to impede gameplay. */
   --hud-animation-duration: 140ms;
+
+  /* Notification category hues — replace the raw-hex palette that lived
+   * in Notifications.tsx (cycle (g)). Each category has a border accent
+   * color; the toast background remains the shared --color-surface so
+   * notifications match the rest of the dark-slate chrome. */
+  --hud-notification-production: #ff8a65;  /* orange */
+  --hud-notification-research:   #42a5f5;  /* blue   */
+  --hud-notification-civic:      #ab47bc;  /* purple */
+  --hud-notification-warning:    #f44336;  /* red    */
+  --hud-notification-info:       #64b5f6;  /* default blue */
+
+  /* Notification close-button hover accent (matches destructive-red
+   * affordance used elsewhere in the HUD). */
+  --hud-notification-close-hover: #f87171;
+
+  /* Combat preview tokens — used by CombatHoverPreview and
+   * CombatPreviewPanel. Bar colors are for attacker/defender strength
+   * comparison visuals (blue = attacker, purple = defender). Damage
+   * numbers read in red for damage-to-defender, orange for retaliation
+   * (damage-to-attacker). Text token for bright emphasis (the "VS"
+   * glyph, outcome ribbons). All tuned to the darker HUD background so
+   * they glance-read at speed. */
+  --hud-combat-attacker-bar: #3b82f6;    /* blue-500  */
+  --hud-combat-defender-bar: #8b5cf6;    /* violet-500 */
+  --hud-combat-damage-positive: #ef4444; /* red-500 — damage to defender */
+  --hud-combat-damage-negative: #f97316; /* orange-500 — retaliation */
+  --hud-combat-text: #f0f6fc;            /* bright emphasis text */
 }
