@@ -35,8 +35,8 @@ The full rule set is `.claude/rules/ui-overlays.md`. The audit motivating the pa
 | **Hover tooltip** | Floats near cursor / tile anchor | `TooltipShell` with `position="floating"` | Tile info, unit info, building info |
 | **Combat preview** | Fixed screen corner, richer body | `TooltipShell` with `position="fixed-corner"` | Pre-attack odds, damage range |
 | **Hint / placement overlay** | Stays visible during a parent interaction | `TooltipShell` with `position="side"`, `sticky` | Urban placement scores, adjacency preview |
-| **Notification / toast** | Stacked transient messages, not anchored to map | Dedicated `ToastShell` (planned) | Save complete, tech unlocked |
-| **Validation feedback** | Transient inline bubble near the failing action | Dedicated `ValidationShell` (planned) | "Not enough gold", "requires Bronze Working" |
+| **Notification / toast** | Stacked transient messages, not anchored to map | `TooltipShell` with `position="fixed-corner"` and `defaultTimeout` in registry | Save complete, tech unlocked |
+| **Validation feedback** | Transient inline bubble near the failing action | `TooltipShell` with `position="fixed-corner"`, `sticky: false`, and `defaultTimeout: 2500` in registry | "Not enough gold", "requires Bronze Working" |
 
 If your overlay does not fit any of these, stop and add it to the audit doc (`hud-ui-audit.md`) as a new type before proceeding. The five types above cover the audit's current catalogue.
 
@@ -59,23 +59,17 @@ b) Add an entry to `HUD_REGISTRY`:
 ```typescript
 ['placementHint', {
   id: 'placementHint',
-  type: 'hint',
-  defaultPosition: 'side',
-  supportsCycle: false,
-  supportsTiers: true,
-  sticky: true,
+  priority: 'floating',          // 'floating' | 'fixed' | 'toast'
+  // defaultTimeout: 3000,       // optional — omit for cursor-driven overlays
 }],
 ```
 
 Fields:
 - `id` — must equal the map key.
-- `type` — one of the five types from Step 1.
-- `defaultPosition` — the shell position unless the caller overrides.
-- `supportsCycle` — `true` if the anchor can hold multiple entities (tile tooltip: yes; validation feedback: no).
-- `supportsTiers` — `true` if Alt toggles a detailed view.
-- `sticky` — `true` if the overlay does not dismiss on pointer-leave (e.g. placement hints).
+- `priority` — one of `'floating'` (cursor-driven, follows anchor), `'fixed'` (snaps to a screen position), or `'toast'` (transient queued message). Controls the z-index tier in `hud-tokens.css`.
+- `defaultTimeout` — optional auto-dismiss in ms. Use for toasts and validation feedback; omit for hover-driven overlays.
 
-If you skip this step, `HUDManager.register('placementHint', ...)` will not type-check. Registry first.
+If you skip this step, TypeScript will immediately catch the wrong field names when you reference the registry, and `HUDManager.register('placementHint', ...)` will not type-check. Registry first.
 
 ### 4. Create the overlay component
 
@@ -201,10 +195,10 @@ If your overlay is a new type or changes hover behavior, add a line to `packages
 Maintain a running registry of all HUD elements in `.claude/workflow/design/hud-elements.md` (create if missing). One line per element:
 
 ```
-| placementHint | hint | side | yes cycle | sticky | BuildingPlacementPanel | ui/hud/PlacementHint.tsx |
+| placementHint | floating | side | cycles | sticky | BuildingPlacementPanel | ui/hud/PlacementHint.tsx |
 ```
 
-Columns: id, type, position, cycle-supported, sticky, parent/trigger, source file. The audit uses this as the source-of-truth catalogue; reviewers use it to spot drift fast.
+Columns: id, priority (`floating`/`fixed`/`toast`), position strategy, cycle-supported, sticky, parent/trigger, source file. The audit uses this as the source-of-truth catalogue; reviewers use it to spot drift fast.
 
 ### 12. Verify
 
@@ -304,7 +298,7 @@ export function PlacementHint({ anchor, scores, tier = 'compact' }: PlacementHin
 
 1. **Adding `className="absolute top-4 right-4"` or inline `style={{ position: 'absolute', ... }}`.** This is the #1 drift vector. Let the shell position. If the shell's strategies don't fit, the overlay type is wrong for this interaction — revisit Step 1.
 2. **Raw hex colors.** Especially in status-colored overlays (validation red, success green). Add to `hud-tokens.css` first.
-3. **Forgetting stack-cycle support.** Tile tooltips must cycle. Combat previews on multi-target hexes must cycle. If `supportsCycle: true` in the registry, the body must respect `cycleIndex`.
+3. **Forgetting stack-cycle support.** Tile tooltips must cycle. Combat previews on multi-target hexes must cycle. If the overlay can anchor to multiple entities, the body must consume `cycleIndex` from `useHUDManager` and render one entity at a time.
 4. **Re-enabling text selection.** Do not set `user-select: text` on an overlay body. The game-feel is "desktop app, not webpage" — text selection breaks the illusion. If a specific surface genuinely needs selectable text (rare), open an issue first.
 5. **Rendering the browser's right-click context menu.** `TooltipShell` suppresses it. Do not add `onContextMenu={undefined}` overrides.
 6. **Keyboard focus theft.** Don't put `tabIndex={0}` on a hover tooltip. Tab order is panels-only.
@@ -319,13 +313,13 @@ export function PlacementHint({ anchor, scores, tier = 'compact' }: PlacementHin
 
 Copy this into your PR description or commit message body.
 
-- [ ] `HUDElementId` added to `hudRegistry.ts` union and `HUD_REGISTRY` map (with priority and any optional `defaultTimeout`)
-- [ ] Component wraps body in `<TooltipShell>` (or appropriate shell) with matching `id`
+- [ ] `HUDElementId` added to `hudRegistry.ts` union and `HUD_REGISTRY` map (with `priority` and optional `defaultTimeout`)
+- [ ] Component wraps body in `<TooltipShell>` with matching `id`
 - [ ] Position strategy chosen at design time (floating / fixed-corner / side), not conditionally
 - [ ] No local `useState<boolean>` for visibility — caller decides when to mount
 - [ ] `HUDManager.register` called in `useEffect` with `unregister` cleanup (if coordination is needed)
 - [ ] Body chrome uses only `var(--panel-*)` and `var(--hud-*)` tokens — no raw hex, no Tailwind color utilities
-- [ ] Stack-cycle support wired (if `supportsCycle: true`)
+- [ ] Stack-cycle support wired (if the overlay can anchor to multiple entities)
 - [ ] No `user-select: text` override; no `onContextMenu` override; no `tabIndex={0}` on non-interactive surfaces
 - [ ] No per-overlay ESC handler
 - [ ] Smoke test in `packages/web/src/ui/hud/__tests__/<OverlayName>.test.tsx` passes

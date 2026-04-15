@@ -55,15 +55,15 @@ Key invariants enforced by following the template:
 
 ### 3. Mount it conditionally in App.tsx
 
-In `packages/web/src/App.tsx`, find the `<Suspense fallback={null}>` block inside `GameUI`. Add a branch:
+In `packages/web/src/App.tsx`, find the `<Suspense fallback={null}>` block inside `GameUI`. Add a branch using `isOpen` and `closePanel` from `usePanelManager`:
 
 ```tsx
-{activePanel === 'myPanel' && (
-  <MyPanel onClose={() => setActivePanel('none')} />
+{isOpen('myPanel') && (
+  <MyPanel onClose={closePanel} />
 )}
 ```
 
-(Once GameUI fully migrates to `usePanelManager`, the wrapping changes to `isOpen('myPanel') && <MyPanel onClose={closePanel} />`. Use whichever style App.tsx is currently on — match the surrounding panels.)
+If surrounding panels still use the legacy `setActivePanel` pattern, that is tech debt to migrate — the new panel must still use `closePanel` from `usePanelManager`. Do not propagate the legacy pattern; `panels.md` requires the modern path from day one.
 
 Add the `lazy` import alongside the others at the top of App.tsx:
 
@@ -87,7 +87,7 @@ Edit `packages/web/src/ui/components/TopBar.tsx` (or wherever the trigger lives)
 
 The `data-panel-trigger="<id>"` attribute is mandatory. Future click-outside-to-close logic uses it to avoid the open/close race the audit caught.
 
-If TopBar does not yet use `usePanelManager` directly and instead receives `onOpenXxx` callbacks from App.tsx, follow the existing pattern for now and add an `onOpenMyPanel` prop. (Migration to direct `usePanelManager` is a separate cycle.)
+Call `usePanelManager()` directly inside `TopBar` — do not props-drill `onOpenMyPanel` callbacks from App.tsx. The rule in `panels.md` is explicit: any component that needs to open a panel calls `usePanelManager()` directly.
 
 ### 5. Wire a keyboard shortcut (optional)
 
