@@ -201,7 +201,8 @@ describe('ReligionPanel', () => {
     const onClose = vi.fn();
     const { getByTestId } = render(<ReligionPanel onClose={onClose} />);
 
-    fireEvent.click(getByTestId('religion-panel-close'));
+    // Migrated to PanelShell — close button is now `panel-close-religion`.
+    fireEvent.click(getByTestId('panel-close-religion'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -211,5 +212,12 @@ describe('ReligionPanel', () => {
 
     const { getByTestId } = render(<ReligionPanel onClose={() => {}} />);
     expect(getByTestId('religion-panel-faith').textContent).toContain('137');
+  });
+
+  it('renders inside a PanelShell with the correct id and overlay priority', () => {
+    setMockState(makeState());
+    const { getByTestId } = render(<ReligionPanel onClose={() => {}} />);
+    const shell = getByTestId('panel-shell-religion');
+    expect(shell.getAttribute('data-panel-priority')).toBe('overlay');
   });
 });

@@ -28,6 +28,7 @@
 import { useGameState } from '../../providers/GameProvider';
 import { ALL_PANTHEONS } from '@hex/engine';
 import type { PlayerState, CityId } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 interface ReligionPanelProps {
   readonly onClose: () => void;
@@ -60,22 +61,9 @@ function humanizeBeliefId(id: string): string {
     .join(' ');
 }
 
-// Panel layout / style tokens mirror the other simple read-only panels
-// (EventLogPanel, GovernorPanel) — right-anchored, fixed-width column
-// with a surface background and matching border.
-const PANEL_CLASSES =
-  'absolute right-0 top-12 bottom-14 w-80 flex flex-col';
-const PANEL_STYLE: React.CSSProperties = {
-  backgroundColor: 'var(--color-surface)',
-  borderLeft: '1px solid var(--color-border)',
-};
-const HEADER_CLASSES =
-  'flex items-center justify-between px-4 py-3 shrink-0';
-const HEADER_STYLE: React.CSSProperties = {
-  backgroundColor: 'var(--color-surface)',
-  borderBottom: '1px solid var(--color-border)',
-};
-const SECTION_CLASSES = 'px-4 py-3';
+// Section style tokens — chrome (container/title/close) is provided by
+// PanelShell. We retain only the per-section inner divider styling.
+const SECTION_CLASSES = 'py-3';
 const SECTION_STYLE: React.CSSProperties = {
   borderBottom: '1px solid var(--color-border)',
 };
@@ -103,37 +91,16 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
   const faith = player?.faith ?? 0;
 
   return (
-    <div
-      className={PANEL_CLASSES}
-      style={PANEL_STYLE}
-      data-testid="religion-panel"
-    >
-      {/* Header */}
-      <div className={HEADER_CLASSES} style={HEADER_STYLE}>
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold">Religion</h2>
-          <span
-            className="text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-            data-testid="religion-panel-faith"
-          >
-            ✦ {faith} Faith
-          </span>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-sm px-2 py-1 cursor-pointer"
+    <PanelShell id="religion" title="Religion" onClose={onClose} priority="overlay">
+      <div data-testid="religion-panel">
+        {/* Faith subtitle (was inline in the old header) */}
+        <div
+          className="text-xs mb-2"
           style={{ color: 'var(--color-text-muted)' }}
-          data-testid="religion-panel-close"
-          aria-label="Close religion panel"
-          type="button"
+          data-testid="religion-panel-faith"
         >
-          X
-        </button>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
+          ✦ {faith} Faith
+        </div>
         {/* Pantheon section */}
         <section
           className={SECTION_CLASSES}
@@ -259,7 +226,7 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
           </div>
         </section>
       </div>
-    </div>
+    </PanelShell>
   );
 }
 

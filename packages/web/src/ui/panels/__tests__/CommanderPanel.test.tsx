@@ -197,8 +197,16 @@ describe('CommanderPanel', () => {
     const onClose = vi.fn();
     const { getByTestId } = render(<CommanderPanel onClose={onClose} />);
 
-    fireEvent.click(getByTestId('commander-panel-close'));
+    // Migrated to PanelShell — close button is `panel-close-commanders`.
+    fireEvent.click(getByTestId('panel-close-commanders'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders inside a PanelShell with the correct id and overlay priority', () => {
+    setMockState(makeState());
+    const { getByTestId } = render(<CommanderPanel onClose={() => {}} />);
+    const shell = getByTestId('panel-shell-commanders');
+    expect(shell.getAttribute('data-panel-priority')).toBe('overlay');
   });
 
   it('renders multiple commanders as separate rows', () => {

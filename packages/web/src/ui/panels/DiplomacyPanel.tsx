@@ -1,6 +1,7 @@
 import { useGameState } from '../../providers/GameProvider';
 import { ALL_CIVILIZATIONS, ALL_LEADERS } from '@hex/engine';
 import type { PlayerId, DiplomaticStatus, DiplomacyProposal, DiplomacyRelation } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 interface DiplomacyPanelProps {
   onClose: () => void;
@@ -19,6 +20,10 @@ const STATUS_LABELS: Record<DiplomaticStatus, string> = {
   war: 'At War',
 };
 
+// TODO(panel-manager-audit DiplomacyPanel.tsx:22–29): swap raw hex
+// status colors for `var(--color-*)` tokens once panel-tokens.css
+// exposes a diplomatic-status palette. Migration to PanelShell did
+// not introduce these tokens to keep scope narrow.
 const STATUS_COLORS: Record<DiplomaticStatus, string> = {
   helpful: '#4ade80',      // green
   friendly: '#60a5fa',     // blue
@@ -34,18 +39,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
   const otherPlayers = [...state.players.values()].filter(p => p.id !== currentPlayerId);
 
   return (
-    <div className="absolute right-0 top-12 bottom-14 w-80 overflow-y-auto"
-      style={{ backgroundColor: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h2 className="text-lg font-bold">Diplomacy</h2>
-        <button onClick={onClose} className="text-sm px-2 py-1 cursor-pointer"
-          style={{ color: 'var(--color-text-muted)' }}>
-          X
-        </button>
-      </div>
-
+    <PanelShell id="diplomacy" title="Diplomacy" onClose={onClose} priority="info">
       {/* Player list */}
       {otherPlayers.length === 0 ? (
         <div className="px-4 py-6 text-center text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -214,7 +208,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
           );
         })
       )}
-    </div>
+    </PanelShell>
   );
 }
 

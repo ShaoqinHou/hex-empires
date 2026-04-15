@@ -186,7 +186,8 @@ describe('GovernmentPanel', () => {
     setMockState(makeState());
 
     const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
-    expect(getByTestId('government-panel-close')).not.toBeNull();
+    // Migrated to PanelShell — close button is `panel-close-government`.
+    expect(getByTestId('panel-close-government')).not.toBeNull();
   });
 
   it('calls onClose when the close button is clicked', () => {
@@ -195,7 +196,14 @@ describe('GovernmentPanel', () => {
     const onClose = vi.fn();
     const { getByTestId } = render(<GovernmentPanel onClose={onClose} />);
 
-    fireEvent.click(getByTestId('government-panel-close'));
+    fireEvent.click(getByTestId('panel-close-government'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders inside a PanelShell with the correct id and overlay priority', () => {
+    setMockState(makeState());
+    const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
+    const shell = getByTestId('panel-shell-government');
+    expect(shell.getAttribute('data-panel-priority')).toBe('overlay');
   });
 });

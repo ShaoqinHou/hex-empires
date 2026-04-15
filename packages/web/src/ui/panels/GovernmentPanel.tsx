@@ -29,6 +29,7 @@ import { useGameState } from '../../providers/GameProvider';
 import { ALL_GOVERNMENTS, ALL_POLICIES } from '@hex/engine';
 import type { PlayerState } from '@hex/engine';
 import type { GovernmentDef, PolicyCategory, PolicyDef } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 interface GovernmentPanelProps {
   readonly onClose: () => void;
@@ -135,22 +136,9 @@ function slotArrayFor(
   return out;
 }
 
-// Panel layout / style tokens mirror the other simple read-only panels
-// (ReligionPanel, EventLogPanel) — right-anchored, fixed-width column
-// with a surface background and matching border.
-const PANEL_CLASSES =
-  'absolute right-0 top-12 bottom-14 w-80 flex flex-col';
-const PANEL_STYLE: React.CSSProperties = {
-  backgroundColor: 'var(--color-surface)',
-  borderLeft: '1px solid var(--color-border)',
-};
-const HEADER_CLASSES =
-  'flex items-center justify-between px-4 py-3 shrink-0';
-const HEADER_STYLE: React.CSSProperties = {
-  backgroundColor: 'var(--color-surface)',
-  borderBottom: '1px solid var(--color-border)',
-};
-const SECTION_CLASSES = 'px-4 py-3';
+// Section style tokens — chrome (container/title/close) is provided by
+// PanelShell. We retain only the per-section inner divider styling.
+const SECTION_CLASSES = 'py-3';
 const SECTION_STYLE: React.CSSProperties = {
   borderBottom: '1px solid var(--color-border)',
 };
@@ -168,28 +156,8 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
   );
 
   return (
-    <div
-      className={PANEL_CLASSES}
-      style={PANEL_STYLE}
-      data-testid="government-panel"
-    >
-      {/* Header */}
-      <div className={HEADER_CLASSES} style={HEADER_STYLE}>
-        <h2 className="text-lg font-bold">Government</h2>
-        <button
-          onClick={onClose}
-          className="text-sm px-2 py-1 cursor-pointer"
-          style={{ color: 'var(--color-text-muted)' }}
-          data-testid="government-panel-close"
-          aria-label="Close government panel"
-          type="button"
-        >
-          X
-        </button>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
+    <PanelShell id="government" title="Government" onClose={onClose} priority="overlay">
+      <div data-testid="government-panel">
         {/* Current government section */}
         <section
           className={SECTION_CLASSES}
@@ -360,6 +328,6 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
           )}
         </section>
       </div>
-    </div>
+    </PanelShell>
   );
 }

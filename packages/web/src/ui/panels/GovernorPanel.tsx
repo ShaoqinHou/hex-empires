@@ -1,5 +1,6 @@
 import { useGameState } from '../../providers/GameProvider';
 import type { Governor, GovernorDef, GovernorAbility } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 interface GovernorPanelProps {
   onClose: () => void;
@@ -14,6 +15,10 @@ const SPECIALIZATION_ICONS: Record<string, string> = {
   diplomatic: '🤝',
 };
 
+// TODO(panel-manager-audit GovernorPanel.tsx:17–24): swap raw hex
+// specialization colors for `var(--color-*)` tokens once
+// panel-tokens.css exposes a specialization palette. Migration to
+// PanelShell did not introduce these tokens to keep scope narrow.
 const SPECIALIZATION_COLORS: Record<string, string> = {
   economic: '#fbbf24',
   military: '#ef4444',
@@ -38,20 +43,9 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
   const playerCities = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId);
 
   return (
-    <div className="absolute right-0 top-12 bottom-14 w-96 overflow-y-auto"
-      style={{ backgroundColor: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h2 className="text-lg font-bold">👑 Governors</h2>
-        <button onClick={onClose} className="text-sm px-2 py-1 cursor-pointer"
-          style={{ color: 'var(--color-text-muted)' }}>
-          X
-        </button>
-      </div>
-
+    <PanelShell id="governors" title="👑 Governors" onClose={onClose} priority="info">
       {/* Recruited Governors */}
-      <div className="px-4 py-2">
+      <div className="py-2">
         <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
           Recruited ({recruitedGovernors.length}/4)
         </h3>
@@ -76,7 +70,7 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
 
       {/* Available to Recruit */}
       {recruitedGovernors.length < 4 && availableToRecruit.length > 0 && (
-        <div className="px-4 py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="py-2 mt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
           <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
             Available to Recruit
           </h3>
@@ -113,7 +107,7 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
           </div>
         </div>
       )}
-    </div>
+    </PanelShell>
   );
 }
 
