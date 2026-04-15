@@ -3,7 +3,7 @@ import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId, CityId } from '../types/Ids';
 import type { UrbanTileV2 } from '../types/DistrictOverhaul';
 import { coordToKey, distance } from '../hex/HexMath';
-import { isWonderPlacementValid } from '../systems/wonderPlacementSystem';
+import { isWonderPlacementValid } from './WonderPlacementUtils';
 
 /**
  * BuildingPlacementValidator (standalone pre-flight helper)

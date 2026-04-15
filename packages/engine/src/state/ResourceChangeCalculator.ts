@@ -1,7 +1,7 @@
 import type { GameState, CityState } from '../types/GameState';
 import { calculateCityYields, getSpecializationYields } from './YieldCalculator';
-import { calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from '../systems/resourceSystem';
-import { getGrowthThreshold } from '../systems/growthSystem';
+import { calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './HappinessUtils';
+import { getGrowthThreshold } from './GrowthUtils';
 
 /**
  * Per-turn resource change summary for a player
