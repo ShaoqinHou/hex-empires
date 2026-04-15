@@ -55,11 +55,13 @@ export interface PanelRegistryEntry {
 
 /**
  * Full list. Keep in sync with `PanelId`.
- * Shortcuts preserved from existing App.tsx behavior:
- *   H — help (App.tsx:56–58)
- *   T — tech tree (TopBar keyboard hint)
- *   Y — civics tree (TopBar keyboard hint)
- * Other shortcuts are placeholders; later cycles can wire them up.
+ * Shortcuts sourced from App.tsx keydown handler and TopBar hints:
+ *   H — help
+ *   T — tech tree (TopBar button)
+ *   Y — civics tree (TopBar button)
+ *   R — religion
+ *   G — government
+ *   K — commanders
  */
 export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<PanelId, PanelRegistryEntry>([
   ['help',            { id: 'help',            title: 'Help',                icon: '❓',  keyboardShortcut: 'H', priority: 'overlay' }],
@@ -71,9 +73,9 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['age',             { id: 'age',             title: 'Age Transition',      icon: '⏳', priority: 'modal'   }],
   ['turnSummary',     { id: 'turnSummary',     title: 'Turn Summary',        icon: '📊', priority: 'modal'   }],
   ['governors',       { id: 'governors',       title: 'Governors',           icon: '👑', priority: 'overlay' }],
-  ['religion',        { id: 'religion',        title: 'Religion',            icon: '⛪', priority: 'overlay' }],
-  ['government',      { id: 'government',      title: 'Government',          icon: '🏛️',  priority: 'overlay' }],
-  ['commanders',      { id: 'commanders',      title: 'Commanders',          icon: '⚔️',  priority: 'overlay' }],
+  ['religion',        { id: 'religion',        title: 'Religion',            icon: '⛪', keyboardShortcut: 'R', priority: 'overlay' }],
+  ['government',      { id: 'government',      title: 'Government',          icon: '🏛️',  keyboardShortcut: 'G', priority: 'overlay' }],
+  ['commanders',      { id: 'commanders',      title: 'Commanders',          icon: '⚔️',  keyboardShortcut: 'K', priority: 'overlay' }],
   ['victoryProgress', { id: 'victoryProgress', title: 'Victory Progress',    icon: '🏆', priority: 'modal'   }],
   ['victory',         { id: 'victory',         title: 'Victory!',            icon: '🏆', priority: 'modal'   }],
   ['crisis',          { id: 'crisis',          title: 'Crisis',              icon: '⚠️',  priority: 'modal'   }],

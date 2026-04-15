@@ -17,6 +17,7 @@ import { TooltipOverlay } from './ui/hud/TooltipOverlay';
 import { UrbanPlacementHintBadge } from './ui/hud/UrbanPlacementHintBadge';
 import { hexToPixel } from './utils/hexMath';
 import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
+import { PANEL_REGISTRY } from './ui/panels/panelRegistry';
 import { HUDManagerProvider } from './ui/hud/HUDManager';
 import { VictoryProgressPanel } from './ui/panels/VictoryProgressPanel';
 
@@ -84,21 +85,17 @@ function GameUI() {
 
   // Keyboard shortcuts for panel toggles. ESC is handled inside
   // PanelManagerProvider (capture phase) so it's not duplicated here.
+  // Shortcut letters are sourced from PANEL_REGISTRY — never hardcoded here.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (e.key === 'h' || e.key === 'H') {
-        togglePanel('help');
-      }
-      if (e.key === 'r' || e.key === 'R') {
-        togglePanel('religion');
-      }
-      if (e.key === 'g' || e.key === 'G') {
-        togglePanel('government');
-      }
-      if (e.key === 'k' || e.key === 'K') {
-        togglePanel('commanders');
+      const keyUpper = e.key.toUpperCase();
+      for (const [id, entry] of PANEL_REGISTRY) {
+        if (entry.keyboardShortcut && keyUpper === entry.keyboardShortcut.toUpperCase()) {
+          togglePanel(id);
+          return;
+        }
       }
     };
     window.addEventListener('keydown', handleKey);
