@@ -331,7 +331,20 @@ Effects are evaluated by the `effectSystem` which collects active effects from t
 
 **Components:** `CombatHoverPreview`, `BuildingPlacementPanel`, `ImprovementPanel`, `UnitCard`, `BuildingCard`, `AudioSettings`, tooltip system
 
-Panel state is managed by plain `useState<Panel>` in the `GameUI` component in `App.tsx` — no UIProvider exists.
+Panel state is managed by plain `useState<Panel>` in the `GameUI` component in `App.tsx` — no UIProvider exists. (This local-state pattern is being phased out — see panel conventions below.)
+
+### Panel Conventions (M33+)
+
+Every panel in `packages/web/src/ui/panels/` follows one shared pattern. Adding or modifying a panel without following it produces visual drift, ESC inconsistencies, and z-index conflicts.
+
+- **Location:** all panels live in `packages/web/src/ui/panels/`. Their body is wrapped in `<PanelShell>` (`packages/web/src/ui/panels/PanelShell.tsx`), which owns the title bar, close button, backdrop (modal only), z-index, context-menu suppression, and `role="dialog"` semantics. Do not hand-roll any of those.
+- **Registration:** every panel id and its metadata (title, optional icon, optional keyboard shortcut, priority class) lives in `packages/web/src/ui/panels/panelRegistry.ts`. New panels must register here first — the `PanelId` union is the source of truth.
+- **Activation:** panel open/close goes through `usePanelManager()` from `packages/web/src/ui/panels/PanelManager.tsx`. The hook exposes `openPanel(id)`, `closePanel()`, `togglePanel(id)`, `isOpen(id)`, and `activePanel`. Do not hold local `useState<boolean>` for a new panel's visibility; do not props-drill `onOpenXxx` callbacks. ESC handling is owned by the provider in capture phase.
+- **Priority classes:** `modal` blocks the map and gets a backdrop (e.g. age transition, turn summary, victory progress). `overlay` floats over the map non-blocking (most panels — city, tech, diplomacy). `info` is a non-blocking side column (event log).
+- **Styling:** panel chrome uses only the CSS custom properties from `packages/web/src/styles/panel-tokens.css` (`var(--panel-bg)`, `var(--panel-border)`, `var(--panel-z-modal)`, etc.). Never raw hex values, never hard-coded Tailwind color utilities for chrome. Panel body content can use whatever styling is appropriate, but prefer tokens for consistency.
+- **Triggers:** TopBar buttons that open a panel get `data-panel-trigger="<id>"` and call `togglePanel('<id>')`. Keyboard shortcuts are wired in `App.tsx`'s keydown handler from the registry.
+
+See `.claude/rules/panels.md` for the authoritative rule set and `.claude/skills/add-panel/` for a step-by-step guide when creating a new panel.
 
 ### State Flow
 
