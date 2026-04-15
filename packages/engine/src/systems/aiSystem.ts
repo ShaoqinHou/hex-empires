@@ -1,4 +1,4 @@
-import type { GameState, GameAction, UnitState, CityState, TownSpecialization } from '../types/GameState';
+import type { GameState, GameAction, UnitState, CityState, HexTile, PlayerState, TownSpecialization } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
@@ -1427,7 +1427,7 @@ function getOneStepToward(from: HexCoord, target: HexCoord, state: GameState): H
 }
 
 /** Try to build an improvement on current or adjacent tile */
-function tryBuildImprovement(state: GameState, builder: UnitState, player: any, ourCities: CityState[], actions: GameAction[]): boolean {
+function tryBuildImprovement(state: GameState, builder: UnitState, player: PlayerState, ourCities: CityState[], actions: GameAction[]): boolean {
   // Check current tile first
   const currentTile = state.map.tiles.get(coordToKey(builder.position));
   if (!currentTile || currentTile.improvement) {
@@ -1458,7 +1458,7 @@ function tryBuildImprovement(state: GameState, builder: UnitState, player: any, 
 }
 
 /** Pick the best improvement for a tile based on its features/resources */
-function pickBestImprovement(state: GameState, tile: any, player: any): string | null {
+function pickBestImprovement(state: GameState, tile: HexTile, player: PlayerState): string | null {
   let bestImprovement: string | null = null;
   let bestPriority = 0;
 
@@ -1509,7 +1509,7 @@ function pickBestImprovement(state: GameState, tile: any, player: any): string |
 }
 
 /** Move builder toward tiles that need improvements */
-function moveTowardImprovementSpot(state: GameState, builder: UnitState, player: any, ourCities: CityState[], actions: GameAction[]): void {
+function moveTowardImprovementSpot(state: GameState, builder: UnitState, player: PlayerState, ourCities: CityState[], actions: GameAction[]): void {
   let bestTarget: HexCoord | null = null;
   let bestScore = -Infinity;
 
@@ -1562,7 +1562,7 @@ function moveTowardImprovementSpot(state: GameState, builder: UnitState, player:
 }
 
 /** Pick the best town specialization based on tile yields and strategic needs */
-function pickTownSpecialization(state: GameState, city: CityState, player: any): TownSpecialization | null {
+function pickTownSpecialization(state: GameState, city: CityState, player: PlayerState): TownSpecialization | null {
   // Analyze territory tiles
   let foodScore = 0;
   let productionScore = 0;

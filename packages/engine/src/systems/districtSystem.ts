@@ -5,8 +5,9 @@
  * Districts are specialized zones that contain buildings and provide adjacency bonuses.
  */
 
-import type { GameState, GameAction } from '../types/GameState';
+import type { GameState, GameAction, CityState } from '../types/GameState';
 import type { DistrictSlot, DistrictDef } from '../types/District';
+import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 
 /**
@@ -53,7 +54,7 @@ function handlePlaceDistrict(
   state: GameState,
   cityId: string,
   districtId: string,
-  tile: any,
+  tile: HexCoord,
 ): GameState {
   const city = state.cities.get(cityId);
   if (!city) return createInvalidResult(state, 'City not found', 'production');
@@ -205,8 +206,8 @@ function handleUpgradeDistrict(
  */
 function validatePlacementConstraints(
   districtDef: DistrictDef,
-  tile: any,
-  city: any,
+  tile: HexCoord,
+  city: CityState,
   state: GameState,
 ): string | null {
   const constraint = districtDef.placementConstraint;
@@ -262,7 +263,7 @@ function validatePlacementConstraints(
  */
 function calculateAdjacencyBonus(
   districtDef: DistrictDef,
-  position: any,
+  position: HexCoord,
   state: GameState,
 ): number {
   const adjacentTiles = neighbors(position);
