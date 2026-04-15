@@ -57,6 +57,26 @@
   --hud-accent-enemy: #ef4444;     /* red */
   --hud-accent-neutral: #9ca3af;   /* grey */
 
+  /* ── Tooltip body palette ──────────────────────────────────────────
+   * Semantic accents used inside the tile tooltip body (TooltipOverlay).
+   * These are game-data colors (enemy = red, resource = yellow, district
+   * = purple) but routed through tokens so the tooltip body stops
+   * reaching for Tailwind color utilities. */
+  --hud-tooltip-heading: #fcd34d;           /* amber-300 — terrain name header */
+  --hud-tooltip-heading-strong: #fbbf24;    /* amber-400 — city name / detailed header */
+  --hud-tooltip-resource: #fde047;          /* yellow-300 — resource accent */
+  --hud-tooltip-improvement: #93c5fd;       /* blue-300 — improvement / info */
+  --hud-tooltip-district: #c4b5fd;          /* purple-300 — district / wonder / tile-building */
+  --hud-tooltip-own-military: #86efac;      /* green-300 — own military */
+  --hud-tooltip-own-civilian: #bbf7d0;      /* green-200 — own civilian */
+  --hud-tooltip-enemy-military: #f87171;    /* red-400 — enemy military */
+  --hud-tooltip-enemy-civilian: #fca5a5;    /* red-300 — enemy civilian */
+  --hud-tooltip-positive: #4ade80;          /* green-400 — positive/happy/adjacency+ */
+  --hud-tooltip-negative: #f87171;          /* red-400 — negative/unhappy/adjacency- */
+  --hud-tooltip-city-neutral: #94a3b8;      /* slate-400 — neutral/unknown city owner */
+  --hud-tooltip-city-own: #4ade80;          /* green-400 — own city */
+  --hud-tooltip-city-enemy: #f87171;        /* red-400 — enemy city */
+
   /* Stack-cycle indicator pill ("1 / 3 — Tab to cycle"). Subtle so it
    * sits visually below the primary tooltip content. */
   --hud-cycle-indicator-bg: rgba(251, 191, 36, 0.18);

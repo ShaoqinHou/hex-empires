@@ -225,11 +225,11 @@ function LightweightTooltipBody({
   const topEnemyCivilianDef = defFor(topEnemyCivilian);
 
   // City ownership colour hint.
-  let cityColor = 'text-slate-300';
+  let cityColor: string = 'var(--panel-text-color)';
   if (contents.city) {
-    if (contents.city.owner === state.currentPlayerId) cityColor = 'text-green-400';
-    else if (state.players.get(contents.city.owner)) cityColor = 'text-red-400';
-    else cityColor = 'text-slate-400';
+    if (contents.city.owner === state.currentPlayerId) cityColor = 'var(--hud-tooltip-city-own)';
+    else if (state.players.get(contents.city.owner)) cityColor = 'var(--hud-tooltip-city-enemy)';
+    else cityColor = 'var(--hud-tooltip-city-neutral)';
   }
 
   // Stack-cycle pill: shown whenever the combined stack has >1 entity.
@@ -246,17 +246,18 @@ function LightweightTooltipBody({
       style={{ minWidth: '160px', lineHeight: '1.5' }}
     >
       {/* Header: Terrain + inline features */}
-      <div className="font-semibold text-amber-300">
+      <div className="font-semibold" style={{ color: 'var(--hud-tooltip-heading)' }}>
         {terrainLabel}
         {headerSuffix && (
-          <span className="font-normal text-slate-300">{headerSuffix}</span>
+          <span className="font-normal" style={{ color: 'var(--hud-text-muted)' }}>{headerSuffix}</span>
         )}
       </div>
 
       {/* Summed yields — one per type, non-zero only. */}
       <div
         data-testid="tooltip-yields-compact"
-        className="flex flex-wrap gap-2 text-slate-300 mt-0.5"
+        className="flex flex-wrap gap-2 mt-0.5"
+        style={{ color: 'var(--hud-text-muted)' }}
       >
         {totals.food !== 0       && <span>🌾 {totals.food}</span>}
         {totals.production !== 0 && <span>🔨 {totals.production}</span>}
@@ -268,59 +269,59 @@ function LightweightTooltipBody({
 
       {/* Resource */}
       {resource && (
-        <div className="text-yellow-300 mt-0.5">★ {resource.name}</div>
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-resource)' }}>★ {resource.name}</div>
       )}
 
       {/* Improvement */}
       {improvement && (
-        <div className="text-blue-300 mt-0.5">⛏ {improvement.name}</div>
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-improvement)' }}>⛏ {improvement.name}</div>
       )}
 
       {/* City */}
       {contents.city && (
-        <div className={`mt-0.5 ${cityColor}`}>
+        <div className="mt-0.5" style={{ color: cityColor }}>
           🏛 {contents.city.name}{' '}
-          <span className="text-slate-400">Pop {contents.city.population}</span>
+          <span style={{ color: 'var(--hud-tooltip-city-neutral)' }}>Pop {contents.city.population}</span>
         </div>
       )}
 
       {/* Own military — per-category count. M37-B: keeps civilian line
           distinct so a warrior + settler pair renders BOTH. */}
       {topOwnMilitary && topOwnMilitaryDef && (
-        <div className="text-green-300 mt-0.5">
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-own-military)' }}>
           ⚔ {topOwnMilitaryDef.name} ({topOwnMilitary.health}hp)
           {ownMilitary.length > 1 && (
-            <span className="text-slate-400"> ×{ownMilitary.length}</span>
+            <span style={{ color: 'var(--hud-tooltip-city-neutral)' }}> ×{ownMilitary.length}</span>
           )}
         </div>
       )}
 
       {/* Own civilian */}
       {topOwnCivilian && topOwnCivilianDef && (
-        <div className="text-green-200 mt-0.5">
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-own-civilian)' }}>
           👤 {topOwnCivilianDef.name} ({topOwnCivilian.health}hp)
           {ownCivilian.length > 1 && (
-            <span className="text-slate-400"> ×{ownCivilian.length}</span>
+            <span style={{ color: 'var(--hud-tooltip-city-neutral)' }}> ×{ownCivilian.length}</span>
           )}
         </div>
       )}
 
       {/* Enemy military */}
       {topEnemyMilitary && topEnemyMilitaryDef && (
-        <div className="text-red-400 mt-0.5">
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-enemy-military)' }}>
           ⚔ {topEnemyMilitaryDef.name} ({topEnemyMilitary.health}hp)
           {enemyMilitary.length > 1 && (
-            <span className="text-red-300"> ×{enemyMilitary.length}</span>
+            <span style={{ color: 'var(--hud-tooltip-enemy-civilian)' }}> ×{enemyMilitary.length}</span>
           )}
         </div>
       )}
 
       {/* Enemy civilian */}
       {topEnemyCivilian && topEnemyCivilianDef && (
-        <div className="text-red-300 mt-0.5">
+        <div className="mt-0.5" style={{ color: 'var(--hud-tooltip-enemy-civilian)' }}>
           👤 {topEnemyCivilianDef.name} ({topEnemyCivilian.health}hp)
           {enemyCivilian.length > 1 && (
-            <span className="text-red-300"> ×{enemyCivilian.length}</span>
+            <span style={{ color: 'var(--hud-tooltip-enemy-civilian)' }}> ×{enemyCivilian.length}</span>
           )}
         </div>
       )}
@@ -329,8 +330,8 @@ function LightweightTooltipBody({
       {showCyclePill && (
         <div
           data-testid="tooltip-cycle-pill"
-          className="mt-1 text-slate-400"
-          style={{ fontSize: '11px' }}
+          className="mt-1"
+          style={{ fontSize: '11px', color: 'var(--hud-text-muted)' }}
         >
           ({displayIndex} / {stackSize} — Tab to cycle)
         </div>
@@ -425,24 +426,24 @@ function DetailedTooltipBody({
       style={{ minWidth: '260px', lineHeight: '1.55' }}
     >
       {/* Header */}
-      <div className="font-bold text-sm text-amber-400 mb-1">
+      <div className="font-bold text-sm mb-1" style={{ color: 'var(--hud-tooltip-heading-strong)' }}>
         {terrain?.name ?? tile.terrain}
         {headerSuffix && (
-          <span className="text-slate-300 font-normal">{headerSuffix}</span>
+          <span className="font-normal" style={{ color: 'var(--hud-text-muted)' }}>{headerSuffix}</span>
         )}
       </div>
 
       {/* Terrain stats */}
-      <div className="text-slate-400 space-y-0.5 mb-2">
+      <div className="space-y-0.5 mb-2" style={{ color: 'var(--hud-text-muted)' }}>
         <div className="flex justify-between">
           <span>Movement cost</span>
-          <span className="text-slate-200">
+          <span style={{ color: 'var(--hud-text-color)' }}>
             {(terrain?.movementCost ?? 1) + (feature?.movementCostModifier ?? 0)}
           </span>
         </div>
         <div className="flex justify-between">
           <span>Defense bonus</span>
-          <span className="text-slate-200">
+          <span style={{ color: 'var(--hud-text-color)' }}>
             +{Math.round(((terrain?.defenseBonus ?? 0) + (feature?.defenseBonusModifier ?? 0)) * 100)}%
           </span>
         </div>
@@ -452,16 +453,18 @@ function DetailedTooltipBody({
       {sources.length > 0 && (
         <div
           data-testid="tooltip-yields-breakdown"
-          className="border-t border-slate-700 pt-2 mb-2"
+          className="pt-2 mb-2"
+          style={{ borderTop: '1px solid var(--hud-border)' }}
         >
-          <div className="text-slate-400 font-semibold mb-1">Yield Breakdown</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--hud-text-muted)' }}>Yield Breakdown</div>
           <div className="space-y-0.5">
             {sources.map((s, idx) => (
               <div
                 key={`${s.label}-${idx}`}
-                className="flex justify-between gap-3 text-slate-300"
+                className="flex justify-between gap-3"
+                style={{ color: 'var(--hud-text-color)' }}
               >
-                <span className="text-slate-400">{s.label}</span>
+                <span style={{ color: 'var(--hud-text-muted)' }}>{s.label}</span>
                 <span>{formatSourceYields(s)}</span>
               </div>
             ))}
@@ -471,7 +474,7 @@ function DetailedTooltipBody({
 
       {/* Resource detail */}
       {resource && (
-        <div className="border-t border-slate-700 pt-2 mb-2">
+        <div className="pt-2 mb-2" style={{ borderTop: '1px solid var(--hud-border)' }}>
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full flex-shrink-0"
@@ -484,25 +487,25 @@ function DetailedTooltipBody({
                     : 'var(--color-resource-bonus, #66bb6a)',
               }}
             />
-            <span className="text-yellow-300 font-semibold">{resource.name}</span>
-            <span className="text-slate-400 capitalize">({resource.type})</span>
+            <span className="font-semibold" style={{ color: 'var(--hud-tooltip-resource)' }}>{resource.name}</span>
+            <span className="capitalize" style={{ color: 'var(--hud-text-muted)' }}>({resource.type})</span>
           </div>
         </div>
       )}
 
       {/* Improvement */}
       {improvement && (
-        <div className="border-t border-slate-700 pt-2 mb-2">
-          <div className="text-blue-300">⛏ {improvement.name}</div>
+        <div className="pt-2 mb-2" style={{ borderTop: '1px solid var(--hud-border)' }}>
+          <div style={{ color: 'var(--hud-tooltip-improvement)' }}>⛏ {improvement.name}</div>
         </div>
       )}
 
       {/* Tile-placed building (rarer — most buildings live in city/district). */}
       {tileBuilding && (
-        <div className="border-t border-slate-700 pt-2 mb-2">
-          <div className="text-purple-300 font-semibold">🏗 {tileBuilding.name}</div>
+        <div className="pt-2 mb-2" style={{ borderTop: '1px solid var(--hud-border)' }}>
+          <div className="font-semibold" style={{ color: 'var(--hud-tooltip-district)' }}>🏗 {tileBuilding.name}</div>
           {tileBuilding.maintenance > 0 && (
-            <div className="text-slate-400">
+            <div style={{ color: 'var(--hud-text-muted)' }}>
               Maintenance: {tileBuilding.maintenance} gold/turn
             </div>
           )}
@@ -513,14 +516,15 @@ function DetailedTooltipBody({
       {district && (
         <div
           data-testid="tooltip-district-adjacency"
-          className="border-t border-slate-700 pt-2 mb-2"
+          className="pt-2 mb-2"
+          style={{ borderTop: '1px solid var(--hud-border)' }}
         >
-          <div className="font-semibold text-purple-300">
+          <div className="font-semibold" style={{ color: 'var(--hud-tooltip-district)' }}>
             {districtDef?.name ?? district.type} (Lv {district.level})
           </div>
-          <div className="text-slate-400">
+          <div style={{ color: 'var(--hud-text-muted)' }}>
             Adjacency bonus:{' '}
-            <span className={district.adjacencyBonus >= 0 ? 'text-green-400' : 'text-red-400'}>
+            <span style={{ color: district.adjacencyBonus >= 0 ? 'var(--hud-tooltip-positive)' : 'var(--hud-tooltip-negative)' }}>
               {district.adjacencyBonus >= 0 ? '+' : ''}
               {district.adjacencyBonus}
             </span>
@@ -532,32 +536,31 @@ function DetailedTooltipBody({
       {contents.city && (
         <div
           data-testid="tooltip-city-detail"
-          className="border-t border-slate-700 pt-2 mb-2"
+          className="pt-2 mb-2"
+          style={{ borderTop: '1px solid var(--hud-border)' }}
         >
-          <div className="font-bold text-amber-400 mb-1">{contents.city.name}</div>
-          <div className="space-y-0.5 text-slate-400">
+          <div className="font-bold mb-1" style={{ color: 'var(--hud-tooltip-heading-strong)' }}>{contents.city.name}</div>
+          <div className="space-y-0.5" style={{ color: 'var(--hud-text-muted)' }}>
             <div className="flex justify-between">
               <span>Owner</span>
-              <span className="text-slate-200">{contents.city.owner}</span>
+              <span style={{ color: 'var(--hud-text-color)' }}>{contents.city.owner}</span>
             </div>
             <div className="flex justify-between">
               <span>Population</span>
-              <span className="text-slate-200">{contents.city.population}</span>
+              <span style={{ color: 'var(--hud-text-color)' }}>{contents.city.population}</span>
             </div>
             <div className="flex justify-between">
               <span>Type</span>
-              <span className="text-slate-200 capitalize">{contents.city.settlementType}</span>
+              <span className="capitalize" style={{ color: 'var(--hud-text-color)' }}>{contents.city.settlementType}</span>
             </div>
             <div className="flex justify-between">
               <span>Defense</span>
-              <span className="text-slate-200">{contents.city.defenseHP} HP</span>
+              <span style={{ color: 'var(--hud-text-color)' }}>{contents.city.defenseHP} HP</span>
             </div>
             <div className="flex justify-between">
               <span>Happiness</span>
               <span
-                className={
-                  contents.city.happiness >= 0 ? 'text-green-400' : 'text-red-400'
-                }
+                style={{ color: contents.city.happiness >= 0 ? 'var(--hud-tooltip-positive)' : 'var(--hud-tooltip-negative)' }}
               >
                 {contents.city.happiness >= 0
                   ? `+${contents.city.happiness}`
@@ -567,14 +570,14 @@ function DetailedTooltipBody({
             {contents.city.specialization && (
               <div className="flex justify-between">
                 <span>Specialization</span>
-                <span className="text-amber-400 capitalize">
+                <span className="capitalize" style={{ color: 'var(--hud-tooltip-heading-strong)' }}>
                   {contents.city.specialization.replace('_', ' ')}
                 </span>
               </div>
             )}
           </div>
           {cityYields && (
-            <div className="mt-2 grid grid-cols-2 gap-1 text-slate-300">
+            <div className="mt-2 grid grid-cols-2 gap-1" style={{ color: 'var(--hud-text-color)' }}>
               <div>🌾 {cityYields.food.toFixed(1)}</div>
               <div>🔨 {cityYields.production.toFixed(1)}</div>
               <div>💰 {cityYields.gold.toFixed(1)}</div>
@@ -586,19 +589,20 @@ function DetailedTooltipBody({
           {cityBuildings.length > 0 && (
             <div
               data-testid="tooltip-city-buildings"
-              className="mt-2 pt-2 border-t border-slate-700 space-y-1"
+              className="mt-2 pt-2 space-y-1"
+              style={{ borderTop: '1px solid var(--hud-border)' }}
             >
-              <div className="text-slate-400 font-semibold">Buildings</div>
+              <div className="font-semibold" style={{ color: 'var(--hud-text-muted)' }}>Buildings</div>
               {cityBuildings.slice(0, 6).map(b => (
-                <div key={b.id} className="flex justify-between gap-2 text-slate-300">
+                <div key={b.id} className="flex justify-between gap-2" style={{ color: 'var(--hud-text-color)' }}>
                   <span>🏛 {b.name}</span>
-                  <span className="text-slate-400">
+                  <span style={{ color: 'var(--hud-text-muted)' }}>
                     {b.maintenance > 0 ? `−${b.maintenance}💰` : 'free'}
                   </span>
                 </div>
               ))}
               {cityBuildings.length > 6 && (
-                <div className="text-slate-500">
+                <div style={{ color: 'var(--hud-text-muted)' }}>
                   …and {cityBuildings.length - 6} more
                 </div>
               )}
@@ -607,7 +611,7 @@ function DetailedTooltipBody({
           {contents.city.productionQueue.length > 0 &&
             contents.city.settlementType === 'city' && (
               <div className="mt-2">
-                <div className="text-slate-400">
+                <div style={{ color: 'var(--hud-text-muted)' }}>
                   Producing: {contents.city.productionQueue[0].id}
                 </div>
               </div>
@@ -620,14 +624,15 @@ function DetailedTooltipBody({
       {allUnitsWithDefs.length > 0 && (
         <div
           data-testid="tooltip-unit-detail"
-          className="border-t border-slate-700 pt-2 space-y-2"
+          className="pt-2 space-y-2"
+          style={{ borderTop: '1px solid var(--hud-border)' }}
         >
           {allUnitsWithDefs.map(({ unit, def, isEnemy }) => (
             <div key={unit.id}>
               {def ? (
                 <UnitStateTooltip unitState={unit} unitDef={def} />
               ) : (
-                <div className={isEnemy ? 'text-red-400' : 'text-green-300'}>
+                <div style={{ color: isEnemy ? 'var(--hud-tooltip-enemy-military)' : 'var(--hud-tooltip-own-military)' }}>
                   {unit.typeId} ({unit.health}hp, xp {unit.experience}, mv {unit.movementLeft})
                 </div>
               )}
@@ -640,8 +645,8 @@ function DetailedTooltipBody({
       {showCyclePill && (
         <div
           data-testid="tooltip-cycle-pill"
-          className="mt-1 text-slate-400"
-          style={{ fontSize: '11px' }}
+          className="mt-1"
+          style={{ fontSize: '11px', color: 'var(--hud-text-muted)' }}
         >
           ({displayIndex} / {stackSize} — Tab to cycle)
         </div>

@@ -71,4 +71,44 @@
   --panel-spec-cultural:   #a855f7; /* purple */
   --panel-spec-religious:  #f59e0b; /* amber */
   --panel-spec-diplomatic: #10b981; /* green */
+
+  /* ─── Accent colors (C11–C13) ─────────────────────────────────────
+   * Semantic accent palette used by panel bodies (chrome — not game
+   * data). Migrated from raw-hex literals in GovernorPanel,
+   * DiplomacyPanel, TechTreePanel, and CivicTreePanel.
+   *
+   * If this block conflicts on merge with a parallel-cycle token
+   * addition, prefer the earlier definition and drop this duplicate —
+   * the values are intentionally the same semantic slots. */
+  --panel-accent-success:        #4ade80;     /* green-400 — positive/friendly */
+  --panel-accent-success-bright: #22c55e;     /* green-500 — stronger success, used in researched-state overlays */
+  --panel-accent-danger:         #ef4444;     /* red-400 — negative/enemy */
+  --panel-accent-info:           #60a5fa;     /* blue-400 — info/alliance */
+  --panel-accent-info-soft:      #93c5fd;     /* blue-300 — softer info */
+  --panel-accent-info-bright:    #3b82f6;     /* blue-500 — stronger info, used in progress fill */
+  --panel-accent-gold-soft:      #fbbf24;     /* amber-400 — softer gold */
+  --panel-accent-gold-bright:    #fcd34d;     /* amber-300 — lighter emphasis (C10) */
+  --panel-accent-purple:         #a855f7;     /* legacy-bonus / wonder / district accent (C10) */
+  --panel-accent-purple-soft:    #c4b5fd;     /* purple-300 — softer reading color (C10) */
+  --panel-accent-purple-glow:    rgba(168, 85, 247, 0.30);
+  --panel-accent-pink:           #e599f7;     /* pink-300 — civic-in-progress text accent */
+  --panel-accent-neutral:        #475569;     /* slate-600 — muted locked state */
+
+  /* Muted surfaces — replace Tailwind `bg-slate-*/XX` patterns in panel
+   * bodies. Added in the C9 + C10 token sweep. */
+  --panel-muted-bg:        rgba(30, 41, 59, 0.50);   /* slate-800 @ 50% */
+  --panel-muted-bg-soft:   rgba(30, 41, 59, 0.30);   /* slate-800 @ 30% — card interior */
+  --panel-muted-bg-strong: rgba(15, 23, 42, 0.50);   /* slate-900 @ 50% — disabled card */
+  --panel-muted-strong:    #475569;                   /* slate-600 — stronger muted text/border (alias of --panel-accent-neutral) */
+  --panel-muted-border:    rgba(71, 85, 105, 0.30);  /* slate-600 @ 30% — card-interior border */
+
+  /* Tech / civic tree node-state aliases. Reuse the accent palette
+   * but give call-sites a semantic name for node state (researched /
+   * selected / locked / unique). Per ui-cleanup-remaining.md C13,
+   * node-state coloring is on the chrome/game-data boundary; naming
+   * them makes the intent explicit. */
+  --tech-state-researched: var(--panel-accent-success-bright);
+  --tech-state-selected:   var(--panel-accent-info-bright);
+  --tech-state-locked:     var(--panel-accent-neutral);
+  --tech-state-unique:     var(--panel-accent-pink);
 }
