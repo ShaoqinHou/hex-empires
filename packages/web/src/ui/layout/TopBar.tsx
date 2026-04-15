@@ -15,9 +15,12 @@ interface TopBarProps {
   onOpenTurnSummary?: () => void;
   onOpenGovernors?: () => void;
   onOpenHelp?: () => void;
+  onOpenReligion?: () => void;
+  onOpenGovernment?: () => void;
+  onOpenCommanders?: () => void;
 }
 
-export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors, onOpenHelp }: TopBarProps) {
+export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors, onOpenHelp, onOpenReligion, onOpenGovernment, onOpenCommanders }: TopBarProps) {
   const { state, dispatch, saveGame, loadGame } = useGameState();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
@@ -111,6 +114,9 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
             <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 z-50 min-w-36"
               style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
               <MenuButton label="👑 Governors" onClick={() => { onOpenGovernors?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="🙏 Religion (R)" testId="open-religion" onClick={() => { onOpenReligion?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="🏛 Government (G)" testId="open-government" onClick={() => { onOpenGovernment?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="🎖 Commanders (K)" testId="open-commanders" onClick={() => { onOpenCommanders?.(); setShowMoreMenu(false); }} />
               <MenuButton label="📜 Event Log" onClick={() => { onOpenLog?.(); setShowMoreMenu(false); }} />
               <MenuButton label="📊 Summary" onClick={() => { onOpenTurnSummary?.(); setShowMoreMenu(false); }} />
               <MenuButton label="🏆 Victory" onClick={() => { setShowVictoryProgress(true); setShowMoreMenu(false); }} />
@@ -211,9 +217,10 @@ function PanelButton({ label, color, dark, onClick }: { label: string; color: st
   );
 }
 
-function MenuButton({ label, onClick }: { label: string; onClick: () => void }) {
+function MenuButton({ label, onClick, testId }: { label: string; onClick: () => void; testId?: string }) {
   return (
     <button
+      data-testid={testId}
       className="w-full text-left px-3 py-1.5 text-xs cursor-pointer hover:brightness-125"
       style={{ color: 'var(--color-text)' }}
       onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface-elevated)'; }}

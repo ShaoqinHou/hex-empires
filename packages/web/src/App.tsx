@@ -27,8 +27,11 @@ const AgeTransitionPanel = lazy(() => import('./ui/panels/AgeTransitionPanel').t
 const TurnSummaryPanel = lazy(() => import('./ui/panels/TurnSummaryPanel').then(m => ({ default: m.TurnSummaryPanel })));
 const GovernorPanel = lazy(() => import('./ui/panels/GovernorPanel').then(m => ({ default: m.GovernorPanel })));
 const HelpPanel = lazy(() => import('./ui/panels/HelpPanel').then(m => ({ default: m.HelpPanel })));
+const ReligionPanel = lazy(() => import('./ui/panels/ReligionPanel').then(m => ({ default: m.ReligionPanel })));
+const GovernmentPanel = lazy(() => import('./ui/panels/GovernmentPanel').then(m => ({ default: m.GovernmentPanel })));
+const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m => ({ default: m.CommanderPanel })));
 
-type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help';
+type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help' | 'religion' | 'government' | 'commanders';
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
@@ -55,6 +58,15 @@ function GameUI() {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'h' || e.key === 'H') {
         togglePanel('help');
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        togglePanel('religion');
+      }
+      if (e.key === 'g' || e.key === 'G') {
+        togglePanel('government');
+      }
+      if (e.key === 'k' || e.key === 'K') {
+        togglePanel('commanders');
       }
       if (e.key === 'Escape' && activePanel !== 'none') {
         setActivePanel('none');
@@ -104,6 +116,9 @@ function GameUI() {
         onOpenTurnSummary={() => togglePanel('turnSummary')}
         onOpenGovernors={() => togglePanel('governors')}
         onOpenHelp={() => togglePanel('help')}
+        onOpenReligion={() => togglePanel('religion')}
+        onOpenGovernment={() => togglePanel('government')}
+        onOpenCommanders={() => togglePanel('commanders')}
       />
       <div className="flex-1 relative">
         <GameCanvas
@@ -143,6 +158,15 @@ function GameUI() {
           )}
           {activePanel === 'help' && (
             <HelpPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'religion' && (
+            <ReligionPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'government' && (
+            <GovernmentPanel onClose={() => setActivePanel('none')} />
+          )}
+          {activePanel === 'commanders' && (
+            <CommanderPanel onClose={() => setActivePanel('none')} />
           )}
         </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />

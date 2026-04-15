@@ -930,3 +930,30 @@ test.describe('Civ VII stacking & own-unit right-click', () => {
     expect(errs).toEqual([]);
   });
 });
+
+test.describe('Newly-wired panels (Religion / Government / Commanders)', () => {
+  test('Religion panel opens from TopBar overflow menu', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+
+    // Open the "⋯" overflow menu — it's the only ⋯ button on the top bar.
+    await page.getByRole('button', { name: '⋯' }).click();
+    await page.waitForTimeout(150);
+
+    // Click the Religion entry via its data-testid.
+    await page.getByTestId('open-religion').click();
+    await page.waitForTimeout(200);
+
+    // Assert the panel rendered — "Pantheon" is a section heading unique to ReligionPanel.
+    await expect(page.locator('text=Pantheon').first()).toBeVisible();
+  });
+
+  test('R key opens religion panel', async ({ page }) => {
+    await startGame(page, { seed: 2 });
+
+    await page.keyboard.press('r');
+    await page.waitForTimeout(200);
+
+    // Panel content should render — "Pantheon" heading is unique to ReligionPanel.
+    await expect(page.locator('text=Pantheon').first()).toBeVisible();
+  });
+});
