@@ -188,7 +188,7 @@ describe('districtSystem', () => {
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation).not.toBeNull();
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('City not found');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('City not found');
     });
 
     it('rejects placement when city belongs to another player', () => {
@@ -209,7 +209,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('Not your city');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('Not your city');
     });
 
     it('rejects placement when district definition does not exist', () => {
@@ -223,7 +223,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('District definition not found');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('District definition not found');
     });
 
     it('rejects placement when required tech is not researched', () => {
@@ -237,7 +237,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('bronze_working');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('bronze_working');
     });
 
     it('rejects placement when required civic is not researched', () => {
@@ -252,7 +252,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('state_workforce');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('state_workforce');
     });
 
     it('rejects placement when city population is insufficient', () => {
@@ -282,7 +282,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(1); // still just the existing one
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('population');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('population');
     });
 
     it('rejects placement when tile is outside city territory', () => {
@@ -296,7 +296,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('territory');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('territory');
     });
 
     it('rejects placement when tile already has a district', () => {
@@ -322,7 +322,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(1); // no new district added
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('already has a district');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('already has a district');
     });
 
     it('rejects placing the same district type twice in the same city', () => {
@@ -351,7 +351,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(1); // no new district
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('already has this district type');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('already has this district type');
     });
 
     it('rejects waterfront district on non-coastal tile', () => {
@@ -366,7 +366,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.size).toBe(0);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('water');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('water');
     });
 
     it('accepts waterfront district on a coastal tile (adjacent to ocean)', () => {
@@ -511,7 +511,7 @@ describe('districtSystem', () => {
       });
 
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('District not found');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('District not found');
     });
 
     it('rejects upgrade when district is already at max level', () => {
@@ -530,7 +530,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.get('district_1_c1_t1')!.level).toBe(2); // unchanged
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('max level');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('max level');
     });
 
     it('rejects upgrade when city population is insufficient', () => {
@@ -549,7 +549,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.get('district_1_c1_t1')!.level).toBe(1); // unchanged
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('population');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('population');
     });
 
     it('rejects upgrade when district belongs to another player', () => {
@@ -571,7 +571,7 @@ describe('districtSystem', () => {
 
       expect(next.districts.get('district_1_c1_t1')!.level).toBe(1);
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('Not your district');
+      expect((next.lastValidation as { valid: false; reason: string }).reason).toContain('Not your district');
     });
   });
 

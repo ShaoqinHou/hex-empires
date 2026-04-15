@@ -46,7 +46,7 @@ describe('Action Validation', () => {
         units: new Map([['u1', unit]]),
       });
       // Make target tile impassable (mountains)
-      setTile(state.map.tiles, { q: 1, r: 0 }, 'grassland', 'mountains');
+      setTile(state.map.tiles as Map<string, import('../../types/GameState').HexTile>, { q: 1, r: 0 }, 'grassland', 'mountains');
       const action: GameAction = {
         type: 'MOVE_UNIT',
         unitId: 'u1',
@@ -288,6 +288,7 @@ describe('Action Validation', () => {
         defenseHP: 100,
         specialization: null,
         specialists: 0,
+        districts: [],
       };
       const state = createTestState({
         players: new Map([
@@ -328,6 +329,7 @@ describe('Action Validation', () => {
         defenseHP: 50,
         specialization: null,
         specialists: 0,
+        districts: [],
       };
       const state = createTestState({
         cities: new Map([['town1', town]]),
@@ -364,6 +366,7 @@ describe('Action Validation', () => {
         defenseHP: 100,
         specialization: null,
         specialists: 0,
+        districts: [],
       };
       const state = createTestState({
         cities: new Map([['city1', city]]),
@@ -400,6 +403,7 @@ describe('Action Validation', () => {
         defenseHP: 50,
         specialization: null,
         specialists: 0,
+        districts: [],
       };
       const player = createTestState().players.get('p1')!;
       const poorPlayer = { ...player, gold: 10 }; // Not enough for warrior (40 cost)
@@ -439,6 +443,7 @@ describe('Action Validation', () => {
         defenseHP: 100,
         specialization: null,
         specialists: 0,
+        districts: [],
       };
       const state = createTestState({
         cities: new Map([['city1', city]]),

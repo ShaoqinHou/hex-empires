@@ -189,7 +189,7 @@ describe('movementSystem', () => {
         path: [{ q: 1, r: 0 }],
       });
       expect(next.units.get('u1')!.position).toEqual({ q: 0, r: 0 });
-      expect(next.lastValidation?.reason).toBe('Cannot stack two military units on the same tile');
+      expect((next.lastValidation as { valid: false; reason: string } | null | undefined)?.reason).toBe('Cannot stack two military units on the same tile');
     });
 
     it('rejects civilian stacking on friendly civilian', () => {
@@ -204,7 +204,7 @@ describe('movementSystem', () => {
         path: [{ q: 1, r: 0 }],
       });
       expect(next.units.get('s1')!.position).toEqual({ q: 0, r: 0 });
-      expect(next.lastValidation?.reason).toBe('Cannot stack two civilian units on the same tile');
+      expect((next.lastValidation as { valid: false; reason: string } | null | undefined)?.reason).toBe('Cannot stack two civilian units on the same tile');
     });
 
     it('does not allow stacking onto an enemy-occupied tile via ZoC stop', () => {
@@ -228,7 +228,7 @@ describe('movementSystem', () => {
       });
       // Enemy blocks at ZoC stop position (1,0).
       expect(next.units.get('mine')!.position).toEqual({ q: 0, r: 0 });
-      expect(next.lastValidation?.reason).toBe('Cannot move into a tile occupied by an enemy');
+      expect((next.lastValidation as { valid: false; reason: string } | null | undefined)?.reason).toBe('Cannot move into a tile occupied by an enemy');
     });
   });
 

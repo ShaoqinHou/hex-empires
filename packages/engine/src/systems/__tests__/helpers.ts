@@ -1,4 +1,4 @@
-import type { GameState, HexTile, PlayerState, UnitState } from '../../types/GameState';
+import type { GameState, HexTile, PlayerState, UnitState, CityState } from '../../types/GameState';
 import type { HexCoord } from '../../types/HexCoord';
 import { coordToKey } from '../../hex/HexMath';
 import { createGameConfig } from '../../state/GameConfigFactory';
@@ -108,6 +108,8 @@ export function createFlatMap(width: number, height: number): Map<string, HexTil
         terrain: 'grassland',
         feature: null,
         resource: null,
+        improvement: null,
+        building: null,
         river: [],
         elevation: 0.5,
         continent: 1,
@@ -115,6 +117,29 @@ export function createFlatMap(width: number, height: number): Map<string, HexTil
     }
   }
   return tiles;
+}
+
+export function createTestCity(overrides: Partial<CityState> = {}): CityState {
+  return {
+    id: 'c1',
+    name: 'Rome',
+    owner: 'p1',
+    position: { q: 0, r: 0 },
+    population: 3,
+    food: 0,
+    productionQueue: [],
+    productionProgress: 0,
+    buildings: [],
+    territory: [],
+    settlementType: 'city',
+    happiness: 10,
+    isCapital: true,
+    defenseHP: 100,
+    specialization: null,
+    specialists: 0,
+    districts: [],
+    ...overrides,
+  };
 }
 
 /** Set a specific tile's terrain/feature */

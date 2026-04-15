@@ -293,6 +293,7 @@ describe('combatSystem — ATTACK_CITY', () => {
       defenseHP: 100,
       specialization: null,
       specialists: 0,
+      districts: [],
       ...overrides,
     };
   }
@@ -530,7 +531,7 @@ describe('combatSystem — B1: river penalty on attacker', () => {
     const attackerKey = '3,3';
     const existingTile = tilesRiverAttacker.get(attackerKey);
     if (existingTile) {
-      tilesRiverAttacker.set(attackerKey, { ...existingTile, river: ['north'] });
+      tilesRiverAttacker.set(attackerKey, { ...existingTile, river: [0] });
     }
     const stateRiverAttacker = { ...stateFlat, map: { ...stateFlat.map, tiles: tilesRiverAttacker } };
 
@@ -562,7 +563,7 @@ describe('combatSystem — B1: river penalty on attacker', () => {
     const defenderKey = '4,3';
     const existingTile = tilesRiverDefender.get(defenderKey);
     if (existingTile) {
-      tilesRiverDefender.set(defenderKey, { ...existingTile, river: ['north'] });
+      tilesRiverDefender.set(defenderKey, { ...existingTile, river: [0] });
     }
     const stateRiverDefender = { ...stateFlat, map: { ...stateFlat.map, tiles: tilesRiverDefender } };
 

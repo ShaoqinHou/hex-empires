@@ -24,6 +24,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     defenseHP: 100,
     specialization: null,
     specialists: 0,
+    districts: [],
     ...overrides,
   };
 }

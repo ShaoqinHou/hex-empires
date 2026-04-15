@@ -12,7 +12,8 @@ import { describe, it, expect } from 'vitest';
 import { ALL_GOVERNMENTS } from '../governments/governments';
 import { ALL_POLICIES } from '../governments/policies';
 import { ALL_CIVICS } from '../civics';
-import type { EffectDef, YieldType, UnitCategory, Age } from '../../types/GameState';
+import type { EffectDef, UnitCategory, Age } from '../../types/GameState';
+import type { YieldType } from '../../types/Yields';
 
 // ── Helpers ──
 

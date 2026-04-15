@@ -24,6 +24,8 @@ function stateWithTiles(tiles: ReadonlyArray<Partial<HexTile> & { coord: { q: nu
       terrain: partial.terrain ?? 'grassland',
       feature: partial.feature ?? null,
       resource: partial.resource ?? null,
+      improvement: partial.improvement ?? null,
+      building: partial.building ?? null,
       river: partial.river ?? [],
       elevation: partial.elevation ?? 0.5,
       continent: partial.continent ?? 1,

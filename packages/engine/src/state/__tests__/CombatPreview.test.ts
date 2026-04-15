@@ -178,7 +178,7 @@ describe('calculateCombatPreview', () => {
     const attackerKey = '3,3';
     const existingTile = tilesRiver.get(attackerKey);
     if (existingTile) {
-      tilesRiver.set(attackerKey, { ...existingTile, river: ['north'] });
+      tilesRiver.set(attackerKey, { ...existingTile, river: [0] });
     }
     const stateRiver = { ...stateBase, map: { ...stateBase.map, tiles: tilesRiver } };
 
@@ -296,6 +296,7 @@ describe('calculateCityCombatPreview', () => {
       defenseHP: 100,
       specialization: null,
       specialists: 0,
+      districts: [],
       ...overrides,
     };
   }
@@ -525,6 +526,7 @@ describe('getAttackableCities', () => {
       defenseHP: 100,
       specialization: null,
       specialists: 0,
+      districts: [],
     };
   }
 

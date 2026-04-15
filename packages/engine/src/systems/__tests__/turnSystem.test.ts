@@ -53,7 +53,7 @@ describe('turnSystem', () => {
         population: 3, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 }), coordToKey({ q: 3, r: 4 })],
         settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
-        specialization: null, specialists: 0,
+        specialization: null, specialists: 0, districts: [],
         ...overrides,
       };
     }
@@ -123,7 +123,7 @@ describe('turnSystem', () => {
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: [coordToKey({ q: 10, r: 10 }), coordToKey({ q: 0, r: 0 })],
         settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
-        specialization: null, specialists: 0,
+        specialization: null, specialists: 0, districts: [],
         ...overrides,
       };
     }

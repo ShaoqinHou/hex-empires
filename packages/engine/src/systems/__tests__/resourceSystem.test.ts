@@ -10,7 +10,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     population: 3, food: 0, productionQueue: [], productionProgress: 0,
     buildings: [], territory: [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 })],
     settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
-    specialists: 0,
+    specialization: null, specialists: 0, districts: [],
     ...overrides,
   };
 }
@@ -162,6 +162,8 @@ describe('resourceSystem — celebrations', () => {
       terrain: 'grassland',
       feature: null,
       resource: null,
+      improvement: null,
+      building: null,
       river: [],
       elevation: 0.5,
       continent: 1,
@@ -177,6 +179,8 @@ describe('resourceSystem — celebrations', () => {
         terrain: 'grassland',
         feature: null,
         resource: 'silk',
+        improvement: null,
+        building: null,
         river: [],
         elevation: 0.5,
         continent: 1,
@@ -315,6 +319,8 @@ describe('productionSystem — celebration bonus', () => {
         terrain: 'plains',
         feature: null,
         resource: null,
+        improvement: null,
+        building: null,
         river: [],
         elevation: 0.5,
         continent: 1,
@@ -362,7 +368,7 @@ describe('B2: specialist happiness cost (-2 per specialist)', () => {
       population: 1, food: 0, productionQueue: [], productionProgress: 0,
       buildings: [], territory: [coordToKey({ q: 3, r: 3 })],
       settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
-      specialization: null, specialists: 0,
+      specialization: null, specialists: 0, districts: [],
     };
     const cityWithSpec: CityState = { ...cityNoSpec, specialists: 2 };
 
@@ -380,7 +386,7 @@ describe('B2: specialist happiness cost (-2 per specialist)', () => {
       population: 1, food: 0, productionQueue: [], productionProgress: 0,
       buildings: [], territory: [coordToKey({ q: 3, r: 3 })],
       settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
-      specialization: null, specialists: 0,
+      specialization: null, specialists: 0, districts: [],
     };
     const cityWith1Spec: CityState = { ...cityNoSpec, specialists: 1 };
 
@@ -398,7 +404,7 @@ describe('B5: settlement cap penalty applied per-settlement (not flat total)', (
       population: 1, food: 0, productionQueue: [], productionProgress: 0,
       buildings: [], territory: [],
       settlementType: 'city', happiness: 0, isCapital: false, defenseHP: 100,
-      specialization: null, specialists: 0,
+      specialization: null, specialists: 0, districts: [],
     };
   }
 
