@@ -307,8 +307,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (window as any).__gameDispatch = dispatch;
   }, [state, dispatch]);
 
-  // Expose current selection so tests can verify UI intent (which unit/hex/city is selected)
-  // without scraping potentially-flaky body text. Read-only for tests.
+  // E2E observability hook: expose current selection so Playwright tests can verify UI intent
+  // (which unit/hex/city is selected) without scraping potentially-flaky body text.
+  // Read-only for tests — GameCanvas reads selectedCityId from context, NOT from this hook.
+  // (window as any) cast is intentional: this is a test escape hatch, not production API.
   useEffect(() => {
     (window as any).__selection = {
       unitId: selectedUnit?.id ?? null,

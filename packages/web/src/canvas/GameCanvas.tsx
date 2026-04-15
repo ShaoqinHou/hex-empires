@@ -41,7 +41,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     selectedUnit, setSelectedUnit, selectedHex, setSelectedHex,
     reachableHexes, setHoveredHex: setGlobalHoveredHex,
     combatPreview, setCombatPreview, combatPreviewPosition, setCombatPreviewPosition,
-    selectCity,
+    selectedCityId, selectCity,
     placementMode, enterPlacementMode, exitPlacementMode,
   } = useGameState();
 
@@ -764,12 +764,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
         const ownCities = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId);
         if (ownCities.length === 0) return;
 
-        const currentCityIdx = ownCities.findIndex(c => c.id === (selectedUnit ? null : /* no selectedCity signal here */ c.id));
-        // Track cycling via a ref anchored to ownCity list order; simplest path: find by
-        // currently-selected city id (exposed to canvas via window.__selection for now, to
-        // avoid plumbing another prop through — if selectCity just ran for city X, X is next.)
-        const selState = (window as any).__selection as { cityId: string | null } | undefined;
-        const curIdx = selState?.cityId ? ownCities.findIndex(c => c.id === selState.cityId) : -1;
+        // Find the currently-selected city's index using selectedCityId from context
+        // (formerly read from window.__selection — now sourced from GameProvider context).
+        const curIdx = selectedCityId ? ownCities.findIndex(c => c.id === selectedCityId) : -1;
         const nextIdx = (curIdx + 1) % ownCities.length;
         const nextCity = ownCities[nextIdx];
 
@@ -780,8 +777,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
 
         const { x, y } = hexToPixel(nextCity.position);
         cameraRef.current.centerOn(x, y);
-        // Silence unused; kept for future if we swap to prop-based cycling index.
-        void currentCityIdx;
       }
     };
 
@@ -807,7 +802,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(scrollFrame);
     };
-  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields, selectCity, onCityClick]);
+  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields, selectCity, selectedCityId, onCityClick]);
 
   // Edge-of-screen scrolling — triggers at WINDOW edges, not canvas edges.
   // This way the cursor must be at the very edge of the browser window
