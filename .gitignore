@@ -19,6 +19,9 @@ Thumbs.db
 .claude/workflow/test-result.txt
 .claude/workflow/verify-marker.txt
 .claude/workflow/.issues.lockdir/
+.claude/workflow/scratch/*
+!.claude/workflow/scratch/.gitignore
+.claude/workflow/verify-screenshot-*.png
 .claude/worktrees/
 test-results/
 packages/web/test-results/

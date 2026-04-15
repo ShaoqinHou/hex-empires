@@ -1,12 +1,33 @@
 #!/bin/bash
 # PostToolUseFailure hook for Bash — logs command failures to issues.md
+# Captures the first 120 chars of the failed command so the log is diagnostic
+# rather than a sea of "Bash command failed" entries (audit finding F-14).
 
 WORKFLOW_DIR=".claude/workflow"
 ISSUES_FILE="$WORKFLOW_DIR/issues.md"
 mkdir -p "$WORKFLOW_DIR"
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-ENTRY="- [$TIMESTAMP] [command_failure] Bash command failed"
+
+# $CLAUDE_TOOL_INPUT is the JSON tool payload; extract the command field if
+# present, else fall back to the raw payload, else empty.
+RAW="${CLAUDE_TOOL_INPUT:-}"
+CMD=""
+if command -v node >/dev/null 2>&1 && [ -n "$RAW" ]; then
+  CMD=$(node -e "
+    try {
+      const x = JSON.parse(process.env.RAW || '');
+      process.stdout.write(String(x.command || x.cmd || '').slice(0, 120));
+    } catch (e) {
+      process.stdout.write(String(process.env.RAW || '').slice(0, 120));
+    }
+  " 2>/dev/null || echo "")
+fi
+CMD="${CMD:-(command not captured)}"
+# Strip newlines + pipe chars that would break the markdown table form
+CMD=$(echo "$CMD" | tr '\n|' '  ')
+
+ENTRY="- [$TIMESTAMP] [command_failure] \`${CMD}\`"
 
 LOCKDIR="$WORKFLOW_DIR/.issues.lockdir"
 if mkdir "$LOCKDIR" 2>/dev/null; then

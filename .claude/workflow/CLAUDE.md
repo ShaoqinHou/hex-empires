@@ -42,6 +42,7 @@ Browser verification via `/verify` skill.
 - Import boundaries: engine clean of DOM, no cross-system imports
 - Data consistency: all referenced IDs exist in registries
 - Test coverage: new systems have unit tests
+- **Automated:** the `/commit-review` skill runs a three-agent loop (Reviewer → Fixer → Arbiter) against the HEAD commit. Triggered automatically via the PostToolUse hook after `git commit`, or invoked manually. See `.claude/skills/commit-review/SKILL.md`.
 
 ## Bug-Fix Fast Path
 1. Write regression test
@@ -54,4 +55,8 @@ Browser verification via `/verify` skill.
 - Test results: `.claude/workflow/test-result.txt`
 - Verify marker: `.claude/workflow/verify-marker.txt`
 - Issues log: `.claude/workflow/issues.md`
-- Status: `.claude/workflow/STATUS.md`
+- Status: `.claude/workflow/STATUS.md` (snapshot — decays; consult `session-start.sh` output + `git log` for live state)
+- Backlog: `.claude/workflow/BACKLOG.md` (SYS-D + CNT-D open items)
+- Review scratch (gitignored): `.claude/workflow/scratch/`
+- Archive (historical): `.claude/workflow/design/archive/`
+- Standards registry (detection recipes): `.claude/workflow/design/standards.md`

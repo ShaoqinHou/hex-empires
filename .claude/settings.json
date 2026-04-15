@@ -20,6 +20,15 @@
           "timeout": 15000,
           "statusMessage": "Checking import boundaries..."
         }]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/commit-review.sh",
+          "timeout": 5000,
+          "statusMessage": "Checking for post-commit review..."
+        }]
       }
     ],
     "PostToolUseFailure": [
