@@ -15,6 +15,7 @@ import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './ui/hud/TooltipOverlay';
+import { UrbanPlacementHintBadge } from './ui/hud/UrbanPlacementHintBadge';
 import { hexToPixel } from './utils/hexMath';
 import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
 import { HUDManagerProvider } from './ui/hud/HUDManager';
@@ -198,6 +199,22 @@ function GameUI() {
             hoveredHex={hoveredHex}
             isAltPressed={isAltPressed}
             state={state}
+          />
+        )}
+
+        {/* Per-tile placement hint — only renders when placementMode is
+            active and the cursor is over a hex. Canvas-side green/gray
+            overlay is untouched; this is the detailed, cursor-following
+            companion showing building name, validity, adjacency sources,
+            and aggregate score. */}
+        {cameraRef.current && (
+          <UrbanPlacementHintBadge
+            hexToScreen={(q, r) => {
+              const cam = cameraRef.current;
+              if (!cam) return null;
+              const world = hexToPixel({ q, r });
+              return cam.worldToScreen(world.x, world.y);
+            }}
           />
         )}
       </div>

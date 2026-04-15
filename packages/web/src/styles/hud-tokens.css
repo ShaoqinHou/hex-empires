@@ -109,18 +109,21 @@
    * Tokens for the brief full-screen interstitial shown between turns
    * (TurnTransition.tsx). The backdrop is a partially transparent wash
    * the shell overlay sits on top of; the accent-shadow is the
-   * glow behind the big "Turn N" announcement text. Opacity is kept
-   * low so the map stays partially visible during the transition.
-   */
+   * glow behind the big "Turn N" announcement text. */
   --hud-turn-transition-backdrop: rgba(0, 0, 0, 0.15);
   --hud-turn-transition-accent-shadow: 0 0 20px rgba(100, 181, 246, 0.8);
   --hud-turn-transition-animation-duration: 500ms;
 
   /* ── Enemy activity summary ───────────────────────────────────────
-   * Tokens for the post-AI-turn summary list (EnemyActivitySummary).
-   * Activity items render against a subtle darker surface with an
-   * accent-colored left edge to distinguish enemy-origin events. */
+   * Tokens for the post-AI-turn summary list (EnemyActivitySummary). */
   --hud-enemy-activity-item-bg: rgba(13, 17, 23, 0.85);
   --hud-enemy-activity-item-border-accent: #58a6ff;
   --hud-enemy-activity-close-hover: #f87171;
+
+  /* ── Urban placement hint badge ────────────────────────────────────
+   * Tokens for the UrbanPlacementHintBadge overlay. Green/red wash for
+   * valid/invalid status; gold-leaning emphasis for the score number. */
+  --hud-placement-valid-bg: rgba(74, 222, 128, 0.18);
+  --hud-placement-invalid-bg: rgba(239, 68, 68, 0.18);
+  --hud-placement-score-text: #fbbf24;
 }
