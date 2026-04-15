@@ -15,6 +15,7 @@ The "shell mode" column matches `TooltipShell`'s `position` prop where applicabl
 | urbanPlacementHint | packages/web/src/ui/hud/UrbanPlacementHintBadge.tsx | TooltipShell floating | detailed | no | Shown only while `BuildingPlacementPanel` is in placement mode. Anchored to candidate tiles; surfaces adjacency / score preview. |
 | minimap | packages/web/src/ui/components/Minimap.tsx | (no TooltipShell — uses `panel-tokens` chrome directly with fixed-corner positioning) | — | yes | Always-mounted while a game is in progress. Exposes `data-hud-id="minimap"` for E2E selectors. Game-feel invariants (no text selection, no context menu) come from the global `.game-app` rules, not from the shell. |
 | tooltip | (generic, on-demand) | TooltipShell floating | compact | no | Reserved generic id for short hover tooltips not tied to a specific HUD element (e.g. button-help bubbles). Body callers use it directly without a dedicated component file. |
+| resourceTooltip | packages/web/src/ui/hud/ResourceTooltip.tsx | TooltipShell floating | compact | no | Appears when the cursor hovers a tile that has a resource (iron, wheat, silk, etc.). Shows resource name, type badge (bonus/strategic/luxury), yield contributions, happiness bonus (luxury only), and unlock status (requires tech / always available). offset="large" so it sits in a different quadrant from tileTooltip. |
 
 ## Cross-checking against `hudRegistry.ts`
 

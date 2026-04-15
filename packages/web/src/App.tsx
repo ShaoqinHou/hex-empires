@@ -14,6 +14,7 @@ import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { CombatHoverPreview } from './ui/components/CombatHoverPreview';
 import { TooltipOverlay } from './ui/hud/TooltipOverlay';
+import { ResourceTooltip } from './ui/hud/ResourceTooltip';
 import { UrbanPlacementHintBadge } from './ui/hud/UrbanPlacementHintBadge';
 import { hexToPixel } from './utils/hexMath';
 import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
@@ -247,6 +248,23 @@ function GameUI() {
             }}
             hoveredHex={hoveredHex}
             isAltPressed={isAltPressed}
+            state={state}
+          />
+        )}
+
+        {/* Resource hover tooltip — appears when the cursor rests over a
+            tile that contains a resource. Shows name, type, yields, and
+            unlock status. Rendered after TooltipOverlay so it occupies
+            a distinct quadrant offset (offset="large"). */}
+        {cameraRef.current && (
+          <ResourceTooltip
+            hexToScreen={(q, r) => {
+              const cam = cameraRef.current;
+              if (!cam) return null;
+              const world = hexToPixel({ q, r });
+              return cam.worldToScreen(world.x, world.y);
+            }}
+            hoveredHex={hoveredHex}
             state={state}
           />
         )}
