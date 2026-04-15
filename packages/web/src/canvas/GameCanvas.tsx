@@ -16,11 +16,13 @@ interface GameCanvasProps {
   onToggleYields?: () => void;
   onBuilderSelected?: () => void;
   onBuilderDeselected?: () => void;
+  /** Called when J is pressed but no idle units exist in the current player's army. */
+  onNoIdleUnits?: () => void;
   cameraRef?: React.MutableRefObject<Camera | null>;
   showYields?: boolean;
 }
 
-export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBuilderSelected, onBuilderDeselected, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBuilderSelected, onBuilderDeselected, onNoIdleUnits, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalCamera = useRef(new Camera());
 
@@ -778,6 +780,37 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
         const { x, y } = hexToPixel(nextCity.position);
         cameraRef.current.centerOn(x, y);
       }
+
+      // J — Jump to next idle unit (movementLeft > 0, not fortified).
+      // Cycles through the army on repeated presses, same ordering as Space.
+      // Differs from Space in that it keeps cycling even when no unit is
+      // currently selected (Space starts at index 0; J resumes from where J
+      // last left off via idleCycleIdxRef).
+      if (key === 'j' || key === 'J') {
+        e.preventDefault();
+        const ownUnits = [...state.units.values()].filter(
+          u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified,
+        );
+        if (ownUnits.length === 0) {
+          onNoIdleUnits?.();
+          return;
+        }
+
+        // Find next index relative to the currently selected unit (mirrors
+        // Space behavior) so J and Space share the same cycle position.
+        const currentIdx = selectedUnit
+          ? ownUnits.findIndex(u => u.id === selectedUnit.id)
+          : -1;
+        const nextIdx = (currentIdx + 1) % ownUnits.length;
+        const nextUnit = ownUnits[nextIdx];
+
+        setSelectedUnit(nextUnit);
+        setSelectedHex(nextUnit.position);
+
+        // Smoothly center the camera on the found unit.
+        const { x, y } = hexToPixel(nextUnit.position);
+        cameraRef.current.centerOn(x, y);
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -802,7 +835,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(scrollFrame);
     };
-  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields, selectCity, selectedCityId, onCityClick]);
+  }, [setSelectedUnit, setSelectedHex, dispatch, selectedUnit, state, unitRegistry, onToggleTechTree, onToggleYields, selectCity, selectedCityId, onCityClick, onNoIdleUnits]);
 
   // Edge-of-screen scrolling — triggers at WINDOW edges, not canvas edges.
   // This way the cursor must be at the very edge of the browser window

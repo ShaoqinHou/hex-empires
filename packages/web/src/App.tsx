@@ -13,6 +13,7 @@ import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { CombatHoverPreview } from './ui/components/CombatHoverPreview';
+import { IdleUnitsToast } from './ui/components/IdleUnitsToast';
 import { TooltipOverlay } from './ui/hud/TooltipOverlay';
 import { ResourceTooltip } from './ui/hud/ResourceTooltip';
 import { UrbanPlacementHintBadge } from './ui/hud/UrbanPlacementHintBadge';
@@ -47,6 +48,7 @@ function GameUI() {
   const state = nullableState!; // GameUI only renders when state is non-null
   const { activePanel, openPanel, closePanel, togglePanel, isOpen } = usePanelManager();
   const [showYields, setShowYields] = useState(false);
+  const [idleUnitsTrigger, setIdleUnitsTrigger] = useState(0);
   const cameraRef = useRef<Camera | null>(null);
 
   // Auto-show help on first ever game start. Runs once on mount; the
@@ -146,6 +148,7 @@ function GameUI() {
           onToggleTechTree={() => togglePanel('tech')}
           onBuilderSelected={() => openPanel('improvement')}
           onBuilderDeselected={() => { if (isOpen('improvement')) closePanel(); }}
+          onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
         />
         {/* CombatHoverPreview — mounted here (not inside GameCanvas) so that
             canvas/ never imports from ui/. The preview data flows through
@@ -229,6 +232,7 @@ function GameUI() {
         }} />
         <EnemyActivitySummary />
         <ValidationFeedback validation={lastValidation} onAnimationEnd={clearValidation} />
+        <IdleUnitsToast triggerCount={idleUnitsTrigger} />
 
         {/* Combat preview panel */}
         {combatPreviewTarget && selectedUnit && (

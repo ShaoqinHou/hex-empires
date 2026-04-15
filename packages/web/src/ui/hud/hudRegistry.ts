@@ -29,7 +29,8 @@ export type HUDElementId =
   | 'urbanPlacementHint'
   | 'tooltip'
   | 'yieldsToggle'
-  | 'resourceTooltip';
+  | 'resourceTooltip'
+  | 'idleUnitsToast';
 
 /**
  * HUD element priority — maps to the z-index tier in `hud-tokens.css`.
@@ -67,6 +68,7 @@ export const HUD_REGISTRY: ReadonlyMap<HUDElementId, HUDRegistryEntry> = new Map
   ['tooltip',              { id: 'tooltip',              priority: 'floating' }],
   ['yieldsToggle',         { id: 'yieldsToggle',         priority: 'floating' }],
   ['resourceTooltip',      { id: 'resourceTooltip',      priority: 'floating' }],
+  ['idleUnitsToast',       { id: 'idleUnitsToast',       priority: 'toast',    defaultTimeout: 2500 }],
 ]);
 
 /** Convenience: all ids in registration order. */
