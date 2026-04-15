@@ -47,12 +47,9 @@ vi.mock('../../../providers/GameProvider', () => ({
   },
 }));
 
-// Stub BuildingPlacementPanel — it's an overlay that renders outside the
-// production picker and isn't relevant to these tests (and its internal
-// useGameState usage would otherwise need extra context wiring).
-vi.mock('../../components/BuildingPlacementPanel', () => ({
-  BuildingPlacementPanel: () => null,
-}));
+// BuildingPlacementPanel was retired in cycle 6 of the building-placement
+// rework — the M34 enterPlacementMode flow (cycles 3-5) replaces it. No
+// stub needed; CityPanel no longer imports the legacy overlay.
 
 // Import AFTER vi.mock so the component picks up the stubs.
 import { CityPanel } from '../CityPanel';

@@ -1,11 +1,9 @@
 import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges, coordToKey } from '@hex/engine';
-import type { UnitDef, BuildingDef } from '@hex/engine';
+import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
-import { BuildingPlacementPanel } from '../components/BuildingPlacementPanel';
-import { useState } from 'react';
+import { PanelShell } from './PanelShell';
 
 interface CityPanelProps {
   city: CityState;
@@ -14,7 +12,6 @@ interface CityPanelProps {
 
 export function CityPanel({ city, onClose }: CityPanelProps) {
   const { state, dispatch, enterPlacementMode } = useGameState();
-  const [placementMode, setPlacementMode] = useState<{ buildingId: string } | null>(null);
 
   const yields = calculateCityYields(city, state);
   const growthThreshold = getGrowthThreshold(city.population);
@@ -59,34 +56,12 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
   const settlementLabel = isTown ? 'Town' : (city.isCapital ? 'Capital City' : 'City');
   const happinessColor = city.happiness >= 0 ? 'var(--color-food)' : 'var(--color-health-low)';
+  // PanelShell renders the title in its chrome bar; combine name +
+  // settlement type so the shell title matches the legacy header.
+  const shellTitle = `${city.name} — ${settlementLabel} (Pop ${city.population})`;
 
   return (
-    <div className="absolute right-0 top-12 bottom-14 w-80 overflow-y-auto"
-      style={{ backgroundColor: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <div>
-          <h2 className="text-lg font-bold">{city.name}</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: isTown ? 'var(--color-production)' : 'var(--color-science)',
-                color: 'var(--color-bg)',
-              }}>
-              {settlementLabel}
-            </span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Pop: {city.population}
-            </span>
-          </div>
-        </div>
-        <button onClick={onClose} className="text-sm px-2 py-1 cursor-pointer"
-          style={{ color: 'var(--color-text-muted)' }}>
-          X
-        </button>
-      </div>
-
+    <PanelShell id="city" title={shellTitle} onClose={onClose} priority="overlay" width="narrow">
       {/* Happiness */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Happiness</h3>
@@ -245,7 +220,16 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                       ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)'
                       : undefined,
                   }}
-                  onClick={() => !isPlaced && setPlacementMode({ buildingId: bId })}
+                  onClick={() => {
+                    if (isPlaced) return;
+                    // Built-but-unplaced (legacy / pre-cycle-1 production
+                    // queue items) — kick off the same placement flow we
+                    // use for fresh production picks. The canvas overlay
+                    // (cycle 4) handles the tile click + dispatches
+                    // PLACE_BUILDING; close so the map is visible.
+                    enterPlacementMode(city.id, bId);
+                    onClose();
+                  }}
                   title={isPlaced ? 'Placed on map' : 'Click to place on map'}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -432,18 +416,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         </div>
       </div>
 
-      {/* Building Placement Panel */}
-      {placementMode && (
-        <BuildingPlacementPanel
-          cityId={city.id}
-          buildingId={placementMode.buildingId}
-          onClose={() => setPlacementMode(null)}
-          onTileSelect={(tile) => {
-            dispatch({ type: 'PLACE_BUILDING', cityId: city.id, buildingId: placementMode.buildingId, tile });
-          }}
-        />
-      )}
-    </div>
+    </PanelShell>
   );
 }
 
