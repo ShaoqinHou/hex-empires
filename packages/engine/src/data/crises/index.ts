@@ -1,4 +1,4 @@
-export type { CrisisEventDef, CrisisTriggerCondition } from './types';
+export type { CrisisEventDef, CrisisTriggerCondition, CompoundTriggerCondition } from './types';
 export {
   ALL_CRISES,
   PLAGUE,
@@ -8,6 +8,7 @@ export {
   NATURAL_DISASTER,
   RELIGIOUS_SCHISM,
   TRADE_DISRUPTION,
+  SOLAR_ECLIPSE,
 } from './all-crises';
 export {
   EXPANSION_CRISES,

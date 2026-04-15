@@ -85,6 +85,30 @@ function isTriggerMet(state: GameState, def: CrisisEventDef): boolean {
       return typeof def.triggerValue === 'number' && playerCities >= def.triggerValue;
     }
 
+    case 'compound': {
+      // All sub-conditions in compoundTrigger must be satisfied
+      const cond = def.compoundTrigger;
+      if (!cond) return false;
+
+      if (cond.minTurn !== undefined && state.turn < cond.minTurn) return false;
+
+      if (cond.minCityPopulation !== undefined) {
+        const playerCities = [...state.cities.values()].filter(
+          c => c.owner === state.currentPlayerId,
+        );
+        const hasLargeEnoughCity = playerCities.some(c => c.population >= cond.minCityPopulation!);
+        if (!hasLargeEnoughCity) return false;
+      }
+
+      if (cond.minResearchedTechs !== undefined) {
+        const player = state.players.get(state.currentPlayerId);
+        if (!player) return false;
+        if (player.researchedTechs.length < cond.minResearchedTechs) return false;
+      }
+
+      return true;
+    }
+
     default:
       return false;
   }
@@ -170,7 +194,7 @@ function resolveCrisis(state: GameState, crisisId: string, choiceId: string): Ga
 /** Apply a single crisis effect to the game state */
 function applyCrisisEffect(
   state: GameState,
-  effect: { readonly type: string; readonly target: string; readonly yield?: string; readonly value: number },
+  effect: { readonly type: string; readonly target: string; readonly yield?: string; readonly value: number; readonly probability?: number },
 ): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
@@ -235,6 +259,33 @@ function applyCrisisEffect(
           message: `${effect.value} enemy warriors appear near your borders!`,
           type: 'crisis' as const,
         }],
+      };
+    }
+
+    case 'REDUCE_CITY_HAPPINESS': {
+      // Probabilistic happiness reduction for all player cities.
+      // Uses the seeded RNG counter so the outcome is deterministic and replayable.
+      const probability = effect.probability ?? 1.0;
+      // Derive a pseudo-random value from the seeded RNG state (deterministic).
+      const rngValue = ((state.rng.seed * 1664525 + state.rng.counter * 22695477 + 1013904223) >>> 0) / 0xFFFFFFFF;
+      if (rngValue > probability) return state;
+
+      const playerCities = [...state.cities.entries()].filter(
+        ([, c]) => c.owner === state.currentPlayerId,
+      );
+      if (playerCities.length === 0) return state;
+
+      const updatedCities = new Map(state.cities);
+      for (const [cityId, city] of playerCities) {
+        updatedCities.set(cityId, {
+          ...city,
+          happiness: Math.max(0, city.happiness + effect.value), // effect.value is negative (e.g. -1)
+        });
+      }
+      return {
+        ...state,
+        cities: updatedCities,
+        rng: { ...state.rng, counter: state.rng.counter + 1 },
       };
     }
 
