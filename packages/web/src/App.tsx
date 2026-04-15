@@ -5,7 +5,6 @@ import { GameCanvas } from './canvas/GameCanvas';
 import { Camera } from './canvas/Camera';
 import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
-import { CrisisPanel } from './ui/panels/CrisisPanel';
 import { Minimap } from './ui/components/Minimap';
 import { YieldsToggle } from './ui/components/YieldsToggle';
 import { TurnTransition } from './ui/components/TurnTransition';
@@ -38,6 +37,7 @@ const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m =>
 const ImprovementPanel = lazy(() => import('./ui/panels/ImprovementPanel').then(m => ({ default: m.ImprovementPanel })));
 const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').then(m => ({ default: m.AudioSettingsPanel })));
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
+const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition } = useGame();
@@ -69,6 +69,18 @@ function GameUI() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [winnerId]);
+
+  // Auto-open the crisis modal when an unresolved crisis appears. The panel
+  // is non-dismissible (the player must pick a choice). Once the player
+  // dispatches RESOLVE_CRISIS, CrisisPanel calls onClose → closePanel(),
+  // and the list will be empty so this effect won't re-open it.
+  const hasActiveCrisis = state.crises.some(c => c.active);
+  useEffect(() => {
+    if (hasActiveCrisis) {
+      openPanel('crisis');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveCrisis]);
 
   // Keyboard shortcuts for panel toggles. ESC is handled inside
   // PanelManagerProvider (capture phase) so it's not duplicated here.
@@ -199,11 +211,13 @@ function GameUI() {
           {activePanel === 'victory' && (
             <VictoryPanel onClose={closePanel} />
           )}
+          {activePanel === 'crisis' && (
+            <CrisisPanel onClose={closePanel} />
+          )}
          </div>
         </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />
-        <CrisisPanel />
 
         {/* Turn transition and notifications */}
         <TurnTransition />

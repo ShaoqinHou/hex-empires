@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
 
 /**
- * CrisisPanel — smoke test for the PanelShell migration (cycle 3 batch 1).
+ * CrisisPanel — smoke test for the PanelShell migration (audit batch 3B).
  *
- * CrisisPanel has no `onClose` prop — it dismisses via the
- * RESOLVE_CRISIS dispatch driven by choice buttons. We assert the shell
- * is present when an active crisis exists, and that clicking a choice
- * dispatches the action (the in-shell "close X" is intentionally a
- * no-op — see the CrisisPanel source).
+ * CrisisPanel routes through PanelManager. It accepts an `onClose` prop
+ * (wired to `closePanel` in App.tsx) and uses `dismissible={false}` — the
+ * X button is not rendered; only choice buttons can advance the panel.
+ * After resolution, `onClose` is called programmatically.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import type { GameState } from '@hex/engine';
+import { PanelManagerProvider } from '../PanelManager';
 
 const mockRef: { state: GameState | null; dispatch: ReturnType<typeof vi.fn> } = {
   state: null,
@@ -67,20 +67,41 @@ afterEach(() => {
 describe('CrisisPanel (PanelShell)', () => {
   it('renders inside PanelShell with the crisis name as title when a crisis is active', () => {
     mockRef.state = makeStateWithCrisis();
-    const { getByTestId, getAllByText } = render(<CrisisPanel />);
+    const { getByTestId, getAllByText } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onClose={() => {}} />
+      </PanelManagerProvider>
+    );
     expect(getByTestId('panel-shell-crisis')).toBeTruthy();
     // The crisis name appears in both the shell's title bar and the body h1.
     expect(getAllByText('Plague').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('dispatches RESOLVE_CRISIS when a choice button is clicked', () => {
+  it('does not render a close button (dismissible=false)', () => {
     mockRef.state = makeStateWithCrisis();
-    const { getByText } = render(<CrisisPanel />);
+    const { queryByTestId } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onClose={() => {}} />
+      </PanelManagerProvider>
+    );
+    // PanelShell only renders data-testid="panel-close-crisis" when dismissible=true.
+    expect(queryByTestId('panel-close-crisis')).toBeNull();
+  });
+
+  it('dispatches RESOLVE_CRISIS and calls onClose when a choice button is clicked', () => {
+    mockRef.state = makeStateWithCrisis();
+    const onClose = vi.fn();
+    const { getByText } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onClose={onClose} />
+      </PanelManagerProvider>
+    );
     fireEvent.click(getByText('Quarantine cities'));
     expect(mockRef.dispatch).toHaveBeenCalledWith({
       type: 'RESOLVE_CRISIS',
       crisisId: 'plague',
       choice: 'quarantine',
     });
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

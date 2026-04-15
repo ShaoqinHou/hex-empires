@@ -2,27 +2,31 @@ import { useGameState } from '../../providers/GameProvider';
 import type { CrisisState } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 
-export function CrisisPanel() {
-  const { state, dispatch } = useGameState();
+interface CrisisPanelProps {
+  readonly onClose: () => void;
+}
 
-  // Find the first active (unresolved) crisis
+export function CrisisPanel({ onClose }: CrisisPanelProps) {
+  const { state, dispatch } = useGameState();
   const activeCrisis: CrisisState | undefined = state.crises.find(c => c.active);
 
+  // Safety guard: if the panel is rendered but no active crisis exists
+  // (e.g. state updated between the useEffect and render), render nothing.
   if (!activeCrisis) return null;
 
   const handleChoice = (choiceId: string) => {
     dispatch({ type: 'RESOLVE_CRISIS', crisisId: activeCrisis.id, choice: choiceId });
+    // Close the panel after resolution — the engine will clear the active
+    // crisis; the useEffect in App.tsx will not re-open since the list is
+    // now empty.
+    onClose();
   };
 
-  // Crises must be resolved by picking a choice — there is no plain
-  // dismissal. The shell still requires an `onClose`, so we pass a no-op.
-  // Clicking the X / backdrop does nothing; only choice buttons advance.
-  const handleClose = () => {
-    /* no-op: crises require an explicit choice */
-  };
-
+  // Crises require an explicit choice — the panel cannot be dismissed by
+  // ESC or the backdrop. dismissible={false} removes the X button and
+  // inerts the backdrop click, matching AgeTransitionPanel's pattern.
   return (
-    <PanelShell id="crisis" title={activeCrisis.name} onClose={handleClose} priority="modal">
+    <PanelShell id="crisis" title={activeCrisis.name} onClose={onClose} priority="modal" dismissible={false}>
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
           {activeCrisis.name}
