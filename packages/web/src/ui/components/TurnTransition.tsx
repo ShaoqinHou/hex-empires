@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
+import { useHUDManager } from '../hud/HUDManager';
 import { TooltipShell } from '../hud/TooltipShell';
 
 interface TurnTransitionProps {
@@ -29,6 +30,7 @@ interface TurnTransitionProps {
  */
 export function TurnTransition({ onComplete }: TurnTransitionProps) {
   const { state } = useGameState();
+  const { register, dismiss } = useHUDManager();
   const [showOverlay, setShowOverlay] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [previousTurn, setPreviousTurn] = useState(state.turn);
@@ -58,6 +60,17 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
     }
     return undefined;
   }, [state.turn, state.log, state.currentPlayerId, previousTurn, onComplete]);
+
+  // Register with HUDManager as sticky so ESC dismisses us via the
+  // manager's precedence chain (panels first, then sticky overlays).
+  useEffect(() => {
+    if (!showOverlay) return undefined;
+    const unregister = register('turnTransition', { sticky: true });
+    return () => {
+      dismiss('turnTransition');
+      unregister();
+    };
+  }, [showOverlay, register, dismiss]);
 
   const handleDismiss = () => {
     setShowOverlay(false);

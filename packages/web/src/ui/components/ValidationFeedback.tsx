@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { ValidationResult } from '@hex/engine';
+import { useHUDManager } from '../hud/HUDManager';
 import { TooltipShell } from '../hud/TooltipShell';
 
 // Derived locally — the engine exports `ValidationResult` but not the
@@ -32,6 +33,7 @@ interface ValidationFeedbackProps {
 export function ValidationFeedback({ validation, onAnimationEnd }: ValidationFeedbackProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const { register, dismiss } = useHUDManager();
 
   useEffect(() => {
     if (validation && !validation.valid) {
@@ -50,6 +52,21 @@ export function ValidationFeedback({ validation, onAnimationEnd }: ValidationFee
     }
     return undefined;
   }, [validation, onAnimationEnd]);
+
+  // Register with HUDManager as sticky so ESC dismisses us via the
+  // manager's precedence chain (panels first, then sticky overlays).
+  // When ESC fires and the manager calls dismiss(), it stops propagation
+  // so the canvas ESC-deselect handler does not fire — preserving the
+  // player's unit selection. The overlay auto-hides after its 3-second
+  // timer regardless.
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const unregister = register('validationFeedback', { sticky: true });
+    return () => {
+      dismiss('validationFeedback');
+      unregister();
+    };
+  }, [isVisible, register, dismiss]);
 
   if (!validation || !isVisible || validation.valid) {
     return null;

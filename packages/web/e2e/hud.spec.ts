@@ -198,18 +198,10 @@ test.describe('HUD invariants — game-feel', () => {
     // propagation so the canvas' bubble-phase ESC-deselect handler does NOT
     // fire. The unit selected before ESC must remain selected after.
     //
-    // Current source state: ValidationFeedback wraps its toast in a
-    // `<TooltipShell sticky>`, but it does NOT call `useHUDManager().register`
-    // — so the HUDManager never sees a sticky entry and ESC falls through to
-    // the canvas deselect handler. This is a real source-side gap that the
-    // rule documents as a TODO. Skipping until ValidationFeedback registers
-    // itself (track via the M-HUD audit, cycle that wires sticky registration
-    // for non-anchored toasts). The test body below is the canonical assertion
-    // the rule requires; flip to active once registration lands.
-    test.skip(
-      true,
-      'ValidationFeedback does not yet register with HUDManager — see ui-overlays.md target API',
-    );
+    // ValidationFeedback now registers with HUDManager as sticky (batch 3C),
+    // so ESC routes through HUDManager's capture-phase handler which dismisses
+    // the sticky overlay and stops propagation — the canvas deselect handler
+    // does not fire.
 
     await startGame(page);
 

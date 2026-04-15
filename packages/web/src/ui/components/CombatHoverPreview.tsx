@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useGameState } from '../../providers/GameProvider';
+import { useHUDManager } from '../hud/HUDManager';
 import { TooltipShell } from '../hud/TooltipShell';
 import type { CombatPreview } from '@hex/engine';
 
@@ -27,6 +29,20 @@ interface CombatHoverPreviewProps {
  */
 export function CombatHoverPreview({ preview, position }: CombatHoverPreviewProps) {
   const { state, unitRegistry } = useGameState();
+  const { register, dismiss } = useHUDManager();
+
+  const isVisible = Boolean(preview && position && preview.canAttack);
+
+  // Register with HUDManager as sticky so ESC dismisses us via the
+  // manager's precedence chain (panels first, then sticky overlays).
+  useEffect(() => {
+    if (!isVisible) return undefined;
+    const unregister = register('combatPreview', { sticky: true });
+    return () => {
+      dismiss('combatPreview');
+      unregister();
+    };
+  }, [isVisible, register, dismiss]);
 
   if (!preview || !position || !preview.canAttack) {
     return null;

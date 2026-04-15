@@ -20,7 +20,14 @@ import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 import { render, cleanup, screen } from '@testing-library/react';
 import type { ValidationResult } from '@hex/engine';
 
+import type { ReactElement } from 'react';
+import { HUDManagerProvider } from '../../hud/HUDManager';
 import { ValidationFeedback } from '../ValidationFeedback';
+
+// Helper: wrap component under test in the required providers.
+function renderWithProviders(ui: ReactElement) {
+  return render(<HUDManagerProvider>{ui}</HUDManagerProvider>);
+}
 
 afterEach(() => {
   cleanup();
@@ -35,13 +42,13 @@ beforeEach(() => {
 
 describe('ValidationFeedback', () => {
   it('renders nothing when validation is null', () => {
-    const { container } = render(<ValidationFeedback validation={null} />);
+    const { container } = renderWithProviders(<ValidationFeedback validation={null} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing when validation is valid', () => {
     const validation: ValidationResult = { valid: true };
-    const { container } = render(<ValidationFeedback validation={validation} />);
+    const { container } = renderWithProviders(<ValidationFeedback validation={validation} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -51,7 +58,7 @@ describe('ValidationFeedback', () => {
       reason: 'Not enough gold',
       category: 'production',
     };
-    render(<ValidationFeedback validation={validation} />);
+    renderWithProviders(<ValidationFeedback validation={validation} />);
 
     const shell = screen.getByTestId('tooltip-shell');
     expect(shell.getAttribute('data-hud-id')).toBe('validationFeedback');
@@ -69,7 +76,7 @@ describe('ValidationFeedback', () => {
       reason: 'Cannot attack that tile',
       category: 'combat',
     };
-    render(<ValidationFeedback validation={validation} />);
+    renderWithProviders(<ValidationFeedback validation={validation} />);
 
     const bubble = screen.getByTestId('validation-feedback-bubble');
     const icon = bubble.querySelector('span[aria-hidden="true"]') as HTMLElement | null;
@@ -87,7 +94,7 @@ describe('ValidationFeedback', () => {
       reason: 'Out of movement',
       category: 'movement',
     };
-    render(<ValidationFeedback validation={validation} />);
+    renderWithProviders(<ValidationFeedback validation={validation} />);
 
     const shake = screen.getByTestId('validation-feedback-shake');
     expect(shake).not.toBeNull();
@@ -100,7 +107,7 @@ describe('ValidationFeedback', () => {
       reason: 'Invalid move',
       category: 'general',
     };
-    render(<ValidationFeedback validation={validation} />);
+    renderWithProviders(<ValidationFeedback validation={validation} />);
 
     const bubble = screen.getByTestId('validation-feedback-bubble');
     // The bubble carries layout utilities (`flex`, `gap-3`, `px-4`,
