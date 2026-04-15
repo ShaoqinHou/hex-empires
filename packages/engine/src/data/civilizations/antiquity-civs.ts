@@ -114,6 +114,30 @@ export const CHINA: CivilizationDef = {
   color: '#43a047',
 };
 
+export const VIKINGS: CivilizationDef = {
+  id: 'vikings',
+  name: 'Vikings',
+  age: 'antiquity',
+  description: 'Seafaring raiders and explorers from the north. Masters of coastal warfare and exploration.',
+  uniqueAbility: {
+    name: 'Norsemen',
+    description: 'Ships gain +2 combat strength and -1 production cost. Ocean tiles provide +1 food.',
+    effects: [
+      { type: 'MODIFY_COMBAT', target: 'naval', value: 2 },
+      { type: 'MODIFY_YIELD', target: 'tile', yield: 'food', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Masters of the Longship',
+    description: '+1 movement for naval units in future ages',
+    effect: { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+  },
+  color: '#00bcd4',
+  startingBias: 'coastal',
+};
+
 export const ALL_ANTIQUITY_CIVS: ReadonlyArray<CivilizationDef> = [
-  ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA,
+  ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA, VIKINGS,
 ];

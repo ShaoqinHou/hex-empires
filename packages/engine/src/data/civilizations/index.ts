@@ -1,5 +1,5 @@
 export type { CivilizationDef } from './types';
-export { ALL_ANTIQUITY_CIVS, ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA } from './antiquity-civs';
+export { ALL_ANTIQUITY_CIVS, ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA, VIKINGS } from './antiquity-civs';
 export { ALL_EXPLORATION_CIVS, SPAIN, ENGLAND, FRANCE, OTTOMAN, JAPAN, MONGOLIA } from './exploration-civs';
 export { ALL_MODERN_CIVS, AMERICA, GERMANY, RUSSIA, BRAZIL } from './modern-civs';
 
