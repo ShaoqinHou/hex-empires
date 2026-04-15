@@ -28,7 +28,8 @@ export type PanelId =
   | 'commanders'
   | 'victoryProgress'
   | 'crisis'
-  | 'improvement';
+  | 'improvement'
+  | 'audioSettings';
 
 /**
  * Panel priority — controls z-index, backdrop, and input-blocking.
@@ -75,6 +76,7 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['victoryProgress', { id: 'victoryProgress', title: 'Victory Progress',    icon: '🏆', priority: 'modal'   }],
   ['crisis',          { id: 'crisis',          title: 'Crisis',              icon: '⚠️',  priority: 'modal'   }],
   ['improvement',     { id: 'improvement',     title: 'Build Improvement',   icon: '🏗️',  priority: 'overlay' }],
+  ['audioSettings',   { id: 'audioSettings',   title: 'Audio',               icon: '🔊', priority: 'overlay' }],
 ]);
 
 /** Convenience: all ids in registration order. */

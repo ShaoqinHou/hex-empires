@@ -3,14 +3,12 @@ import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges } from '@hex/eng
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState } from 'react';
-import { AudioSettings } from '../components/AudioSettings';
 import { usePanelManager } from '../panels/PanelManager';
 import type { PanelId } from '../panels/panelRegistry';
 
 export function TopBar() {
   const { state, dispatch, saveGame, loadGame } = useGameState();
   const { togglePanel } = usePanelManager();
-  const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
@@ -116,7 +114,7 @@ export function TopBar() {
               <div className="h-px my-1" style={{ backgroundColor: 'var(--color-border)' }} />
               <MenuButton label="💾 Save" onClick={handleSave} />
               <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
-              <MenuButton label="🔊 Audio" onClick={() => { setShowAudioSettings(true); setShowMoreMenu(false); }} />
+              <MenuButton label="🔊 Audio" panelId="audioSettings" onClick={() => openFromMenu('audioSettings')} />
               <MenuButton label="❓ Help (H)" panelId="help" onClick={() => openFromMenu('help')} />
             </div>
           )}
@@ -157,18 +155,6 @@ export function TopBar() {
           }}
         >
           {saveToast}
-        </div>
-      )}
-
-      {/* Floating panels */}
-      {showAudioSettings && (
-        <div className="absolute top-14 right-4 w-80 rounded-lg shadow-xl p-4 z-50"
-          style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">Audio Settings</h3>
-            <button onClick={() => setShowAudioSettings(false)} className="text-lg cursor-pointer" style={{ color: 'var(--color-text-muted)' }}>✕</button>
-          </div>
-          <AudioSettings />
         </div>
       )}
     </div>

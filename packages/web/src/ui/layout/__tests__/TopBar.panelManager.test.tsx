@@ -225,15 +225,17 @@ describe('TopBar — PanelManager wiring', () => {
     expect(getPanel().activePanel).toBe('religion');
   });
 
-  it('Save / Load / Audio menu items deliberately have NO data-panel-trigger (they are not panels)', () => {
+  it('Save / Load menu items deliberately have NO data-panel-trigger (they are not panels)', () => {
     const { container, getByText } = renderTopBar();
     fireEvent.click(getByText('⋯'));
 
-    // We can't easily query the Save/Load buttons by id, but we can assert
-    // there's exactly the count of panel triggers we expect inside the
-    // menu (4 header + 8 menu = 12 total).
+    // Audio migrated to a proper panel (AudioSettingsPanel) in the panel-cleanup
+    // cycle, so it now carries data-panel-trigger="audioSettings" like the rest.
+    // Save and Load remain non-panel actions (they dispatch directly).
     const triggers = container.querySelectorAll('[data-panel-trigger]');
-    // 4 header buttons (tech/civics/diplomacy/age) + 8 menu items above
-    expect(triggers.length).toBe(12);
+    // 4 header buttons (tech/civics/diplomacy/age) + 9 menu items (governors,
+    // religion, government, commanders, log, turnSummary, victoryProgress,
+    // audioSettings, help) = 13 total.
+    expect(triggers.length).toBe(13);
   });
 });
