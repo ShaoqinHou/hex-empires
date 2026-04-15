@@ -190,6 +190,17 @@ interface GameContextValue {
   animationManager: AnimationManager | null;
   lastValidation: ValidationResult | null;
   clearValidation: () => void;
+  // ── Building placement mode (Cycle 3 of building-placement rework) ──
+  //
+  // Pure React/UI state — deliberately NOT part of GameState because it
+  // represents a transient picker session, not a persistent game fact.
+  // When non-null, the canvas overlay (Cycle 4) and CityPanel (Cycle 5)
+  // cooperate to let the player click a tile, at which point the caller
+  // dispatches SET_PRODUCTION with the chosen tile. ESC at the window
+  // capture phase clears this without touching panel state.
+  placementMode: { readonly cityId: CityId; readonly buildingId: string } | null;
+  enterPlacementMode: (cityId: CityId, buildingId: string) => void;
+  exitPlacementMode: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -209,6 +220,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [combatPreview, setCombatPreview] = useState<CombatPreview | null>(null);
   const [combatPreviewPosition, setCombatPreviewPosition] = useState<{ x: number; y: number } | null>(null);
   const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
+  const [placementMode, setPlacementMode] = useState<{ readonly cityId: CityId; readonly buildingId: string } | null>(null);
+
+  const enterPlacementMode = useCallback((cityId: CityId, buildingId: string) => {
+    setPlacementMode({ cityId, buildingId });
+  }, []);
+  const exitPlacementMode = useCallback(() => {
+    setPlacementMode(null);
+  }, []);
 
   // Create and maintain AnimationManager instance
   const animationManagerRef = useRef<AnimationManager | null>(null);
@@ -242,6 +261,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
+
+  // ── ESC cancels placement mode at window capture phase ──
+  //
+  // Registered in the capture phase so it runs before App.tsx's own ESC
+  // handler (panel dismissal). We stopPropagation when a placement is
+  // active so the player's ESC only cancels placement without also closing
+  // the CityPanel behind it. When placement is not active, the event falls
+  // through to the existing panel-ESC handler unmolested.
+  useEffect(() => {
+    const handleKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (placementMode) {
+        setPlacementMode(null);
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDownCapture, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDownCapture, true);
+    };
+  }, [placementMode]);
 
   // Derive selectedUnit from state — always fresh reference
   const selectedUnit = (selectedUnitId && state) ? state.units.get(selectedUnitId) ?? null : null;
@@ -578,7 +618,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     animationManager: animationManagerRef.current,
     lastValidation,
     clearValidation,
-  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation]);
+    placementMode,
+    enterPlacementMode,
+    exitPlacementMode,
+  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation, placementMode, enterPlacementMode, exitPlacementMode]);
 
   // Expose game state for E2E testing (Playwright can read window.__gameState)
   useEffect(() => {

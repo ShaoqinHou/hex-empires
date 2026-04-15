@@ -401,6 +401,7 @@ export type GameAction =
   | { readonly type: 'ATTACK_CITY'; readonly attackerId: UnitId; readonly cityId: CityId }
   | { readonly type: 'FOUND_CITY'; readonly unitId: UnitId; readonly name: string }
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type'] }
+  | { readonly type: 'CANCEL_BUILDING_PLACEMENT'; readonly cityId: CityId }
   | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }
   | { readonly type: 'PLACE_DISTRICT'; readonly cityId: CityId; readonly districtId: DistrictId; readonly tile: HexCoord }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }

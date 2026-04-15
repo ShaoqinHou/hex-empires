@@ -34,6 +34,8 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
   switch (action.type) {
     case 'SET_PRODUCTION':
       return handleSetProduction(state, action.cityId, action.itemId, action.itemType);
+    case 'CANCEL_BUILDING_PLACEMENT':
+      return handleCancelBuildingPlacement(state, action.cityId);
     case 'PURCHASE_ITEM':
       return handlePurchaseItem(state, action.cityId, action.itemId, action.itemType);
     case 'END_TURN':
@@ -41,6 +43,57 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
     default:
       return state;
   }
+}
+
+/**
+ * Compute the cancel threshold for a city's current building/wonder in queue.
+ *
+ * Per `.claude/workflow/design/building-placement-rework.md` §2.2, a player may
+ * cancel placement so long as `productionProgress` is strictly below
+ * `max(10, floor(0.5 * productionPerTurn))` — i.e. less than half of one turn's
+ * worth of accumulated production (with a 10-point floor so zero-production
+ * cities still have a cancel window).
+ *
+ * Exposed (non-exported) helper kept close to the handler for easy unit
+ * verification via behavioural assertions. Pure — reads state, returns number.
+ */
+function computeCancelThreshold(state: GameState, city: CityState): number {
+  const yields = calculateCityYields(city, state);
+  const prod = yields.production;
+  return Math.max(10, Math.floor(0.5 * prod));
+}
+
+/**
+ * Handle CANCEL_BUILDING_PLACEMENT — Cycle 2 of the building-placement rework.
+ *
+ * Clears the head of the production queue iff it is a 'building' or 'wonder'
+ * item with a `lockedTile`, and production has not yet crossed the cancel
+ * threshold. Returns state unchanged for every other shape (no queue, wrong
+ * head type, no lockedTile, past threshold, missing city). Does not emit a
+ * validation error when declining to cancel — the UI is responsible for
+ * disabling the Cancel button via `computeCancelThreshold` (mirrored into the
+ * React layer in Cycle 3+).
+ */
+function handleCancelBuildingPlacement(state: GameState, cityId: string): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.productionQueue.length === 0) return state;
+
+  const head = city.productionQueue[0];
+  if (head.type !== 'building' && head.type !== 'wonder') return state;
+  if (!head.lockedTile) return state;
+
+  const threshold = computeCancelThreshold(state, city);
+  if (city.productionProgress >= threshold) return state;
+
+  const updatedCities = new Map(state.cities);
+  updatedCities.set(cityId, {
+    ...city,
+    productionQueue: city.productionQueue.slice(1),
+    productionProgress: 0,
+  });
+
+  return { ...state, cities: updatedCities, lastValidation: null };
 }
 
 function handleSetProduction(
