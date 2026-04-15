@@ -13,6 +13,7 @@ import { Notifications } from './ui/components/Notifications';
 import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
+import { CombatHoverPreview } from './ui/components/CombatHoverPreview';
 import { TooltipOverlay } from './ui/hud/TooltipOverlay';
 import { UrbanPlacementHintBadge } from './ui/hud/UrbanPlacementHintBadge';
 import { hexToPixel } from './utils/hexMath';
@@ -39,9 +40,9 @@ const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').t
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 
 function GameUI() {
-  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
+  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition } = useGame();
   const state = nullableState!; // GameUI only renders when state is non-null
-  const { activePanel, openPanel, closePanel, togglePanel } = usePanelManager();
+  const { activePanel, openPanel, closePanel, togglePanel, isOpen } = usePanelManager();
   const [showYields, setShowYields] = useState(false);
   const cameraRef = useRef<Camera | null>(null);
 
@@ -132,7 +133,18 @@ function GameUI() {
             openPanel('city');
           }}
           onToggleTechTree={() => togglePanel('tech')}
+          onBuilderSelected={() => openPanel('improvement')}
+          onBuilderDeselected={() => { if (isOpen('improvement')) closePanel(); }}
         />
+        {/* CombatHoverPreview — mounted here (not inside GameCanvas) so that
+            canvas/ never imports from ui/. The preview data flows through
+            GameProvider context (combatPreview, combatPreviewPosition). */}
+        {combatPreview && (
+          <CombatHoverPreview
+            preview={combatPreview}
+            position={combatPreviewPosition}
+          />
+        )}
         {/* Suppress browser context menu on the panels layer — panels
             feel like desktop UI, not a webpage. GameCanvas keeps its
             own right-click handler (gameplay action) and is unaffected

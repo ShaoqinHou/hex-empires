@@ -3,8 +3,6 @@ import { useGameState } from '../providers/GameProvider';
 import { Camera } from './Camera';
 import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
-import { CombatHoverPreview } from '../ui/components/CombatHoverPreview';
-import { usePanelManager } from '../ui/panels/PanelManager';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
 import type { HexCoord, CityState } from '@hex/engine';
@@ -14,11 +12,13 @@ interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
   onToggleTechTree?: () => void;
   onToggleYields?: () => void;
+  onBuilderSelected?: () => void;
+  onBuilderDeselected?: () => void;
   cameraRef?: React.MutableRefObject<Camera | null>;
   showYields?: boolean;
 }
 
-export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBuilderSelected, onBuilderDeselected, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalCamera = useRef(new Camera());
 
@@ -53,10 +53,6 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, [enterPlacementMode, exitPlacementMode, placementMode]);
 
   const [hoveredHex, setHoveredHex] = useState<HexCoord | null>(null);
-
-  // ImprovementPanel is a registered panel owned by PanelManager. Selecting
-  // a builder opens it; selecting any other entity closes it.
-  const { openPanel, closePanel, isOpen } = usePanelManager();
 
   // ── Building placement overlay (Cycle 4) ──
   //
@@ -311,7 +307,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     if (cycle.length === 0) {
       setSelectedUnit(null);
       setSelectedHex(hex);
-      if (isOpen('improvement')) closePanel();
+      onBuilderDeselected?.();
       return;
     }
 
@@ -327,9 +323,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       setSelectedUnit(unit);
       setSelectedHex(hex);
       if (isBuilder) {
-        openPanel('improvement');
-      } else if (isOpen('improvement')) {
-        closePanel();
+        onBuilderSelected?.();
+      } else {
+        onBuilderDeselected?.();
       }
     } else {
       // city
@@ -340,9 +336,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       }
       setSelectedUnit(null);
       setSelectedHex(hex);
-      if (isOpen('improvement')) closePanel();
+      onBuilderDeselected?.();
     }
-  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick, placementMode, placementValidTiles, dispatch, exitPlacementMode, openPanel, closePanel, isOpen]);
+  }, [state, selectedUnit, setSelectedUnit, setSelectedHex, selectCity, unitRegistry, onCityClick, placementMode, placementValidTiles, dispatch, exitPlacementMode, onBuilderSelected, onBuilderDeselected]);
 
   // Mouse handlers — left button drives drag-pan + click-select; right button is reserved
   // for handleContextMenu (RTS-style action). Middle button is ignored.
@@ -713,30 +709,22 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
   }, [state, hoveredHex, combatPreview]);
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        data-testid="game-canvas"
-        data-placement-mode={placementMode ? 'active' : 'inactive'}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        style={cursor !== 'grab' ? { cursor } : undefined}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          isDraggingRef.current = false;
-          setCombatPreview(null);
-          setCombatPreviewPosition(null);
-        }}
-        onWheel={handleWheel}
-        onContextMenu={handleContextMenu}
-      />
-      {combatPreview && (
-        <CombatHoverPreview
-          preview={combatPreview}
-          position={combatPreviewPosition}
-        />
-      )}
-    </>
+    <canvas
+      ref={canvasRef}
+      data-testid="game-canvas"
+      data-placement-mode={placementMode ? 'active' : 'inactive'}
+      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      style={cursor !== 'grab' ? { cursor } : undefined}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={() => {
+        isDraggingRef.current = false;
+        setCombatPreview(null);
+        setCombatPreviewPosition(null);
+      }}
+      onWheel={handleWheel}
+      onContextMenu={handleContextMenu}
+    />
   );
 }
