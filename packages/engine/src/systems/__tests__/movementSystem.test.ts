@@ -131,10 +131,10 @@ describe('movementSystem', () => {
     expect(next.units.get('u1')!.position).toEqual({ q: 0, r: 0 });
   });
 
-  it('prevents stacking friendly units', () => {
+  it('prevents stacking two friendly military units (Civ VII 1-per-class)', () => {
     const units = new Map([
-      ['u1', createTestUnit({ id: 'u1', position: { q: 0, r: 0 }, movementLeft: 2 })],
-      ['u2', createTestUnit({ id: 'u2', position: { q: 1, r: 0 }, movementLeft: 2 })],
+      ['u1', createTestUnit({ id: 'u1', typeId: 'warrior', position: { q: 0, r: 0 }, movementLeft: 2 })],
+      ['u2', createTestUnit({ id: 'u2', typeId: 'warrior', position: { q: 1, r: 0 }, movementLeft: 2 })],
     ]);
     const state = createTestState({ units });
     const next = movementSystem(state, {
@@ -143,6 +143,93 @@ describe('movementSystem', () => {
       path: [{ q: 1, r: 0 }],
     });
     expect(next.units.get('u1')!.position).toEqual({ q: 0, r: 0 });
+    expect(next.lastValidation?.valid).toBe(false);
+  });
+
+  describe('Civ VII stacking (1 military + 1 civilian per tile)', () => {
+    it('allows a civilian to move onto a friendly military unit', () => {
+      const units = new Map([
+        ['warrior1', createTestUnit({ id: 'warrior1', typeId: 'warrior', position: { q: 1, r: 0 }, movementLeft: 0 })],
+        ['settler1', createTestUnit({ id: 'settler1', typeId: 'settler', position: { q: 0, r: 0 }, movementLeft: 2 })],
+      ]);
+      const state = createTestState({ units });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'settler1',
+        path: [{ q: 1, r: 0 }],
+      });
+      expect(next.units.get('settler1')!.position).toEqual({ q: 1, r: 0 });
+      expect(next.units.get('warrior1')!.position).toEqual({ q: 1, r: 0 });
+    });
+
+    it('allows a military unit to move onto a friendly civilian', () => {
+      const units = new Map([
+        ['settler1', createTestUnit({ id: 'settler1', typeId: 'settler', position: { q: 1, r: 0 }, movementLeft: 0 })],
+        ['warrior1', createTestUnit({ id: 'warrior1', typeId: 'warrior', position: { q: 0, r: 0 }, movementLeft: 2 })],
+      ]);
+      const state = createTestState({ units });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'warrior1',
+        path: [{ q: 1, r: 0 }],
+      });
+      expect(next.units.get('warrior1')!.position).toEqual({ q: 1, r: 0 });
+      expect(next.units.get('settler1')!.position).toEqual({ q: 1, r: 0 });
+    });
+
+    it('rejects military stacking on friendly military', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', typeId: 'warrior', position: { q: 0, r: 0 }, movementLeft: 2 })],
+        ['u2', createTestUnit({ id: 'u2', typeId: 'warrior', position: { q: 1, r: 0 }, movementLeft: 0 })],
+      ]);
+      const state = createTestState({ units });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 1, r: 0 }],
+      });
+      expect(next.units.get('u1')!.position).toEqual({ q: 0, r: 0 });
+      expect(next.lastValidation?.reason).toBe('Cannot stack two military units on the same tile');
+    });
+
+    it('rejects civilian stacking on friendly civilian', () => {
+      const units = new Map([
+        ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 }, movementLeft: 2 })],
+        ['s2', createTestUnit({ id: 's2', typeId: 'settler', position: { q: 1, r: 0 }, movementLeft: 0 })],
+      ]);
+      const state = createTestState({ units });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 's1',
+        path: [{ q: 1, r: 0 }],
+      });
+      expect(next.units.get('s1')!.position).toEqual({ q: 0, r: 0 });
+      expect(next.lastValidation?.reason).toBe('Cannot stack two civilian units on the same tile');
+    });
+
+    it('does not allow stacking onto an enemy-occupied tile via ZoC stop', () => {
+      // Path (0,0) -> (1,0) -> (2,0). Enemy warrior at (2,-1) exerts ZoC on (1,0).
+      // The enemy at (1,0)? No — we put an enemy settler at (1,0) directly so the
+      // intermediate stop hex is enemy-occupied, exercising the enemy-block path.
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const units = new Map([
+        ['mine', createTestUnit({ id: 'mine', owner: 'p1', typeId: 'warrior', position: { q: 0, r: 0 }, movementLeft: 5 })],
+        ['blocker', createTestUnit({ id: 'blocker', owner: 'p2', typeId: 'settler', position: { q: 1, r: 0 }, movementLeft: 0 })],
+        ['zoc', createTestUnit({ id: 'zoc', owner: 'p2', typeId: 'warrior', position: { q: 2, r: -1 }, movementLeft: 0 })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'mine',
+        path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
+      });
+      // Enemy blocks at ZoC stop position (1,0).
+      expect(next.units.get('mine')!.position).toEqual({ q: 0, r: 0 });
+      expect(next.lastValidation?.reason).toBe('Cannot move into a tile occupied by an enemy');
+    });
   });
 
   it('breaks fortification on movement', () => {

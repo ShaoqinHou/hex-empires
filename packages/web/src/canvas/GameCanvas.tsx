@@ -382,6 +382,28 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
       }
     }
 
+    // Civ VII stacking: 1 military + 1 civilian per tile. If the target tile already
+    // holds an OWN unit of the same class as selectedUnit, a MOVE_UNIT would bounce
+    // off the engine with "cannot stack" — that's an unreachable UI path, so we silent
+    // no-op here rather than flashing a toast. Mixed-class stacks fall through to
+    // the normal move path below.
+    const movingDef = unitRegistry.get(selectedUnit.typeId);
+    const movingIsCivilian = movingDef?.category === 'civilian' || movingDef?.category === 'religious';
+    const ownUnitsOnTile = [...state.units.values()].filter(
+      u => u.id !== selectedUnit.id && u.owner === state.currentPlayerId && coordToKey(u.position) === key,
+    );
+    if (ownUnitsOnTile.length > 0) {
+      const anySameClass = ownUnitsOnTile.some(u => {
+        const d = unitRegistry.get(u.typeId);
+        const otherIsCivilian = d?.category === 'civilian' || d?.category === 'religious';
+        return otherIsCivilian === movingIsCivilian;
+      });
+      if (anySameClass) {
+        // Silent no-op: no toast, no error, preserve selection.
+        return;
+      }
+    }
+
     // 3. Move to reachable hex
     if (selectedUnit.movementLeft > 0 && reachableHexes && reachableHexes.has(key)) {
       const costFn = (_from: HexCoord, to: HexCoord) => {
@@ -398,7 +420,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, came
     }
 
     // No valid action for this target — preserve selection (modern RTS semantics).
-  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedHex]);
+  }, [state, selectedUnit, reachableHexes, dispatch, setSelectedHex, unitRegistry]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const canvas = canvasRef.current;

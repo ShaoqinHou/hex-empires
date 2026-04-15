@@ -111,7 +111,7 @@ describe('Action Validation', () => {
       const result = movementSystem(state, action);
       expect(result.lastValidation).toEqual({
         valid: false,
-        reason: 'Cannot stack friendly units',
+        reason: 'Cannot stack two military units on the same tile',
         category: 'movement',
       });
     });

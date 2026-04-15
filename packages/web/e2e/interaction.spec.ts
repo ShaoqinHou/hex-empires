@@ -820,3 +820,113 @@ test.describe('Robustness', () => {
     expect((await getSelection(page)).unitId).toBe(warrior.id);
   });
 });
+
+// ── Civ VII stacking + silent no-op on own-unit right-click ──────────────────
+
+test.describe('Civ VII stacking & own-unit right-click', () => {
+  test('right-click own settler with warrior selected moves warrior onto settler (stack)', async ({ page }) => {
+    // seed=2: warrior starts at (-2,5) and settler at (-3,6) — adjacent hexes — so a
+    // single right-click covers the mixed-class stack in one move with full MP.
+    await startGame(page, { seed: 2 });
+    const warrior = await ownUnit(page, 'warrior');
+    const settler = await ownUnit(page, 'settler');
+
+    const dq = settler.position.q - warrior.position.q;
+    const dr = settler.position.r - warrior.position.r;
+    const dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(-dq - dr)) / 2;
+    if (dist !== 1) test.skip(true, `warrior ${dist} hexes from settler on this seed`);
+
+    const errs: string[] = [];
+    page.on('pageerror', (e) => errs.push(String(e)));
+
+    const wScr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
+    await page.waitForTimeout(200);
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
+
+    const sScr = await hexScreen(page, settler.position.q, settler.position.r);
+    await page.mouse.click(sScr!.x, sScr!.y, { button: 'right' });
+    await page.waitForTimeout(400);
+
+    const after = await getState(page);
+    const wAfter = after!.units.find(u => u.id === warrior.id)!;
+    const sAfter = after!.units.find(u => u.id === settler.id)!;
+    // Warrior stacked onto settler's tile (Civ VII mixed-class rule).
+    expect(wAfter.position).toEqual(settler.position);
+    expect(sAfter.position).toEqual(settler.position);
+    // No "cannot attack" toast triggered.
+    const toast = await page.locator('text=/cannot attack own|Friendly fire/i').count();
+    expect(toast).toBe(0);
+    expect(errs).toEqual([]);
+  });
+
+  test('right-click own warrior with another warrior selected is a silent no-op', async ({ page }) => {
+    // Scenario: we need two friendly MILITARY units on adjacent tiles. Seed-2 starts
+    // warrior at (-2,5) and scout at (-3,7) — not adjacent. We mutate state directly to
+    // drop a second warrior adjacent to the first, then trigger a harmless engine
+    // dispatch (FORTIFY on the first warrior) to force a React re-render that picks up
+    // the synthetic unit. FORTIFY on an actual own unit is a successful action — no toast.
+    await startGame(page, { seed: 2 });
+    const warrior = await ownUnit(page, 'warrior');
+
+    const adj = await page.evaluate(({ pos }) => {
+      const s = (window as any).__gameState;
+      const DIRS = [ {dq:1,dr:0}, {dq:-1,dr:0}, {dq:0,dr:1}, {dq:0,dr:-1}, {dq:1,dr:-1}, {dq:-1,dr:1} ];
+      for (const d of DIRS) {
+        const q = pos.q + d.dq, r = pos.r + d.dr;
+        const tile = s.map.tiles.get(`${q},${r}`);
+        if (!tile) continue;
+        if (['ocean','coast','reef','mountains'].includes(tile.terrain)) continue;
+        if (tile.feature && ['hills','forest','jungle','marsh'].includes(tile.feature)) continue;
+        const hasUnit = [...s.units.values()].some((u: any) => u.position.q === q && u.position.r === r);
+        if (!hasUnit) return { q, r };
+      }
+      return null;
+    }, { pos: warrior.position });
+    if (!adj) test.skip(true, 'no free adjacent flat tile for synthetic warrior');
+
+    const injected = await page.evaluate(({ pos }) => {
+      const s = (window as any).__gameState;
+      if (!s) return false;
+      const units = s.units as Map<string, any>;
+      units.set('test-w2', {
+        id: 'test-w2', typeId: 'warrior', owner: s.currentPlayerId, position: pos,
+        movementLeft: 0, health: 100, experience: 0, promotions: [], fortified: false,
+      });
+      return true;
+    }, { pos: adj });
+    if (!injected) test.skip(true, 'state-mutation hook unavailable');
+
+    // Trigger a React re-render by dispatching a successful action. FORTIFY on an own
+    // unit always succeeds and doesn't surface a toast. Using the REAL warrior id.
+    await dispatch(page, { type: 'FORTIFY_UNIT', unitId: warrior.id });
+
+    // Unfortify (dispatch MOVE_UNIT to zero-length path is rejected — instead just
+    // re-click selection). Actually FORTIFY+select should be fine; re-select the warrior
+    // to clear its fortified visuals.
+    const errs: string[] = [];
+    page.on('pageerror', (e) => errs.push(String(e)));
+
+    const wScr = await hexScreen(page, warrior.position.q, warrior.position.r);
+    await page.mouse.click(wScr!.x, wScr!.y, { button: 'left' });
+    await page.waitForTimeout(200);
+    expect((await getSelection(page)).unitId).toBe(warrior.id);
+
+    const before = await getState(page);
+
+    const tScr = await hexScreen(page, adj!.q, adj!.r);
+    await page.mouse.click(tScr!.x, tScr!.y, { button: 'right' });
+    await page.waitForTimeout(400);
+
+    // First warrior did NOT move (same-class stacking → silent no-op).
+    const after = await getState(page);
+    const wAfter = after!.units.find(u => u.id === warrior.id)!;
+    expect(wAfter.position).toEqual(warrior.position);
+    // Turn/phase unchanged.
+    expect(after!.turn).toBe(before!.turn);
+    // No "cannot attack / stack" toast triggered.
+    const toast = await page.locator('text=/cannot attack own|Friendly fire|Cannot stack/i').count();
+    expect(toast).toBe(0);
+    expect(errs).toEqual([]);
+  });
+});

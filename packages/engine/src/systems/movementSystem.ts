@@ -118,13 +118,24 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     return createInvalidResult(state, 'Not enough movement points', 'movement');
   }
 
-  // Check final destination isn't occupied by another unit of the same player
-  // (We'll also check intermediate ZoC stop positions below)
+  // Civ VII stacking rule: 1 military + 1 civilian/religious per tile.
+  // Reject only if moving unit and occupant share the same class.
+  const movingClass = getStackClass(unit, state);
   const finalDest = action.path[action.path.length - 1];
   const finalDestKey = coordToKey(finalDest);
   for (const [id, other] of state.units) {
-    if (id !== unit.id && other.owner === unit.owner && coordToKey(other.position) === finalDestKey) {
-      return createInvalidResult(state, 'Cannot stack friendly units', 'movement');
+    if (id === unit.id) continue;
+    if (coordToKey(other.position) !== finalDestKey) continue;
+    if (other.owner !== unit.owner) continue;
+    const otherClass = getStackClass(other, state);
+    if (otherClass === movingClass) {
+      return createInvalidResult(
+        state,
+        movingClass === 'military'
+          ? 'Cannot stack two military units on the same tile'
+          : 'Cannot stack two civilian units on the same tile',
+        'movement',
+      );
     }
   }
 
@@ -157,7 +168,11 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
       if (id === unit.id) continue;
       if (coordToKey(other.position) !== stopKey) continue;
       if (other.owner === unit.owner) {
-        return createInvalidResult(state, 'Cannot stack at Zone of Control stop position', 'movement');
+        // Same class-based stacking rule applies at ZoC stop positions
+        const otherClass = getStackClass(other, state);
+        if (otherClass === movingClass) {
+          return createInvalidResult(state, 'Cannot stack at Zone of Control stop position', 'movement');
+        }
       } else {
         return createInvalidResult(state, 'Cannot move into a tile occupied by an enemy', 'movement');
       }
@@ -199,6 +214,17 @@ function createInvalidResult(
     lastValidation: { valid: false, reason, category },
     log: state.log, // Keep log unchanged
   };
+}
+
+/**
+ * Classify a unit for stacking purposes.
+ * Civ VII rule: one military + one civilian/religious unit per tile.
+ * Unknown/missing unit defs default to 'military' to preserve the safer rule.
+ */
+function getStackClass(unit: UnitState, state: GameState): 'military' | 'civilian' {
+  const def = state.config.units.get(unit.typeId);
+  if (!def) return 'military';
+  return def.category === 'civilian' || def.category === 'religious' ? 'civilian' : 'military';
 }
 
 /**
