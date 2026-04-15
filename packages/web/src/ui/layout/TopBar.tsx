@@ -110,6 +110,7 @@ export function TopBar() {
                 borderRadius: 'var(--panel-radius)',
                 zIndex: 'var(--panel-z-overlay)' as unknown as number,
               }}>
+              <MenuButton label="🤝 Trade Routes (X)" testId="open-trade-routes" panelId="tradeRoutes" onClick={() => openFromMenu('tradeRoutes')} />
               <MenuButton label="👑 Governors" panelId="governors" onClick={() => openFromMenu('governors')} />
               <MenuButton label="🙏 Religion (R)" testId="open-religion" panelId="religion" onClick={() => openFromMenu('religion')} />
               <MenuButton label="🏛 Government (G)" testId="open-government" panelId="government" onClick={() => openFromMenu('government')} />

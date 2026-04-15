@@ -39,6 +39,7 @@ const ImprovementPanel = lazy(() => import('./ui/panels/ImprovementPanel').then(
 const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').then(m => ({ default: m.AudioSettingsPanel })));
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
+const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(m => ({ default: m.TradeRoutesPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition } = useGame();
@@ -210,6 +211,9 @@ function GameUI() {
           )}
           {activePanel === 'crisis' && (
             <CrisisPanel onClose={closePanel} />
+          )}
+          {activePanel === 'tradeRoutes' && (
+            <TradeRoutesPanel onClose={closePanel} />
           )}
          </div>
         </Suspense>

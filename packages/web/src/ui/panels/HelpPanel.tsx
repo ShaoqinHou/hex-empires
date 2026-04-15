@@ -43,6 +43,7 @@ const SECTIONS: Section[] = [
       { key: 'R', label: 'Toggle religion panel (pantheon, religion, faith)' },
       { key: 'G', label: 'Toggle government panel (policies, slots)' },
       { key: 'K', label: 'Toggle commanders panel (XP, level, promotions)' },
+      { key: 'X', label: 'Toggle trade routes panel' },
       { key: 'H', label: 'Open / close this help panel' },
       { key: 'Escape', label: 'Deselect unit / close panel' },
     ],

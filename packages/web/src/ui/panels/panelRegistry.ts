@@ -30,7 +30,8 @@ export type PanelId =
   | 'crisis'
   | 'improvement'
   | 'audioSettings'
-  | 'victory';
+  | 'victory'
+  | 'tradeRoutes';
 
 /**
  * Panel priority — controls z-index, backdrop, and input-blocking.
@@ -62,6 +63,7 @@ export interface PanelRegistryEntry {
  *   R — religion
  *   G — government
  *   K — commanders
+ *   X — trade routes
  */
 export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<PanelId, PanelRegistryEntry>([
   ['help',            { id: 'help',            title: 'Help',                icon: '❓',  keyboardShortcut: 'H', priority: 'overlay' }],
@@ -81,6 +83,7 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['crisis',          { id: 'crisis',          title: 'Crisis',              icon: '⚠️',  priority: 'modal'   }],
   ['improvement',     { id: 'improvement',     title: 'Build Improvement',   icon: '🏗️',  priority: 'overlay' }],
   ['audioSettings',   { id: 'audioSettings',   title: 'Audio',               icon: '🔊', priority: 'overlay' }],
+  ['tradeRoutes',     { id: 'tradeRoutes',     title: 'Trade Routes',        icon: '🤝', keyboardShortcut: 'X', priority: 'overlay' }],
 ]);
 
 /** Convenience: all ids in registration order. */
