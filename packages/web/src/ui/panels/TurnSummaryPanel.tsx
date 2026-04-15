@@ -28,7 +28,7 @@ export function TurnSummaryPanel({ onClose }: TurnSummaryPanelProps) {
     });
 
   return (
-    <PanelShell id={PANEL_ID} title="Turn Summary" onClose={onClose} priority="overlay">
+    <PanelShell id={PANEL_ID} title="Turn Summary" onClose={onClose} priority="modal">
       {/* Current Turn */}
       <div className="pb-2 mb-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <div className="text-sm font-bold">Turn {state.turn}</div>
