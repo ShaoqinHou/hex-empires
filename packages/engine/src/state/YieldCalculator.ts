@@ -1,7 +1,7 @@
 import type { GameState, CityState, TownSpecialization } from '../types/GameState';
+import type { GameConfig } from '../types/GameConfig';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
-import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getYieldBonus } from './EffectUtils';
 
 /** Calculate total yields for a city from its territory tiles */
@@ -32,7 +32,7 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
 
     // Improvement yields (NEW)
     if (tile.improvement) {
-      const improvementYields = getImprovementYields(tile.improvement);
+      const improvementYields = getImprovementYields(tile.improvement, state.config);
       total = addYields(total, improvementYields);
     }
 
@@ -117,7 +117,7 @@ function getFeatureYieldModifiers(feature: string): Partial<YieldSet> {
   return table[feature] ?? {};
 }
 
-function getImprovementYields(improvementId: string): Partial<YieldSet> {
-  const improvement = ALL_IMPROVEMENTS.find(i => i.id === improvementId);
+function getImprovementYields(improvementId: string, config: GameConfig): Partial<YieldSet> {
+  const improvement = config.improvements.get(improvementId);
   return improvement?.yields ?? {};
 }

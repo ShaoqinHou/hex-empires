@@ -38,7 +38,6 @@ import type {
   ReligionRecord,
   ReligionSlotState,
 } from '../types/Religion';
-import { ALL_PANTHEONS } from '../data/religion/pantheons';
 import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
 import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
 
@@ -58,9 +57,9 @@ const FOUND_RELIGION_FAITH_COST = 200 as const;
  */
 export type ReligionSystemAction = GameAction | ReligionAction;
 
-/** Look up a pantheon by id from the M9 catalog. */
-function findPantheon(pantheonId: PantheonId): PantheonDef | undefined {
-  return ALL_PANTHEONS.find((p) => p.id === pantheonId);
+/** Look up a pantheon by id from state.config. */
+function findPantheon(state: GameState, pantheonId: PantheonId): PantheonDef | undefined {
+  return state.config.pantheons.get(pantheonId);
 }
 
 /**
@@ -80,7 +79,7 @@ export function canAdoptPantheon(
   // cannot evaluate cost — disallow adoption.
   if (!playerHasFaithField(player)) return false;
 
-  const pantheon = findPantheon(pantheonId);
+  const pantheon = findPantheon(state, pantheonId);
   if (!pantheon) return false;
 
   return player.faith >= pantheon.faithCost;
@@ -124,7 +123,7 @@ function handleAdoptPantheon(
   if (!player) return state;
   if (!playerHasFaithField(player)) return state;
 
-  const pantheon = findPantheon(pantheonId);
+  const pantheon = findPantheon(state, pantheonId);
   if (!pantheon) return state;
   if (player.faith < pantheon.faithCost) return state;
 

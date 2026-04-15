@@ -1,7 +1,6 @@
 import type { GameState, GameAction } from '../types/GameState';
 import type { ImprovementDef } from '../types/Improvement';
 import { coordToKey } from '../hex/HexMath';
-import { ALL_IMPROVEMENTS } from '../data/improvements';
 
 /**
  * ImprovementSystem handles tile improvement construction
@@ -18,7 +17,7 @@ export function improvementSystem(state: GameState, action: GameAction): GameSta
   const unit = state.units.get(unitId);
   if (!unit) return state;
 
-  const improvement = ALL_IMPROVEMENTS.find(i => i.id === improvementId);
+  const improvement = state.config.improvements.get(improvementId);
   if (!improvement) return state;
 
   const tileKey = coordToKey(tile);

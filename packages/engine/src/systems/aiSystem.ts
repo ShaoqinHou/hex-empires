@@ -2,13 +2,10 @@ import type { GameState, GameAction, UnitState, CityState, TownSpecialization } 
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
-import { ALL_IMPROVEMENTS } from '../data/improvements';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
 import { PROMOTION_THRESHOLDS } from '../data/units/promotions';
-import { ALL_PANTHEONS } from '../data/religion';
-import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
-import type { PolicyCategory } from '../data/governments';
+import type { PolicyCategory } from '../data/governments/governments';
 
 /** Faith threshold for adopting a pantheon (mirrors PANTHEON_DEFAULT_FAITH_COST). */
 const AI_PANTHEON_FAITH_COST = 25;
@@ -537,7 +534,7 @@ function pickCivVIIParityAction(
         claimedByAny.add(pid);
       }
     }
-    const available = ALL_PANTHEONS.find(p => !claimedByAny.has(p.id));
+    const available = [...state.config.pantheons.values()].find(p => !claimedByAny.has(p.id));
     if (available) {
       return {
         type: 'ADOPT_PANTHEON',
@@ -550,7 +547,7 @@ function pickCivVIIParityAction(
   // 2. Government
   if (!player.governmentId) {
     const researched = new Set(player.researchedCivics);
-    const candidate = ALL_GOVERNMENTS.find(g => researched.has(g.unlockCivic));
+    const candidate = [...state.config.governments.values()].find(g => researched.has(g.unlockCivic));
     if (candidate) {
       return {
         type: 'SET_GOVERNMENT',
@@ -576,7 +573,7 @@ function pickCivVIIParityAction(
       if (!slots) continue;
       const slotIndex = slots.findIndex(s => s === null);
       if (slotIndex < 0) continue;
-      const policy = ALL_POLICIES.find(
+      const policy = [...state.config.policies.values()].find(
         p =>
           (category === 'wildcard' || p.category === category) &&
           researched.has(p.unlockCivic) &&
@@ -657,7 +654,7 @@ function pickBestTech(state: GameState, personality: AIPersonality): string | nu
       }
 
       // Check if it's an improvement
-      const improvement = ALL_IMPROVEMENTS.find(i => i.id === unlockId);
+      const improvement = state.config.improvements.get(unlockId);
       if (improvement) {
         score += 40; // Improvements are very valuable
       }
@@ -1465,7 +1462,7 @@ function pickBestImprovement(state: GameState, tile: any, player: any): string |
   let bestImprovement: string | null = null;
   let bestPriority = 0;
 
-  for (const imp of ALL_IMPROVEMENTS) {
+  for (const imp of state.config.improvements.values()) {
     // Check tech prerequisite
     if (imp.requiredTech && !player.researchedTechs.includes(imp.requiredTech)) {
       continue;
@@ -1595,7 +1592,7 @@ function pickTownSpecialization(state: GameState, city: CityState, player: any):
 
     // Check for improvements
     if (tile.improvement) {
-      const imp = ALL_IMPROVEMENTS.find(i => i.id === tile.improvement);
+      const imp = state.config.improvements.get(tile.improvement);
       if (imp) {
         foodScore += imp.yields.food ?? 0;
         productionScore += imp.yields.production ?? 0;

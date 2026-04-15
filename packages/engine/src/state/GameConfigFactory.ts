@@ -8,6 +8,10 @@ import type { PromotionDef } from '../types/Promotion';
 import type { ResourceDef } from '../types/Resource';
 import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
 import type { GovernorDef } from '../types/Governor';
+import type { ImprovementDef } from '../types/Improvement';
+import type { PantheonDef } from '../types/Religion';
+import type { GovernmentDef } from '../data/governments/governments';
+import type { PolicyDef } from '../data/governments/policies';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 import { ALL_UNITS } from '../data/units';
@@ -22,6 +26,9 @@ import { ALL_RESOURCES } from '../data/resources';
 import { ALL_GOVERNORS } from '../data/governors';
 import { ALL_CIVILIZATIONS } from '../data/civilizations';
 import { ALL_LEADERS } from '../data/leaders';
+import { ALL_IMPROVEMENTS } from '../data/improvements';
+import { ALL_PANTHEONS } from '../data/religion';
+import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -61,5 +68,17 @@ export function createGameConfig(): GameConfig {
   const leaders = new Map<string, LeaderDef>();
   for (const l of ALL_LEADERS) leaders.set(l.id, l);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders };
+  const improvements = new Map<string, ImprovementDef>();
+  for (const i of ALL_IMPROVEMENTS) improvements.set(i.id, i);
+
+  const pantheons = new Map<string, PantheonDef>();
+  for (const p of ALL_PANTHEONS) pantheons.set(p.id, p);
+
+  const governments = new Map<string, GovernmentDef>();
+  for (const g of ALL_GOVERNMENTS) governments.set(g.id, g);
+
+  const policies = new Map<string, PolicyDef>();
+  for (const p of ALL_POLICIES) policies.set(p.id, p);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies };
 }

@@ -7,6 +7,10 @@ import type { ResourceDef } from './Resource';
 import type { TerrainDef, TerrainFeatureDef } from './Terrain';
 import type { DistrictDef } from './District';
 import type { GovernorDef } from './Governor';
+import type { ImprovementDef } from './Improvement';
+import type { PantheonDef } from './Religion';
+import type { GovernmentDef } from '../data/governments/governments';
+import type { PolicyDef } from '../data/governments/policies';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 
@@ -28,4 +32,8 @@ export interface GameConfig {
   readonly governors: ReadonlyMap<string, GovernorDef>;
   readonly civilizations: ReadonlyMap<string, CivilizationDef>;
   readonly leaders: ReadonlyMap<string, LeaderDef>;
+  readonly improvements: ReadonlyMap<string, ImprovementDef>;
+  readonly pantheons: ReadonlyMap<string, PantheonDef>;
+  readonly governments: ReadonlyMap<string, GovernmentDef>;
+  readonly policies: ReadonlyMap<string, PolicyDef>;
 }

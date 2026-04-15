@@ -34,13 +34,15 @@
  */
 
 import type { GameState, GameAction, PlayerState } from '../types/GameState';
+import type { GameConfig } from '../types/GameConfig';
 import type {
   GovernmentAction,
   GovernmentId,
   PolicyId,
   PolicyCategory,
 } from '../types/Government';
-import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
+import type { GovernmentDef } from '../data/governments/governments';
+import type { PolicyDef } from '../data/governments/policies';
 
 /**
  * Widened action union accepted by governmentSystem. The engine-level
@@ -79,14 +81,14 @@ function hasGovernmentFields(
   );
 }
 
-/** Look up a Government definition by id. */
-export function findGovernment(id: GovernmentId) {
-  return ALL_GOVERNMENTS.find((g) => g.id === id);
+/** Look up a Government definition by id from config. */
+export function findGovernment(id: GovernmentId, config: GameConfig): GovernmentDef | undefined {
+  return config.governments.get(id);
 }
 
-/** Look up a Policy definition by id. */
-export function findPolicy(id: PolicyId) {
-  return ALL_POLICIES.find((p) => p.id === id);
+/** Look up a Policy definition by id from config. */
+export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefined {
+  return config.policies.get(id);
 }
 
 /**
@@ -103,7 +105,7 @@ export function canAdoptGovernment(
   const player = state.players.get(playerId);
   if (!player) return false;
 
-  const gov = findGovernment(governmentId);
+  const gov = findGovernment(governmentId, state.config);
   if (!gov) return false;
 
   if (!player.researchedCivics.includes(gov.unlockCivic)) return false;
@@ -134,10 +136,10 @@ export function canSlotPolicy(
   if (!hasGovernmentFields(player)) return false;
   if (player.governmentId === null) return false;
 
-  const gov = findGovernment(player.governmentId);
+  const gov = findGovernment(player.governmentId, state.config);
   if (!gov) return false;
 
-  const policy = findPolicy(policyId);
+  const policy = findPolicy(policyId, state.config);
   if (!policy) return false;
 
   // Policy must be unlocked.
@@ -164,7 +166,7 @@ export function canSlotPolicy(
  * the design doc.
  */
 function emptySlotMap(
-  government: ReturnType<typeof findGovernment>,
+  government: GovernmentDef | undefined,
 ): ReadonlyMap<PolicyCategory, ReadonlyArray<PolicyId | null>> {
   if (!government) {
     return new Map();
@@ -202,7 +204,7 @@ function applyAdoptGovernment(
 
   if (!canAdoptGovernment(state, playerId, governmentId)) return state;
 
-  const gov = findGovernment(governmentId);
+  const gov = findGovernment(governmentId, state.config);
   if (!gov) return state;
 
   const updated: PlayerWithGovernment = {
@@ -231,7 +233,7 @@ function applySlotPolicy(
     player.slottedPolicies.get(category) ?? [];
   const nextCategory: Array<PolicyId | null> = [...currentCategory];
   // Normalise length to Government's slot count if the map was sparse.
-  const gov = findGovernment(player.governmentId!);
+  const gov = findGovernment(player.governmentId!, state.config);
   if (!gov) return state;
   const expectedLen = gov.policySlots[category];
   while (nextCategory.length < expectedLen) nextCategory.push(null);
@@ -258,7 +260,7 @@ function applyUnslotPolicy(
   if (!hasGovernmentFields(player)) return state;
   if (player.governmentId === null) return state;
 
-  const gov = findGovernment(player.governmentId);
+  const gov = findGovernment(player.governmentId, state.config);
   if (!gov) return state;
 
   const slotCount = gov.policySlots[category];
