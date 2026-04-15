@@ -4,26 +4,13 @@ import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState } from 'react';
 import { AudioSettings } from '../components/AudioSettings';
-import { VictoryProgressPanel } from '../panels/VictoryProgressPanel';
+import { usePanelManager } from '../panels/PanelManager';
+import type { PanelId } from '../panels/panelRegistry';
 
-interface TopBarProps {
-  onOpenTechTree?: () => void;
-  onOpenCivicTree?: () => void;
-  onOpenDiplomacy?: () => void;
-  onOpenLog?: () => void;
-  onOpenAge?: () => void;
-  onOpenTurnSummary?: () => void;
-  onOpenGovernors?: () => void;
-  onOpenHelp?: () => void;
-  onOpenReligion?: () => void;
-  onOpenGovernment?: () => void;
-  onOpenCommanders?: () => void;
-}
-
-export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpenLog, onOpenAge, onOpenTurnSummary, onOpenGovernors, onOpenHelp, onOpenReligion, onOpenGovernment, onOpenCommanders }: TopBarProps) {
+export function TopBar() {
   const { state, dispatch, saveGame, loadGame } = useGameState();
+  const { togglePanel } = usePanelManager();
   const [showAudioSettings, setShowAudioSettings] = useState(false);
-  const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
@@ -50,6 +37,12 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
   const unitsWithMovement = [...state.units.values()].filter(
     u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified
   ).length;
+
+  // Closes overflow menu and toggles the panel — hoisted so menu items stay slim.
+  const openFromMenu = (id: PanelId) => {
+    togglePanel(id);
+    setShowMoreMenu(false);
+  };
 
   return (
     <div className="h-12 flex items-center justify-between px-3 select-none"
@@ -96,10 +89,10 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
 
       {/* Right: Panel buttons + End Turn */}
       <div className="flex items-center gap-1.5">
-        <PanelButton label="Tech" color="#4dabf7" onClick={onOpenTechTree} />
-        <PanelButton label="Civics" color="#cc5de8" onClick={onOpenCivicTree} />
-        <PanelButton label="Diplo" color="#ba68c8" onClick={onOpenDiplomacy} />
-        <PanelButton label="Ages" color="#ffd54f" dark onClick={onOpenAge} />
+        <PanelButton label="Tech" color="#4dabf7" panelId="tech" onClick={() => togglePanel('tech')} />
+        <PanelButton label="Civics" color="#cc5de8" panelId="civics" onClick={() => togglePanel('civics')} />
+        <PanelButton label="Diplo" color="#ba68c8" panelId="diplomacy" onClick={() => togglePanel('diplomacy')} />
+        <PanelButton label="Ages" color="#ffd54f" dark panelId="age" onClick={() => togglePanel('age')} />
 
         {/* More menu for secondary actions */}
         <div className="relative">
@@ -113,18 +106,18 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           {showMoreMenu && (
             <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 z-50 min-w-36"
               style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-              <MenuButton label="👑 Governors" onClick={() => { onOpenGovernors?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="🙏 Religion (R)" testId="open-religion" onClick={() => { onOpenReligion?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="🏛 Government (G)" testId="open-government" onClick={() => { onOpenGovernment?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="🎖 Commanders (K)" testId="open-commanders" onClick={() => { onOpenCommanders?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="📜 Event Log" onClick={() => { onOpenLog?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="📊 Summary" onClick={() => { onOpenTurnSummary?.(); setShowMoreMenu(false); }} />
-              <MenuButton label="🏆 Victory" onClick={() => { setShowVictoryProgress(true); setShowMoreMenu(false); }} />
+              <MenuButton label="👑 Governors" panelId="governors" onClick={() => openFromMenu('governors')} />
+              <MenuButton label="🙏 Religion (R)" testId="open-religion" panelId="religion" onClick={() => openFromMenu('religion')} />
+              <MenuButton label="🏛 Government (G)" testId="open-government" panelId="government" onClick={() => openFromMenu('government')} />
+              <MenuButton label="🎖 Commanders (K)" testId="open-commanders" panelId="commanders" onClick={() => openFromMenu('commanders')} />
+              <MenuButton label="📜 Event Log" panelId="log" onClick={() => openFromMenu('log')} />
+              <MenuButton label="📊 Summary" panelId="turnSummary" onClick={() => openFromMenu('turnSummary')} />
+              <MenuButton label="🏆 Victory" panelId="victoryProgress" onClick={() => openFromMenu('victoryProgress')} />
               <div className="h-px my-1" style={{ backgroundColor: 'var(--color-border)' }} />
               <MenuButton label="💾 Save" onClick={handleSave} />
               <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
               <MenuButton label="🔊 Audio" onClick={() => { setShowAudioSettings(true); setShowMoreMenu(false); }} />
-              <MenuButton label="❓ Help (H)" onClick={() => { onOpenHelp?.(); setShowMoreMenu(false); }} />
+              <MenuButton label="❓ Help (H)" panelId="help" onClick={() => openFromMenu('help')} />
             </div>
           )}
         </div>
@@ -178,10 +171,6 @@ export function TopBar({ onOpenTechTree, onOpenCivicTree, onOpenDiplomacy, onOpe
           <AudioSettings />
         </div>
       )}
-
-      {showVictoryProgress && (
-        <VictoryProgressPanel onClose={() => setShowVictoryProgress(false)} />
-      )}
     </div>
   );
 }
@@ -200,9 +189,10 @@ function ResourcePill({ icon, label, value, perTurn, color }: { icon: string; la
   );
 }
 
-function PanelButton({ label, color, dark, onClick }: { label: string; color: string; dark?: boolean; onClick?: () => void }) {
+function PanelButton({ label, color, dark, onClick, panelId }: { label: string; color: string; dark?: boolean; onClick?: () => void; panelId?: PanelId }) {
   return (
     <button
+      data-panel-trigger={panelId}
       className="px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
       style={{
         background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
@@ -217,10 +207,11 @@ function PanelButton({ label, color, dark, onClick }: { label: string; color: st
   );
 }
 
-function MenuButton({ label, onClick, testId }: { label: string; onClick: () => void; testId?: string }) {
+function MenuButton({ label, onClick, testId, panelId }: { label: string; onClick: () => void; testId?: string; panelId?: PanelId }) {
   return (
     <button
       data-testid={testId}
+      data-panel-trigger={panelId}
       className="w-full text-left px-3 py-1.5 text-xs cursor-pointer hover:brightness-125"
       style={{ color: 'var(--color-text)' }}
       onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface-elevated)'; }}

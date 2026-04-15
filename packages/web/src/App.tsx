@@ -15,6 +15,8 @@ import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
 import { TooltipOverlay } from './canvas/TooltipOverlay';
+import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
+import { VictoryProgressPanel } from './ui/panels/VictoryProgressPanel';
 
 // Lazy-loaded panels — they only mount when the user opens them, so split them out
 // of the initial bundle to cut first-paint payload.
@@ -31,27 +33,27 @@ const ReligionPanel = lazy(() => import('./ui/panels/ReligionPanel').then(m => (
 const GovernmentPanel = lazy(() => import('./ui/panels/GovernmentPanel').then(m => ({ default: m.GovernmentPanel })));
 const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m => ({ default: m.CommanderPanel })));
 
-type Panel = 'none' | 'city' | 'tech' | 'civics' | 'diplomacy' | 'log' | 'age' | 'turnSummary' | 'governors' | 'help' | 'religion' | 'government' | 'commanders';
-
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity } = useGame();
   const state = nullableState!; // GameUI only renders when state is non-null
-  const [activePanel, setActivePanel] = useState<Panel>(() => {
-    // Auto-show help on first ever game start
-    if (!localStorage.getItem('helpShown')) {
-      localStorage.setItem('helpShown', '1');
-      return 'help';
-    }
-    return 'none';
-  });
+  const { activePanel, openPanel, closePanel, togglePanel } = usePanelManager();
   const [showYields, setShowYields] = useState(false);
   const cameraRef = useRef<Camera | null>(null);
 
-  const togglePanel = (panel: Panel) => setActivePanel(prev => prev === panel ? 'none' : panel);
+  // Auto-show help on first ever game start. Runs once on mount; the
+  // PanelManager is the single source of truth for activePanel state, so
+  // the previous useState-initializer trick has moved to a one-shot effect.
+  useEffect(() => {
+    if (!localStorage.getItem('helpShown')) {
+      localStorage.setItem('helpShown', '1');
+      openPanel('help');
+    }
+    // openPanel is stable from useCallback; we intentionally only run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // H key — toggle help panel. ESC — smart close: if a panel is open, close it
-  // FIRST (and stop propagation so GameCanvas's ESC handler doesn't also deselect).
-  // If no panel is open, GameCanvas's ESC handler runs normally and clears selection.
+  // Keyboard shortcuts for panel toggles. ESC is handled inside
+  // PanelManagerProvider (capture phase) so it's not duplicated here.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = document.activeElement?.tagName;
@@ -68,15 +70,10 @@ function GameUI() {
       if (e.key === 'k' || e.key === 'K') {
         togglePanel('commanders');
       }
-      if (e.key === 'Escape' && activePanel !== 'none') {
-        setActivePanel('none');
-        e.stopPropagation();
-      }
     };
-    // Capture phase so we intercept ESC before GameCanvas's bubble-phase handler runs.
-    window.addEventListener('keydown', handleKey, true);
-    return () => window.removeEventListener('keydown', handleKey, true);
-  }, [activePanel]);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [togglePanel]);
 
   // Determine if we should show combat preview
   const combatPreviewTarget = useMemo(() => {
@@ -86,7 +83,7 @@ function GameUI() {
     const targetKey = `${hoveredHex.q},${hoveredHex.r}`;
     let hasEnemyTarget = false;
 
-    for (const [id, unit] of state.units) {
+    for (const [, unit] of state.units) {
       if (`${unit.position.q},${unit.position.r}` === targetKey && unit.owner !== selectedUnit.owner) {
         hasEnemyTarget = true;
         break;
@@ -94,7 +91,7 @@ function GameUI() {
     }
 
     if (!hasEnemyTarget) {
-      for (const [id, city] of state.cities) {
+      for (const [, city] of state.cities) {
         if (`${city.position.q},${city.position.r}` === targetKey && city.owner !== selectedUnit.owner) {
           hasEnemyTarget = true;
           break;
@@ -107,19 +104,7 @@ function GameUI() {
 
   return (
     <div className="game-app w-full h-full flex flex-col">
-      <TopBar
-        onOpenTechTree={() => togglePanel('tech')}
-        onOpenCivicTree={() => togglePanel('civics')}
-        onOpenDiplomacy={() => togglePanel('diplomacy')}
-        onOpenLog={() => togglePanel('log')}
-        onOpenAge={() => togglePanel('age')}
-        onOpenTurnSummary={() => togglePanel('turnSummary')}
-        onOpenGovernors={() => togglePanel('governors')}
-        onOpenHelp={() => togglePanel('help')}
-        onOpenReligion={() => togglePanel('religion')}
-        onOpenGovernment={() => togglePanel('government')}
-        onOpenCommanders={() => togglePanel('commanders')}
-      />
+      <TopBar />
       <div className="flex-1 relative">
         <GameCanvas
           cameraRef={cameraRef}
@@ -127,7 +112,7 @@ function GameUI() {
           onToggleYields={() => setShowYields(v => !v)}
           onCityClick={(city) => {
             selectCity(city.id);
-            setActivePanel('city');
+            openPanel('city');
           }}
           onToggleTechTree={() => togglePanel('tech')}
         />
@@ -138,40 +123,43 @@ function GameUI() {
         <Suspense fallback={null}>
          <div onContextMenu={(e) => e.preventDefault()}>
           {activePanel === 'city' && selectedCity && (
-            <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />
+            <CityPanel city={selectedCity} onClose={closePanel} />
           )}
           {activePanel === 'tech' && (
-            <TechTreePanel onClose={() => setActivePanel('none')} />
+            <TechTreePanel onClose={closePanel} />
           )}
           {activePanel === 'civics' && (
-            <CivicTreePanel onClose={() => setActivePanel('none')} />
+            <CivicTreePanel onClose={closePanel} />
           )}
           {activePanel === 'diplomacy' && (
-            <DiplomacyPanel onClose={() => setActivePanel('none')} />
+            <DiplomacyPanel onClose={closePanel} />
           )}
           {activePanel === 'log' && (
-            <EventLogPanel onClose={() => setActivePanel('none')} />
+            <EventLogPanel onClose={closePanel} />
           )}
           {activePanel === 'age' && (
-            <AgeTransitionPanel onClose={() => setActivePanel('none')} />
+            <AgeTransitionPanel onClose={closePanel} />
           )}
           {activePanel === 'turnSummary' && (
-            <TurnSummaryPanel onClose={() => setActivePanel('none')} />
+            <TurnSummaryPanel onClose={closePanel} />
           )}
           {activePanel === 'governors' && (
-            <GovernorPanel onClose={() => setActivePanel('none')} />
+            <GovernorPanel onClose={closePanel} />
           )}
           {activePanel === 'help' && (
-            <HelpPanel onClose={() => setActivePanel('none')} />
+            <HelpPanel onClose={closePanel} />
           )}
           {activePanel === 'religion' && (
-            <ReligionPanel onClose={() => setActivePanel('none')} />
+            <ReligionPanel onClose={closePanel} />
           )}
           {activePanel === 'government' && (
-            <GovernmentPanel onClose={() => setActivePanel('none')} />
+            <GovernmentPanel onClose={closePanel} />
           )}
           {activePanel === 'commanders' && (
-            <CommanderPanel onClose={() => setActivePanel('none')} />
+            <CommanderPanel onClose={closePanel} />
+          )}
+          {activePanel === 'victoryProgress' && (
+            <VictoryProgressPanel onClose={closePanel} />
           )}
          </div>
         </Suspense>
@@ -184,7 +172,7 @@ function GameUI() {
         <TurnTransition />
         <Notifications onCityClick={(cityId) => {
           selectCity(cityId);
-          setActivePanel('city');
+          openPanel('city');
         }} />
         <EnemyActivitySummary />
         <ValidationFeedback validation={lastValidation} onAnimationEnd={clearValidation} />
@@ -216,7 +204,11 @@ function AppInner() {
     return <SetupScreen onStart={initGame} onLoadGame={loadGame} />;
   }
 
-  return <GameUI />;
+  return (
+    <PanelManagerProvider>
+      <GameUI />
+    </PanelManagerProvider>
+  );
 }
 
 export function App() {
