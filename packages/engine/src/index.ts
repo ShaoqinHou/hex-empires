@@ -98,6 +98,9 @@ export {
   listValidTilesForBuilding,
 } from './state/BuildingPlacementValidator';
 export type { PlacementResult } from './state/BuildingPlacementValidator';
+export { evaluateWonderConstraint, evaluateWonderRule } from './state/WonderPlacement';
+export type { WonderPlacementRule, WonderPlacementConstraint } from './types/WonderPlacement';
+export { WONDER_PLACEMENT_RULES } from './data/wonders/placement-rules';
 
 // Engine
 export { GameEngine, DEFAULT_SYSTEMS } from './GameEngine';

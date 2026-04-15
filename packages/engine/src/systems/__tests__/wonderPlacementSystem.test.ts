@@ -44,11 +44,12 @@ describe('WONDER_PLACEMENT_RULES table', () => {
     expect(WONDER_PLACEMENT_RULES.size).toBeGreaterThanOrEqual(6);
   });
 
-  it('every rule has a non-empty description and matching id', () => {
+  it('every rule has a non-empty description, matching id, and a constraint', () => {
     for (const [id, rule] of WONDER_PLACEMENT_RULES) {
       expect(rule.wonderId).toBe(id);
       expect(rule.description.length).toBeGreaterThan(0);
-      expect(typeof rule.canPlace).toBe('function');
+      expect(typeof rule.constraint).toBe('object');
+      expect(typeof rule.constraint.type).toBe('string');
     }
   });
 });
