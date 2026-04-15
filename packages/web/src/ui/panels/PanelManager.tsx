@@ -61,12 +61,22 @@ export function PanelManagerProvider({ children, initialPanel = null }: PanelMan
   // prevents the downstream handler from running when we actually did
   // close a panel. Ignored when focus is in a form field so text inputs
   // can still use ESC normally.
+  //
+  // Non-dismissible panels opt out of ESC: `PanelShell` stamps the root
+  // with `data-dismissible="false"` when its `dismissible` prop is
+  // false. When such a shell is present in the DOM the handler does
+  // nothing, so blocking modals (age transition, crises) cannot be
+  // keyboard-dismissed. This keeps the policy in a single place rather
+  // than requiring each panel to intercept ESC itself.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (activePanel === null) return;
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (document.querySelector('[data-panel-id][data-dismissible="false"]') !== null) {
+        return;
+      }
       setActivePanel(null);
       e.stopPropagation();
     };

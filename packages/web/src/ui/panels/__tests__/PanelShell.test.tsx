@@ -10,8 +10,9 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { PanelShell } from '../PanelShell';
+import { PanelManagerProvider, usePanelManager } from '../PanelManager';
 
 afterEach(() => {
   cleanup();
@@ -151,5 +152,125 @@ describe('PanelShell', () => {
     const evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     const prevented = !backdrop.dispatchEvent(evt);
     expect(prevented).toBe(true);
+  });
+
+  // --- dismissible={false} (blocking-modal opt-in) ---
+
+  it('defaults data-dismissible to "true" when dismissible prop is omitted', () => {
+    const { getByTestId } = render(
+      <PanelShell id="help" title="Help" onClose={() => {}}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    expect(getByTestId('panel-shell-help').getAttribute('data-dismissible')).toBe('true');
+  });
+
+  it('stamps data-dismissible="false" on the shell root when dismissible={false}', () => {
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal" dismissible={false}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    expect(getByTestId('panel-shell-age').getAttribute('data-dismissible')).toBe('false');
+  });
+
+  it('does NOT render the close X button when dismissible={false}', () => {
+    const { queryByTestId, queryByLabelText } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal" dismissible={false}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    expect(queryByTestId('panel-close-age')).toBeNull();
+    expect(queryByLabelText('Close Age')).toBeNull();
+  });
+
+  it('does NOT fire onClose when the backdrop is clicked with dismissible={false}', () => {
+    const onClose = vi.fn();
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={onClose} priority="modal" dismissible={false}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    fireEvent.click(getByTestId('panel-backdrop-age'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('still suppresses the browser context menu on backdrop when dismissible={false}', () => {
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal" dismissible={false}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    const backdrop = getByTestId('panel-backdrop-age');
+    const evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const prevented = !backdrop.dispatchEvent(evt);
+    expect(prevented).toBe(true);
+  });
+
+  it('ESC keydown does NOT close a PanelManager-tracked panel when its shell has dismissible={false}', () => {
+    // Integration: PanelShell stamps `data-dismissible="false"` on its
+    // root, PanelManager's ESC handler short-circuits when it sees such
+    // a shell anywhere in the DOM. Net effect: ESC is inert for blocking
+    // modals without any per-panel plumbing.
+    function ProbePanel() {
+      const { activePanel } = usePanelManager();
+      if (activePanel !== 'age') return null;
+      return (
+        <PanelShell id="age" title="Age" onClose={() => {}} priority="modal" dismissible={false}>
+          <div data-testid="blocking-body">pick a civ</div>
+        </PanelShell>
+      );
+    }
+    function Probe() {
+      const { activePanel } = usePanelManager();
+      return <span data-testid="active-probe">{activePanel ?? 'none'}</span>;
+    }
+    const { getByTestId, queryByTestId } = render(
+      <PanelManagerProvider initialPanel="age">
+        <Probe />
+        <ProbePanel />
+      </PanelManagerProvider>,
+    );
+    expect(getByTestId('active-probe').textContent).toBe('age');
+    expect(queryByTestId('blocking-body')).not.toBeNull();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+
+    // Panel must still be open — ESC was intercepted as a no-op.
+    expect(getByTestId('active-probe').textContent).toBe('age');
+    expect(queryByTestId('blocking-body')).not.toBeNull();
+  });
+
+  it('ESC keydown DOES close a PanelManager-tracked panel when its shell is dismissible (default)', () => {
+    // Control case: confirms the inert-ESC behavior above is specifically
+    // caused by `dismissible={false}`, not by PanelShell existence.
+    function ProbePanel() {
+      const { activePanel, closePanel } = usePanelManager();
+      if (activePanel !== 'help') return null;
+      return (
+        <PanelShell id="help" title="Help" onClose={closePanel} priority="overlay">
+          <div>body</div>
+        </PanelShell>
+      );
+    }
+    function Probe() {
+      const { activePanel } = usePanelManager();
+      return <span data-testid="active-probe">{activePanel ?? 'none'}</span>;
+    }
+    const { getByTestId } = render(
+      <PanelManagerProvider initialPanel="help">
+        <Probe />
+        <ProbePanel />
+      </PanelManagerProvider>,
+    );
+    expect(getByTestId('active-probe').textContent).toBe('help');
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+
+    expect(getByTestId('active-probe').textContent).toBe('none');
   });
 });

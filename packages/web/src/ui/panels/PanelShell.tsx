@@ -37,6 +37,16 @@ export interface PanelShellProps {
   readonly priority?: PanelPriority;
   /** Default: 'wide'. */
   readonly width?: PanelShellWidth;
+  /**
+   * When false, this panel is a blocking modal that cannot be dismissed
+   * via chrome: the X button is not rendered, the backdrop click is
+   * inert, and `PanelManager`'s ESC handler is instructed (via the
+   * `data-dismissible="false"` attribute on the shell root) to leave
+   * the panel open. The owning component is responsible for calling
+   * `onClose` from within the panel body (e.g. after the player makes
+   * a required choice). Default: true.
+   */
+  readonly dismissible?: boolean;
   readonly children: ReactNode;
 }
 
@@ -138,6 +148,7 @@ export function PanelShell({
   onClose,
   priority = 'overlay',
   width = 'wide',
+  dismissible = true,
   children,
 }: PanelShellProps) {
   // Suppress the browser context menu on panel chrome so right-click on
@@ -148,13 +159,27 @@ export function PanelShell({
   };
 
   // Click-outside-to-close design decision:
-  //   - `modal` priority: backdrop click closes (implemented below).
+  //   - `modal` priority: backdrop click closes (implemented below),
+  //     unless `dismissible === false` in which case the backdrop is
+  //     inert.
   //   - `overlay` + `info` priorities: X button only. We intentionally do
   //     NOT add a document-level listener here because the TopBar buttons
   //     that open these panels would race with such a listener (the same
   //     click that opened the panel would also close it). Adding proper
   //     click-outside for non-modal panels is a follow-up once TopBar
   //     buttons are tagged with `data-panel-trigger`.
+  //
+  // Dismissibility contract:
+  //   - When `dismissible === false`, the close X is not rendered at
+  //     all, the backdrop click is a no-op (still catches
+  //     `contextmenu` to suppress the browser menu), and
+  //     `PanelManager`'s ESC handler respects the
+  //     `data-dismissible="false"` DOM attribute on the shell root so
+  //     ESC also cannot close the panel. The owning panel component
+  //     is responsible for calling `onClose` after its required user
+  //     interaction completes.
+  const handleBackdropClick = dismissible ? onClose : undefined;
+
   return (
     <>
       {priority === 'modal' && (
@@ -162,7 +187,7 @@ export function PanelShell({
           data-testid={`panel-backdrop-${id}`}
           style={backdropStyle}
           aria-hidden="true"
-          onClick={onClose}
+          onClick={handleBackdropClick}
           onContextMenu={preventContextMenu}
         />
       )}
@@ -171,6 +196,7 @@ export function PanelShell({
         data-panel-id={id}
         data-panel-priority={priority}
         data-panel-width={width}
+        data-dismissible={dismissible ? 'true' : 'false'}
         role="dialog"
         aria-label={title}
         style={containerStyle(priority, width)}
@@ -178,15 +204,17 @@ export function PanelShell({
       >
         <div style={titleBarStyle}>
           <h2 style={titleStyle}>{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={`Close ${title}`}
-            data-testid={`panel-close-${id}`}
-            style={closeButtonStyle}
-          >
-            ×
-          </button>
+          {dismissible && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={`Close ${title}`}
+              data-testid={`panel-close-${id}`}
+              style={closeButtonStyle}
+            >
+              ×
+            </button>
+          )}
         </div>
         <div style={bodyStyle}>{children}</div>
       </div>

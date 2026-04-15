@@ -23,22 +23,16 @@ export function AgeTransitionPanel({ onClose }: AgeTransitionPanelProps) {
 
   // ── Blocking-modal semantic ──
   // AgeTransition is a blocking modal: the player MUST pick a civ to
-  // continue. PanelShell's M34 chrome closes the panel on backdrop
-  // click AND on the X button via a single onClose callback. Until
-  // PanelShell exposes a `dismissible: false` prop (follow-up), we
-  // suppress dismissal by passing a no-op onClose to the shell. The
-  // panel still closes naturally once the player picks a civ —
-  // dispatching TRANSITION_AGE advances player.age, which causes
-  // getNextAge() above to return null on the next render and the
-  // outer component returns null. The real `onClose` prop from the
-  // parent is invoked from the civ-pick handler so App.tsx can reset
-  // its activePanel state.
-  const blockingOnClose = (): void => {
-    /* intentionally a no-op — see comment above */
-  };
+  // continue. We opt out of chrome dismissal via `dismissible={false}`
+  // — PanelShell drops the X button and inert-fies the backdrop click,
+  // and `PanelManager`'s ESC handler respects the
+  // `data-dismissible="false"` attribute on the shell root. The panel
+  // closes only when a civ is picked: the civ-pick handler dispatches
+  // `TRANSITION_AGE` and then calls the real `onClose` from the parent
+  // so App.tsx can reset its activePanel state.
 
   return (
-    <PanelShell id="age" title="Age Transition" onClose={blockingOnClose} priority="modal" width="full">
+    <PanelShell id="age" title="Age Transition" onClose={onClose} priority="modal" width="full" dismissible={false}>
       {/* Title-row supplement: from → to ages and lightning glyph */}
       <div className="flex items-center gap-4 mb-4">
         <div className="text-4xl">⚡</div>

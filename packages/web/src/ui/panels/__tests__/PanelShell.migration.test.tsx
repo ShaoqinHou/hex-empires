@@ -198,15 +198,18 @@ describe('AgeTransitionPanel — PanelShell migration + blocking semantics', () 
     expect(queryByTestId('panel-backdrop-age')).not.toBeNull();
   });
 
-  it('does NOT call parent onClose when the close button (X) is clicked — blocking modal', () => {
-    // Workaround: PanelShell does not yet support `dismissible: false`;
-    // AgeTransition passes a no-op onClose to PanelShell so the X +
-    // backdrop become inert. The panel only closes when a civ is picked.
-    const onClose = vi.fn();
+  it('marks the shell root with data-dismissible="false" — blocking modal', () => {
     mockRef.state = makeBaseState(makePlayer());
-    const { getByTestId } = render(<AgeTransitionPanel onClose={onClose} />);
-    fireEvent.click(getByTestId('panel-close-age'));
-    expect(onClose).not.toHaveBeenCalled();
+    const { getByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    expect(getByTestId('panel-shell-age').getAttribute('data-dismissible')).toBe('false');
+  });
+
+  it('does NOT render the PanelShell close X button — blocking modal', () => {
+    // Now that AgeTransitionPanel uses `dismissible={false}`, PanelShell
+    // drops the close button entirely instead of rendering an inert one.
+    mockRef.state = makeBaseState(makePlayer());
+    const { queryByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    expect(queryByTestId('panel-close-age')).toBeNull();
   });
 
   it('does NOT call parent onClose when the modal backdrop is clicked — blocking modal', () => {
@@ -224,10 +227,10 @@ describe('AgeTransitionPanel — PanelShell migration + blocking semantics', () 
     // Player has enough age progress to be `ready` for exploration age.
     mockRef.state = makeBaseState(makePlayer({ ageProgress: 100 }));
     const { container } = render(<AgeTransitionPanel onClose={onClose} />);
-    // Find the first enabled civ-pick button (not the X button — that's
-    // inside PanelShell chrome with `panel-close-age` testid).
+    // All visible buttons are civ-pick buttons now — the PanelShell X is
+    // not rendered at all with `dismissible={false}`.
     const civButtons = Array.from(container.querySelectorAll('button')).filter(
-      (b) => !b.disabled && b.getAttribute('data-testid') !== 'panel-close-age',
+      (b) => !b.disabled,
     );
     expect(civButtons.length).toBeGreaterThan(0);
     fireEvent.click(civButtons[0]);
