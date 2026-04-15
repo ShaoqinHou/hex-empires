@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { HexCoord, GameState } from '@hex/engine';
 import {
   getTileContents,
   calculateCityYields,
+  coordToKey,
   ALL_UNITS,
   ALL_BASE_TERRAINS,
   ALL_FEATURES,
@@ -12,6 +13,7 @@ import {
 } from '@hex/engine';
 import { TooltipShell } from './TooltipShell';
 import { UnitStateTooltip } from '../components/tooltips';
+import { useHUDManager } from './HUDManager';
 
 interface TooltipOverlayProps {
   /**
@@ -409,6 +411,28 @@ export function TooltipOverlay({
   isAltPressed,
   state,
 }: TooltipOverlayProps) {
+  const hud = useHUDManager();
+
+  // Register with HUDManager so Tab can advance the stack cycle for the
+  // currently-hovered hex. The anchor key ties the registration to the
+  // cycle state keyed by the same string. No-op when no hex is hovered.
+  // Cycle (f) of the HUD UI rethink.
+  //
+  // We intentionally depend only on `anchorKey`, not on `hud` itself:
+  // `HUDManager`'s context value re-memos whenever any registration
+  // changes (because `isActive` closes over the registrations map), so
+  // including `hud` as a dep would cause this very register() call to
+  // retrigger the effect → infinite loop. A ref captures the latest
+  // register/dismiss closures without making them into effect deps.
+  const hudRef = useRef(hud);
+  hudRef.current = hud;
+  const anchorKey = hoveredHex ? coordToKey(hoveredHex) : null;
+  useEffect(() => {
+    if (anchorKey === null) return;
+    const unregister = hudRef.current.register('tileTooltip', { sticky: false, anchorKey });
+    return unregister;
+  }, [anchorKey]);
+
   if (!hoveredHex) return null;
 
   // Probe hexToScreen early — if the hex can't be projected (off-camera) we

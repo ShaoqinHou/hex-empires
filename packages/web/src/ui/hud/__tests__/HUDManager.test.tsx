@@ -195,6 +195,130 @@ describe('HUDManager', () => {
     expect(result.current.isActive('tileTooltip')).toBe(true);
   });
 
+  // ─── Cycle (f): Tab-driven stack cycling ──────────────────────────────────
+
+  it('Tab with an active anchor advances the cycle for that anchor', () => {
+    const { result } = renderHook(() => useHUDManager(), { wrapper });
+
+    const anchorKey = 'q:2,r:-1';
+    act(() => {
+      result.current.register('tileTooltip', { sticky: false, anchorKey });
+    });
+    expect(result.current.cycleIndex(anchorKey)).toBe(0);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Tab' });
+    });
+    expect(result.current.cycleIndex(anchorKey)).toBe(1);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Tab' });
+    });
+    expect(result.current.cycleIndex(anchorKey)).toBe(2);
+  });
+
+  it('Tab with no active anchor is a no-op and does not call preventDefault', () => {
+    renderHook(() => useHUDManager(), { wrapper });
+
+    // No overlays registered → no active anchor → Tab must NOT be consumed.
+    const event = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true, bubbles: true });
+    let defaultPrevented = false;
+    act(() => {
+      window.dispatchEvent(event);
+      defaultPrevented = event.defaultPrevented;
+    });
+    expect(defaultPrevented).toBe(false);
+  });
+
+  it('Tab with focus inside an INPUT is a no-op (normal form tabbing preserved)', () => {
+    const { result } = renderHook(() => useHUDManager(), { wrapper });
+
+    const anchorKey = 'q:0,r:0';
+    act(() => {
+      result.current.register('tileTooltip', { sticky: false, anchorKey });
+    });
+
+    // Focus an input — simulates the user typing in a text field.
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true, bubbles: true });
+    let defaultPrevented = false;
+    act(() => {
+      window.dispatchEvent(event);
+      defaultPrevented = event.defaultPrevented;
+    });
+
+    expect(defaultPrevented).toBe(false);
+    expect(result.current.cycleIndex(anchorKey)).toBe(0);
+  });
+
+  it('Tab with a panel shell mounted is a no-op (panel owns tab order)', () => {
+    const { result } = renderHook(() => useHUDManager(), { wrapper });
+
+    const anchorKey = 'q:5,r:5';
+    act(() => {
+      result.current.register('tileTooltip', { sticky: false, anchorKey });
+    });
+
+    // Simulate a mounted panel the same way PanelShell stamps it.
+    const fakePanel = document.createElement('div');
+    fakePanel.setAttribute('data-panel-id', 'help');
+    document.body.appendChild(fakePanel);
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true, bubbles: true });
+    let defaultPrevented = false;
+    act(() => {
+      window.dispatchEvent(event);
+      defaultPrevented = event.defaultPrevented;
+    });
+
+    expect(defaultPrevented).toBe(false);
+    expect(result.current.cycleIndex(anchorKey)).toBe(0);
+  });
+
+  it('Tab cycles monotonically — consumers apply modulo against entity count', () => {
+    // The manager increments without wrapping; the consumer is expected to
+    // apply `cycleIndex(key) % stackedEntities.length`. Verify the index
+    // keeps growing so consumer-side modulo produces the wrap-around.
+    const { result } = renderHook(() => useHUDManager(), { wrapper });
+
+    const anchorKey = 'q:9,r:9';
+    act(() => {
+      result.current.register('tileTooltip', { sticky: false, anchorKey });
+    });
+
+    const stackSize = 3;
+    const observed: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      observed.push(result.current.cycleIndex(anchorKey) % stackSize);
+      act(() => {
+        fireEvent.keyDown(window, { key: 'Tab' });
+      });
+    }
+    // 0, 1, 2, 0, 1, 2, 0 — the cycle wraps under modulo.
+    expect(observed).toEqual([0, 1, 2, 0, 1, 2, 0]);
+  });
+
+  it('most-recently-registered anchor wins when multiple overlays declare anchors', () => {
+    const { result } = renderHook(() => useHUDManager(), { wrapper });
+
+    act(() => {
+      result.current.register('tileTooltip', { sticky: false, anchorKey: 'q:1,r:1' });
+      result.current.register('combatPreview', { sticky: true, anchorKey: 'q:2,r:2' });
+    });
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Tab' });
+    });
+
+    // The later registration owns the active anchor — its cycle advances.
+    expect(result.current.cycleIndex('q:2,r:2')).toBe(1);
+    expect(result.current.cycleIndex('q:1,r:1')).toBe(0);
+  });
+
   it('useHUDManager throws when called outside a HUDManagerProvider', () => {
     const originalError = console.error;
     console.error = () => {};

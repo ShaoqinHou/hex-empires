@@ -23,6 +23,7 @@ import { cleanup, render } from '@testing-library/react';
 import type { GameState, UnitState, HexTile } from '@hex/engine';
 import { ALL_UNITS, ALL_BASE_TERRAINS } from '@hex/engine';
 import { TooltipOverlay } from '../TooltipOverlay';
+import { HUDManagerProvider } from '../HUDManager';
 
 function coordKey(q: number, r: number): string {
   return `${q},${r}`;
@@ -107,12 +108,14 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const state = makeStateWithStackedUnits([warrior, settler]);
 
     const { container } = render(
-      <TooltipOverlay
-        hexToScreen={stubHexToScreen}
-        hoveredHex={{ q: 0, r: 0 }}
-        isAltPressed={false}
-        state={state}
-      />,
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
     );
 
     const text = container.textContent ?? '';
@@ -135,12 +138,14 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const state = makeStateWithStackedUnits([w1, w2, settler]);
 
     const { container } = render(
-      <TooltipOverlay
-        hexToScreen={stubHexToScreen}
-        hoveredHex={{ q: 0, r: 0 }}
-        isAltPressed={false}
-        state={state}
-      />,
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
     );
 
     const text = container.textContent ?? '';
@@ -158,12 +163,14 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const state = makeStateWithStackedUnits([warrior]);
 
     const { container } = render(
-      <TooltipOverlay
-        hexToScreen={stubHexToScreen}
-        hoveredHex={{ q: 0, r: 0 }}
-        isAltPressed={false}
-        state={state}
-      />,
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
     );
 
     // The shell applies its own data attributes — verifies cycle (c) migration.

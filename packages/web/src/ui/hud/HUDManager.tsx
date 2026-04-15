@@ -52,6 +52,20 @@ export interface HUDEntry {
    * Only sticky overlays are dismissed by ESC.
    */
   readonly sticky?: boolean;
+
+  /**
+   * Optional anchor key identifying the map position / entity stack the
+   * overlay is attached to (typically `coordToKey({ q, r })` for a hex).
+   *
+   * When an overlay registers with an `anchorKey`, the manager treats it
+   * as the "active anchor" — the target of Tab-driven stack cycling.
+   * The most-recently-registered anchor wins if multiple overlays
+   * declare anchors simultaneously.
+   *
+   * Cycle (f) of the HUD UI rethink — see
+   * `.claude/workflow/design/hud-ui-audit.md`.
+   */
+  readonly anchorKey?: string;
 }
 
 export interface HUDManagerValue {
@@ -118,6 +132,21 @@ export function HUDManagerProvider({ children }: HUDManagerProviderProps) {
         return next;
       });
     };
+  }, []);
+
+  /**
+   * Derive the current "active anchor" from the registration set: the
+   * most-recently-registered entry that declared an `anchorKey`. Using
+   * Map iteration order gives us insertion order for free, so the last
+   * overlay to register wins — matching the "topmost sticky" rule in
+   * the ESC handler.
+   */
+  const getActiveAnchorKey = useCallback((): string | null => {
+    let last: string | null = null;
+    registrationsRef.current.forEach(entry => {
+      if (typeof entry.anchorKey === 'string') last = entry.anchorKey;
+    });
+    return last;
   }, []);
 
   const dismiss = useCallback((id: HUDElementId) => {
@@ -204,6 +233,41 @@ export function HUDManagerProvider({ children }: HUDManagerProviderProps) {
     window.addEventListener('keydown', handleKey, true);
     return () => window.removeEventListener('keydown', handleKey, true);
   }, [dismiss]);
+
+  // Tab handler — cycle f. When an overlay has registered with an
+  // `anchorKey`, Tab advances the stack cycle for that anchor so the
+  // tooltip body shows the next entity in the stack. We only consume
+  // the keypress when we actually have an active anchor; otherwise we
+  // leave Tab alone so it keeps its default "move keyboard focus"
+  // semantics on panels, buttons, and the like.
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      // Text-field focus → leave Tab alone so form navigation works.
+      const tag = (typeof document !== 'undefined'
+        ? document.activeElement?.tagName
+        : undefined);
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      // Panel open → let the panel / browser handle Tab normally.
+      if (isAnyPanelOpen()) return;
+
+      const anchorKey = getActiveAnchorKey();
+      if (anchorKey === null) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      setCycles(prev => {
+        const next = new Map(prev);
+        const current = prev.get(anchorKey) ?? 0;
+        next.set(anchorKey, current + 1);
+        return next;
+      });
+    };
+    window.addEventListener('keydown', handleKey, true);
+    return () => window.removeEventListener('keydown', handleKey, true);
+  }, [getActiveAnchorKey]);
 
   const value = useMemo<HUDManagerValue>(() => ({
     register,
