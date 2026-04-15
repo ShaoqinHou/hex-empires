@@ -1,14 +1,6 @@
 import { useGameState } from '../../providers/GameProvider';
 import type { CrisisState } from '@hex/engine';
 import { PanelShell } from './PanelShell';
-import type { PanelId } from './panelRegistry';
-
-// CrisisPanel doesn't have a dedicated entry in panelRegistry yet (the
-// crisis modal is mounted always-on, gated by `state.crises`). We reuse
-// the closest semantically modal id — `age` — purely so the shell's
-// data-testid / data-panel-id attributes are non-empty. A follow-up
-// cycle can add a `crisis` entry to the registry.
-const PANEL_ID = 'age' as PanelId;
 
 export function CrisisPanel() {
   const { state, dispatch } = useGameState();
@@ -30,7 +22,7 @@ export function CrisisPanel() {
   };
 
   return (
-    <PanelShell id={PANEL_ID} title={activeCrisis.name} onClose={handleClose} priority="modal">
+    <PanelShell id="crisis" title={activeCrisis.name} onClose={handleClose} priority="modal">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
           {activeCrisis.name}

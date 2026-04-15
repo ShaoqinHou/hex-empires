@@ -68,8 +68,7 @@ describe('CrisisPanel (PanelShell)', () => {
   it('renders inside PanelShell with the crisis name as title when a crisis is active', () => {
     mockRef.state = makeStateWithCrisis();
     const { getByTestId, getAllByText } = render(<CrisisPanel />);
-    // The shell uses the registry's `age` slot since no `crisis` id exists.
-    expect(getByTestId('panel-shell-age')).toBeTruthy();
+    expect(getByTestId('panel-shell-crisis')).toBeTruthy();
     // The crisis name appears in both the shell's title bar and the body h1.
     expect(getAllByText('Plague').length).toBeGreaterThanOrEqual(1);
   });

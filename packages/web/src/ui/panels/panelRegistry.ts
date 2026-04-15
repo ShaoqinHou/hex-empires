@@ -26,7 +26,8 @@ export type PanelId =
   | 'religion'
   | 'government'
   | 'commanders'
-  | 'victoryProgress';
+  | 'victoryProgress'
+  | 'crisis';
 
 /**
  * Panel priority — controls z-index, backdrop, and input-blocking.
@@ -71,6 +72,7 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['government',      { id: 'government',      title: 'Government',          icon: '🏛️',  priority: 'overlay' }],
   ['commanders',      { id: 'commanders',      title: 'Commanders',          icon: '⚔️',  priority: 'overlay' }],
   ['victoryProgress', { id: 'victoryProgress', title: 'Victory Progress',    icon: '🏆', priority: 'modal'   }],
+  ['crisis',          { id: 'crisis',          title: 'Crisis',              icon: '⚠️',  priority: 'modal'   }],
 ]);
 
 /** Convenience: all ids in registration order. */
