@@ -346,6 +346,21 @@ Every panel in `packages/web/src/ui/panels/` follows one shared pattern. Adding 
 
 See `.claude/rules/panels.md` for the authoritative rule set and `.claude/skills/add-panel/` for a step-by-step guide when creating a new panel.
 
+### HUD / Overlay Conventions (planned — audit phase)
+
+Panels are the explicit, player-triggered surfaces. The other half of the UI — hover tooltips, toasts, validation feedback, turn transitions, minimap, hint badges — is the HUD/overlay layer. It follows the same central-manager + shared-shell philosophy as panels, with its own rules tuned for transient, cursor-driven UI.
+
+Implementation is staged behind the HUD audit (`.claude/workflow/design/hud-ui-audit.md`); `HUDManager`, `TooltipShell`, and `hud-tokens.css` do not yet exist in the tree. The rule doc below defines the target pattern so new HUD work lands conforming to it from day one.
+
+- **Location:** HUD/overlay elements live in `packages/web/src/ui/components/` and `packages/web/src/canvas/TooltipOverlay.tsx` (today). The eventual foundation (`HUDManager`, `TooltipShell`, `hud-tokens.css`) will live under `packages/web/src/ui/hud/` and `packages/web/src/styles/`.
+- **Central manager:** a single React context (`HUDManager`) will own per-overlay registration, stack-cycle indices for stacked entities, and coordinated dismiss (ESC) — mirroring `PanelManager` for panels.
+- **Shared chrome:** tooltip-style overlays wrap body content in `<TooltipShell>` (anchor, position strategy, tier, children, optional sticky). No ad-hoc `position: absolute` with magic numbers — positioning is a shared concern of the shell.
+- **Styling:** tokens only — `var(--panel-*)` for shared chrome values and HUD-specific tokens from `hud-tokens.css` once it lands. Never raw hex, never Tailwind color utilities for overlay chrome.
+- **Game-feel invariants:** no browser text selection on the game surface, no default right-click context menu in canvas/overlay regions, ESC dismisses transient overlays (or resets the cycle index for stacked entities), overlays never steal keyboard focus.
+- **Positioning rules:** overlays must not occlude the hovered entity — offset sufficiently or switch to a fixed-corner info surface when the tooltip would cover more than ~30% of the visible tile. Stacked entities must support cycling (Tab/arrows) — never silently swallow one side.
+
+See `.claude/rules/ui-overlays.md` for the authoritative rule set and `.claude/skills/add-hud-element/` for the step-by-step guide when adding a new tooltip, notification, validation toast, or hint overlay.
+
 ### State Flow
 
 ```
