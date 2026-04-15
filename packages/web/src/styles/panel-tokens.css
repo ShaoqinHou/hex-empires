@@ -1,0 +1,47 @@
+/*
+ * panel-tokens.css — CSS custom properties for the shared PanelShell
+ * chrome. Tokens only; no class definitions.
+ *
+ * Values match the game's existing dark-slate aesthetic (see
+ * index.css :root tokens and TopBar.tsx gradient). Panel chrome uses
+ * a semi-opaque surface over the map with subtle gold accents on the
+ * title bar, matching DiplomacyPanel / ReligionPanel / TopBar.
+ *
+ * Cycle 2 of the panel-manager refactor.
+ */
+
+:root {
+  /* Chrome surface */
+  --panel-bg: rgba(22, 27, 34, 0.96);
+  --panel-border: rgba(48, 54, 61, 0.85);
+  --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --panel-radius: 8px;
+
+  /* Spacing scale used by title bar + body */
+  --panel-padding-sm: 8px;
+  --panel-padding-md: 12px;
+  --panel-padding-lg: 16px;
+
+  /* Typography */
+  --panel-title-color: #f0f6fc;
+  --panel-text-color: #f0f6fc;
+  --panel-muted-color: #8b949e;
+
+  /* Gold accent — title underline, hover states. Matches index.css --color-gold. */
+  --panel-accent-gold: #ffd700;
+
+  /* Close button */
+  --panel-close-icon-size: 18px;
+
+  /* Backdrop for modal priority */
+  --panel-backdrop: rgba(0, 0, 0, 0.65);
+
+  /* Z-index scale
+   * TopBar/BottomBar sit at 100; HelpPanel historically at 200.
+   * info     — above map, below top bar dropdowns
+   * overlay  — above top bar so the panel chrome is clickable
+   * modal    — above everything */
+  --panel-z-info: 90;
+  --panel-z-overlay: 110;
+  --panel-z-modal: 210;
+}
