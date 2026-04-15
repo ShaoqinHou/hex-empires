@@ -157,8 +157,17 @@ export function Minimap({ cameraRef }: MinimapProps) {
   }, [cameraRef]);
 
   return (
-    <div className="absolute bottom-16 left-2 rounded-lg overflow-hidden cursor-pointer"
-      style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)' }}>
+    <div
+      data-hud-id="minimap"
+      className="absolute bottom-16 left-2 rounded-lg overflow-hidden cursor-pointer"
+      style={{
+        border: '1px solid var(--panel-border)',
+        backgroundColor: 'var(--panel-bg)',
+        zIndex: 'var(--hud-z-minimap)' as unknown as number,
+        userSelect: 'none',
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <canvas
         ref={canvasRef}
         width={MINIMAP_WIDTH}

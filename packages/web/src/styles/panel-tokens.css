@@ -45,6 +45,13 @@
   --panel-z-overlay: 110;
   --panel-z-modal: 210;
 
+  /* HUD z-tiers — shared with panel z-scale so stacking order is predictable
+   * across the two layers. Minimap sits at the info tier (above map, below
+   * top bar dropdowns). When hud-tokens.css lands these values will be
+   * re-exported from there; keeping them here in the interim lets the
+   * Minimap migrate off raw values without a forward reference. */
+  --hud-z-minimap: 90;
+
   /* Diplomacy relationship status palette — used by DiplomacyPanel badges.
    * Values match the hues previously hard-coded in DiplomacyPanel's
    * STATUS_COLORS map; migrated here in M33 follow-up. */
