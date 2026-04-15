@@ -3,9 +3,26 @@ interface YieldsToggleProps {
   onToggle: () => void;
 }
 
+/**
+ * Persistent on/off floating control for toggling yield-icon rendering
+ * on the map. Not a tooltip (always visible) and not a panel (no chrome,
+ * no ESC dismiss), so it does not wrap `TooltipShell` or `PanelShell`.
+ * Instead it uses the HUD floating-control tokens for z-index + offset
+ * and is registered in `hudRegistry` as `'yieldsToggle'` so the HUD
+ * documentation sees it.
+ */
 export function YieldsToggle({ showYields, onToggle }: YieldsToggleProps) {
   return (
-    <div className="absolute left-2 select-none" style={{ bottom: '14rem', zIndex: 20 }}>
+    <div
+      className="absolute left-2"
+      style={{
+        bottom: 'var(--hud-floating-control-offset-bottom)',
+        zIndex: 'var(--hud-z-floating-control)',
+        userSelect: 'none',
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+      data-hud-id="yieldsToggle"
+    >
       <button
         className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold cursor-pointer"
         style={{

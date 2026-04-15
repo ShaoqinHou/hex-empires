@@ -126,4 +126,14 @@
   --hud-placement-valid-bg: rgba(74, 222, 128, 0.18);
   --hud-placement-invalid-bg: rgba(239, 68, 68, 0.18);
   --hud-placement-score-text: #fbbf24;
+
+  /* ── Floating controls ─────────────────────────────────────────────
+   * Persistent on/off toggles that float over the map but are not
+   * tooltips or toasts (e.g. YieldsToggle). Z-index sits below the
+   * fixed-corner HUD tier (120) and below every panel overlay (110 is
+   * the same plane as panel overlays — floating controls must not
+   * layer above open panels). Bottom offset is measured from the
+   * BottomBar so the control clears it without clipping. */
+  --hud-z-floating-control: 110;
+  --hud-floating-control-offset-bottom: 14rem;
 }

@@ -27,7 +27,8 @@ export type HUDElementId =
   | 'minimap'
   | 'enemyActivitySummary'
   | 'urbanPlacementHint'
-  | 'tooltip';
+  | 'tooltip'
+  | 'yieldsToggle';
 
 /**
  * HUD element priority — maps to the z-index tier in `hud-tokens.css`.
@@ -63,6 +64,7 @@ export const HUD_REGISTRY: ReadonlyMap<HUDElementId, HUDRegistryEntry> = new Map
   ['enemyActivitySummary', { id: 'enemyActivitySummary', priority: 'fixed'    }],
   ['urbanPlacementHint',   { id: 'urbanPlacementHint',   priority: 'floating' }],
   ['tooltip',              { id: 'tooltip',              priority: 'floating' }],
+  ['yieldsToggle',         { id: 'yieldsToggle',         priority: 'floating' }],
 ]);
 
 /** Convenience: all ids in registration order. */
