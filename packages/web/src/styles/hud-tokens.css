@@ -1,0 +1,67 @@
+/*
+ * hud-tokens.css — CSS custom properties for the HUD / tooltip / overlay
+ * layer. Sibling sheet to panel-tokens.css; kept separate because HUD
+ * chrome intentionally differs from panel chrome (higher contrast,
+ * faster animation timing, no gold accents on tooltips).
+ *
+ * Tokens only; no class definitions. Imported by HUDManager.tsx so the
+ * values are available as soon as the provider mounts.
+ *
+ * Values match the existing game aesthetic. Where a value semantically
+ * overlaps with a panel token it is re-declared here rather than
+ * importing panel-tokens.css — the two systems are allowed to drift for
+ * stylistic reasons (e.g. tooltips run darker / higher contrast for
+ * glance-reading over the map).
+ *
+ * Cycle (a) of the HUD UI rethink.
+ */
+
+:root {
+  /* Chrome surface — darker than panel-bg for higher contrast against
+   * the busy hex map. Matches the tooltip bg proposed in the HUD audit
+   * §3.6. */
+  --hud-bg: rgba(15, 23, 42, 0.94);
+  --hud-border: rgba(148, 163, 184, 0.25);
+  --hud-shadow: 0 4px 16px rgba(0, 0, 0, 0.55), 0 1px 4px rgba(0, 0, 0, 0.35);
+  --hud-radius: 6px;
+
+  /* Spacing scale for overlay bodies. Tighter than panel spacing — HUD
+   * chrome is meant to stay compact. */
+  --hud-padding-sm: 6px;
+  --hud-padding-md: 10px;
+
+  /* Typography */
+  --hud-text-color: #f0f6fc;
+  --hud-text-muted: #94a3b8;
+  --hud-text-emphasis: #fbbf24;
+
+  /* Z-index scale
+   *   Panels sit at 90 (info) / 110 (overlay) / 210 (modal).
+   *   HUD tiers layer around and above those:
+   *     fixed-corner — above floating panels (info + overlay), below
+   *                    modal panels.
+   *     toast        — above floating panels + fixed-corner, below
+   *                    modal panels.
+   *     tooltip      — above toasts; always on top among HUD elements,
+   *                    still below modal panels.
+   *   Modal panel shells (`--panel-z-modal` = 210) intentionally win
+   *   against every HUD tier because a modal panel blocks the map.
+   */
+  --hud-z-fixed-corner: 120;
+  --hud-z-toast: 140;
+  --hud-z-tooltip: 150;
+
+  /* Accent colors for faction / relationship affinity, used by combat
+   * preview, enemy activity summary, placement hints. */
+  --hud-accent-friendly: #4ade80;  /* green */
+  --hud-accent-enemy: #ef4444;     /* red */
+  --hud-accent-neutral: #9ca3af;   /* grey */
+
+  /* Stack-cycle indicator pill ("1 / 3 — Tab to cycle"). Subtle so it
+   * sits visually below the primary tooltip content. */
+  --hud-cycle-indicator-bg: rgba(251, 191, 36, 0.18);
+
+  /* Animation timing — all HUD fades / slides share one duration so the
+   * layer feels consistent. Short enough not to impede gameplay. */
+  --hud-animation-duration: 140ms;
+}
