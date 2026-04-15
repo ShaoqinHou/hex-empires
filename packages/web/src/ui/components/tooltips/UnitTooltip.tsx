@@ -2,7 +2,7 @@
 import React from 'react';
 import type { UnitDef, UnitState } from '@hex/engine';
 import { ALL_PROMOTIONS } from '@hex/engine';
-import { TooltipContent, TooltipSection } from './Tooltip';
+import { TooltipContent, type TooltipSection } from '../Tooltip';
 
 interface UnitTooltipProps {
   unitDef: UnitDef;

@@ -2,7 +2,7 @@
 import React from 'react';
 import type { TerrainDef, TerrainFeatureDef } from '@hex/engine';
 import type { HexTile } from '@hex/engine';
-import { TooltipContent, TooltipSection } from './Tooltip';
+import { TooltipContent, type TooltipSection } from '../Tooltip';
 
 interface TerrainTooltipProps {
   tile: HexTile;

@@ -1,3 +1,4 @@
+/** The canonical generic Tooltip primitive. For game-hover tile/unit tooltips, use TooltipOverlay → TooltipShell (HUD layer). */
 import React, { useState, useRef, useEffect } from 'react';
 
 export interface TooltipPosition {

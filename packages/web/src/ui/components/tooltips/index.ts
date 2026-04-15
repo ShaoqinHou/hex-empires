@@ -1,5 +1,5 @@
-export { Tooltip, TooltipContent } from './Tooltip';
-export type { TooltipProps, TooltipPosition, TooltipSection, TooltipItem } from './Tooltip';
+export { Tooltip, TooltipContent } from '../Tooltip';
+export type { TooltipPosition, TooltipSection, TooltipItem } from '../Tooltip';
 
 export { UnitTooltip, UnitStateTooltip } from './UnitTooltip';
 export { BuildingTooltip } from './BuildingTooltip';

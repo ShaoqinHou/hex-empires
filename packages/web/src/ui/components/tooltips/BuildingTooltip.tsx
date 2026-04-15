@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import type { BuildingDef } from '@hex/engine';
-import { TooltipContent, TooltipSection } from './Tooltip';
+import { TooltipContent, type TooltipSection } from '../Tooltip';
 
 interface BuildingTooltipProps {
   building: BuildingDef;
