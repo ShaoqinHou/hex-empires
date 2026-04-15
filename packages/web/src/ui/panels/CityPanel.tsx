@@ -13,7 +13,7 @@ interface CityPanelProps {
 }
 
 export function CityPanel({ city, onClose }: CityPanelProps) {
-  const { state, dispatch } = useGameState();
+  const { state, dispatch, enterPlacementMode } = useGameState();
   const [placementMode, setPlacementMode] = useState<{ buildingId: string } | null>(null);
 
   const yields = calculateCityYields(city, state);
@@ -410,7 +410,15 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                   building={b}
                   compact
                   isActive={currentProduction?.id === b.id}
-                  onClick={() => dispatch({ type: 'SET_PRODUCTION', cityId: city.id, itemId: b.id, itemType: 'building' })}
+                  onClick={() => {
+                    // Cycle 5: buildings/wonders need a tile — launch placement
+                    // mode instead of dispatching SET_PRODUCTION immediately.
+                    // Close the panel so the player can see the map and pick
+                    // a tile; the canvas overlay (cycle 4) handles the click
+                    // and dispatches SET_PRODUCTION with the tile attached.
+                    enterPlacementMode(city.id, b.id);
+                    onClose();
+                  }}
                 />
                 {turnsEstimate !== null && currentProduction?.id !== b.id && (
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold pointer-events-none"
