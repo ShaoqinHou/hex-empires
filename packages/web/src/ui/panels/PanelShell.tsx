@@ -20,7 +20,7 @@
  * to use it yet — cycle 3 starts with HelpPanel.
  */
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { PanelId, PanelPriority } from './panelRegistry';
 // Importing the CSS file from here guarantees the tokens are loaded
 // whenever a PanelShell is mounted, without requiring every consumer
@@ -140,6 +140,21 @@ export function PanelShell({
   width = 'wide',
   children,
 }: PanelShellProps) {
+  // Suppress the browser context menu on panel chrome so right-click on
+  // UI feels like a desktop app, not a webpage. Canvas handles its own
+  // right-click (gameplay action) and is unaffected.
+  const preventContextMenu = (e: ReactMouseEvent) => {
+    e.preventDefault();
+  };
+
+  // Click-outside-to-close design decision:
+  //   - `modal` priority: backdrop click closes (implemented below).
+  //   - `overlay` + `info` priorities: X button only. We intentionally do
+  //     NOT add a document-level listener here because the TopBar buttons
+  //     that open these panels would race with such a listener (the same
+  //     click that opened the panel would also close it). Adding proper
+  //     click-outside for non-modal panels is a follow-up once TopBar
+  //     buttons are tagged with `data-panel-trigger`.
   return (
     <>
       {priority === 'modal' && (
@@ -147,6 +162,8 @@ export function PanelShell({
           data-testid={`panel-backdrop-${id}`}
           style={backdropStyle}
           aria-hidden="true"
+          onClick={onClose}
+          onContextMenu={preventContextMenu}
         />
       )}
       <div
@@ -157,6 +174,7 @@ export function PanelShell({
         role="dialog"
         aria-label={title}
         style={containerStyle(priority, width)}
+        onContextMenu={preventContextMenu}
       >
         <div style={titleBarStyle}>
           <h2 style={titleStyle}>{title}</h2>

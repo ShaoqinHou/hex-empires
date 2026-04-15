@@ -97,3 +97,27 @@ html, body, #root {
 .animate-turn-ready {
   animation: turn-ready-pulse 1.4s ease-out infinite;
 }
+
+/* Game-feel: disable text selection inside the in-game UI so clicks feel
+ * like desktop-app interactions rather than webpage highlights. Scoped to
+ * .game-app (applied on the GameUI wrapper only); SetupScreen/AppInner
+ * remain selectable so input fields behave normally.
+ *
+ * Small elements that still need to be selectable (inputs, toasts with
+ * text we want copy-pasteable) can opt back in with the .selectable
+ * escape-hatch class. */
+.game-app {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.game-app .selectable,
+.game-app input,
+.game-app textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}

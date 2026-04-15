@@ -106,7 +106,7 @@ function GameUI() {
   }, [selectedUnit, hoveredHex, state]);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="game-app w-full h-full flex flex-col">
       <TopBar
         onOpenTechTree={() => togglePanel('tech')}
         onOpenCivicTree={() => togglePanel('civics')}
@@ -131,7 +131,12 @@ function GameUI() {
           }}
           onToggleTechTree={() => togglePanel('tech')}
         />
+        {/* Suppress browser context menu on the panels layer — panels
+            feel like desktop UI, not a webpage. GameCanvas keeps its
+            own right-click handler (gameplay action) and is unaffected
+            because this wrapper only covers panel DOM. */}
         <Suspense fallback={null}>
+         <div onContextMenu={(e) => e.preventDefault()}>
           {activePanel === 'city' && selectedCity && (
             <CityPanel city={selectedCity} onClose={() => setActivePanel('none')} />
           )}
@@ -168,6 +173,7 @@ function GameUI() {
           {activePanel === 'commanders' && (
             <CommanderPanel onClose={() => setActivePanel('none')} />
           )}
+         </div>
         </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <Minimap cameraRef={cameraRef} />

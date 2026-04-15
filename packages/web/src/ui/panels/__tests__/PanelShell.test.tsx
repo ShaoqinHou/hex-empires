@@ -104,4 +104,52 @@ describe('PanelShell', () => {
     );
     expect(getByLabelText('Close Turn Summary')).toBeTruthy();
   });
+
+  // --- Game-feel polish: click-outside-to-close + no browser context menu ---
+
+  it('fires onClose when the modal backdrop is clicked', () => {
+    const onClose = vi.fn();
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={onClose} priority="modal">
+        <div>x</div>
+      </PanelShell>,
+    );
+    fireEvent.click(getByTestId('panel-backdrop-age'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT fire onClose when a click lands inside the panel body', () => {
+    const onClose = vi.fn();
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={onClose} priority="modal">
+        <div data-testid="shell-body-content">body</div>
+      </PanelShell>,
+    );
+    fireEvent.click(getByTestId('shell-body-content'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('prevents the default browser context menu on panel root', () => {
+    const { getByTestId } = render(
+      <PanelShell id="tech" title="Tech" onClose={() => {}}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    const shell = getByTestId('panel-shell-tech');
+    const evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const prevented = !shell.dispatchEvent(evt);
+    expect(prevented).toBe(true);
+  });
+
+  it('prevents the default browser context menu on modal backdrop', () => {
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal">
+        <div>x</div>
+      </PanelShell>,
+    );
+    const backdrop = getByTestId('panel-backdrop-age');
+    const evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const prevented = !backdrop.dispatchEvent(evt);
+    expect(prevented).toBe(true);
+  });
 });
