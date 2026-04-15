@@ -14,7 +14,8 @@ import { Notifications } from './ui/components/Notifications';
 import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
 import { ValidationFeedback } from './ui/components/ValidationFeedback';
 import { CombatPreviewPanel } from './ui/components/CombatPreviewPanel';
-import { TooltipOverlay } from './canvas/TooltipOverlay';
+import { TooltipOverlay } from './ui/hud/TooltipOverlay';
+import { hexToPixel } from './utils/hexMath';
 import { PanelManagerProvider, usePanelManager } from './ui/panels/PanelManager';
 import { HUDManagerProvider } from './ui/hud/HUDManager';
 import { VictoryProgressPanel } from './ui/panels/VictoryProgressPanel';
@@ -183,10 +184,17 @@ function GameUI() {
           <CombatPreviewPanel attackerUnitId={selectedUnit.id} targetHex={combatPreviewTarget} />
         )}
 
-        {/* Tooltip overlay for canvas elements (Alt + hover) */}
+        {/* Tooltip overlay for canvas elements (Alt + hover).
+            The hex → screen projector is supplied here so the overlay itself
+            stays in ui/hud/ without importing the canvas Camera. */}
         {cameraRef.current && (
           <TooltipOverlay
-            camera={cameraRef.current}
+            hexToScreen={(q, r) => {
+              const cam = cameraRef.current;
+              if (!cam) return null;
+              const world = hexToPixel({ q, r });
+              return cam.worldToScreen(world.x, world.y);
+            }}
             hoveredHex={hoveredHex}
             isAltPressed={isAltPressed}
             state={state}

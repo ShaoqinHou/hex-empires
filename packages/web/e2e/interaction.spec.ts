@@ -553,7 +553,9 @@ test.describe('Hover & tooltip', () => {
       await page.mouse.move(c.x, c.y);
       await page.waitForTimeout(120);
       const rect = await page.evaluate(() => {
-        const el = document.querySelector('[data-testid="tooltip-overlay"]') as HTMLElement | null;
+        // Post HUD cycle (c) migration: the tooltip is wrapped in TooltipShell,
+        // which stamps [data-testid="tooltip-shell"][data-hud-id="tileTooltip"].
+        const el = document.querySelector('[data-hud-id="tileTooltip"]') as HTMLElement | null;
         if (!el) return null;
         const r = el.getBoundingClientRect();
         return { top: r.top, left: r.left, right: r.right, bottom: r.bottom, vw: window.innerWidth, vh: window.innerHeight };

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useLayoutEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { HexCoord, GameState } from '@hex/engine';
 import {
   getTileContents,
@@ -10,20 +10,25 @@ import {
   ALL_RESOURCES,
   ALL_BUILDINGS,
 } from '@hex/engine';
-import type { Camera } from './Camera';
-import { hexToPixel } from './HexRenderer';
-import { UnitStateTooltip } from '../ui/components/tooltips';
+import { TooltipShell } from './TooltipShell';
+import { UnitStateTooltip } from '../components/tooltips';
 
 interface TooltipOverlayProps {
-  camera: Camera;
+  /**
+   * Hex → screen-pixel projector. Must return absolute viewport
+   * coordinates (or null when the hex is off-camera). Passed by the
+   * App-level glue that owns the camera; lives here as a prop to keep
+   * this file out of the `canvas/ → ui/` import boundary.
+   */
+  hexToScreen: (q: number, r: number) => { readonly x: number; readonly y: number } | null;
   hoveredHex: HexCoord | null;
   isAltPressed: boolean;
   state: GameState;
 }
 
-// ─── Lightweight (always-on) tooltip ────────────────────────────────────────
+// ─── Lightweight (always-on) tooltip body ───────────────────────────────────
 
-function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord }) {
+function LightweightTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }) {
   const contents = useMemo(
     () => getTileContents(state, hex, state.currentPlayerId),
     [state, hex],
@@ -64,7 +69,7 @@ function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord })
   // Split own + enemy units into military vs civilian so the tooltip can show
   // each category separately. Without this split, a warrior+settler stack would
   // render as "Warrior ×2" (the top unit's name with the combined count), misreading
-  // the settler as a duplicate warrior.
+  // the settler as a duplicate warrior. Preserves the M37-B regression fix.
   const isCivilianUnit = (typeId: string): boolean => {
     const def = ALL_UNITS.find(u => u.id === typeId);
     return def?.category === 'civilian' || def?.category === 'religious';
@@ -86,17 +91,7 @@ function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord })
   const topEnemyCivilianDef = topEnemyCivilian ? ALL_UNITS.find(u => u.id === topEnemyCivilian.typeId) : null;
 
   return (
-    <div
-      className="rounded-md shadow-lg border text-xs pointer-events-none"
-      style={{
-        background: 'rgba(15,23,42,0.92)',
-        borderColor: 'rgba(148,163,184,0.25)',
-        minWidth: '140px',
-        maxWidth: '220px',
-        padding: '6px 10px',
-        lineHeight: '1.5',
-      }}
-    >
+    <div className="text-xs" style={{ minWidth: '140px', lineHeight: '1.5' }}>
       {/* Line 1: Terrain + feature */}
       <div className="font-semibold text-amber-300">
         {terrainLabel}
@@ -172,9 +167,9 @@ function LightweightTooltip({ state, hex }: { state: GameState; hex: HexCoord })
   );
 }
 
-// ─── Alt-expanded detailed tooltip ──────────────────────────────────────────
+// ─── Alt-expanded detailed tooltip body ─────────────────────────────────────
 
-function DetailedTooltip({ state, hex }: { state: GameState; hex: HexCoord }) {
+function DetailedTooltipBody({ state, hex }: { state: GameState; hex: HexCoord }) {
   const contents = useMemo(
     () => getTileContents(state, hex, state.currentPlayerId),
     [state, hex],
@@ -210,18 +205,7 @@ function DetailedTooltip({ state, hex }: { state: GameState; hex: HexCoord }) {
   ];
 
   return (
-    <div
-      className="rounded-lg shadow-xl border text-xs pointer-events-none"
-      style={{
-        background: 'linear-gradient(135deg, rgba(30,41,59,0.97) 0%, rgba(15,23,42,0.99) 100%)',
-        borderColor: 'rgba(251,191,36,0.35)',
-        borderWidth: '2px',
-        minWidth: '220px',
-        maxWidth: '300px',
-        padding: '10px 14px',
-        lineHeight: '1.6',
-      }}
-    >
+    <div className="text-xs" style={{ minWidth: '220px', lineHeight: '1.6' }}>
       {/* Terrain header */}
       <div className="font-bold text-sm text-amber-400 mb-1">
         {terrain?.name ?? tile.terrain}
@@ -287,10 +271,10 @@ function DetailedTooltip({ state, hex }: { state: GameState; hex: HexCoord }) {
               style={{
                 backgroundColor:
                   resource.type === 'luxury'
-                    ? '#ffd54f'
+                    ? 'var(--color-resource-luxury, #ffd54f)'
                     : resource.type === 'strategic'
-                    ? '#9e9e9e'
-                    : '#66bb6a',
+                    ? 'var(--color-resource-strategic, #9e9e9e)'
+                    : 'var(--color-resource-bonus, #66bb6a)',
               }}
             />
             <span className="text-yellow-300 font-semibold">{resource.name}</span>
@@ -399,102 +383,55 @@ function DetailedTooltip({ state, hex }: { state: GameState; hex: HexCoord }) {
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 /**
- * Canvas overlay that shows hover tooltips on hex tiles.
+ * Hover tooltip for map hexes — tile terrain, entity snapshot, unit stats.
  *
- * - Always-on lightweight tooltip: terrain, yields, top entity, city info.
- * - Alt-expanded detailed tooltip: full stats, yield breakdown, unit cards.
+ * Migrated to use {@link TooltipShell} for positioning (cycle (c) of the HUD
+ * audit). The shell owns quadrant-aware diagonal offset, viewport clamping,
+ * pointer-events discipline, and context-menu suppression. The old
+ * `ClampedTooltipPositioner` with `translate(-50%, -100%)` placed the tooltip
+ * directly above the anchor and covered the top of the hovered hex — the #1
+ * audit complaint. `TooltipShell` offsets diagonally away from viewport edges
+ * so the focal hex stays visible.
  *
- * Positioning: anchored above the hovered hex center (world → screen via camera).
+ * TODO(cycle-e): migrate the Alt-held detailed tier to
+ * `position="fixed-corner"` so the detailed body does not occlude the hex at
+ * all. Cycle (c) ships compact-tier positioning only; detailed tier keeps the
+ * same anchor for now, just at tier="detailed" (slightly wider padding).
+ *
+ * This component lives in `ui/hud/` rather than `canvas/` because it wraps
+ * `TooltipShell` (also in `ui/hud/`); the `canvas/ → ui/` import boundary
+ * forbids the reverse. The camera / hex-to-screen conversion is now taken as
+ * a `hexToScreen` function prop so the component stays canvas-free.
  */
 export function TooltipOverlay({
-  camera,
+  hexToScreen,
   hoveredHex,
   isAltPressed,
   state,
 }: TooltipOverlayProps) {
   if (!hoveredHex) return null;
 
-  const { x: worldX, y: worldY } = hexToPixel(hoveredHex);
-  const screen = camera.worldToScreen(worldX, worldY);
+  // Probe hexToScreen early — if the hex can't be projected (off-camera) we
+  // render nothing. TooltipShell would otherwise render at (0, 0) with a
+  // placeholder, which is fine for the shell but undesirable for a tile
+  // hover tooltip where the anchor is always expected to be projectable.
+  const projected = hexToScreen(hoveredHex.q, hoveredHex.r);
+  if (!projected) return null;
 
   return (
-    <ClampedTooltipPositioner anchorX={screen.x} anchorY={screen.y}>
-      {isAltPressed ? (
-        <DetailedTooltip state={state} hex={hoveredHex} />
-      ) : (
-        <LightweightTooltip state={state} hex={hoveredHex} />
-      )}
-    </ClampedTooltipPositioner>
-  );
-}
-
-/**
- * Positions the tooltip above the anchor by default, then clamps into viewport:
- *   - if it would overflow the top edge → render BELOW the anchor
- *   - if it would overflow left/right → slide horizontally to fit
- *
- * This prevents tooltips from being clipped at map edges, a common complaint when
- * hovering tiles near the window border.
- */
-function ClampedTooltipPositioner({
-  anchorX,
-  anchorY,
-  children,
-}: {
-  anchorX: number;
-  anchorY: number;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  // Offsets applied on top of the default (centered, above). We measure then nudge.
-  const [nudge, setNudge] = useState<{ dx: number; dy: number; below: boolean }>({ dx: 0, dy: 0, below: false });
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const margin = 8;
-    let dx = 0;
-    let dy = 0;
-    let below = false;
-
-    // Step 1: if the default (above) position overflows the top edge, flip below.
-    if (rect.top < margin) {
-      below = true;
-    }
-    // Step 2: horizontal clamp.
-    if (rect.left < margin) {
-      dx = margin - rect.left;
-    } else if (rect.right > window.innerWidth - margin) {
-      dx = window.innerWidth - margin - rect.right;
-    }
-    // Step 3: ABSOLUTE vertical clamp — covers the case where the anchor itself sits off-
-    // screen (e.g. hovering a corner that maps to an off-map hex whose anchor is at y=-300).
-    // Compute the predicted top after flip + dy nudge, then push it inside if needed.
-    const predictedTop = below
-      ? anchorY + 12 + dy
-      : anchorY - rect.height - 12 + dy;
-    const predictedBottom = predictedTop + rect.height;
-    if (predictedTop < margin) {
-      dy += margin - predictedTop;
-    } else if (predictedBottom > window.innerHeight - margin) {
-      dy -= predictedBottom - (window.innerHeight - margin);
-    }
-    if (dx !== 0 || below || dy !== 0) setNudge({ dx, dy, below });
-  }, [anchorX, anchorY, children]);
-
-  const baseTransform = nudge.below
-    ? `translate(-50%, 0%) translate(${nudge.dx}px, ${12 + nudge.dy}px)`
-    : `translate(-50%, -100%) translate(${nudge.dx}px, ${-12 + nudge.dy}px)`;
-
-  return (
-    <div
-      ref={ref}
-      data-testid="tooltip-overlay"
-      className="fixed z-50 pointer-events-none"
-      style={{ left: anchorX, top: anchorY, transform: baseTransform }}
+    <TooltipShell
+      id="tileTooltip"
+      anchor={{ kind: 'hex', q: hoveredHex.q, r: hoveredHex.r }}
+      position="floating"
+      tier={isAltPressed ? 'detailed' : 'compact'}
+      offset="auto"
+      hexToScreen={hexToScreen}
     >
-      {children}
-    </div>
+      {isAltPressed ? (
+        <DetailedTooltipBody state={state} hex={hoveredHex} />
+      ) : (
+        <LightweightTooltipBody state={state} hex={hoveredHex} />
+      )}
+    </TooltipShell>
   );
 }

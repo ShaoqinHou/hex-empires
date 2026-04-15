@@ -12,6 +12,10 @@
  * Fix: split ownUnits (and enemyUnits) into military vs civilian groups and
  * render each top entry with its own per-category count. Both names must appear
  * in the rendered DOM when a stack contains one of each class.
+ *
+ * Preserved across the HUD cycle (c) migration that wrapped the tooltip body
+ * in `<TooltipShell>`. The API changed (camera prop → hexToScreen prop) but the
+ * body rendering is identical; these assertions still apply.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -19,7 +23,6 @@ import { cleanup, render } from '@testing-library/react';
 import type { GameState, UnitState, HexTile } from '@hex/engine';
 import { ALL_UNITS, ALL_BASE_TERRAINS } from '@hex/engine';
 import { TooltipOverlay } from '../TooltipOverlay';
-import { Camera } from '../Camera';
 
 function coordKey(q: number, r: number): string {
   return `${q},${r}`;
@@ -90,6 +93,9 @@ function makeStateWithStackedUnits(units: ReadonlyArray<UnitState>): GameState {
   } as unknown as GameState;
 }
 
+/** Stub projector — places the hex at a known on-screen position so the shell mounts. */
+const stubHexToScreen = (_q: number, _r: number) => ({ x: 400, y: 300 });
+
 afterEach(() => {
   cleanup();
 });
@@ -100,12 +106,9 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const settler = makeUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 } });
     const state = makeStateWithStackedUnits([warrior, settler]);
 
-    const camera = new Camera();
-    camera.setCanvasSize(800, 600);
-
     const { container } = render(
       <TooltipOverlay
-        camera={camera}
+        hexToScreen={stubHexToScreen}
         hoveredHex={{ q: 0, r: 0 }}
         isAltPressed={false}
         state={state}
@@ -131,12 +134,9 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const settler = makeUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 } });
     const state = makeStateWithStackedUnits([w1, w2, settler]);
 
-    const camera = new Camera();
-    camera.setCanvasSize(800, 600);
-
     const { container } = render(
       <TooltipOverlay
-        camera={camera}
+        hexToScreen={stubHexToScreen}
         hoveredHex={{ q: 0, r: 0 }}
         isAltPressed={false}
         state={state}
@@ -151,5 +151,26 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     // But the settler (only one) must NOT get a ×3 from the total ownUnits.
     expect(text).not.toMatch(/Settler\s*×\s*3/);
     expect(text).not.toMatch(/Warrior\s*×\s*3/);
+  });
+
+  it('wraps the body in TooltipShell with id="tileTooltip"', () => {
+    const warrior = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([warrior]);
+
+    const { container } = render(
+      <TooltipOverlay
+        hexToScreen={stubHexToScreen}
+        hoveredHex={{ q: 0, r: 0 }}
+        isAltPressed={false}
+        state={state}
+      />,
+    );
+
+    // The shell applies its own data attributes — verifies cycle (c) migration.
+    const shell = container.querySelector('[data-testid="tooltip-shell"]');
+    expect(shell).not.toBeNull();
+    expect(shell?.getAttribute('data-hud-id')).toBe('tileTooltip');
+    expect(shell?.getAttribute('data-position')).toBe('floating');
+    expect(shell?.getAttribute('data-tier')).toBe('compact');
   });
 });
