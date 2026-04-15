@@ -1,12 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
+import { TooltipShell } from '../hud/TooltipShell';
+import { useHUDManager } from '../hud/HUDManager';
 
 interface EnemyActivitySummaryProps {
   onClose?: () => void;
 }
 
+/**
+ * EnemyActivitySummary — post-AI-turn summary of enemy moves shown to
+ * the human player. Surfaces as a sticky HUD overlay in a fixed screen
+ * corner; auto-dismisses after 8 seconds or on close-button click.
+ *
+ * HUD cycle (j): migrated from hand-rolled `fixed top-20 left-4 z-40`
+ * positioning + `var(--color-*)` chrome to a `<TooltipShell>` wrapper
+ * with `position="fixed-corner"` and `sticky`. User-select suppression
+ * and context-menu suppression are owned by the shell. The overlay
+ * registers with `HUDManager` as a sticky entry so ESC can dismiss it
+ * via the manager's standard precedence chain.
+ */
 export function EnemyActivitySummary({ onClose }: EnemyActivitySummaryProps) {
   const { state } = useGameState();
+  const { register, dismiss } = useHUDManager();
   const [show, setShow] = useState(false);
   const [activities, setActivities] = useState<string[]>([]);
 
@@ -40,49 +55,100 @@ export function EnemyActivitySummary({ onClose }: EnemyActivitySummaryProps) {
         return () => clearTimeout(timer);
       }
     }
+    return undefined;
   }, [state.turn, state.currentPlayerId, state.log, state.players, onClose]);
+
+  // Register with HUDManager as sticky so ESC dismisses us via the
+  // manager's precedence chain (panels first, then sticky overlays).
+  useEffect(() => {
+    if (!show) return undefined;
+    const unregister = register('enemyActivitySummary', { sticky: true });
+    return () => {
+      dismiss('enemyActivitySummary');
+      unregister();
+    };
+  }, [show, register, dismiss]);
 
   if (!show || activities.length === 0) return null;
 
+  const handleClose = () => {
+    setShow(false);
+    onClose?.();
+  };
+
   return (
-    <div className="fixed top-20 left-4 z-40 pointer-events-auto">
-      <div
-        className="bg-surface border rounded-lg shadow-lg max-w-sm"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
+    <TooltipShell
+      id="enemyActivitySummary"
+      anchor={{ kind: 'screen', x: 0, y: 0 }}
+      position="fixed-corner"
+      tier="detailed"
+      sticky
+    >
+      <div style={{ minWidth: '280px', maxWidth: '360px' }}>
         {/* Header */}
-        <div className="px-4 py-2 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingBottom: 'var(--hud-padding-sm)',
+            marginBottom: 'var(--hud-padding-sm)',
+            borderBottom: '1px solid var(--hud-border)',
+          }}
+        >
           <div
-            className="text-sm font-bold"
-            style={{ color: 'var(--color-accent)' }}
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: 'var(--hud-text-emphasis)',
+            }}
           >
             Enemy Activity
           </div>
           <button
-            className="text-xs hover:text-red-400 transition-colors px-1"
-            style={{ color: 'var(--color-text-muted)' }}
-            onClick={() => {
-              setShow(false);
-              onClose?.();
+            type="button"
+            aria-label="Dismiss enemy activity summary"
+            style={{
+              fontSize: 12,
+              color: 'var(--hud-text-muted)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0 4px',
+              lineHeight: 1,
             }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = 'var(--hud-enemy-activity-close-hover)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--hud-text-muted)';
+            }}
+            onClick={handleClose}
           >
             ×
           </button>
         </div>
 
         {/* Activities list */}
-        <div className="px-4 py-2 space-y-2 max-h-64 overflow-y-auto">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--hud-padding-sm)',
+            maxHeight: '16rem',
+            overflowY: 'auto',
+          }}
+        >
           {activities.map((activity, index) => (
             <div
               key={index}
-              className="text-xs p-2 rounded"
               style={{
-                backgroundColor: 'var(--color-bg)',
-                color: 'var(--color-text)',
-                borderLeft: '2px solid var(--color-accent)',
+                fontSize: 12,
+                padding: 'var(--hud-padding-sm) var(--hud-padding-md)',
+                borderRadius: 'var(--hud-radius)',
+                backgroundColor: 'var(--hud-enemy-activity-item-bg)',
+                color: 'var(--hud-text-color)',
+                borderLeft: '2px solid var(--hud-enemy-activity-item-border-accent)',
               }}
             >
               {activity}
@@ -92,26 +158,19 @@ export function EnemyActivitySummary({ onClose }: EnemyActivitySummaryProps) {
 
         {/* Footer */}
         <div
-          className="px-4 py-2 text-xs italic text-center border-t"
           style={{
-            color: 'var(--color-text-muted)',
-            borderColor: 'var(--color-border)',
+            fontSize: 11,
+            fontStyle: 'italic',
+            textAlign: 'center',
+            paddingTop: 'var(--hud-padding-sm)',
+            marginTop: 'var(--hud-padding-sm)',
+            borderTop: '1px solid var(--hud-border)',
+            color: 'var(--hud-text-muted)',
           }}
         >
-          Click outside or wait to dismiss
+          Click × or wait to dismiss
         </div>
       </div>
-
-      {/* Backdrop to dismiss on click */}
-      {show && (
-        <div
-          className="fixed inset-0 z-[-1]"
-          onClick={() => {
-            setShow(false);
-            onClose?.();
-          }}
-        />
-      )}
-    </div>
+    </TooltipShell>
   );
 }

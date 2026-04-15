@@ -1,11 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import type { GameEvent } from '@hex/engine';
+import { TooltipShell } from '../hud/TooltipShell';
 
 interface TurnTransitionProps {
   onComplete?: () => void;
 }
 
+/**
+ * TurnTransition — brief full-screen interstitial shown on turn change,
+ * displaying "Turn N / <Age> Age" and up to 3 recent notifications.
+ *
+ * HUD cycle (j): migrated from hand-rolled `fixed inset-0 z-50` +
+ * inline `textShadow: '0 0 20px rgba(100, 181, 246, 0.8)'` to a
+ * `<TooltipShell>` wrapper with `position="fixed-corner"` for the
+ * announcement body, plus a click-catching backdrop layer.
+ *
+ * Design notes:
+ *   - The backdrop (fixed inset) is kept as a separate sibling — it's
+ *     behavior (click-anywhere-to-dismiss), not chrome. Its color and
+ *     z-index come from `--hud-turn-transition-backdrop` and
+ *     `--hud-z-tooltip`; no raw hex.
+ *   - A dedicated `position="centered"` shell mode would better express
+ *     this surface; its implementation is out of scope for this cycle
+ *     (see `.claude/workflow/design/hud-ui-audit.md`, cycle k) — the
+ *     audit plan calls for `position="modal-hint"` / full-screen shell
+ *     in a later iteration. Until it lands, `fixed-corner` keeps the
+ *     splash out of the raw-positioning anti-pattern.
+ */
 export function TurnTransition({ onComplete }: TurnTransitionProps) {
   const { state } = useGameState();
   const [showOverlay, setShowOverlay] = useState(false);
@@ -35,6 +56,7 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [state.turn, state.log, state.currentPlayerId, previousTurn, onComplete]);
 
   const handleDismiss = () => {
@@ -44,97 +66,133 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
 
   if (!showOverlay) return null;
 
+  const meaningfulNotifications = notifications.filter(n => !n.includes('started'));
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center cursor-pointer"
-      onClick={handleDismiss}
-      style={{ pointerEvents: 'auto' }}
-    >
-      {/* Fade overlay - less opaque */}
+    <>
+      {/* Full-viewport click-catcher + fade wash. Tokens for color and
+          z-index; no raw rgba / Tailwind color utilities. Pointer-events
+          enabled so clicking anywhere dismisses. */}
       <div
-        className="absolute inset-0 bg-black transition-opacity duration-300"
+        data-testid="turn-transition-backdrop"
+        onClick={handleDismiss}
         style={{
-          opacity: showOverlay ? 0.15 : 0,
+          position: 'fixed',
+          inset: 0,
+          cursor: 'pointer',
+          backgroundColor: 'var(--hud-turn-transition-backdrop)',
+          zIndex: 'var(--hud-z-tooltip)' as unknown as number,
+          transition: `opacity var(--hud-turn-transition-animation-duration) ease-out`,
         }}
+        aria-hidden="true"
       />
 
-      {/* Turn announcement */}
-      <div className="relative text-center animate-fade-in pointer-events-none">
+      {/* Announcement body via TooltipShell — shell owns positioning,
+          user-select, context-menu suppression, z-index layering. */}
+      <TooltipShell
+        id="turnTransition"
+        anchor={{ kind: 'screen', x: 0, y: 0 }}
+        position="fixed-corner"
+        tier="detailed"
+        sticky
+      >
         <div
-          className="text-6xl font-bold mb-4"
-          style={{
-            color: 'var(--color-accent)',
-            textShadow: '0 0 20px rgba(100, 181, 246, 0.8)',
-          }}
+          className="animate-fade-in"
+          style={{ textAlign: 'center', minWidth: '240px' }}
         >
-          Turn {state.turn}
-        </div>
-
-        {state.age.currentAge && (
           <div
-            className="text-xl uppercase tracking-widest mb-6"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {state.age.currentAge} Age
-          </div>
-        )}
-
-        {/* Notifications - only show if there are meaningful events */}
-        {notifications.length > 0 && notifications.some(n => !n.includes('started')) && (
-          <div
-            className="max-w-md mx-auto bg-surface rounded-lg p-4 space-y-2"
             style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
+              fontSize: '3.5rem',
+              fontWeight: 700,
+              lineHeight: 1.1,
+              marginBottom: 'var(--hud-padding-md)',
+              color: 'var(--hud-text-emphasis)',
+              textShadow: 'var(--hud-turn-transition-accent-shadow)',
             }}
           >
-            {notifications
-              .filter(n => !n.includes('started')) // Filter out "Turn started" messages
-              .slice(0, 3)
-              .map((msg, i) => (
+            Turn {state.turn}
+          </div>
+
+          {state.age.currentAge && (
+            <div
+              style={{
+                fontSize: '0.95rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                marginBottom: 'var(--hud-padding-md)',
+                color: 'var(--hud-text-muted)',
+              }}
+            >
+              {state.age.currentAge} Age
+            </div>
+          )}
+
+          {/* Notifications — only render if there are meaningful events */}
+          {meaningfulNotifications.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--hud-padding-sm)',
+                padding: 'var(--hud-padding-md)',
+                borderRadius: 'var(--hud-radius)',
+                border: '1px solid var(--hud-border)',
+                backgroundColor: 'var(--hud-enemy-activity-item-bg)',
+              }}
+            >
+              {meaningfulNotifications.slice(0, 3).map((msg, i) => (
                 <div
                   key={i}
-                  className="text-sm"
-                  style={{ color: 'var(--color-text)' }}
+                  style={{
+                    fontSize: 13,
+                    color: 'var(--hud-text-color)',
+                  }}
                 >
                   {msg}
                 </div>
               ))}
-            {notifications.filter(n => !n.includes('started')).length > 3 && (
-              <div
-                className="text-xs italic"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                +{notifications.filter(n => !n.includes('started')).length - 3} more events
-              </div>
-            )}
+              {meaningfulNotifications.length > 3 && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontStyle: 'italic',
+                    color: 'var(--hud-text-muted)',
+                  }}
+                >
+                  +{meaningfulNotifications.length - 3} more events
+                </div>
+              )}
+            </div>
+          )}
+
+          <div
+            style={{
+              fontSize: 12,
+              marginTop: 'var(--hud-padding-md)',
+              opacity: 0.6,
+              color: 'var(--hud-text-muted)',
+            }}
+          >
+            Click anywhere to continue
           </div>
-        )}
-
-        {/* Click to continue hint */}
-        <div
-          className="text-sm mt-6 opacity-60"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          Click anywhere to continue
         </div>
-      </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
+        <style>{`
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: scale(0.9);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
           }
-          to {
-            opacity: 1;
-            transform: scale(1);
+          .animate-fade-in {
+            animation: fadeIn var(--hud-turn-transition-animation-duration) ease-out;
           }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-out;
-        }
-      `}</style>
-    </div>
+        `}</style>
+      </TooltipShell>
+    </>
   );
 }
