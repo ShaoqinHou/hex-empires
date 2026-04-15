@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import { ALL_ANTIQUITY_TECHS, ALL_EXPLORATION_TECHS, ALL_MODERN_TECHS } from '@hex/engine';
 import type { TechnologyDef } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 /** Cell dimensions matching the CSS grid layout */
 const CELL_WIDTH = 192;
@@ -38,59 +39,42 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
 
   const ageLabel = currentAge.charAt(0).toUpperCase() + currentAge.slice(1);
 
+  // PanelShell ('overlay', width='full') provides chrome (title bar +
+  // close button) and a vertically-scrolling body. The tree itself
+  // requires both axes of scroll for wide age trees, so we wrap the
+  // grid in our own `overflow-auto` div inside PanelShell's body.
   return (
-    <div
-      className="absolute inset-x-0 top-12 bottom-14 flex flex-col"
-      style={{ backgroundColor: 'rgba(12, 16, 36, 0.97)' }}
-    >
-      {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between px-4 py-3 shrink-0"
-        style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}
-      >
-        <div className="flex items-center gap-4 flex-wrap">
-          <h2 className="text-lg font-bold tracking-wide" style={{ color: 'var(--color-text)' }}>
-            {ageLabel} Age Technology Tree
-          </h2>
-          {activeTech && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: 'var(--color-science)' }}>
-                Researching:
-              </span>
-              <span className="text-xs font-semibold" style={{ color: 'var(--color-science)' }}>
-                {activeTech.name}
-              </span>
-              {/* Inline mini progress bar */}
-              <div
-                className="w-24 h-2 rounded-full overflow-hidden"
-                style={{ backgroundColor: 'rgba(66,165,245,0.2)', border: '1px solid rgba(66,165,245,0.3)' }}
-              >
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${progressPct}%`,
-                    backgroundColor: 'var(--color-science)',
-                    boxShadow: '0 0 6px var(--color-science)',
-                  }}
-                />
-              </div>
-              <span className="text-xs tabular-nums" style={{ color: 'var(--color-science)' }}>
-                {player.researchProgress}/{activeTech.cost}
-              </span>
-            </div>
-          )}
+    <PanelShell id="tech" title={`${ageLabel} Age Technology Tree`} onClose={onClose} priority="overlay" width="full">
+      {activeTech && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-xs" style={{ color: 'var(--color-science)' }}>
+            Researching:
+          </span>
+          <span className="text-xs font-semibold" style={{ color: 'var(--color-science)' }}>
+            {activeTech.name}
+          </span>
+          {/* Inline mini progress bar */}
+          <div
+            className="w-24 h-2 rounded-full overflow-hidden"
+            style={{ backgroundColor: 'rgba(66,165,245,0.2)', border: '1px solid rgba(66,165,245,0.3)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${progressPct}%`,
+                backgroundColor: 'var(--color-science)',
+                boxShadow: '0 0 6px var(--color-science)',
+              }}
+            />
+          </div>
+          <span className="text-xs tabular-nums" style={{ color: 'var(--color-science)' }}>
+            {player.researchProgress}/{activeTech.cost}
+          </span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-sm px-3 py-1 rounded cursor-pointer transition-opacity hover:opacity-75"
-          style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
-        >
-          ✕
-        </button>
-      </div>
+      )}
 
       {/* ── Scrollable tree (horizontal + vertical) ── */}
-      <div className="overflow-auto flex-1 p-6">
+      <div className="overflow-auto" style={{ maxHeight: '60vh' }}>
         <div
           className="relative inline-block"
           style={{
@@ -134,11 +118,10 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
 
       {/* ── Legend ── */}
       <div
-        className="flex items-center gap-5 px-4 py-2 shrink-0 text-[10px]"
+        className="flex items-center gap-5 mt-3 pt-2 text-[10px]"
         style={{
-          backgroundColor: 'rgba(12,16,36,0.9)',
-          borderTop: '1px solid var(--color-border)',
-          color: 'var(--color-text-muted)',
+          borderTop: '1px solid var(--panel-border)',
+          color: 'var(--panel-muted-color)',
         }}
       >
         <LegendItem color="#22c55e" label="Researched" solid />
@@ -146,7 +129,7 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
         <LegendItem color="#f8fafc" label="Available" solid />
         <LegendItem color="#64748b" label="Locked" solid dim />
       </div>
-    </div>
+    </PanelShell>
   );
 }
 

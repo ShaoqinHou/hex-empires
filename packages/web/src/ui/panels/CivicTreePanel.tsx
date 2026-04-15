@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import { ALL_ANTIQUITY_CIVICS, ALL_EXPLORATION_CIVICS, ALL_MODERN_CIVICS } from '@hex/engine';
 import type { CivicDef } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 /** Cell dimensions matching the CSS grid layout */
 const CELL_WIDTH = 192;
@@ -41,59 +42,42 @@ export function CivicTreePanel({ onClose }: CivicTreePanelProps) {
 
   const ageLabel = currentAge.charAt(0).toUpperCase() + currentAge.slice(1);
 
+  // PanelShell ('overlay', width='full') provides chrome (title bar +
+  // close button) and a vertically-scrolling body. The civic tree
+  // requires both axes of scroll, so we wrap the grid in our own
+  // `overflow-auto` div inside PanelShell's body.
   return (
-    <div
-      className="absolute inset-x-0 top-12 bottom-14 flex flex-col"
-      style={{ backgroundColor: 'rgba(18, 10, 28, 0.97)' }}
-    >
-      {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between px-4 py-3 shrink-0"
-        style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}
-      >
-        <div className="flex items-center gap-4 flex-wrap">
-          <h2 className="text-lg font-bold tracking-wide" style={{ color: 'var(--color-text)' }}>
-            {ageLabel} Age Civic Tree
-          </h2>
-          {activeCivic && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: CULTURE_COLOR }}>
-                Researching:
-              </span>
-              <span className="text-xs font-semibold" style={{ color: CULTURE_COLOR }}>
-                {activeCivic.name}
-              </span>
-              {/* Inline mini progress bar */}
-              <div
-                className="w-24 h-2 rounded-full overflow-hidden"
-                style={{ backgroundColor: 'rgba(204,93,232,0.2)', border: '1px solid rgba(204,93,232,0.3)' }}
-              >
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${progressPct}%`,
-                    backgroundColor: CULTURE_COLOR,
-                    boxShadow: `0 0 6px ${CULTURE_COLOR}`,
-                  }}
-                />
-              </div>
-              <span className="text-xs tabular-nums" style={{ color: CULTURE_COLOR }}>
-                {player.civicProgress}/{activeCivic.cost}
-              </span>
-            </div>
-          )}
+    <PanelShell id="civics" title={`${ageLabel} Age Civic Tree`} onClose={onClose} priority="overlay" width="full">
+      {activeCivic && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-xs" style={{ color: CULTURE_COLOR }}>
+            Researching:
+          </span>
+          <span className="text-xs font-semibold" style={{ color: CULTURE_COLOR }}>
+            {activeCivic.name}
+          </span>
+          {/* Inline mini progress bar */}
+          <div
+            className="w-24 h-2 rounded-full overflow-hidden"
+            style={{ backgroundColor: 'rgba(204,93,232,0.2)', border: '1px solid rgba(204,93,232,0.3)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${progressPct}%`,
+                backgroundColor: CULTURE_COLOR,
+                boxShadow: `0 0 6px ${CULTURE_COLOR}`,
+              }}
+            />
+          </div>
+          <span className="text-xs tabular-nums" style={{ color: CULTURE_COLOR }}>
+            {player.civicProgress}/{activeCivic.cost}
+          </span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-sm px-3 py-1 rounded cursor-pointer transition-opacity hover:opacity-75"
-          style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
-        >
-          ✕
-        </button>
-      </div>
+      )}
 
       {/* ── Scrollable tree (horizontal + vertical) ── */}
-      <div className="overflow-auto flex-1 p-6">
+      <div className="overflow-auto" style={{ maxHeight: '60vh' }}>
         <div
           className="relative inline-block"
           style={{
@@ -137,11 +121,10 @@ export function CivicTreePanel({ onClose }: CivicTreePanelProps) {
 
       {/* ── Legend ── */}
       <div
-        className="flex items-center gap-5 px-4 py-2 shrink-0 text-[10px]"
+        className="flex items-center gap-5 mt-3 pt-2 text-[10px]"
         style={{
-          backgroundColor: 'rgba(18,10,28,0.9)',
-          borderTop: '1px solid var(--color-border)',
-          color: 'var(--color-text-muted)',
+          borderTop: '1px solid var(--panel-border)',
+          color: 'var(--panel-muted-color)',
         }}
       >
         <LegendItem color="#22c55e" label="Researched" solid />
@@ -149,7 +132,7 @@ export function CivicTreePanel({ onClose }: CivicTreePanelProps) {
         <LegendItem color="#f8fafc" label="Available" solid />
         <LegendItem color="#64748b" label="Locked" solid dim />
       </div>
-    </div>
+    </PanelShell>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useGameState } from '../../providers/GameProvider';
 import { ALL_CIVILIZATIONS, ALL_UNITS, ALL_BUILDINGS } from '@hex/engine';
 import type { Age } from '@hex/engine';
+import { PanelShell } from './PanelShell';
 
 interface AgeTransitionPanelProps {
   onClose: () => void;
@@ -20,26 +21,35 @@ export function AgeTransitionPanel({ onClose }: AgeTransitionPanelProps) {
   // Available civs for the next age
   const availableCivs = ALL_CIVILIZATIONS.filter(c => c.age === nextAge);
 
+  // ── Blocking-modal semantic ──
+  // AgeTransition is a blocking modal: the player MUST pick a civ to
+  // continue. PanelShell's M34 chrome closes the panel on backdrop
+  // click AND on the X button via a single onClose callback. Until
+  // PanelShell exposes a `dismissible: false` prop (follow-up), we
+  // suppress dismissal by passing a no-op onClose to the shell. The
+  // panel still closes naturally once the player picks a civ —
+  // dispatching TRANSITION_AGE advances player.age, which causes
+  // getNextAge() above to return null on the next render and the
+  // outer component returns null. The real `onClose` prop from the
+  // parent is invoked from the civ-pick handler so App.tsx can reset
+  // its activePanel state.
+  const blockingOnClose = (): void => {
+    /* intentionally a no-op — see comment above */
+  };
+
   return (
-    <div className="absolute inset-x-0 top-12 bottom-14 overflow-auto"
-      style={{ backgroundColor: 'rgba(15, 23, 42, 0.98)', backgroundImage: 'radial-gradient(circle at 50% 30%, rgba(251, 191, 36, 0.1) 0%, transparent 50%)' }}>
-      <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10 bg-gradient-to-r from-amber-900/20 via-amber-800/30 to-amber-900/20 border-b-2 border-amber-500/40">
-        <div className="flex items-center gap-4">
-          <div className="text-4xl">⚡</div>
-          <div>
-            <h2 className="text-2xl font-bold text-amber-400">Age Transition</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-lg font-semibold capitalize" style={{ color: getAgeColor(player.age) }}>{player.age}</span>
-              <span className="text-amber-400">→</span>
-              <span className="text-lg font-semibold capitalize text-amber-300">{nextAge}</span>
-            </div>
-          </div>
+    <PanelShell id="age" title="Age Transition" onClose={blockingOnClose} priority="modal" width="full">
+      {/* Title-row supplement: from → to ages and lightning glyph */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="text-4xl">⚡</div>
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold capitalize" style={{ color: getAgeColor(player.age) }}>{player.age}</span>
+          <span className="text-amber-400">→</span>
+          <span className="text-lg font-semibold capitalize text-amber-300">{nextAge}</span>
         </div>
-        <button onClick={onClose} className="text-2xl px-3 py-1 hover:text-amber-400 transition-colors"
-          style={{ color: 'var(--color-text-muted)' }}>✕</button>
       </div>
 
-      <div className="p-6 max-w-7xl mx-auto">
+      <div>
         {/* Progress section with celebration */}
         <div className={`mb-8 p-6 rounded-xl border-2 transition-all ${ready ? 'bg-gradient-to-r from-amber-900/40 to-yellow-900/40 border-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-800/50 border-slate-700'}`}>
           <div className="flex items-center justify-between mb-4">
@@ -177,7 +187,7 @@ export function AgeTransitionPanel({ onClose }: AgeTransitionPanelProps) {
           </div>
         </div>
       </div>
-    </div>
+    </PanelShell>
   );
 }
 
