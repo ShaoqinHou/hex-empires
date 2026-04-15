@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { citySystem } from '../citySystem';
 import type { CityState } from '../../types/GameState';
+import { coordToKey } from '../../hex/HexMath';
 import { createTestState, createTestPlayer, createTestUnit, setTile } from './helpers';
 
 describe('citySystem', () => {
@@ -244,6 +245,60 @@ describe('citySystem', () => {
 
       expect(next.cities.size).toBe(1); // rejected — hex distance is 2
       expect(next.units.has('s1')).toBe(true);
+    });
+
+    it('auto-places Palace at city center without entering placement mode', () => {
+      // Bug regression: Palace is auto-built when a capital is founded, so it
+      // must also be auto-placed on the city-center tile. Otherwise the CityPanel
+      // lists Palace as "NEEDS PLACEMENT" and launches enterPlacementMode on
+      // click — which is wrong for an auto-built capital building.
+      const units = new Map([
+        ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 3, r: 3 } })],
+      ]);
+      const state = createTestState({ units });
+      const next = citySystem(state, {
+        type: 'FOUND_CITY',
+        unitId: 's1',
+        name: 'Rome',
+      });
+
+      const city = [...next.cities.values()][0];
+      // 1. Palace is in city.buildings (auto-built in capital)
+      expect(city.buildings).toContain('palace');
+      // 2. No production-queue entry for palace — it was never queued
+      expect(city.productionQueue.find(p => p.id === 'palace')).toBeUndefined();
+      // 3. The city-center tile carries building: 'palace' so the UI treats
+      //    it as already placed (no "NEEDS PLACEMENT" flag, no placement mode)
+      const centerKey = coordToKey({ q: 3, r: 3 });
+      const centerTile = next.map.tiles.get(centerKey);
+      expect(centerTile?.building).toBe('palace');
+    });
+
+    it('does not auto-place Palace for non-capital (town) founding', () => {
+      const existingCity: CityState = {
+        id: 'c1', name: 'Rome', owner: 'p1', position: { q: 3, r: 3 },
+        population: 1, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: ['palace'], territory: ['3,3'],
+        settlementType: 'city', happiness: 15, isCapital: true, defenseHP: 100,
+        specialization: null, specialists: 0,
+      };
+      const units = new Map([
+        ['s1', createTestUnit({ id: 's1', typeId: 'settler', position: { q: 7, r: 3 } })],
+      ]);
+      const cities = new Map([['c1', existingCity]]);
+      const state = createTestState({ units, cities });
+      const next = citySystem(state, {
+        type: 'FOUND_CITY',
+        unitId: 's1',
+        name: 'Carthage',
+      });
+
+      const newCity = [...next.cities.values()].find(c => c.name === 'Carthage');
+      expect(newCity).toBeDefined();
+      expect(newCity!.buildings).not.toContain('palace');
+      const centerKey = coordToKey({ q: 7, r: 3 });
+      const centerTile = next.map.tiles.get(centerKey);
+      expect(centerTile?.building ?? null).toBeNull();
     });
 
     it('second city founded is a Town (not capital)', () => {

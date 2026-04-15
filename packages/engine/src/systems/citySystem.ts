@@ -122,11 +122,26 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   const updatedDistricts = new Map(state.districts);
   updatedDistricts.set(districtId, newDistrict);
 
+  // Palace is auto-built in the capital and auto-placed on the city-center
+  // tile — it should never enter the normal PLACE_BUILDING placement flow.
+  // Marking tile.building = 'palace' here makes the UI treat it as already
+  // placed, so the "NEEDS PLACEMENT" flag never fires for the Palace.
+  let updatedMap = state.map;
+  if (isFirstCity) {
+    const centerTile = state.map.tiles.get(posKey);
+    if (centerTile && !centerTile.building) {
+      const nextTiles = new Map(state.map.tiles);
+      nextTiles.set(posKey, { ...centerTile, building: 'palace' });
+      updatedMap = { ...state.map, tiles: nextTiles };
+    }
+  }
+
   return {
     ...state,
     units: updatedUnits,
     cities: updatedCities,
     districts: updatedDistricts,
+    map: updatedMap,
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,
