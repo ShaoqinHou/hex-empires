@@ -85,11 +85,15 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   // Update attacker
   if (newAttackerHealth <= 0) {
     updatedUnits.delete(attacker.id);
+    // If the attacker was the current player's own unit, this is a critical event
+    const attackerIsOwnUnit = attacker.owner === state.currentPlayerId;
     logEntries.push({
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} was destroyed attacking ${defender.typeId}`,
       type: 'combat',
+      severity: attackerIsOwnUnit ? 'critical' : 'info',
+      blocksTurn: attackerIsOwnUnit ? true : undefined,
     });
   } else {
     updatedUnits.set(attacker.id, {
@@ -106,11 +110,15 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   // Update defender
   if (newDefenderHealth <= 0) {
     updatedUnits.delete(defender.id);
+    // If the defender was the current player's own unit (rare, but possible via multi-player), mark critical
+    const defenderIsOwnUnit = defender.owner === state.currentPlayerId;
     logEntries.push({
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} destroyed ${defender.typeId}!`,
       type: 'combat',
+      severity: defenderIsOwnUnit ? 'critical' : 'info',
+      blocksTurn: defenderIsOwnUnit ? true : undefined,
     });
 
     // Increment totalKills for the attacker's owner
@@ -145,6 +153,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} attacked ${defender.typeId} (${newDefenderHealth}HP remaining)`,
       type: 'combat',
+      severity: 'info',
     });
   }
 
@@ -412,11 +421,14 @@ function handleAttackCity(
   // Update attacker
   if (newAttackerHealth <= 0) {
     updatedUnits.delete(attacker.id);
+    const attackerIsOwnUnit = attacker.owner === state.currentPlayerId;
     logEntries.push({
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} was destroyed attacking ${city.name}`,
       type: 'combat',
+      severity: attackerIsOwnUnit ? 'critical' : 'info',
+      blocksTurn: attackerIsOwnUnit ? true : undefined,
     });
   } else {
     updatedUnits.set(attacker.id, {
@@ -446,11 +458,15 @@ function handleAttackCity(
       });
     }
 
+    // Critical for the city's previous owner (defender); just informational for the attacker
+    const captureIsOwnLoss = previousOwner === state.currentPlayerId;
     logEntries.push({
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} conquered ${city.name}!`,
       type: 'combat',
+      severity: captureIsOwnLoss ? 'critical' : 'warning',
+      blocksTurn: captureIsOwnLoss ? true : undefined,
     });
   } else {
     // City not captured — update defenseHP
@@ -464,6 +480,7 @@ function handleAttackCity(
       playerId: state.currentPlayerId,
       message: `${attacker.typeId} attacked ${city.name} (${newCityHP} defense HP remaining)`,
       type: 'combat',
+      severity: 'info',
     });
   }
 

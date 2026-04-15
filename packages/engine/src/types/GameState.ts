@@ -441,15 +441,38 @@ export type GameAction =
   | { readonly type: 'PROMOTE_COMMANDER'; readonly commanderId: UnitId; readonly promotionId: string }
   // ── Resource Slot assignment (rulebook §13.3) ──
   | { readonly type: 'ASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId }
-  | { readonly type: 'UNASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId };
+  | { readonly type: 'UNASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId }
+  // ── Notification / event dismissal ──
+  /** Marks a specific log event as dismissed so blocksTurn events no longer block END_TURN. */
+  | { readonly type: 'DISMISS_EVENT'; readonly eventMessage: string; readonly eventTurn: number };
 
 // ── Events ──
+
+export type GameEventSeverity = 'info' | 'warning' | 'critical';
 
 export interface GameEvent {
   readonly turn: number;
   readonly playerId: PlayerId;
   readonly message: string;
   readonly type: 'move' | 'combat' | 'city' | 'research' | 'civic' | 'diplomacy' | 'age' | 'crisis' | 'victory' | 'production' | 'legacy';
+  /**
+   * Severity level for notification filtering.
+   * - 'info': routine events, shown briefly and de-duped
+   * - 'warning': notable events worth attention (tech complete, wonder built by rival, ally offer)
+   * - 'critical': player-action required (surprise war, city capture, crisis, unit death, barbarian near capital)
+   * Defaults to 'info' when omitted.
+   */
+  readonly severity?: GameEventSeverity;
+  /**
+   * When true, the turn system refuses END_TURN until this event is dismissed.
+   * Used for critical events that require acknowledgement before proceeding.
+   */
+  readonly blocksTurn?: boolean;
+  /**
+   * Set to true when the player has acknowledged this event (via DISMISS_EVENT action).
+   * The turn blocker clears once all blocksTurn events on the current turn are dismissed.
+   */
+  readonly dismissed?: boolean;
 }
 
 // ── Validation ──

@@ -129,7 +129,10 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
           turn: state.turn,
           playerId: sourceId,
           message: `Declared ${warType} war on ${targetId}`,
-          type: 'diplomacy',
+          type: 'diplomacy' as const,
+          // Surprise war declared ON this player is critical and blocks turn; formal war is just warning
+          severity: isSurprise ? 'critical' as const : 'warning' as const,
+          blocksTurn: isSurprise ? true as const : undefined,
         }],
       };
     }
@@ -236,6 +239,13 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
   const updatedRelations = new Map(state.diplomacy.relations);
   updatedRelations.set(relationKey, newRelation);
 
+  // Friendship / alliance proposals are noteworthy (warning) so the player notices the offer.
+  const proposalSeverity =
+    (action.type === 'PROPOSE_DIPLOMACY' &&
+      (action.proposal.type === 'PROPOSE_FRIENDSHIP' || action.proposal.type === 'PROPOSE_ALLIANCE'))
+      ? 'warning' as const
+      : 'info' as const;
+
   return {
     ...state,
     diplomacy: { relations: updatedRelations },
@@ -244,6 +254,7 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
       playerId: sourceId,
       message: logMessage,
       type: 'diplomacy',
+      severity: proposalSeverity,
     }],
   };
 }

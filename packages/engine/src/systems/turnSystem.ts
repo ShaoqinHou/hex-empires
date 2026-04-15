@@ -1,5 +1,5 @@
-import type { GameState, GameAction, PlayerState, CityState } from '../types/GameState';
-import { coordToKey } from '../hex/HexMath';
+import type { GameState, GameAction, PlayerState, CityState, GameEvent } from '../types/GameState';
+import { coordToKey, distance } from '../hex/HexMath';
 import { getMovementBonus } from '../state/EffectUtils';
 
 /**
@@ -16,6 +16,8 @@ export function turnSystem(state: GameState, action: GameAction): GameState {
       return handleStartTurn(state);
     case 'END_TURN':
       return handleEndTurn(state);
+    case 'DISMISS_EVENT':
+      return handleDismissEvent(state, action.eventMessage, action.eventTurn);
     default:
       // Block actions if not in 'actions' phase (except START/END)
       if (state.phase !== 'actions') {
@@ -65,14 +67,44 @@ function handleStartTurn(state: GameState): GameState {
   // Only log turn start for human players — AI turn starts are noise
   const currentPlayer = state.players.get(state.currentPlayerId);
   const isHuman = currentPlayer?.isHuman ?? true;
-  const newLog = isHuman
+  const newLog: GameEvent[] = isHuman
     ? [...state.log, {
         turn: state.turn,
         playerId: state.currentPlayerId,
         message: `Turn ${state.turn} — your turn`,
         type: 'production' as const,
+        severity: 'info' as const,
       }]
-    : state.log;
+    : [...state.log];
+
+  // Check for enemy units within 2 tiles of any of the human player's capital cities
+  if (isHuman) {
+    const capitalCities = ownedCities.filter(c => c.isCapital);
+    for (const capital of capitalCities) {
+      for (const unit of state.units.values()) {
+        if (unit.owner === state.currentPlayerId) continue; // skip own units
+        const dist = distance(capital.position, unit.position);
+        if (dist <= 2) {
+          const alreadyWarned = newLog.some(
+            e => e.turn === state.turn &&
+                 e.message.includes('near your capital') &&
+                 e.message.includes(capital.name),
+          );
+          if (!alreadyWarned) {
+            newLog.push({
+              turn: state.turn,
+              playerId: state.currentPlayerId,
+              message: `Enemy ${unit.typeId} is ${dist} tile${dist === 1 ? '' : 's'} from your capital ${capital.name}!`,
+              type: 'combat' as const,
+              severity: 'critical' as const,
+              blocksTurn: true as const,
+            });
+          }
+          break; // one warning per capital per turn is enough
+        }
+      }
+    }
+  }
 
   return {
     ...state,
@@ -161,6 +193,29 @@ function getHealAmount(
 }
 
 function handleEndTurn(state: GameState): GameState {
+  // Block END_TURN if the human player has any unacknowledged critical events this turn.
+  // AI players bypass this check — they auto-dismiss all events.
+  const currentPlayer = state.players.get(state.currentPlayerId);
+  const isHuman = currentPlayer?.isHuman ?? true;
+  if (isHuman) {
+    const hasBlockingEvent = state.log.some(
+      e => e.turn === state.turn &&
+           e.playerId === state.currentPlayerId &&
+           e.blocksTurn === true &&
+           e.dismissed !== true,
+    );
+    if (hasBlockingEvent) {
+      return {
+        ...state,
+        lastValidation: {
+          valid: false,
+          reason: 'You must acknowledge all critical alerts before ending your turn.',
+          category: 'general',
+        },
+      };
+    }
+  }
+
   const playerIds = [...state.players.keys()];
   const currentIndex = playerIds.indexOf(state.currentPlayerId);
   const isLastPlayer = currentIndex === playerIds.length - 1;
@@ -183,6 +238,23 @@ function handleEndTurn(state: GameState): GameState {
       phase: 'start',
     };
   }
+}
+
+/**
+ * Mark a specific log event as dismissed so it no longer blocks END_TURN.
+ * Matched by (eventTurn, eventMessage) — the pair is unique enough for gameplay purposes.
+ */
+function handleDismissEvent(state: GameState, eventMessage: string, eventTurn: number): GameState {
+  let changed = false;
+  const newLog = state.log.map(e => {
+    if (e.turn === eventTurn && e.message === eventMessage && e.dismissed !== true) {
+      changed = true;
+      return { ...e, dismissed: true as const };
+    }
+    return e;
+  });
+  if (!changed) return state;
+  return { ...state, log: newLog };
 }
 
 /** Base movement points by unit type — driven by state.config.units */

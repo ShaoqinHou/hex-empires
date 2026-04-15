@@ -146,6 +146,7 @@ function processNormalResearch(state: GameState): GameState {
           playerId: player.id,
           message: `Completed Future Tech! (+${FUTURE_TECH_AGE_PROGRESS} age progress)`,
           type: 'research',
+          severity: 'warning' as const,
         }],
       };
     }
@@ -168,6 +169,7 @@ function processNormalResearch(state: GameState): GameState {
         playerId: player.id,
         message: `Researched ${player.currentResearch}!`,
         type: 'research',
+        severity: 'warning' as const,
       }],
     };
   }
@@ -221,6 +223,7 @@ function processMasteryResearch(state: GameState): GameState {
         playerId: player.id,
         message: `Mastered ${techDef?.name ?? player.currentMastery}! (+1 Science per turn)`,
         type: 'research',
+        severity: 'warning' as const,
       }],
     };
   }

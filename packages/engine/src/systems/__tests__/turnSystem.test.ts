@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { turnSystem } from '../turnSystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
-import type { CityState, DiplomacyRelation } from '../../types/GameState';
+import type { CityState, DiplomacyRelation, GameEvent } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
 
 describe('turnSystem', () => {
@@ -212,5 +212,105 @@ describe('turnSystem', () => {
       expect(next.currentPlayerId).toBe('p1');
       expect(next.turn).toBe(6);
     });
+  });
+});
+
+describe('turnSystem — DISMISS_EVENT', () => {
+  it('sets dismissed=true on a matching log event', () => {
+    const event: GameEvent = {
+      turn: 5,
+      playerId: 'p1',
+      message: 'Enemy warrior is 1 tile from your capital Rome!',
+      type: 'combat',
+      severity: 'critical',
+      blocksTurn: true,
+    };
+    const state = createTestState({
+      turn: 5,
+      phase: 'actions',
+      log: [event],
+    });
+    const next = turnSystem(state, { type: 'DISMISS_EVENT', eventMessage: event.message, eventTurn: event.turn });
+
+    expect(next.log[0].dismissed).toBe(true);
+  });
+
+  it('returns state unchanged if the event cannot be found', () => {
+    const event: GameEvent = {
+      turn: 5,
+      playerId: 'p1',
+      message: 'Some known message',
+      type: 'combat',
+    };
+    const state = createTestState({ turn: 5, phase: 'actions', log: [event] });
+    const next = turnSystem(state, { type: 'DISMISS_EVENT', eventMessage: 'No such message', eventTurn: 5 });
+
+    // same reference because nothing changed
+    expect(next).toBe(state);
+  });
+});
+
+describe('turnSystem — END_TURN blocksTurn guard', () => {
+  it('blocks END_TURN for a human player when a blocksTurn critical event is undismissed', () => {
+    const criticalEvent: GameEvent = {
+      turn: 5,
+      playerId: 'p1',
+      message: 'Crisis event: Plague',
+      type: 'crisis',
+      severity: 'critical',
+      blocksTurn: true,
+    };
+    const state = createTestState({
+      turn: 5,
+      phase: 'actions',
+      players: new Map([['p1', createTestPlayer({ id: 'p1', isHuman: true })]]),
+      log: [criticalEvent],
+    });
+    const next = turnSystem(state, { type: 'END_TURN' });
+
+    // Phase must NOT advance
+    expect(next.phase).toBe('actions');
+    expect(next.lastValidation).not.toBeNull();
+    expect(next.lastValidation?.valid).toBe(false);
+  });
+
+  it('allows END_TURN once the critical event is dismissed', () => {
+    const criticalEvent: GameEvent = {
+      turn: 5,
+      playerId: 'p1',
+      message: 'Crisis event: Plague',
+      type: 'crisis',
+      severity: 'critical',
+      blocksTurn: true,
+      dismissed: true,
+    };
+    const state = createTestState({
+      turn: 5,
+      phase: 'actions',
+      players: new Map([['p1', createTestPlayer({ id: 'p1', isHuman: true })]]),
+      log: [criticalEvent],
+    });
+    const next = turnSystem(state, { type: 'END_TURN' });
+
+    expect(next.phase).toBe('start');
+  });
+
+  it('allows END_TURN when there are no blocksTurn events', () => {
+    const infoEvent: GameEvent = {
+      turn: 5,
+      playerId: 'p1',
+      message: 'Researched bronze_working!',
+      type: 'research',
+      severity: 'warning',
+    };
+    const state = createTestState({
+      turn: 5,
+      phase: 'actions',
+      players: new Map([['p1', createTestPlayer({ id: 'p1', isHuman: true })]]),
+      log: [infoEvent],
+    });
+    const next = turnSystem(state, { type: 'END_TURN' });
+
+    expect(next.phase).toBe('start');
   });
 });

@@ -40,6 +40,8 @@ function checkCrisisTriggers(state: GameState): GameState {
     playerId: state.currentPlayerId,
     message: `Crisis event: ${c.name}`,
     type: 'crisis' as const,
+    severity: 'critical' as const,
+    blocksTurn: true as const,
   }));
 
   return {

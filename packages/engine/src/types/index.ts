@@ -47,6 +47,7 @@ export type {
   DiplomacyProposal,
   GameAction,
   GameEvent,
+  GameEventSeverity,
   System,
   ValidationResult,
 } from './GameState';
