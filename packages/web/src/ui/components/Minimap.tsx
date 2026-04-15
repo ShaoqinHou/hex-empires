@@ -164,7 +164,6 @@ export function Minimap({ cameraRef }: MinimapProps) {
         border: '1px solid var(--panel-border)',
         backgroundColor: 'var(--panel-bg)',
         zIndex: 'var(--hud-z-minimap)' as unknown as number,
-        userSelect: 'none',
       }}
       onContextMenu={(e) => e.preventDefault()}
     >

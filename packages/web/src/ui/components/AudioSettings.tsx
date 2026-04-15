@@ -31,9 +31,7 @@ export function AudioSettings() {
           </div>
           <button
             onClick={toggleSound}
-            className={`w-12 h-6 rounded-full transition-colors duration-200 ${
-              soundEnabled ? 'bg-green-600' : 'bg-gray-600'
-            }`}
+            className="w-12 h-6 rounded-full transition-colors duration-200"
             style={{ backgroundColor: soundEnabled ? 'var(--color-production)' : 'var(--color-bg)' }}
           >
             <div
@@ -80,9 +78,7 @@ export function AudioSettings() {
           </div>
           <button
             onClick={toggleMusic}
-            className={`w-12 h-6 rounded-full transition-colors duration-200 ${
-              musicEnabled ? 'bg-green-600' : 'bg-gray-600'
-            }`}
+            className="w-12 h-6 rounded-full transition-colors duration-200"
             style={{ backgroundColor: musicEnabled ? 'var(--color-science)' : 'var(--color-bg)' }}
           >
             <div
