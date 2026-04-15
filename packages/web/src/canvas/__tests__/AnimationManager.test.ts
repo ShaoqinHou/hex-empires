@@ -19,6 +19,7 @@ import {
   type RangedAttackAnimation,
 } from '../AnimationManager';
 import { coordToKey } from '@hex/engine';
+import { hexToPixel } from '../../utils/hexMath';
 
 describe('AnimationManager', () => {
   describe('Easing Functions', () => {
@@ -169,23 +170,25 @@ describe('AnimationManager', () => {
       const anim = manager.createUnitMoveAnimation('u1', 'p1', 'warrior', path, 1000);
       manager.add(anim);
 
-      // At start, should be at first hex (pixel position)
+      // At start (t=0, progress=0), should be at first hex
+      // easeInOutQuad(0)=0 → segmentProgress=0 → hexToPixel({q:0,r:0})
       let pos = manager.getUnitPosition(anim, anim.startTime);
       expect(pos).not.toBeNull();
-      expect(pos!.x).toBeDefined();
-      expect(pos!.y).toBeDefined();
+      expect(pos!.x).toBeCloseTo(hexToPixel({ q: 0, r: 0 }).x, 5);
+      expect(pos!.y).toBeCloseTo(hexToPixel({ q: 0, r: 0 }).y, 5);
 
-      // At halfway, should be between first and second hex
+      // At t=500ms (progress=0.5 after easeInOutQuad), segmentProgress=1.0
+      // segmentIndex=1, segmentT=0 → returns hexToPixel({q:1,r:0})
       pos = manager.getUnitPosition(anim, anim.startTime + 500);
       expect(pos).not.toBeNull();
-      expect(pos!.x).toBeDefined();
-      expect(pos!.y).toBeDefined();
+      expect(pos!.x).toBeCloseTo(hexToPixel({ q: 1, r: 0 }).x, 5);
+      expect(pos!.y).toBeCloseTo(hexToPixel({ q: 1, r: 0 }).y, 5);
 
-      // At end, should be at last hex (pixel position)
+      // At end (t=1000ms, progress=1), segmentIndex >= path.length-1 → last hex
       pos = manager.getUnitPosition(anim, anim.startTime + 1000);
       expect(pos).not.toBeNull();
-      expect(pos!.x).toBeDefined();
-      expect(pos!.y).toBeDefined();
+      expect(pos!.x).toBeCloseTo(hexToPixel({ q: 2, r: 0 }).x, 5);
+      expect(pos!.y).toBeCloseTo(hexToPixel({ q: 2, r: 0 }).y, 5);
     });
 
     it('should handle single-step movement', () => {
@@ -197,18 +200,23 @@ describe('AnimationManager', () => {
       const anim = manager.createUnitMoveAnimation('u1', 'p1', 'warrior', path, 1000);
       manager.add(anim);
 
-      // At halfway, should be between the two hexes (in pixel space)
+      // At t=500ms: easeInOutQuad(0.5)=0.5, segmentProgress=0.5, segmentT=0.5
+      // interpolates halfway between hexToPixel({q:0,r:0}) and hexToPixel({q:1,r:0})
+      const hex0 = hexToPixel({ q: 0, r: 0 });
+      const hex1 = hexToPixel({ q: 1, r: 0 });
+      const expectedMidX = hex0.x + (hex1.x - hex0.x) * 0.5;
+      const expectedMidY = hex0.y + (hex1.y - hex0.y) * 0.5;
+
       const pos = manager.getUnitPosition(anim, anim.startTime + 500);
       expect(pos).not.toBeNull();
-      expect(pos!.x).toBeDefined();
-      expect(pos!.y).toBeDefined();
+      expect(pos!.x).toBeCloseTo(expectedMidX, 5);
+      expect(pos!.y).toBeCloseTo(expectedMidY, 5);
 
-      // Position should be between start and end positions
+      // Start and end pixel positions are exactly on the hex centers
       const startPos = manager.getUnitPosition(anim, anim.startTime);
       const endPos = manager.getUnitPosition(anim, anim.startTime + 1000);
-
-      expect(pos!.x).toBeGreaterThan(startPos!.x);
-      expect(pos!.x).toBeLessThan(endPos!.x);
+      expect(startPos!.x).toBeCloseTo(hex0.x, 5);
+      expect(endPos!.x).toBeCloseTo(hex1.x, 5);
     });
 
     it('should include unit type ID in animation', () => {

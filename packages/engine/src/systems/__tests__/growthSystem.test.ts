@@ -34,9 +34,10 @@ describe('growthSystem', () => {
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
-    // Should have accumulated some food (city yields - consumption)
+    // territory: 3 grassland tiles × 2 food = 6; city center bonus +2 = 8 total
+    // consumed: population(1) * 2 = 2; surplus = 6; newFood = 0 + 6 = 6
     const updatedCity = next.cities.get('c1')!;
-    expect(updatedCity.food).toBeGreaterThan(0);
+    expect(updatedCity.food).toBe(6);
   });
 
   it('grows population when food reaches threshold', () => {

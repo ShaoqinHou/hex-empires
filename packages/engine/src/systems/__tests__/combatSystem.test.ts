@@ -19,8 +19,10 @@ describe('combatSystem', () => {
     // Both units should take damage (melee combat)
     const defender = next.units.get('d1');
     const attacker = next.units.get('a1');
-    if (defender) expect(defender.health).toBeLessThan(100);
-    if (attacker) expect(attacker.health).toBeLessThan(100);
+    expect(defender).toBeDefined();
+    expect(defender!.health).toBeLessThan(100);
+    expect(attacker).toBeDefined();
+    expect(attacker!.health).toBeLessThan(100);
   });
 
   it('attacker movement goes to 0 after attack', () => {
@@ -35,7 +37,8 @@ describe('combatSystem', () => {
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const attacker = next.units.get('a1');
-    if (attacker) expect(attacker.movementLeft).toBe(0);
+    expect(attacker).toBeDefined();
+    expect(attacker!.movementLeft).toBe(0);
   });
 
   it('rejects attack on own units', () => {
@@ -113,7 +116,8 @@ describe('combatSystem', () => {
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const attacker = next.units.get('a1');
-    if (attacker) expect(attacker.position).toEqual({ q: 4, r: 3 });
+    expect(attacker).toBeDefined();
+    expect(attacker!.position).toEqual({ q: 4, r: 3 });
   });
 
   it('terrain gives defense bonus (hills)', () => {
@@ -155,7 +159,8 @@ describe('combatSystem', () => {
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const attacker = next.units.get('a1');
-    if (attacker) expect(attacker.experience).toBeGreaterThan(0);
+    expect(attacker).toBeDefined();
+    expect(attacker!.experience).toBeGreaterThan(0);
   });
 
   it('adds combat log entry', () => {

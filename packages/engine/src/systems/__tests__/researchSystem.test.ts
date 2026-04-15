@@ -57,7 +57,8 @@ describe('researchSystem', () => {
         cities: new Map([['c1', city]]),
       });
       const next = researchSystem(state, { type: 'END_TURN' });
-      expect(next.players.get('p1')!.researchProgress).toBeGreaterThan(0);
+      // sciencePerTurn: base 1 (player.science=0) + city.population(3) = 4
+      expect(next.players.get('p1')!.researchProgress).toBe(4);
     });
 
     it('completes research when progress reaches cost', () => {

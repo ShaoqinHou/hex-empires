@@ -210,7 +210,8 @@ describe('diplomacySystem', () => {
       });
       const rel = next.diplomacy.relations.get('p1:p2')!;
       expect(rel.hasFriendship).toBe(true);
-      expect(rel.relationship).toBeGreaterThan(0); // friendship improves relationship
+      // default relationship is 0; friendship adds +20 → 20
+      expect(rel.relationship).toBe(20);
     });
 
     it('rejects friendship when relationship is too negative', () => {
