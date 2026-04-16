@@ -33,6 +33,8 @@ If invoked with `--drain-queue`:
 - Specific `<sha>` argument: single-element list with that sha.
 - No args: `[$(git rev-parse HEAD)]`.
 
+**Target-list invariant (STRICT):** Your target list is EXACTLY what Step 1 produced. Do NOT add shas from scanning `scratch/` for missing outcome files. Do NOT retroactively process prior drives' incomplete artifacts. If you notice a gap in historical outcome files (e.g. a fix-log with no matching review-outcome), note it in your final summary's "observations" section as a hint for a human sweep — do NOT process it yourself. Scope creep here makes drives unbounded, inflates cost, and conflates current state with past state.
+
 ## Step 2 — Per-sha loop (max 3 iterations)
 
 For each `target_sha` in the list, initialize `current_sha = target_sha`, `iter = 1`:

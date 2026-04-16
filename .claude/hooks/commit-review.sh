@@ -159,26 +159,29 @@ fi
 # MINGW64. Explicit release + an 8-min stale-timeout handles the crash
 # case.
 #
-# --dangerously-skip-permissions is required for headless operation
-# (otherwise Agent/Bash/Edit tool calls would prompt and hang forever
-# since stdin is /dev/null). Local-dev scope only.
-#
-# --model sonnet: the orchestrator's job is mechanical (read queue,
-# spawn sub-agents, parse YAML front-matter, branch on verdicts, write
-# outcome files). It does not need Opus-level judgment. The *sub-agents*
-# the orchestrator spawns use their prescribed models per SKILL.md:
-# Sonnet for Reviewer + Fixer, Opus for Arbiter (only on dispute).
-# Running the orchestrator itself on Sonnet instead of the user's
-# default (Opus) cuts per-drain cost ~10x with no accuracy impact.
+# Flag stack:
+#   --dangerously-skip-permissions  Bypasses permission CHECKS.
+#   --permission-mode bypassPermissions  Sets the session's permission
+#     MODE to auto-approve. Both are needed in practice: WF-AUTO-7
+#     observed the driver completing Reviewer + Fixer + iter-2 work
+#     successfully, then hitting "The permission prompt was declined"
+#     on the final `review-outcome-<sha>.md` + `last-review-summary.md`
+#     writes. Root cause: `--dangerously-skip-permissions` alone does
+#     not cover all Write paths in a long-running headless session on
+#     Windows; the mode flag covers the gap. Belt and braces.
+#   --model sonnet  The orchestrator's job is mechanical (read queue,
+#     spawn sub-agents, parse YAML, branch on verdicts, write files).
+#     Sub-agents use their own models per SKILL.md (Sonnet for
+#     Reviewer+Fixer, Opus for Arbiter on dispute).
 LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
-# MSYS_NO_PATHCONV=1 is CRITICAL on Windows Git Bash / MINGW64. Without it,
-# MSYS's POSIX-to-Windows path translator sees the leading `/` of the skill
-# invocation argument and rewrites `/commit-review --drain-queue` to
-# `C:/Program Files/Git/commit-review --drain-queue`. Claude then receives
-# a mangled prompt. Documented in CLAUDE.md as the general-case Windows
-# platform note.
+# MSYS_NO_PATHCONV=1 is CRITICAL on Windows Git Bash / MINGW64 — without
+# it the POSIX-to-Windows path translator rewrites `/commit-review` to
+# `C:/Program Files/Git/commit-review`.
 (
-  MSYS_NO_PATHCONV=1 claude --dangerously-skip-permissions --model sonnet \
+  MSYS_NO_PATHCONV=1 claude \
+    --dangerously-skip-permissions \
+    --permission-mode bypassPermissions \
+    --model sonnet \
     -p "/commit-review --drain-queue" \
     > "$LOG_FILE" 2>&1
   rm -rf "$LOCK_DIR" 2>/dev/null
