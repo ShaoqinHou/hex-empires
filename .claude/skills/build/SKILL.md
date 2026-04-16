@@ -1,6 +1,6 @@
 ---
 name: build
-description: Quick reference for dev commands
+description: Quick reference for hex-empires dev/build/test commands. TRIGGER WHEN you need to run the dev server, build, tests, or want to look up the correct npm workspace command for this monorepo. DO NOT TRIGGER for general npm questions unrelated to this project.
 user_invocable: true
 ---
 

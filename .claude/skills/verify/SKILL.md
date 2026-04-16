@@ -1,6 +1,6 @@
 ---
 name: verify
-description: E2E browser verification for game canvas and UI
+description: End-to-end browser verification for the game canvas and UI via chrome-devtools MCP. TRIGGER WHEN you've finished a UI or canvas change and want to confirm it renders without errors, OR the user says "verify" / "check in the browser" / "run verify", OR a Stop hook nudges about verification being stale. Writes a marker file so the stop hook knows verify was run. DO NOT TRIGGER for pure engine changes with no UI effect.
 user_invocable: true
 ---
 

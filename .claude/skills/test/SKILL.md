@@ -1,6 +1,6 @@
 ---
 name: test
-description: Testing conventions for game systems
+description: hex-empires testing conventions — the 4-layer framework (L1 unit, L2 integration, L3 behavioral, L4 output), where each type of test lives, and concrete-assertion rules. TRIGGER WHEN you're writing a new test and need to know where it belongs / how strict the assertions should be, OR the user asks about testing approach / test conventions, OR you're about to write `.toBeDefined()` / `.toBeTruthy()` (check this skill first for the concrete-assertions rule).
 user_invocable: true
 ---
 

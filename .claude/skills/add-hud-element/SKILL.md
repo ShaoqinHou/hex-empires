@@ -1,6 +1,6 @@
 ---
 name: add-hud-element
-description: Step-by-step guide for adding a new hover tooltip, notification, validation feedback, or hint overlay that conforms to the HUDManager + TooltipShell pattern
+description: Step-by-step procedure for adding a new HUD overlay conforming to the HUDManager + TooltipShell pattern. TRIGGER WHEN you are about to create a new hover tooltip, toast notification, validation bubble, hint badge, or any `position: absolute`-style transient UI layer, OR the user asks to "add a tooltip" / "show a toast" / "display a hint" / similar, OR you need to register a new id in `packages/web/src/ui/hud/hudRegistry.ts`. DO NOT TRIGGER for panels (use /add-panel), or for small edits to existing overlays (read `.claude/rules/ui-overlays.md` directly).
 user_invocable: true
 ---
 

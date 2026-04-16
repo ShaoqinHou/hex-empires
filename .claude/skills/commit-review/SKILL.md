@@ -1,6 +1,6 @@
 ---
 name: commit-review
-description: Orchestrate the commit-review loop (Reviewer → Fixer → Arbiter → iter-2 Reviewer) on one or more commits. Auto-invoked in the background by the PostToolUse hook after every substantive commit, OR manually invoked with a specific sha or --sweep.
+description: Orchestrate the three-agent review loop (Reviewer → Fixer → Arbiter → iter-2 Reviewer) on one or more commits. Auto-invoked in the background by the PostToolUse hook after every substantive commit. TRIGGER WHEN user says "run commit-review" / "review HEAD" / "review commit <sha>" / "sweep the last N commits", OR you want to re-run review on a commit whose outcome file is missing. DO NOT TRIGGER proactively on every commit — the hook already does that.
 ---
 
 # /commit-review — Orchestrator

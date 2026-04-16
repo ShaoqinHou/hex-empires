@@ -1,6 +1,6 @@
 ---
 name: spawn-worktree
-description: Spawn an isolated git worktree for a parallel agent with a sentinel file that prevents commits leaking back to main. Use when the orchestrator is about to fire multiple dev agents concurrently on disjoint tasks.
+description: Spawn an isolated git worktree for a parallel agent with a sentinel file that prevents commits leaking back to main. TRIGGER WHEN you are about to fire ≥2 dev sub-agents concurrently on disjoint tasks (blind-eval batch, parallel feature work), OR you need an isolated sandbox for a risky refactor a human wants to inspect before merging. DO NOT TRIGGER for single-agent work — the overhead is not worth it.
 ---
 
 # Spawn a Guarded Worktree

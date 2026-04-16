@@ -1,6 +1,6 @@
 ---
 name: consistency-audit
-description: Audit game content consistency — verify all references, balance, and completeness
+description: Full-tree sweep for content consistency (broken IDs, missing barrel exports, stale cross-references, balance drift). TRIGGER WHEN the user asks to "audit content" / "check consistency" / "validate registries" / "find broken refs", OR after a big content batch (multiple civs/units/buildings added in parallel) where individual PR-level review might miss cross-commit drift, OR before a release cutoff. DO NOT TRIGGER on every commit — this is an on-demand sweep, not an automatic review.
 user_invocable: true
 ---
 

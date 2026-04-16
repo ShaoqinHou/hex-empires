@@ -1,6 +1,6 @@
 ---
 name: add-content
-description: Step-by-step guide for adding new civilizations, leaders, units, technologies, buildings
+description: Step-by-step procedure for adding new civilizations, leaders, units, technologies, buildings, districts, crises, or other game content as data files. TRIGGER WHEN you are about to create a new file in `packages/engine/src/data/**`, OR the user asks to "add a civ" / "new unit" / "new tech" / "new building" / "new crisis" / similar, OR you need to extend a content registry (civilizations, leaders, units, etc). DO NOT TRIGGER for engine-system changes (read `.claude/rules/architecture.md`), or for UI-facing content changes without data backing.
 user_invocable: true
 ---
 
