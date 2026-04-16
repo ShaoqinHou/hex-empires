@@ -21,21 +21,31 @@ set -uo pipefail
 SCRATCH_DIR=".claude/workflow/scratch"
 mkdir -p "$SCRATCH_DIR" 2>/dev/null || exit 0
 
-# Tool payload JSON is in $CLAUDE_TOOL_INPUT; check if this was a commit-producing op
-if [ -z "${CLAUDE_TOOL_INPUT:-}" ]; then exit 0; fi
+# Claude Code delivers the hook payload as JSON on stdin. The shape is:
+#   { session_id, transcript_path, cwd, permission_mode, hook_event_name,
+#     tool_name, tool_input: { command, description, ... } }
+# Previous revisions tried to read CLAUDE_TOOL_INPUT from env, which is NOT
+# set by Claude Code — every PostToolUse fire silently produced empty CMD
+# and exited zero. Root cause diagnosed 2026-04-16 via a debug-probe hook
+# that captured stdin + env on a real invocation.
+STDIN_PAYLOAD=$(cat 2>/dev/null || echo "")
+if [ -z "$STDIN_PAYLOAD" ]; then exit 0; fi
 
-# Extract the command. If node isn't available, fail-open.
-# NOTE: node child processes only see exported env vars. CLAUDE_TOOL_INPUT is
-# exported to us by Claude Code, so passing it through directly via
-# `process.env.CLAUDE_TOOL_INPUT` works; previous revision used `process.env.RAW`
-# on a non-exported local, which silently always produced an empty CMD.
+# Extract the command the tool was asked to run. Only bash-tool payloads
+# carry a meaningful `command`; other tools have different tool_input
+# shapes and will fall through to the empty-CMD exit below.
 CMD=""
 if command -v node >/dev/null 2>&1; then
-  CMD=$(node -e "
-    try {
-      const x = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '');
-      process.stdout.write(String(x.command || x.cmd || ''));
-    } catch (e) {}
+  CMD=$(printf '%s' "$STDIN_PAYLOAD" | node -e "
+    let d = '';
+    process.stdin.on('data', c => d += c);
+    process.stdin.on('end', () => {
+      try {
+        const x = JSON.parse(d);
+        const ti = (x && x.tool_input) || {};
+        process.stdout.write(String(ti.command || ti.cmd || ''));
+      } catch (e) {}
+    });
   " 2>/dev/null || echo "")
 fi
 

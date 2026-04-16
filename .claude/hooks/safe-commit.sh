@@ -35,20 +35,25 @@ if [ ! -f "$SENTINEL_FILE" ]; then
   exit 0
 fi
 
-# Bail fast if this isn't a Bash tool invocation carrying a git-commit
-# command. The PreToolUse matcher filters to Bash; we still parse the
-# payload in case it's `git log`, `git status`, etc.
-if [ -z "${CLAUDE_TOOL_INPUT:-}" ]; then
+# Claude Code delivers the hook payload as JSON on stdin. Parse it to
+# extract the bash command being attempted.
+STDIN_PAYLOAD=$(cat 2>/dev/null || echo "")
+if [ -z "$STDIN_PAYLOAD" ]; then
   exit 0
 fi
 
 CMD=""
 if command -v node >/dev/null 2>&1; then
-  CMD=$(node -e "
-    try {
-      const x = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '');
-      process.stdout.write(String(x.command || x.cmd || ''));
-    } catch (e) {}
+  CMD=$(printf '%s' "$STDIN_PAYLOAD" | node -e "
+    let d = '';
+    process.stdin.on('data', c => d += c);
+    process.stdin.on('end', () => {
+      try {
+        const x = JSON.parse(d);
+        const ti = (x && x.tool_input) || {};
+        process.stdout.write(String(ti.command || ti.cmd || ''));
+      } catch (e) {}
+    });
   " 2>/dev/null || echo "")
 fi
 

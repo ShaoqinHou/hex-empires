@@ -9,20 +9,25 @@ mkdir -p "$WORKFLOW_DIR"
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# $CLAUDE_TOOL_INPUT is the JSON tool payload; extract the command field if
-# present, else fall back to the raw payload, else empty.
-# NOTE: node child processes only see exported env vars. Previous revision
-# used `process.env.RAW` on a non-exported local, silently always emitting
-# "(command not captured)". Read CLAUDE_TOOL_INPUT directly from env instead.
+# Claude Code delivers the hook payload as JSON on stdin (NOT via
+# CLAUDE_TOOL_INPUT env — that var is not set by the harness). Earlier
+# revisions tried env; they all produced "(command not captured)" because
+# the var was always unset. Diagnosed 2026-04-16 via a debug probe.
+STDIN_PAYLOAD=$(cat 2>/dev/null || echo "")
 CMD=""
-if command -v node >/dev/null 2>&1 && [ -n "${CLAUDE_TOOL_INPUT:-}" ]; then
-  CMD=$(node -e "
-    try {
-      const x = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '');
-      process.stdout.write(String(x.command || x.cmd || '').slice(0, 120));
-    } catch (e) {
-      process.stdout.write(String(process.env.CLAUDE_TOOL_INPUT || '').slice(0, 120));
-    }
+if command -v node >/dev/null 2>&1 && [ -n "$STDIN_PAYLOAD" ]; then
+  CMD=$(printf '%s' "$STDIN_PAYLOAD" | node -e "
+    let d = '';
+    process.stdin.on('data', c => d += c);
+    process.stdin.on('end', () => {
+      try {
+        const x = JSON.parse(d);
+        const ti = (x && x.tool_input) || {};
+        process.stdout.write(String(ti.command || ti.cmd || '').slice(0, 120));
+      } catch (e) {
+        process.stdout.write(d.slice(0, 120));
+      }
+    });
   " 2>/dev/null || echo "")
 fi
 CMD="${CMD:-(command not captured)}"
