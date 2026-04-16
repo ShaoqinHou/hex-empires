@@ -171,8 +171,14 @@ fi
 # Running the orchestrator itself on Sonnet instead of the user's
 # default (Opus) cuts per-drain cost ~10x with no accuracy impact.
 LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
+# MSYS_NO_PATHCONV=1 is CRITICAL on Windows Git Bash / MINGW64. Without it,
+# MSYS's POSIX-to-Windows path translator sees the leading `/` of the skill
+# invocation argument and rewrites `/commit-review --drain-queue` to
+# `C:/Program Files/Git/commit-review --drain-queue`. Claude then receives
+# a mangled prompt. Documented in CLAUDE.md as the general-case Windows
+# platform note.
 (
-  claude --dangerously-skip-permissions --model sonnet \
+  MSYS_NO_PATHCONV=1 claude --dangerously-skip-permissions --model sonnet \
     -p "/commit-review --drain-queue" \
     > "$LOG_FILE" 2>&1
   rm -rf "$LOCK_DIR" 2>/dev/null
