@@ -48,7 +48,7 @@ export function TopBar() {
         background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
         borderBottom: '2px solid var(--color-border)',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-        zIndex: 100,
+        zIndex: 'var(--panel-z-chrome)' as unknown as number,
       }}>
 
       {/* Left: Turn & Age */}

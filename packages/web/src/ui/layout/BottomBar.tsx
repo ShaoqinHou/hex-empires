@@ -108,7 +108,7 @@ export function BottomBar() {
         background: 'linear-gradient(0deg, var(--color-bg) 0%, var(--color-surface) 100%)',
         borderTop: '2px solid var(--color-border)',
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
-        zIndex: 100,
+        zIndex: 'var(--panel-z-chrome)' as unknown as number,
       }}
     >
       {/* ── Stack picker portrait strip (shown when 2+ entities on selected tile) ── */}

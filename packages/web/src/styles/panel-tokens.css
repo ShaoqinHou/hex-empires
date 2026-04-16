@@ -37,11 +37,12 @@
   --panel-backdrop: rgba(0, 0, 0, 0.65);
 
   /* Z-index scale
-   * TopBar/BottomBar sit at 100; HelpPanel historically at 200.
-   * info     — above map, below top bar dropdowns
-   * overlay  — above top bar so the panel chrome is clickable
-   * modal    — above everything */
+   * chrome   — always-visible layout (TopBar, BottomBar)
+   * info     — above map, below top bar dropdowns (event log, minimap)
+   * overlay  — above top bar so the panel chrome is clickable (most panels)
+   * modal    — above everything (age transition, crisis, victory) */
   --panel-z-info: 90;
+  --panel-z-chrome: 100;
   --panel-z-overlay: 110;
   --panel-z-modal: 210;
 
