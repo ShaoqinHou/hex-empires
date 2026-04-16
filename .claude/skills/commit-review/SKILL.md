@@ -80,9 +80,16 @@ Agent tool, `subagent_type: general-purpose`, `model: sonnet`. Prompt template:
 >
 > Review report: `.claude/workflow/scratch/review-<current_sha>.md`
 >
-> (auto mode only:) **AUTO_MODE=1.** You MUST create and commit to a new branch named `auto-fix/<short-sha>-<ts>` (short-sha = first 7 chars of `<current_sha>`, ts = `date -u +%Y%m%dT%H%M%SZ`). Do NOT commit on the current branch. Record the branch name in your fix log's `commits:` list as `branch:<name>, sha:<commit-sha>`.
+> (auto mode only:) **AUTO_MODE=1.** You MUST create an isolated worktree and do all editing there. `git checkout` in the main repo mutates the shared working tree and pulls files out from under an active human session. Instead:
+> ```bash
+> BRANCH="auto-fix/<short-sha>-<ts>"  # short-sha = first 7 of <current_sha>, ts = `date -u +%Y%m%dT%H%M%SZ`
+> WORKTREE=".claude/worktrees/$BRANCH"
+> git worktree add -b "$BRANCH" "$WORKTREE" HEAD
+> cd "$WORKTREE"   # all edits + tests + commit happen here
+> ```
+> Record `branch:<name>, sha:<commit-sha>` in the fix log's `commits:` list. Do NOT `git checkout` the branch in the main checkout; that changes the human's visible files.
 >
-> (manual mode only:) No AUTO_MODE flag — commit on the current branch per default behavior.
+> (manual mode only:) No AUTO_MODE flag — commit on the current branch in the main checkout per default behavior.
 >
 > HEAD-MOVED check per your prompt: if `git rev-parse HEAD` differs from the `commit:` field in the review report, write a `HEAD-MOVED` dispute and exit without committing.
 >
