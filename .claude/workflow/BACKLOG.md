@@ -27,7 +27,8 @@ These items unblock the next cycle's experiment. Ordered by leverage.
 | SYS-D-2 | `skipLibCheck: true` removal — masks engine→web `.d.ts` drift | audit B4C | medium |
 | SYS-D-3 | Root `npm test` doesn't chain `test:e2e` (`test:all` exists) | audit B4C | 1 line |
 | SYS-D-4 | 12 more `toBeGreaterThan(0)` vague assertions (civic/production/age/etc.) | audit B4A | 1 cycle |
-| SYS-D-5 | TopBar + BottomBar literal `zIndex: 100` → token | gap-sweep N1 | trivial |
+| ~~SYS-D-5~~ | ~~TopBar + BottomBar literal `zIndex: 100` → token~~ | gap-sweep N1 | **DONE** — commit `ce48c0a`, Phase 7 first loop run, review PASS with 2 WARN follow-ups (see SYS-D-12) |
+| SYS-D-12 | Migrate inline `zIndex: 'var(--panel-z-*)' as unknown as number` casts (4 occurrences in TopBar + BottomBar) to CSS classes applied via `className`. Eliminates the type-system double-cast pattern; uses the token natively in CSS where `z-index` accepts custom properties without coercion. Flagged by Reviewer on commit `ce48c0a` as findings F-a1b2c3d4 + F-e5f6g7h8. | Phase 7 review | small (30 min) |
 | SYS-D-7 | Wire `wonderPlacementSystem` + `resourceAssignmentSystem` into DEFAULT_SYSTEMS pipeline | gap-analysis-v3 | medium |
 | SYS-D-8 | `AudioManager.ts` `@ts-nocheck` — narrow types, remove flag | audit | medium |
 | SYS-D-9 | Residual `toBeDefined()` / conditional-guard asserts beyond 4A scope | audit | 1 cycle |
