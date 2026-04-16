@@ -1,3 +1,7 @@
+---
+purpose: Running registry of all HUD overlays (mirrors hudRegistry.ts). Guarded by hud-registry-sync.test.ts — stays in lockstep with the code registry.
+---
+
 # HUD Elements — Running Registry
 
 This doc is the human-readable index of every HUD / overlay element currently in the tree. It pairs with `packages/web/src/ui/hud/hudRegistry.ts`, whose `HUDElementId` union is the type-level source of truth. When the two disagree, the registry file wins — but reviewers should expect this doc to track it within one cycle. Add a row here whenever you land a new overlay (the `/add-hud-element` skill's checklist enforces it); update or remove rows when an overlay's shell mode, tier behavior, or sticky flag changes.

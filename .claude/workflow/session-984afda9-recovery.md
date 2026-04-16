@@ -1,3 +1,7 @@
+---
+purpose: Historical recovery brief for the interrupted Apr 2026 session. Reference only; no active content.
+---
+
 # Session 984afda9 — Recovery Brief
 
 **Origin:** `~/.claude/projects/C--Users-housh-Documents-monoWeb-hex-empires/984afda9-6e89-4c73-88fa-37435e8e51d6.jsonl` (29M, 10,718 lines, 197 user prompts, 1,850 assistant responses)

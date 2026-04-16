@@ -1,3 +1,7 @@
+---
+purpose: Workflow validation log. End-to-end evidence of the commit-review loop working on real code + WF-AUTO-14 refactor rationale.
+---
+
 # Phase 6d — Workflow Findings from the Phase 6c Blind Eval
 
 Date: 2026-04-16

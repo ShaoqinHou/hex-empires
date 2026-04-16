@@ -1,3 +1,7 @@
+---
+purpose: Live UI cleanup backlog (C4..C13). Residual items after the M31..M37 + M-HUD1..4 panel/overlay refactors.
+---
+
 # UI Cleanup — Remaining (2026-04-15)
 
 Final sweep after M31–M37 panel refactor and M-HUD1..4 overlay refactor. This

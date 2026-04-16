@@ -1,3 +1,7 @@
+---
+purpose: Gap analysis of engine vs civ7-rulebook, documenting intentional simplifications and remaining divergences.
+---
+
 # Gap Analysis v3 — Post-Audit Source of Truth (2026-04-10)
 
 Compiled from 4-agent code audit against civ7-rulebook.md.

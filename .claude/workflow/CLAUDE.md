@@ -1,3 +1,7 @@
+---
+purpose: TDD 6-phase development process + autonomous-mode continuation directive (don't stop mid-list when user says "full auto").
+---
+
 # TDD Workflow (Game Development)
 
 ## Autonomous-mode directive (continuation policy)

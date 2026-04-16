@@ -1,3 +1,7 @@
+---
+purpose: Auto-appended log by hooks (command failures, review skips, PRINCIPLE-GAP entries). Humans triage periodically.
+---
+
 ## Issues Log
 <!-- Hooks auto-append entries here. Format: -->
 <!-- - [YYYY-MM-DDTHH:MM:SSZ] [category] description -->
@@ -5,3 +9,5 @@
 - [2026-04-16T06:23:01Z] [command_failure] `cd "C:/Users/housh/Documents/monoWeb/hex-empires" && \   echo "--- pre-commit state ---" && \   echo "scratch contents:" `
 - [2026-04-16T07:20:58Z] [command_failure] `ls "C:\Users\housh\Documents\monoWeb\hex-empires\.claude\workflow\scratch\" 2>&1 `
 - [2026-04-16T07:26:49Z] [review_skipped] commit 61c1fc7 — Skip-Review: manual WARN cleanup following auto-drive; no new code shape.
+- [2026-04-16T07:40:01Z] [command_failure] `ls "C:\Users\housh\Documents\monoWeb\hex-empires\.claude\workflow\scratch\" `
+- [2026-04-16T07:47:07Z] [command_failure] `ls -la "C:/Users/housh/Documents/monoWeb/hex-empires/.claude/workflow/scratch/.review.lock/" 2>/dev/null `

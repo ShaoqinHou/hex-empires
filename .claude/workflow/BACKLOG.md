@@ -1,3 +1,7 @@
+---
+purpose: Open work items (SYS-D codebase cleanups, CNT-D content gaps, WF-AUTO workflow refactors). SSOT for deferred work.
+---
+
 # Backlog — open work
 
 Single source of truth for deferred/pending work. Populated 2026-04-16 from audit-status, ui-cleanup-remaining, and STATUS.md's "known remaining work." When items land, move them to commit messages and delete from here.

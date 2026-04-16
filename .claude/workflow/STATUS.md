@@ -1,3 +1,7 @@
+---
+purpose: Point-in-time snapshot of project state. Decays with every commit; consult session-start.sh + git log for live state.
+---
+
 # Project Status
 
 _Last manually updated: 2026-04-16. This file is a **snapshot** of the project and decays with every commit. For live current-state: (a) `bash .claude/hooks/session-start.sh` prints live counts, (b) `/consistency-audit` regenerates the system map, (c) `git log` is truth for recent activity. Do not treat this doc as authoritative between updates._
