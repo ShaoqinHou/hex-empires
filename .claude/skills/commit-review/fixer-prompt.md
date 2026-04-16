@@ -11,13 +11,13 @@ You address findings from a review report. You DO NOT review code yourself, you 
 
 ## What you do
 
-1. Parse the review report. List `BLOCK` findings in order (lowest line number first within each file).
+1. Parse the review report. Build the list of findings where `severity: block`. **IGNORE findings with `severity: warn` or `severity: note`** — those are for human attention, not yours. The review-outcome file carries them forward for later triage.
 2. For each BLOCK finding:
    - Read the file + surrounding context.
    - Apply a minimal edit matching the `suggested-fix`.
    - If the suggested fix would break typing, break tests, or is structurally invalid, DO NOT force it — raise a dispute (below).
 3. Run relevant tests after each file (e.g. `npm run test:engine` for engine edits, `vitest run` for web).
-4. Stage + commit with `fix(review): <finding-ids>` message.
+4. Stage + commit with `fix(review): <finding-ids>` message. The finding-ids list must contain ONLY block-severity ids.
 5. Write `workflow/scratch/fix-log-<sha>.md` with what you did.
 
 ## Dispute protocol
@@ -38,10 +38,11 @@ The loop orchestrator will invoke the Arbiter agent (Opus) to rule.
 
 ## Hard constraints
 
-- **Only address findings in the report.** No "while I'm here" fixes.
+- **BLOCK severity only, ever.** You do NOT fix WARN. You do NOT fix NOTE. Even if a WARN's suggested-fix is one trivial line. Even if it's on the same line as a BLOCK you're fixing. Even if you think it's an "obviously related" cleanup. The review report already surfaces WARN/NOTE findings to the human for later — your job is exclusively to clear the gate (BLOCKs) so the commit can stand. Pre-commit self-check: enumerate every line you plan to edit; map each edit to a BLOCK finding id. If any planned edit does not map to a BLOCK, delete it from your plan. This check is mandatory.
+- **Only address findings in the report.** No "while I'm here" fixes, no adjacent tidy-ups, no renaming.
 - **Do not add tests.** If a fix requires a test, flag it in the fix log as `needs-test` — don't write one.
 - **Do not reorganize files** beyond what the specific finding requires.
-- **Each fix-commit is surgical** — fix 1-5 findings per commit, group by file when possible.
+- **Each fix-commit is surgical** — fix 1-5 BLOCK findings per commit, group by file when possible.
 - **Run tests** after every file edit. If tests break, revert that edit and raise a dispute.
 - **No review scope.** You don't judge rule applicability — the reviewer already did.
 - **HEAD-MOVED check.** Before any edit, run `git rev-parse HEAD` and compare to the `commit:` field in the review report's YAML front-matter. If they differ, write a dispute block with `type: HEAD-MOVED` and exit without committing. The orchestrator re-queues the review against the new HEAD. This prevents you from editing files the user just changed in their active session.

@@ -101,10 +101,16 @@ Wait for completion. Read `.claude/workflow/scratch/fix-log-<current_sha>.md`.
 
 Parse the fix log. Branches:
 
-- **All BLOCKs fixed, no disputes** → Fixer produced a commit. Read the commit's sha from the `commits:` list (in auto mode it's `branch:<name>, sha:<hex>`; in manual mode it's just `<hex>`). Record the branch (auto mode). Set `previous_sha = current_sha`, `current_sha = <fixer_commit_sha>`, `iter += 1`. Loop back to 2a.
-- **HEAD-MOVED dispute** → same as 2d: re-queue, record, move on.
+- **All BLOCKs fixed, no disputes** → Fixer produced a commit. This is NOT a terminal state — you must run iter-2 Reviewer next to confirm the fix actually closed the findings. Steps:
+    1. Read the commit sha from the fix log's `commits:` list. In auto mode the entry is `branch:<name>, sha:<hex>` — parse BOTH. In manual mode it's just `<hex>`.
+    2. (Auto mode) Record the branch name — it will go in the outcome file's `auto_fix_branches` list.
+    3. Set `previous_sha = current_sha`. Set `current_sha = <fixer_commit_sha>`. Increment `iter`.
+    4. **Loop back to step 2a (idempotency check) with the new current_sha.** The next iteration's Reviewer will re-audit the Fixer's commit; if it comes back PASS, you record the sha as done in step 3 and move on. **Do NOT skip iter-2. Do NOT treat "Fixer committed" as "this sha is done".**
+- **HEAD-MOVED dispute** → same as 2d: re-queue the target_sha, record `final_state: head-moved` in the outcome file, move on to the next target_sha.
 - **≥ 1 substantive dispute (type ≠ HEAD-MOVED)** → spawn Arbiter (2g).
-- **Iter ≥ 3 without PASS** → STALLED. Append to `.claude/workflow/issues.md`: `- [<ts>] [review_stalled] commit <target_sha> — <N> BLOCKs still open after 3 iters`. Record in outcome. Move to next target_sha.
+- **Iter ≥ 3 without PASS** → STALLED. Append to `.claude/workflow/issues.md`: `- [<ts>] [review_stalled] commit <target_sha> — <N> BLOCKs still open after 3 iters`. Record `final_state: stalled` in the outcome. Move on.
+
+**IMPORTANT loop invariant:** every target_sha's loop ends in exactly one of: `pass`, `stalled`, `head-moved`, `malformed`. The only way to transition to `pass` from a FAIL verdict is a successful iter-2 (or iter-3) Reviewer run. "Fixer succeeded" alone does NOT count — you must run the next Reviewer iteration.
 
 ### 2g. Spawn the Arbiter (only on substantive dispute)
 
@@ -125,9 +131,17 @@ Read the dispute ruling. Three outcomes:
 - `reviewer-correct` → dispute overruled. Re-spawn Fixer with the arbiter's explanation attached, asking for a different approach. `iter += 1`.
 - `escalate-human` → STALLED. Append to `issues.md`. Record. Move on.
 
-## Step 3 — Per-sha outcome file
+## Step 3 — Per-sha outcome file (MANDATORY before moving on)
 
-After each target_sha resolves (PASS / STALLED / HEAD-MOVED / auth-fail / malformed), write `.claude/workflow/scratch/review-outcome-<target_sha>.md`:
+You MUST write this file for every target_sha before advancing to the next one (or exiting). It is not optional. It is not something the orchestrator can decide to skip because "the work looks done". If you skip this, the human has no record of what the driver did, session-start shows nothing, and the human either re-runs the review manually (wasting cost) or doesn't notice that a sha went through.
+
+**Before advancing to the next target_sha OR before releasing the lock, confirm this file exists:**
+
+```bash
+test -f .claude/workflow/scratch/review-outcome-<target_sha>.md || echo "MISSING — write it now"
+```
+
+The file path uses the ORIGINAL target_sha (the sha that landed from the hook), not any Fixer-produced commit sha. File format:
 
 ```markdown
 ---
@@ -155,7 +169,7 @@ ruling if any, final state.>
 <WARN and NOTE findings carried over. These are logged, not fixed.>
 ```
 
-## Step 4 — Batch summary (auto mode only)
+## Step 4 — Batch summary (auto mode only, MANDATORY before exiting)
 
 At the end of `--drain-queue`, write `.claude/workflow/scratch/last-review-summary.md`:
 
@@ -178,9 +192,27 @@ auto_fix_branches:
 reads the top-line.>
 ```
 
-## Step 5 — Exit
+## Step 5 — Exit checklist
 
-Do not release the lock. The spawning hook's subshell releases it as its last line after you return. Exit cleanly.
+Before you stop, run through this checklist. Every item must be true:
+
+```
+[ ] For every target_sha in the original list, one of:
+    (a) .claude/workflow/scratch/review-outcome-<target_sha>.md exists with final_state filled in, OR
+    (b) the target_sha was re-queued (HEAD-MOVED path) and the queue file still has it
+
+[ ] .claude/workflow/scratch/last-review-summary.md was written this run (auto mode only), with drain_finished set and counts accurate
+
+[ ] For any `final_state: pass` target_sha where Fixer ran: you invoked Reviewer at least twice (iter 1 + iter ≥2) and the final iteration returned PASS
+
+[ ] Lock release is handled by the hook's subshell — you do NOT rmdir .review.lock yourself
+
+[ ] No pending in-flight sub-agents (you waited for each Agent tool call to return before moving on)
+```
+
+If any box is unchecked, go back and fix it. Exiting with an unchecked box means the human will open their next session and see a dead driver, stale lock, and missing outcome files — exactly the failure mode this checklist prevents.
+
+Once all items are ticked: exit cleanly. The hook's background subshell will release the lock and the driver log will flush.
 
 ## Wait-for-artifact pattern
 
