@@ -123,6 +123,12 @@
   --panel-button-civics:    #cc5de8;  /* magenta */
   --panel-button-diplomacy: #ba68c8;  /* purple */
   --panel-button-age:       #ffd54f;  /* gold — dark-text variant */
+
+  /* Turn badge — pre-existing raw hex on the "Turn N" text, now
+   * tokenized per review-bb4a89d F-48c16af3. Dark text on the bright
+   * accent gradient; the literal resolves to the same value as
+   * --color-bg but is named semantically for readability. */
+  --panel-turn-badge-text: #0d1117;
 }
 
 /* Layout chrome utility classes — SYS-D-12.
