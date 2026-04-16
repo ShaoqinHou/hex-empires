@@ -11,6 +11,17 @@
         }]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/safe-commit.sh",
+          "timeout": 5000,
+          "statusMessage": "Checking worktree guard..."
+        }]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

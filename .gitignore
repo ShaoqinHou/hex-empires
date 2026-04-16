@@ -22,7 +22,11 @@ Thumbs.db
 .claude/workflow/scratch/*
 !.claude/workflow/scratch/.gitignore
 .claude/workflow/verify-screenshot-*.png
+.claude/workflow/.stop_hook_active
 .claude/worktrees/
+# Per-worktree sentinel for safe-commit.sh — written at worktree spawn,
+# removed at teardown. Must never be committed (see WF-GUARD-1).
+.claude/worktree-sentinel
 test-results/
 packages/web/test-results/
 packages/web/e2e/screenshot-*.png
