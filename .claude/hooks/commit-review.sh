@@ -21,24 +21,30 @@ set -uo pipefail
 SCRATCH_DIR=".claude/workflow/scratch"
 mkdir -p "$SCRATCH_DIR" 2>/dev/null || exit 0
 
-# Tool payload JSON is in $CLAUDE_TOOL_INPUT; check if this was `git commit`
-RAW="${CLAUDE_TOOL_INPUT:-}"
-if [ -z "$RAW" ]; then exit 0; fi
+# Tool payload JSON is in $CLAUDE_TOOL_INPUT; check if this was a commit-producing op
+if [ -z "${CLAUDE_TOOL_INPUT:-}" ]; then exit 0; fi
 
-# Extract the command. If jq or node aren't available, fail-open.
+# Extract the command. If node isn't available, fail-open.
+# NOTE: node child processes only see exported env vars. CLAUDE_TOOL_INPUT is
+# exported to us by Claude Code, so passing it through directly via
+# `process.env.CLAUDE_TOOL_INPUT` works; previous revision used `process.env.RAW`
+# on a non-exported local, which silently always produced an empty CMD.
 CMD=""
 if command -v node >/dev/null 2>&1; then
   CMD=$(node -e "
     try {
-      const x = JSON.parse(process.env.RAW || '');
+      const x = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '');
       process.stdout.write(String(x.command || x.cmd || ''));
     } catch (e) {}
   " 2>/dev/null || echo "")
 fi
 
-# Only fire on `git commit` (not `git commit --help`, not `git log`, etc.)
+# Fire on any command that PRODUCES a commit. cherry-pick + rebase + merge all
+# land commits and should be reviewed the same way direct commits are. We do
+# NOT fire on --abort / --skip / --continue variants that don't produce a new
+# commit; the HEAD-SHA diff below filters those out naturally.
 case "$CMD" in
-  *"git commit"*)
+  *"git commit"*|*"git cherry-pick"*|*"git rebase"*|*"git merge"*|*"git revert"*)
     # Continue
     ;;
   *)
@@ -46,9 +52,23 @@ case "$CMD" in
     ;;
 esac
 
-# Skip if we're in the middle of a rebase / merge / cherry-pick
+# Skip if we're in the middle of an unfinished rebase / merge / cherry-pick.
+# A completed cherry-pick has already cleared CHERRY_PICK_HEAD by the time this
+# hook fires (git's --continue path removes it atomically with the commit), so
+# the presence of these files means we're mid-conflict — no review yet.
 if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || \
    [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
+  exit 0
+fi
+
+# Skip if HEAD didn't move (e.g. `git commit --amend --no-edit` on the same
+# content, or `git cherry-pick --skip`). We compare the pre-command HEAD via
+# ORIG_HEAD which cherry-pick/rebase/merge all set; for plain `git commit`
+# ORIG_HEAD may be stale, so we also accept the fresh-commit case (no parent
+# match yet).
+PREV=$(git rev-parse ORIG_HEAD 2>/dev/null || echo "")
+CURR=$(git rev-parse HEAD 2>/dev/null || echo "")
+if [ -n "$PREV" ] && [ "$PREV" = "$CURR" ]; then
   exit 0
 fi
 

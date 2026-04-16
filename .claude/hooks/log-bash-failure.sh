@@ -11,15 +11,17 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # $CLAUDE_TOOL_INPUT is the JSON tool payload; extract the command field if
 # present, else fall back to the raw payload, else empty.
-RAW="${CLAUDE_TOOL_INPUT:-}"
+# NOTE: node child processes only see exported env vars. Previous revision
+# used `process.env.RAW` on a non-exported local, silently always emitting
+# "(command not captured)". Read CLAUDE_TOOL_INPUT directly from env instead.
 CMD=""
-if command -v node >/dev/null 2>&1 && [ -n "$RAW" ]; then
+if command -v node >/dev/null 2>&1 && [ -n "${CLAUDE_TOOL_INPUT:-}" ]; then
   CMD=$(node -e "
     try {
-      const x = JSON.parse(process.env.RAW || '');
+      const x = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '');
       process.stdout.write(String(x.command || x.cmd || '').slice(0, 120));
     } catch (e) {
-      process.stdout.write(String(process.env.RAW || '').slice(0, 120));
+      process.stdout.write(String(process.env.CLAUDE_TOOL_INPUT || '').slice(0, 120));
     }
   " 2>/dev/null || echo "")
 fi
