@@ -43,12 +43,12 @@ export function TopBar() {
   };
 
   return (
-    <div className="h-12 flex items-center justify-between px-3 select-none"
+    // TODO(SYS-D-12): migrate the inline zIndex cast to a CSS class.
+    <div className="h-12 flex items-center justify-between px-3 select-none layout-chrome-bar"
       style={{
         background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
         borderBottom: '2px solid var(--color-border)',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-        zIndex: 'var(--panel-z-chrome)' as unknown as number,
       }}>
 
       {/* Left: Turn & Age */}
@@ -102,13 +102,12 @@ export function TopBar() {
             ⋯
           </button>
           {showMoreMenu && (
-            <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 min-w-36"
+            <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 min-w-36 layout-chrome-overlay"
               style={{
                 backgroundColor: 'var(--panel-bg)',
-                border: '1px solid var(--panel-border)',
+                border: '1px solid #30363d',
                 boxShadow: 'var(--panel-shadow)',
                 borderRadius: 'var(--panel-radius)',
-                zIndex: 'var(--panel-z-overlay)' as unknown as number,
               }}>
               <MenuButton label="🤝 Trade Routes (X)" testId="open-trade-routes" panelId="tradeRoutes" onClick={() => openFromMenu('tradeRoutes')} />
               <MenuButton label="👑 Governors" panelId="governors" onClick={() => openFromMenu('governors')} />
@@ -159,14 +158,13 @@ export function TopBar() {
           existing aesthetic is preserved while raw hex disappears. */}
       {saveToast && (
         <div
-          className="absolute top-14 right-4 px-4 py-2"
+          className="absolute top-14 right-4 px-4 py-2 layout-chrome-overlay"
           style={{
             backgroundColor: 'var(--panel-status-helpful)',
             color: 'var(--color-bg)',
             borderRadius: 'var(--panel-radius)',
             boxShadow: 'var(--panel-shadow)',
             animation: 'fadeInOut 2s ease-out',
-            zIndex: 'var(--panel-z-overlay)' as unknown as number,
           }}
         >
           {saveToast}
