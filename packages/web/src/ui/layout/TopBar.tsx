@@ -43,7 +43,6 @@ export function TopBar() {
   };
 
   return (
-    // TODO(SYS-D-12): migrate the inline zIndex cast to a CSS class.
     <div className="h-12 flex items-center justify-between px-3 select-none layout-chrome-bar"
       style={{
         background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
@@ -105,7 +104,7 @@ export function TopBar() {
             <div className="absolute right-0 top-9 rounded-lg shadow-xl py-1 min-w-36 layout-chrome-overlay"
               style={{
                 backgroundColor: 'var(--panel-bg)',
-                border: '1px solid #30363d',
+                border: '1px solid var(--panel-border)',
                 boxShadow: 'var(--panel-shadow)',
                 borderRadius: 'var(--panel-radius)',
               }}>
