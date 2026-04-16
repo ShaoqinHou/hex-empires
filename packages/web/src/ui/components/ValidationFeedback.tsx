@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import type { ValidationResult } from '@hex/engine';
 import { useHUDManager } from '../hud/HUDManager';
 import { TooltipShell } from '../hud/TooltipShell';
@@ -25,52 +25,59 @@ interface ValidationFeedbackProps {
  * overlay pins to a fixed screen corner rather than floating near the
  * failed action's anchor.
  *
+ * Phase 6d UI-C-VF1: visibility derives from `HUDManager.isActive` —
+ * the manager's registration map is the single source of truth.
+ * Previously the component shadowed this with a local
+ * `useState<boolean>(isVisible)` toggled by a separate `useEffect`,
+ * the exact antipattern documented in `.claude/rules/ui-overlays.md`
+ * and the one the blind-eval J-shortcut agent copied (review finding
+ * F-1196b755). Cleaning the exemplar here removes the transmission
+ * vector so future HUD agents don't inherit the drift. The shake
+ * animation's lifetime is identical to the toast's, so it's also
+ * derived from `isActive` — no second visibility state.
+ *
  * TODO(hud-cycle-later): enrich `ValidationResult` with an optional
  * `anchor: HexCoord | ScreenCoord` field so the shell can use
  * `position="floating"` and render next to the actual tile / button
  * that rejected the action.
  */
 export function ValidationFeedback({ validation, onAnimationEnd }: ValidationFeedbackProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const { register, dismiss } = useHUDManager();
+  const { register, dismiss, isActive } = useHUDManager();
+  // Single source of truth for visibility: HUDManager registration.
+  const isVisible = isActive('validationFeedback');
 
   useEffect(() => {
-    if (validation && !validation.valid) {
-      setIsVisible(true);
-      setIsAnimating(true);
-      playErrorSound();
+    if (!validation || validation.valid) return undefined;
 
-      // Auto-hide after 3 seconds
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        setIsAnimating(false);
-        onAnimationEnd?.();
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [validation, onAnimationEnd]);
-
-  // Register with HUDManager as sticky so ESC dismisses us via the
-  // manager's precedence chain (panels first, then sticky overlays).
-  // When ESC fires and the manager calls dismiss(), it stops propagation
-  // so the canvas ESC-deselect handler does not fire — preserving the
-  // player's unit selection. The overlay auto-hides after its 3-second
-  // timer regardless.
-  useEffect(() => {
-    if (!isVisible) return undefined;
+    // Register as sticky so ESC dismisses via the manager's precedence
+    // chain (panels first, then sticky overlays). When ESC fires and
+    // the manager calls dismiss(), it stops propagation so the canvas
+    // ESC-deselect handler does not fire — preserving the player's
+    // unit selection. Non-ESC auto-hide is handled by the timer below.
     const unregister = register('validationFeedback', { sticky: true });
-    return () => {
+    playErrorSound();
+
+    // Auto-hide after 3 seconds. Calling dismiss() is the one thing
+    // that flips isVisible (through the registration map); there is
+    // no second `setIsVisible` to keep in sync.
+    const timer = setTimeout(() => {
       dismiss('validationFeedback');
+      onAnimationEnd?.();
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
       unregister();
     };
-  }, [isVisible, register, dismiss]);
+  }, [validation, register, dismiss, onAnimationEnd]);
 
   if (!validation || !isVisible || validation.valid) {
     return null;
   }
+
+  // The shake tint overlay has the same lifetime as the toast body,
+  // so it's gated on isVisible too rather than a second animation flag.
+  const isAnimating = isVisible;
 
   const icon = CATEGORY_ICONS[validation.category];
   const accentVar = CATEGORY_ACCENT_VARS[validation.category];
