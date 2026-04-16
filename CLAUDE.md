@@ -27,7 +27,7 @@ npm run dev:all          # Start web (port 5174)
 npm run dev:web          # Web only
 
 # Testing
-npm test                 # Full suite (engine + web)
+npm test                 # Full suite (engine + web + e2e)
 npm run test:engine      # Engine tests only
 npm run test:web         # Web tests only
 bash .claude/hooks/run-tests.sh                    # Full + marker
