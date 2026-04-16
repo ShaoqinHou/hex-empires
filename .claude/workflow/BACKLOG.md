@@ -13,7 +13,6 @@ These items unblock the next cycle's experiment. Ordered by leverage.
 | WF-ENF-2 (part 1, Fixer) | Fixer-leg smoke test. Hand a real BLOCK review report to a Fixer subagent; verify it follows the fixer contract end-to-end. | P6d | **DONE** — 2026-04-16 |
 | WF-ENF-2 (part 2, Arbiter) | Arbiter-leg smoke test — `fixer-correct` ruling on false-positive BLOCK. Arbiter wrote a self-correcting `reviewer-note`. | P6d | **DONE** — 2026-04-16 |
 | WF-ENF-2 (part 3, multi-iteration) | Full loop smoke test: iter 1 FAIL → Fixer → iter 2 PASS, with inherited finding IDs and regression detection. Iteration was driven manually. | P6d | **DONE** — 2026-04-16 |
-| WF-ENF-2 (part 4, reviewer-correct) | Arbiter siding with Reviewer against a wrongly-disputed valid BLOCK. Needs a handcrafted fixture. Lower priority — symmetric to part 2. | P6d | pending |
 | WF-ENF-2 (part 5, loop-automation) | Driver script / skill body that runs iter 1 → Fixer → iter 2 → ... without a human invoking each agent. | P6d | **DONE** — landed as WF-AUTO-1 (commits `3c4691b` `d87e373` `a1f5275` `7f4426e`) |
 | WF-ENF-2 (part 6, stuck-state) | If Fixer can't converge in 3 iterations, write STALLED entry to `issues.md` and exit. Built into the WF-AUTO-1 orchestrator SKILL (step 2f). | P6d | **DONE** (in SKILL.md) — unvalidated until first real stuck case |
 | WF-ENF-2 (part 7, reviewer-note) | Reviewer-notes accumulate in dispute files but nothing yet injects them into future Reviewer runs. Glue work. | P6d | pending |
@@ -27,9 +26,16 @@ These items unblock the next cycle's experiment. Ordered by leverage.
 | WF-AUTO-11 | Permission-prompt gap: `--dangerously-skip-permissions` alone didn't cover all Write paths in WF-AUTO-7's driver. | WF-AUTO-7 observation | **DONE** — commit `c2d7e42` added `--permission-mode bypassPermissions` to the hook's claude-spawn flag stack. Validated live in WF-AUTO-13: drive on `0e207d8` fully persisted `review-outcome-*.md` + `last-review-summary.md` + truncated queue. |
 | WF-AUTO-12 | Target-scope creep: in WF-AUTO-7 the orchestrator retroactively wrote outcome files for non-queued shas. | WF-AUTO-7 observation | **DONE** — commit `c2d7e42` added a STRICT target-list invariant to SKILL step 1. Validated live in WF-AUTO-13: no retroactive writes observed, only the queued sha was processed. |
 | WF-AUTO-13 | Combined re-validation of AUTO_MODE + BLOCK-only + permission-gate fix + scope guardrail. | post-WF-AUTO-11/12 fixes | **DONE** — 2026-04-16. Commit `0e207d8` (tokenize Turn badge) drove cleanly: Reviewer found planted BLOCK (`#1a1f29` border) + bonus WARN (pre-existing dark-text sibling at PanelButton:199). Fixer created `auto-fix/0e207d8-*`, tokenized the border, committed on branch. Iter-2 PASS. All outcome + summary files persisted. Merged cleanly. |
-| WF-AUTO-3 | Cost rail: queue depth cap (max N pending) + per-day commit counter. Add after first cost surprise if any. | robustness-agent review | pending |
-| WF-AUTO-4 | Re-verify background `claude -p --dangerously-skip-permissions` auth on MINGW64 — currently assumed to inherit OAuth via `~/.claude/.credentials.json` but unverified for disowned-subshell case. Add auth probe to the hook before spawning. | robustness-agent review | pending |
-| WF-ENF-1 | ESLint rule banning `useState<boolean>` whose setter is only called from a `useEffect` watching a context-computable value. Alt: content-style lint banning `useState<boolean>.*setIsVisible` in `ui/components/*.tsx` + `ui/panels/*.tsx` unless preceded by `// enforcement-exception`. | P6d skeptic review | pending |
+| WF-AUTO-14 | Workflow self-documentation refactor: principles (index), engine-patterns (missing rule coverage), coordination, continuation directive, unify main/subagent injection, MANIFEST + file headers + /audit-workflow skill, commit-review logs PRINCIPLE-GAP to issues.md. | user request 2026-04-17 | in progress |
+
+### Removed from BACKLOG (2026-04-17 — triage after 3-agent consultation)
+
+Four items removed as permanent defers with no current-evidence trigger. Retriggered by real-world conditions, not BACKLOG presence:
+- **WF-ENF-2 part 4** (Arbiter reviewer-correct smoke test) — symmetric to part 2; will validate itself on first real wrongly-disputed BLOCK
+- **WF-ENF-2 part 7** (reviewer-note injection) — no accumulated notes yet; scope-down of WF-AUTO-14 logs PRINCIPLE-GAP to issues.md, which covers 80% of the intent more simply
+- **WF-AUTO-3** (cost rails — queue depth cap, per-day budget) — retrigger when first cost surprise happens; no evidence the ~$0.25-0.70 per drive is a problem
+- **WF-AUTO-4** (MINGW64 auth probe formalization) — worked in 3/3 live drives; retrigger on first failure
+- **WF-ENF-1** (ESLint rule for useState-boolean antipattern) — own-cycle project; Reviewer already catches it via `ui-overlays.md` trap table; low marginal value
 
 ## System / codebase (fixable now)
 
