@@ -194,9 +194,9 @@ function PanelButton({ label, color, dark, onClick, panelId }: { label: string; 
       data-panel-trigger={panelId}
       className="px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
       style={{
-        background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+        background: `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color} 80%, transparent) 100%)`,
         color: dark ? '#0d1117' : '#fff',
-        border: `1px solid ${color}80`,
+        border: `1px solid color-mix(in srgb, ${color} 50%, transparent)`,
         minHeight: '28px',
       }}
       onClick={onClick}
