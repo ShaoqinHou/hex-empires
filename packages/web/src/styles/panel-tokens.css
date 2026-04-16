@@ -127,8 +127,11 @@
   /* Turn badge — pre-existing raw hex on the "Turn N" text, now
    * tokenized per review-bb4a89d F-48c16af3. Dark text on the bright
    * accent gradient; the literal resolves to the same value as
-   * --color-bg but is named semantically for readability. */
-  --panel-turn-badge-text: #0d1117;
+   * --color-bg but is named semantically for readability.
+   * Border color tokenized per review-0e207d8 F-c68b3dd0. Near-black
+   * dark background shade that frames the accent gradient. */
+  --panel-turn-badge-text:   #0d1117;
+  --panel-turn-badge-border: #1a1f29;
 }
 
 /* Layout chrome utility classes — SYS-D-12.

@@ -56,7 +56,7 @@ export function TopBar() {
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
             boxShadow: '0 2px 4px rgba(88, 166, 255, 0.3)',
-            border: '1px solid #1a1f29',
+            border: '1px solid var(--panel-turn-badge-border)',
           }}>
           <span className="text-xs font-bold" style={{ color: 'var(--panel-turn-badge-text)' }}>
             Turn {state.turn}
