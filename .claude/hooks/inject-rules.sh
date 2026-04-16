@@ -1,9 +1,126 @@
 #!/bin/bash
-# SubagentStart hook — injects rules into subagent context.
-# Expanded 2026-04-16 to cover panel + HUD patterns (audit finding: UI violations
-# were the largest category of drift; subagents editing UI files had no injected
-# guidance for panels.md / ui-overlays.md).
+# SubagentStart AND SessionStart hook — injects the canonical rules bundle
+# into agent context. Single source of truth: both entry points emit the
+# same additionalContext JSON.
+#
+# Design (WF-AUTO-14):
+#   - Short curated cheat sheet PLUS full contents of three high-leverage
+#     docs (principles, engine-patterns, coordination). Other rule docs
+#     referenced by path — agent reads them on demand via Read tool.
+#   - Token budget: aim for ~6k tokens (~24 KB). Skeptic agent warned that
+#     >8 KB starts degrading Sonnet's rule-adherence at context-window
+#     boundaries.
+#   - Uses Python's json.dumps for escaping safety. Validates by re-parsing.
+#   - Fallback path if Python fails: static minimal bundle + log to
+#     issues.md.
+
+set -uo pipefail
+
+# High-leverage docs to include in full (after YAML front-matter strip).
+FULL_DOCS=(
+  .claude/rules/principles.md
+  .claude/rules/engine-patterns.md
+  .claude/rules/coordination.md
+)
+
+if command -v python >/dev/null 2>&1; then
+  OUTPUT=$(python - "${FULL_DOCS[@]}" <<'PY'
+import sys, json, os, re
+
+CHEAT_SHEET = """## Hex-Empires Workflow Cheat Sheet (WF-AUTO-14)
+
+You have the three highest-leverage rule docs appended in full below: principles.md
+(named principles + trap registry), engine-patterns.md (state mutation, state.config,
+seeded RNG, age transitions), and coordination.md (sub-agent dispatch + synthesis).
+
+Other rule docs are at these paths — read them on demand with the Read tool when
+you are working in their area:
+
+- `.claude/rules/architecture.md` — engine/renderer separation, system pipeline shape
+- `.claude/rules/import-boundaries.md` — import direction constraints (mechanical)
+- `.claude/rules/data-driven.md` — registry pattern, data-file rules
+- `.claude/rules/panels.md` — PanelShell / PanelManager protocol (spec)
+- `.claude/rules/ui-overlays.md` — TooltipShell / HUDManager protocol (spec)
+- `.claude/rules/tech-conventions.md` — TypeScript idioms, ports, platform notes
+- `.claude/rules/testing.md` — L1/L2/L3/L4 test depth framework, concrete assertions
+- `.claude/workflow/CLAUDE.md` — TDD workflow + continuation directive
+
+Skills (invocable with the Skill tool):
+
+- `/add-panel`, `/add-hud-element`, `/add-content` — step-by-step procedures for
+  the three recurring add-X shapes. Each skill has explicit TRIGGER conditions
+  in its description — invoke by name when those conditions match.
+- `/verify` — E2E browser verification via chrome-devtools MCP
+- `/build`, `/test` — command references
+- `/consistency-audit` — on-demand content-tree sweep
+- `/commit-review` — manual trigger for the three-agent review loop
+- `/spawn-worktree` — isolated worktree for parallel agents
+- `/audit-workflow` — verify .claude/ consistency + MANIFEST.md accuracy
+
+Invariants — catches all three below at write time avoid 80%+ of Reviewer findings:
+
+1. **Engine is DOM-free.** No react, no document, no canvas, no Math.random().
+2. **Immutable state.** Systems return new objects; never `.set()` on state.X.
+   See engine-patterns.md § Immutable state updates.
+3. **Token-only chrome.** Raw hex (#xxxxxx) in panel/HUD chrome is a BLOCK.
+   Use var(--panel-*) / var(--hud-*). See principles.md trap registry.
+
+When reviewing a commit, cite trap names from the trap registry when applicable.
+When writing code, self-review against the 3 invariants before `git commit`.
+
+---
+
+"""
+
+parts = [CHEAT_SHEET]
+for path in sys.argv[1:]:
+    if not os.path.isfile(path):
+        parts.append(f"### [missing: {path}]\n\n")
+        continue
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    # Strip YAML front-matter block (--- ... ---) if present at top.
+    content = re.sub(r'^---\n.*?\n---\n', '', content, count=1, flags=re.DOTALL)
+    parts.append(f"## Source: {path}\n\n{content}\n\n---\n\n")
+
+full = ''.join(parts)
+payload = {"additionalContext": full}
+
+print(json.dumps(payload))
+PY
+  )
+  EXIT=$?
+else
+  OUTPUT=""
+  EXIT=1
+fi
+
+if [ "$EXIT" -eq 0 ] && [ -n "$OUTPUT" ]; then
+  VALID=$(printf '%s' "$OUTPUT" | python -c "
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    assert 'additionalContext' in d
+    print('OK')
+except Exception as e:
+    print('FAIL:' + str(e))
+" 2>/dev/null || echo "FAIL:python")
+else
+  VALID="FAIL:no-output"
+fi
+
+if [ "${VALID%%:*}" = "OK" ]; then
+  printf '%s\n' "$OUTPUT"
+  exit 0
+fi
+
+# Fallback: hand-crafted minimal bundle. Log the failure.
+ISSUES=".claude/workflow/issues.md"
+if [ -f "$ISSUES" ]; then
+  TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  echo "- [$TS] [inject-rules-fallback] $VALID" >> "$ISSUES"
+fi
 
 cat <<'EOF'
-{"additionalContext": "## Injected Rules for Subagents\n\n### Import Boundaries (CRITICAL)\n- engine/ CANNOT import from web/, React, or any DOM/browser API\n- systems/ CANNOT import from each other — each system is independent\n- state/ CANNOT import from systems/ (layering direction)\n- data/ files are pure data — only import from types/\n- canvas/ and ui/ are independent — cannot import from each other\n- providers/ CANNOT import from canvas/\n\n### Architecture\n- Systems are pure functions: (state, action) => newState\n- GameState is immutable — never mutate, always return new objects\n- Use ReadonlyMap, ReadonlyArray, readonly properties\n- Data-driven content: civs/leaders/units/techs are data files in data/\n- Adding content = new data file + barrel export update. ZERO code changes.\n- Systems read content via state.config.X (GameConfig) — never ALL_X globals\n\n### Panel Patterns (CRITICAL — see .claude/rules/panels.md)\n- Every panel lives in packages/web/src/ui/panels/ and wraps <PanelShell>\n- Register in panelRegistry.ts BEFORE writing the component\n- Visibility via usePanelManager() — NEVER useState<boolean> for open/closed\n- NEVER raw hex in chrome — use var(--panel-*) tokens\n- NO inline position:fixed or zIndex literals on the panel root (shell owns layout)\n- NO per-panel ESC handler (PanelManagerProvider owns ESC in capture phase)\n- TopBar triggers have data-panel-trigger=\"<id>\" and call togglePanel()\n\n### HUD / Overlay Patterns (CRITICAL — see .claude/rules/ui-overlays.md)\n- Tooltip-shaped overlays wrap <TooltipShell>, registered in hudRegistry.ts\n- Sticky overlays MUST call useHUDManager().register() so ESC can dismiss\n- NEVER raw hex in overlay chrome — use var(--hud-*) / var(--panel-*) tokens\n- NO magic-number positioning — shell chooses position from anchor prop\n- Stacked entities must support Tab-cycle via HUDManager, not silent-swallow\n- Overlays never steal focus; use tabIndex={-1} on sticky corners\n\n### Testing (CRITICAL — see .claude/rules/testing.md)\n- L1 (Unit): system functions with concrete states and actions\n- L2 (Integration): multi-system pipeline tests via applyAction\n- L3 (Behavioral): browser canvas/UI interactions via Playwright\n- L4 (Output): save/load serialization correctness\n- Use seeded RNG, NEVER Math.random()\n- Assert concrete values: exact coordinates, exact resource amounts — not toBeDefined()\n\n### Tech Conventions\n- TypeScript strict, no `any` (use unknown + narrowing), named exports only, ESM\n- readonly for all state, discriminated unions for actions/effects\n- Engine: zero DOM deps. Web: React 19 + Canvas + Tailwind v4\n- Port: Web on 5174\n- Shell: Windows MINGW64, use `python` not `python3`, MSYS_NO_PATHCONV=1 for vite --base\n\n### Commit Review\n- After committing a logical unit, the /commit-review skill (or PostToolUse hook) runs a three-agent loop: Reviewer (Sonnet, read-only) finds violations → Fixer (Sonnet) addresses them → Arbiter (Opus) resolves disputes\n- BLOCK findings must be fixed; WARN/NOTE are logged. See .claude/skills/commit-review/"}
+{"additionalContext": "## Injected Rules (FALLBACK — see .claude/workflow/issues.md)\n\nThe full rules bundle failed to build. Consult .claude/rules/ directly. Key invariants:\n- Engine: zero DOM deps. Web: React 19 + Canvas. Pure functions.\n- No raw hex in chrome; use var(--panel-*) / var(--hud-*) tokens.\n- Systems pure (state, action) => newState. Never mutate.\n- ReadonlyMap/Array. No Math.random() — use state.rng. No `any`.\n- Panels wrap PanelShell; HUD overlays wrap TooltipShell; both register in their manager.\n- BLOCK-severity findings only for Fixer. Reviewer cites trap names from principles.md registry.\n- Continuation: if user says 'full auto' / 'keep going', do NOT stop between phases."}
 EOF
