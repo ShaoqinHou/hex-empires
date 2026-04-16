@@ -162,9 +162,18 @@ fi
 # --dangerously-skip-permissions is required for headless operation
 # (otherwise Agent/Bash/Edit tool calls would prompt and hang forever
 # since stdin is /dev/null). Local-dev scope only.
+#
+# --model sonnet: the orchestrator's job is mechanical (read queue,
+# spawn sub-agents, parse YAML front-matter, branch on verdicts, write
+# outcome files). It does not need Opus-level judgment. The *sub-agents*
+# the orchestrator spawns use their prescribed models per SKILL.md:
+# Sonnet for Reviewer + Fixer, Opus for Arbiter (only on dispute).
+# Running the orchestrator itself on Sonnet instead of the user's
+# default (Opus) cuts per-drain cost ~10x with no accuracy impact.
 LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
 (
-  claude --dangerously-skip-permissions -p "/commit-review --drain-queue" \
+  claude --dangerously-skip-permissions --model sonnet \
+    -p "/commit-review --drain-queue" \
     > "$LOG_FILE" 2>&1
   rm -rf "$LOCK_DIR" 2>/dev/null
 ) </dev/null >/dev/null 2>&1 &
