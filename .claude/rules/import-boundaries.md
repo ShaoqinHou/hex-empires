@@ -1,3 +1,7 @@
+---
+purpose: Import direction constraints (engine→web forbidden, cross-system imports forbidden, data→systems forbidden, canvas↔ui forbidden). Mechanical, grep-checkable.
+---
+
 # Import Boundary Rules
 
 ## The Rule

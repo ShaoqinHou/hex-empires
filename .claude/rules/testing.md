@@ -1,3 +1,7 @@
+---
+purpose: 4-layer test depth framework (L1 unit / L2 integration / L3 behavioral / L4 output) + concrete-assertion rule. Where each type of test lives.
+---
+
 # Testing Rules
 
 ## Testing Depth Framework (adapted for games)
