@@ -104,13 +104,70 @@ if [ -z "$SUBSTANTIVE" ]; then
   exit 0
 fi
 
-# Write a trigger marker; the /commit-review skill reads this on invocation
-# and humans/agents can observe which commits want review.
+# Write a trigger marker — quick-glance "what's the latest pending review".
+# Back-compat with manual flows. The queue file below is the real work list.
 cat > "$SCRATCH_DIR/pending-review.txt" <<TRIGGER
 sha=$SHA
 triggered_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 files_changed=$(echo "$CHANGED" | wc -l | tr -d ' ')
 substantive_files=$(echo "$SUBSTANTIVE" | wc -l | tr -d ' ')
 TRIGGER
+
+# Append to the FIFO queue. Dedupe against shas already queued (same commit
+# landing twice via amend + rebase, etc.).
+QUEUE_FILE="$SCRATCH_DIR/review-queue.txt"
+touch "$QUEUE_FILE"
+if ! grep -qxF "$SHA" "$QUEUE_FILE" 2>/dev/null; then
+  echo "$SHA" >> "$QUEUE_FILE"
+fi
+
+# Opt-in pause. If this file exists, the hook still queues but does NOT
+# spawn a background driver. Reviews accumulate until a manual
+# `/commit-review --drain-queue` or removal of the pause file.
+if [ -f "$SCRATCH_DIR/review-pause" ]; then
+  exit 0
+fi
+
+# Stale-lock detection. If a prior driver crashed without cleanup, the
+# lockdir remains. 8-min threshold — long enough for a legitimate Fixer
+# run, short enough to not block a whole session. Uses the lockdir's
+# own mtime OR a heartbeat file the driver updates per-sha (see SKILL.md).
+LOCK_DIR="$SCRATCH_DIR/.review.lock"
+if [ -d "$LOCK_DIR" ]; then
+  NOW_TS=$(date +%s)
+  if [ -f "$LOCK_DIR/heartbeat" ]; then
+    MTIME=$(stat -c %Y "$LOCK_DIR/heartbeat" 2>/dev/null || echo "$NOW_TS")
+  else
+    MTIME=$(stat -c %Y "$LOCK_DIR" 2>/dev/null || echo "$NOW_TS")
+  fi
+  AGE=$(( NOW_TS - MTIME ))
+  if [ "$AGE" -gt 480 ]; then
+    rm -rf "$LOCK_DIR" 2>/dev/null
+  fi
+fi
+
+# Try to acquire the driver lock atomically. If another driver is running
+# we just leave our queue entry and exit — that driver will drain us too.
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  exit 0
+fi
+
+# Lock acquired; spawn a background claude -p to drain the queue. The
+# driver session has a fresh context and inherits OAuth creds from
+# ~/.claude/.credentials.json. The subshell explicitly releases the lock
+# as its last line; EXIT traps in disowned subshells are unreliable on
+# MINGW64. Explicit release + an 8-min stale-timeout handles the crash
+# case.
+#
+# --dangerously-skip-permissions is required for headless operation
+# (otherwise Agent/Bash/Edit tool calls would prompt and hang forever
+# since stdin is /dev/null). Local-dev scope only.
+LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
+(
+  claude --dangerously-skip-permissions -p "/commit-review --drain-queue" \
+    > "$LOG_FILE" 2>&1
+  rm -rf "$LOCK_DIR" 2>/dev/null
+) </dev/null >/dev/null 2>&1 &
+disown 2>/dev/null || true
 
 exit 0
