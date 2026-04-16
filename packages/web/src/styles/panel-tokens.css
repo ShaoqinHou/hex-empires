@@ -1,6 +1,6 @@
 /*
  * panel-tokens.css — CSS custom properties for the shared PanelShell
- * chrome. Tokens only; no class definitions.
+ * chrome, plus layout-chrome utility classes.
  *
  * Values match the game's existing dark-slate aesthetic (see
  * index.css :root tokens and TopBar.tsx gradient). Panel chrome uses
@@ -45,26 +45,7 @@
   --panel-z-chrome: 100;
   --panel-z-overlay: 110;
   --panel-z-modal: 210;
-}
 
-/* Layout chrome utility classes — SYS-D-12.
- *
- * React's CSSProperties.zIndex type is `number | undefined` and does NOT
- * accept a CSS custom-property string. Setting `zIndex: 'var(--panel-z-*)'`
- * inline requires a double-cast `as unknown as number` to bypass the type
- * system. CSS classes accept var() natively so eliminating the cast is
- * simpler than coercing it. These utilities apply the same numeric values
- * the token scale defines — always via var() so a future theme change
- * propagates. */
-.layout-chrome-bar {
-  z-index: var(--panel-z-chrome);
-}
-
-.layout-chrome-overlay {
-  z-index: var(--panel-z-overlay);
-}
-
-:root {
   /* HUD z-tiers — shared with panel z-scale so stacking order is predictable
    * across the two layers. Minimap sits at the info tier (above map, below
    * top bar dropdowns). When hud-tokens.css lands these values will be
@@ -132,4 +113,21 @@
   --tech-state-selected:   var(--panel-accent-info-bright);
   --tech-state-locked:     var(--panel-accent-neutral);
   --tech-state-unique:     var(--panel-accent-pink);
+}
+
+/* Layout chrome utility classes — SYS-D-12.
+ *
+ * React's CSSProperties.zIndex type is `number | undefined` and does NOT
+ * accept a CSS custom-property string. Setting `zIndex: 'var(--panel-z-*)'`
+ * inline requires a double-cast `as unknown as number` to bypass the type
+ * system. CSS classes accept var() natively so eliminating the cast is
+ * simpler than coercing it. These utilities apply the same numeric values
+ * the token scale defines — always via var() so a future theme change
+ * propagates. */
+.layout-chrome-bar {
+  z-index: var(--panel-z-chrome);
+}
+
+.layout-chrome-overlay {
+  z-index: var(--panel-z-overlay);
 }
