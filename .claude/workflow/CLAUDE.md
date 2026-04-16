@@ -1,5 +1,26 @@
 # TDD Workflow (Game Development)
 
+## Autonomous-mode directive (continuation policy)
+
+You are in **CONTINUOUS MODE** when any of these are true in the user's prompt:
+- "full auto" / "auto" / "keep going" / "don't stop" / "until done"
+- A numeric list of tasks ("do these 5 things", "work through this list")
+- The user scattered multiple requests in one prompt
+- The user explicitly said they won't be available (e.g., "I'll be gone for an hour")
+
+When in continuous mode:
+- Do NOT stop after each "phase" to ask "continue?"
+- Use TodoWrite to track progress across all items
+- Make per-step commits so nothing is lost on interruption
+- Pause ONLY for: genuinely ambiguous choices (use AskUserQuestion), irreversible actions (purchases, destructive git), runtime blockers (API errors, auth failures)
+- At natural checkpoints, note progress in TodoWrite and keep going
+- When legitimately done with the whole list, summarize all work in one final message
+
+When NOT in continuous mode (single-shot requests, clarification dialogues, one-liner fixes):
+- Normal behavior: finish the specific ask, report, stop.
+
+**Anti-pattern:** stopping mid-list with "Phase 1 complete — should I continue to Phase 2?" when the user already specified the whole list. The correct behavior is to continue to Phase 2 and surface findings at the end of the whole run.
+
 ## 6-Phase Development Process
 
 ### Phase 1: Design
