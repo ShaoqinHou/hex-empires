@@ -26,9 +26,9 @@ Observed: all 5 agents independently wrapped in `PanelShell` / `TooltipShell`, r
 
 ## What we still don't know
 
-The eval tested one axis (new-file additive tasks) under one set of conditions (Sonnet agents, clean-ish task scope). Five things remain un-tested or under-tested:
+The eval tested one axis (new-file additive tasks) under one set of conditions (Sonnet agents, clean-ish task scope). Most of the gaps below still stand; the Fixer-path gap closed on 2026-04-16 via the WF-ENF-2 smoke test (see below).
 
-1. **The BLOCK path has never fired.** Reviewer produced PASS. Fixer and Arbiter have never run. We don't know whether the Fixer correctly addresses only BLOCK findings, whether the dispute protocol works, whether the Arbiter's judgment is sound. First real BLOCK will be the test — or we write a synthetic-BLOCK smoke test in a later cycle.
+1. **~~The BLOCK path has never fired.~~** **Fixer validated 2026-04-16 via WF-ENF-2 smoke test** (see section below). Arbiter remains unproven because the Fixer had no reason to dispute a clean suggested-fix — the dispute path still awaits a real BLOCK where the suggested fix is wrong, invalid, or structurally impossible.
 
 2. **Legacy drift teaches new agents the antipattern.** Finding F-1196b755 showed the J-shortcut blind agent imitated `ValidationFeedback.tsx`'s `useState<boolean>`-for-visibility antipattern. The rule is documented in `ui-overlays.md`; the sibling file violates it; the agent pattern-matched. Rule injection cannot overpower a contradictory local exemplar. Cleaning `ValidationFeedback.tsx` is a workflow prerequisite, not a polish item — see BACKLOG `UI-C-VF1`.
 
@@ -102,6 +102,40 @@ Two of these are **pattern-transmission leaks** (F-c6155628, F-1196b755) — the
 
 Three are **one-off judgment calls** that a human or the Reviewer catches on review (F-3cfd936d, F-dd2174c5, F-dc002a8f). Acceptable for the Reviewer to flag; not worth baking into lint.
 
+## WF-ENF-2 — Fixer smoke test (2026-04-16, post-UI-C-VF1 + WF-GUARD-1)
+
+Exercise: hand a known BLOCK-producing review report to a fresh Fixer subagent and observe whether it addresses the finding per spec.
+
+**Setup:**
+- Worktree `test/wf-enf-2-synthetic` spawned off main at `387e4d2` (the WF-GUARD-1 commit).
+- Dropped the sentinel file `.claude/worktree-sentinel` inside the worktree — **first live use of WF-GUARD-1 in a subagent's bash invocations.**
+- Created `packages/web/src/ui/panels/__synthetic__/SyntheticFixturePanel.tsx` with two deliberate BLOCK violations of `.claude/rules/panels.md`: raw hex `#161b22` for chrome bg, raw hex `#30363d` for chrome border.
+- Committed the fixture in the worktree (passed the safe-commit guard because sentinel matched the worktree toplevel).
+- Hand-authored a synthetic review report at `.claude/workflow/scratch/review-0cfff70.md` with both findings as BLOCK.
+
+**Result:**
+- Fixer subagent read `fixer-prompt.md`, read the review report, read the fixture file.
+- Produced a surgical 2-line edit — `'#161b22'` → `'var(--panel-bg)'`, `'#30363d'` → `'var(--panel-border)'` — exactly matching the suggested-fix.
+- Ran tests (`npm run test`) — 1748 unit/integration tests passed. Playwright specs failed with a pre-existing version mismatch unrelated to the fix; Fixer correctly identified this and did not deflect.
+- Staged both lines + committed inside the worktree with message `fix(review): F-synth0001, F-synth0002` (commit `ea2fcba`).
+- Wrote a valid fix log at `.claude/workflow/scratch/fix-log-0cfff70.md` per the contract's YAML schema.
+- Total: 13 tool calls, 64527 tokens, ~5m wall time.
+
+**What this proves:**
+- Fixer correctly parses `review-<sha>.md` per the yaml front-matter + findings format.
+- Fixer respects the "only BLOCK findings this iteration" constraint (the synthetic report had no WARN/NOTE to accidentally address).
+- Fixer keeps edits surgical — touched only the two lines named in the findings.
+- Fixer runs tests before committing.
+- Fixer writes a structurally valid fix log.
+- WF-GUARD-1 sentinel is transparent in the happy path — no false blocks on the Fixer's commit inside the worktree.
+
+**What it doesn't prove:**
+- **Arbiter still unproven.** The Fixer had no reason to dispute; synthetic finding + matching fix = no dispute block. Arbiter invocation path (Opus rule on fixer-correct / reviewer-correct / escalate-human) has yet to fire.
+- **Multi-iteration loop unproven.** The loop design says a second Reviewer run should follow the Fixer commit to confirm clean. That second run was not executed in this exercise; the prescribed flow assumes the orchestrator kicks it off. Validating the iteration protocol is a separate future smoke test.
+- **Off-the-happy-path Fixer behavior.** Invalid suggested-fixes, type-breaking edits, test regressions, finding-references-to-non-existent-lines — none tested yet.
+
+**Cleanup:** worktree + branch removed after the exercise. Synthetic fixture file did NOT land on main (it lives only in the deleted branch). The fix log + review report were in the gitignored worktree scratch dir and removed with the directory.
+
 ## What "Phase 6d done" looks like
 
 - [x] Cherry-pick finished (J-shortcut landed as `600662a`).
@@ -112,10 +146,12 @@ Three are **one-off judgment calls** that a human or the Reviewer catches on rev
 - [x] F-c6155628 fixed in place (`hud-elements.md` now has rows for `idleUnitsToast` + the pre-existing missing `yieldsToggle` entry).
 - [x] `hud-registry-sync.test.ts` shipped as Tier-4 lint-as-test — permanently prevents the F-c6155638 drift class.
 - [x] Findings documented (this file).
-- [ ] (Prerequisite for Phase 7, tracked as `UI-C-VF1` in BACKLOG) Refactor `ValidationFeedback.tsx` to drive visibility from `HUDManager.isActive()` instead of local `useState<boolean>`. Unblocks future HUD agents from pattern-matching the antipattern (F-1196b755).
+- [x] UI-C-VF1: `ValidationFeedback.tsx` + `IdleUnitsToast.tsx` now derive visibility from `HUDManager.isActive()`; the useState-for-visibility exemplar is gone. Commit `b92e8e9`. Closes F-1196b755.
+- [x] WF-GUARD-1: `safe-commit.sh` + spawn-worktree skill + settings wiring. Commit `387e4d2`. Validated on live subagent bash in the WF-ENF-2 exercise.
+- [x] WF-ENF-2: Fixer smoke test (see section above). First live Fixer validation; Arbiter still unproven.
 - [ ] (Deferred) Fix F-dd2174c5 (aria-role overlap) + F-dc002a8f (stale comment). Judgment calls; do on a later cleanup pass.
-- [ ] (Deferred) Fixer + Arbiter have never run. Next real BLOCK-producing commit will test them — or write a synthetic-BLOCK smoke test next cycle.
-- [ ] (Deferred) Worktree isolation guard script (`safe-commit.sh` + sentinel file). Must ship before next parallel batch.
+- [ ] (Deferred) Arbiter dispute-path smoke test. Needs a BLOCK where the suggested-fix is structurally invalid — handcrafted fixture required.
+- [ ] (Deferred) Multi-iteration loop smoke test. Commit → Reviewer → Fixer → Reviewer-2 → PASS. Needs the orchestrator-side invocation glue (the hook writes a trigger file but doesn't spawn the next iteration automatically).
 - [ ] (Deferred) Phase 7: exercise the commit-review loop against BACKLOG items (SYS-D, CNT-D). Next session.
 
 ## Trust model after this cycle

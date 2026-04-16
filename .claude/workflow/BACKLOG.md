@@ -6,12 +6,14 @@ Single source of truth for deferred/pending work. Populated 2026-04-16 from audi
 
 These items unblock the next cycle's experiment. Ordered by leverage.
 
-| ID | Item | Source | Est. effort |
+| ID | Item | Source | Status |
 |---|---|---|---|
-| UI-C-VF1 | Refactor `packages/web/src/ui/components/ValidationFeedback.tsx` to derive `isVisible` from `HUDManager.isActive('validationFeedback')` instead of a local `useState<boolean>` toggled by `useEffect`. **Why this blocks Phase 7:** finding F-1196b755 on the blind-eval J-shortcut showed a new HUD agent pattern-matched on this exemplar and copied the antipattern. As long as `ValidationFeedback` violates the rule, every future HUD agent inherits the drift. This is a workflow prerequisite, not polish. | P6c findings F-1196b755 | 30-60 min |
-| WF-GUARD-1 | `safe-commit.sh` + worktree sentinel file. At worktree creation, drop `.worktree-id` with the worktree's absolute path. Any commit runs `git rev-parse --show-toplevel` and refuses to commit if it doesn't match. Catches the Agent-4 leak class. | P6c Bug 1 | medium (1-2 h) |
-| WF-ENF-1 | Add ESLint rule banning `useState<boolean>` whose setter is only called from a `useEffect` watching a value that could be computed from a context hook. Harder to author; optional. Alternative: content-style lint that bans `useState<boolean>.*setIsVisible` in `ui/components/*.tsx` + `ui/panels/*.tsx` unless preceded by a `// enforcement-exception` comment. | P6d skeptic review | medium |
-| WF-ENF-2 | Build a synthetic-BLOCK smoke test for the Reviewer→Fixer→Arbiter loop. Intentionally introduce a rule violation (e.g. raw hex in a panel chrome file) on a throwaway branch, run the full loop, verify Fixer commits the correction and Arbiter is not invoked without dispute. Exercise-only; don't land the synthetic commit. | P6d | 1-2 h |
+| UI-C-VF1 | Refactor `packages/web/src/ui/components/ValidationFeedback.tsx` + `IdleUnitsToast.tsx` to derive visibility from `HUDManager.isActive()` instead of local `useState<boolean>`. | P6c F-1196b755 | **DONE** — commit `b92e8e9` |
+| WF-GUARD-1 | `safe-commit.sh` + worktree sentinel. Machine-guards the commits-land-in-the-right-worktree invariant. | P6c Bug 1 | **DONE** — commit `387e4d2`; validated live in WF-ENF-2 |
+| WF-ENF-2 (part 1) | Fixer-leg smoke test. Hand a real BLOCK review report to a Fixer subagent; verify it follows the fixer contract end-to-end. | P6d | **DONE** — Fixer validated 2026-04-16 (see phase-6d-findings.md § WF-ENF-2) |
+| WF-ENF-2 (part 2, Arbiter) | Arbiter-leg smoke test. Needs a BLOCK where the suggested-fix is structurally invalid / breaks types / breaks tests so the Fixer raises a dispute. Then Arbiter rules (fixer-correct / reviewer-correct / escalate-human). | P6d | pending |
+| WF-ENF-2 (part 3, multi-iteration) | Full loop smoke test: commit → Reviewer → Fixer → Reviewer-iteration-2 → PASS. The hook writes a trigger file but does NOT spawn subsequent iterations automatically. Either add the orchestrator glue, or run iterations manually and document the protocol. | P6d | pending |
+| WF-ENF-1 | ESLint rule banning `useState<boolean>` whose setter is only called from a `useEffect` watching a context-computable value. Alt: content-style lint banning `useState<boolean>.*setIsVisible` in `ui/components/*.tsx` + `ui/panels/*.tsx` unless preceded by `// enforcement-exception`. | P6d skeptic review | pending |
 
 ## System / codebase (fixable now)
 
