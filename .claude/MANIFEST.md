@@ -105,16 +105,20 @@ Skills are invoked by agents via the Skill tool, triggered by their `description
 
 | Skill | Purpose |
 |-------|---------|
-| `add-panel` | Step-by-step procedure for new `*Panel.tsx` — wraps `PanelShell`, registers in `panelRegistry` |
-| `add-hud-element` | Step-by-step for new tooltip/toast/hint — wraps `TooltipShell`, registers in `hudRegistry` |
-| `add-content` | Step-by-step for new civs/units/buildings/techs/crises — data files in `packages/engine/src/data/**` |
-| `verify` | E2E browser verification via chrome-devtools MCP — writes verify-marker for stop-nudge |
-| `build` | Dev/build/test command reference for this monorepo |
-| `test` | L1/L2/L3/L4 test depth framework + concrete-assertion rule |
-| `consistency-audit` | Full-tree content-consistency sweep (broken IDs, missing barrel exports) |
-| `commit-review` | Three-agent review loop orchestrator (manual; hook invokes it automatically) |
-| `spawn-worktree` | Isolated git worktree with sentinel file for parallel agents |
-| `audit-workflow` | Verify this MANIFEST.md matches filesystem + per-file headers present |
+| `skills/add-panel/SKILL.md` | Step-by-step procedure for new `*Panel.tsx` — wraps `PanelShell`, registers in `panelRegistry` |
+| `skills/add-hud-element/SKILL.md` | Step-by-step for new tooltip/toast/hint — wraps `TooltipShell`, registers in `hudRegistry` |
+| `skills/add-content/SKILL.md` | Step-by-step for new civs/units/buildings/techs/crises — data files in `packages/engine/src/data/**` |
+| `skills/verify/SKILL.md` | E2E browser verification via chrome-devtools MCP — writes verify-marker for stop-nudge |
+| `skills/build/SKILL.md` | Dev/build/test command reference for this monorepo |
+| `skills/test/SKILL.md` | L1/L2/L3/L4 test depth framework + concrete-assertion rule |
+| `skills/consistency-audit/SKILL.md` | Full-tree content-consistency sweep (broken IDs, missing barrel exports) |
+| `skills/consistency-audit/references/audit-layers.md` | Support doc for consistency-audit — layer-by-layer audit recipes |
+| `skills/commit-review/SKILL.md` | Three-agent review loop orchestrator (manual; hook invokes it automatically) |
+| `skills/commit-review/reviewer-prompt.md` | Reviewer sub-agent system prompt |
+| `skills/commit-review/fixer-prompt.md` | Fixer sub-agent system prompt (BLOCK-only contract + AUTO_MODE worktree protocol) |
+| `skills/commit-review/arbiter-prompt.md` | Arbiter sub-agent system prompt (dispute resolution, Opus-backed) |
+| `skills/spawn-worktree/SKILL.md` | Isolated git worktree with sentinel file for parallel agents |
+| `skills/audit-workflow/SKILL.md` | Verify this MANIFEST.md matches filesystem + per-file headers present |
 
 ### `.claude/hooks/` — event-driven automation
 

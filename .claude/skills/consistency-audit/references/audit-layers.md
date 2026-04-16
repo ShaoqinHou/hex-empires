@@ -1,3 +1,7 @@
+---
+purpose: 6-layer audit recipes for consistency-audit skill — references, balance, completeness, graph integrity, registry coverage, age-consistency.
+---
+
 # 6-Layer Game Content Audit
 
 ## Layer 1: REFERENCES — All IDs resolve
