@@ -10,9 +10,13 @@ These items unblock the next cycle's experiment. Ordered by leverage.
 |---|---|---|---|
 | UI-C-VF1 | Refactor `packages/web/src/ui/components/ValidationFeedback.tsx` + `IdleUnitsToast.tsx` to derive visibility from `HUDManager.isActive()` instead of local `useState<boolean>`. | P6c F-1196b755 | **DONE** — commit `b92e8e9` |
 | WF-GUARD-1 | `safe-commit.sh` + worktree sentinel. Machine-guards the commits-land-in-the-right-worktree invariant. | P6c Bug 1 | **DONE** — commit `387e4d2`; validated live in WF-ENF-2 |
-| WF-ENF-2 (part 1) | Fixer-leg smoke test. Hand a real BLOCK review report to a Fixer subagent; verify it follows the fixer contract end-to-end. | P6d | **DONE** — Fixer validated 2026-04-16 (see phase-6d-findings.md § WF-ENF-2) |
-| WF-ENF-2 (part 2, Arbiter) | Arbiter-leg smoke test. Needs a BLOCK where the suggested-fix is structurally invalid / breaks types / breaks tests so the Fixer raises a dispute. Then Arbiter rules (fixer-correct / reviewer-correct / escalate-human). | P6d | pending |
-| WF-ENF-2 (part 3, multi-iteration) | Full loop smoke test: commit → Reviewer → Fixer → Reviewer-iteration-2 → PASS. The hook writes a trigger file but does NOT spawn subsequent iterations automatically. Either add the orchestrator glue, or run iterations manually and document the protocol. | P6d | pending |
+| WF-ENF-2 (part 1, Fixer) | Fixer-leg smoke test. Hand a real BLOCK review report to a Fixer subagent; verify it follows the fixer contract end-to-end. | P6d | **DONE** — 2026-04-16 |
+| WF-ENF-2 (part 2, Arbiter) | Arbiter-leg smoke test — `fixer-correct` ruling on false-positive BLOCK. Arbiter wrote a self-correcting `reviewer-note`. | P6d | **DONE** — 2026-04-16 |
+| WF-ENF-2 (part 3, multi-iteration) | Full loop smoke test: iter 1 FAIL → Fixer → iter 2 PASS, with inherited finding IDs and regression detection. Iteration was driven manually. | P6d | **DONE** — 2026-04-16 |
+| WF-ENF-2 (part 4, reviewer-correct) | Arbiter siding with Reviewer against a wrongly-disputed valid BLOCK. Needs a handcrafted fixture. Lower priority — symmetric to part 2. | P6d | pending |
+| WF-ENF-2 (part 5, loop-automation) | Driver script / skill body that runs iter 1 → Fixer → iter 2 → ... without a human invoking each agent. Hook writes `pending-review.txt`; automation glue to spawn agents from that trigger is still missing. | P6d | pending |
+| WF-ENF-2 (part 6, stuck-state) | If Fixer can't converge in 3 iterations, write STALLED entry to `issues.md` and exit. Needs part 5 first. | P6d | pending |
+| WF-ENF-2 (part 7, reviewer-note) | Reviewer-notes accumulate in dispute files but nothing yet injects them into future Reviewer runs. Glue work. | P6d | pending |
 | WF-ENF-1 | ESLint rule banning `useState<boolean>` whose setter is only called from a `useEffect` watching a context-computable value. Alt: content-style lint banning `useState<boolean>.*setIsVisible` in `ui/components/*.tsx` + `ui/panels/*.tsx` unless preceded by `// enforcement-exception`. | P6d skeptic review | pending |
 
 ## System / codebase (fixable now)

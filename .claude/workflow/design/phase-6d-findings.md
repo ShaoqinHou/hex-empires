@@ -136,6 +136,78 @@ Exercise: hand a known BLOCK-producing review report to a fresh Fixer subagent a
 
 **Cleanup:** worktree + branch removed after the exercise. Synthetic fixture file did NOT land on main (it lives only in the deleted branch). The fix log + review report were in the gitignored worktree scratch dir and removed with the directory.
 
+## WF-ENF-2 part 2 — Arbiter smoke test (2026-04-16, false-positive dispute)
+
+Exercise: invoke Arbiter (Opus) on a Fixer-raised dispute over a fabricated BLOCK finding.
+
+**Setup:**
+- Worktree `test/wf-enf-2-arbiter` spawned off `7250905`; sentinel dropped.
+- Created `ArbiterFixturePanel.tsx` — ALREADY compliant, uses `var(--panel-bg)` + `var(--panel-border)` correctly.
+- Committed fixture in the worktree.
+- Hand-authored a FALSE-POSITIVE review report claiming line 30 contained `backgroundColor: '#161b22'`. (In reality the file uses the token; the fabricated offender was lifted straight from panels.md's "BAD" example block.)
+
+**Fixer result (first link of the chain):**
+- Read the file, saw line 30 is actually `padding: 16,`, grep-verified `#161b22` absent.
+- Did NOT force the fix. Raised a dispute in the fix log per contract.
+- Reported: 0 fixed / 1 disputed / tests N/A.
+
+**Arbiter result (second link — Opus, rarely invoked):**
+- Read rule, review, dispute, and source file independently.
+- Ruled **`fixer-correct`**. The offender string does not exist in the file.
+- Wrote a valuable self-correction: a `reviewer-note` to be injected into future Reviewer runs: *"Before emitting a BLOCK finding, confirm the quoted `offender` string appears verbatim in the cited file at the cited line — do not copy example 'BAD' snippets from rule docs into findings without re-reading the actual file."*
+
+**What this proves:**
+- Fixer correctly detects false positives and chooses dispute over forced compliance.
+- Fixer's dispute block is structurally valid (Arbiter could consume it without re-prompting).
+- Arbiter (Opus) correctly arbitrates on evidence independent of Reviewer + Fixer claims.
+- Arbiter produces the `reviewer-note` feedback mechanism — a *self-correcting* loop. Over time these notes accumulate and reduce false-positive rate.
+- Dispute-ruling file is schema-valid (`dispute-ruling/v1`).
+
+**What it doesn't prove:**
+- `reviewer-correct` rulings — Arbiter siding with Reviewer against Fixer. Would need a valid BLOCK where Fixer wrongly disputes.
+- `escalate-human` ruling — ambiguous rule case.
+- Reviewer-note integration into future runs — the note is written, but nothing yet consumes accumulated notes when spawning the next Reviewer. Future integration work.
+
+Cost: 121k tokens, 6 tool calls, ~9.5 m wall time (Opus is slower + more expensive than Sonnet, as expected for rare arbitration).
+
+## WF-ENF-2 part 3 — Multi-iteration chain (2026-04-16)
+
+Exercise: drive a full Reviewer iter 1 → Fixer → Reviewer iter 2 chain on a real BLOCK.
+
+**Setup (continued in the arbiter worktree for efficiency):**
+- Added `IterationFixturePanel.tsx` with one deliberate BLOCK violation (`border: '2px solid #8b949e'`).
+- Committed as `9fabd99`.
+
+**Iter 1 (real Reviewer, Sonnet):**
+- Ran `git diff HEAD~1..HEAD`, read the fixture in full.
+- Produced `review-9fabd99.md` — verdict FAIL, 1 BLOCK (F-a3f7c21e, raw hex `#8b949e` line 29), 1 NOTE (F-b1d4e09a, fixture in non-standard subdirectory — acceptable for test scaffolding).
+- Suggested-fix: replace with `var(--panel-muted-color)`.
+
+**Fixer (real Fixer, Sonnet):**
+- Read report, applied the surgical 1-line fix, ran tests (212 pass), committed as `084fa10`, wrote fix log.
+- Respected contract: only addressed BLOCK; left NOTE untouched.
+
+**Iter 2 Reviewer (the novel leg):**
+- Explicitly told it was iter 2; instructed to read iter-1's report and inherit IDs.
+- Ran `git diff 9fabd99..084fa10` to see the Fixer's change.
+- Produced `review-084fa10.md` with `iteration: 2` in front-matter.
+- Correctly **closed F-a3f7c21e** (the previously-blocking finding) because the Fixer's commit removed the raw hex.
+- Correctly **inherited F-b1d4e09a** with the same ID across iterations (the NOTE about the `__synthetic__/` subdirectory remained because the fixture's existence was unchanged).
+- Included an "Iter-1 finding resolution" table and a "Regressions introduced by the Fixer: None" section.
+- Final verdict: **PASS**. Loop converged in 2 iterations. No Arbiter needed on this chain.
+
+**What this proves:**
+- The Reviewer can be instructed (via its prompt) to behave differently on iteration ≥2: read the previous report, inherit IDs, flag regressions.
+- Finding-ID inheritance works: hashing file+line+rule produces stable IDs across a surgical Fixer edit that doesn't shift line numbers for untouched findings.
+- The happy-path iteration chain (iter 1 FAIL → Fixer → iter 2 PASS) converges cleanly.
+
+**What it doesn't prove:**
+- Max-iteration cap behavior (what happens if Fixer can't converge in 3 iterations → STALLED).
+- Stuck detection (same finding-set two iters running — the fix-log must record this so the orchestrator bails).
+- Automatic orchestration: the iteration loop was driven manually by me in this exercise, not by a script. The hook writes `pending-review.txt`; a real driver that calls Reviewer → Fixer → Reviewer automatically is still missing. SKILL.md describes the flow textually; productionizing it means either (a) a user-invoked /commit-review skill that LOOPS by spawning sub-agents from its own body, or (b) accepting that iteration is human-driven for now (the current state).
+
+**Takeaway for the workflow:** The loop's semantic primitives (Reviewer, Fixer, Arbiter, iteration) all work. What's still missing is the *cheap automation glue* — a bash or node driver, or a fully-fledged /commit-review skill body that does the loop itself rather than invoking one agent at a time. That's a WF-ENF follow-up, not a blocker for using the machinery manually or as part of a deliberate review cycle.
+
 ## What "Phase 6d done" looks like
 
 - [x] Cherry-pick finished (J-shortcut landed as `600662a`).
@@ -147,11 +219,15 @@ Exercise: hand a known BLOCK-producing review report to a fresh Fixer subagent a
 - [x] `hud-registry-sync.test.ts` shipped as Tier-4 lint-as-test — permanently prevents the F-c6155638 drift class.
 - [x] Findings documented (this file).
 - [x] UI-C-VF1: `ValidationFeedback.tsx` + `IdleUnitsToast.tsx` now derive visibility from `HUDManager.isActive()`; the useState-for-visibility exemplar is gone. Commit `b92e8e9`. Closes F-1196b755.
-- [x] WF-GUARD-1: `safe-commit.sh` + spawn-worktree skill + settings wiring. Commit `387e4d2`. Validated on live subagent bash in the WF-ENF-2 exercise.
-- [x] WF-ENF-2: Fixer smoke test (see section above). First live Fixer validation; Arbiter still unproven.
+- [x] WF-GUARD-1: `safe-commit.sh` + spawn-worktree skill + settings wiring. Commit `387e4d2`. Validated on live subagent bash in all three WF-ENF-2 exercises.
+- [x] WF-ENF-2 part 1: Fixer happy-path smoke test (section above). Fixer applies suggested-fix, runs tests, commits, writes fix log.
+- [x] WF-ENF-2 part 2: Arbiter dispute-resolution smoke test (section above). Opus ruled `fixer-correct` on a false-positive BLOCK; produced a reusable `reviewer-note`.
+- [x] WF-ENF-2 part 3: Multi-iteration chain (section above). Iter 1 FAIL → Fixer → Iter 2 PASS, with inherited IDs and regression detection.
 - [ ] (Deferred) Fix F-dd2174c5 (aria-role overlap) + F-dc002a8f (stale comment). Judgment calls; do on a later cleanup pass.
-- [ ] (Deferred) Arbiter dispute-path smoke test. Needs a BLOCK where the suggested-fix is structurally invalid — handcrafted fixture required.
-- [ ] (Deferred) Multi-iteration loop smoke test. Commit → Reviewer → Fixer → Reviewer-2 → PASS. Needs the orchestrator-side invocation glue (the hook writes a trigger file but doesn't spawn the next iteration automatically).
+- [ ] (Deferred) `reviewer-correct` Arbiter ruling — exercising Arbiter siding WITH the reviewer against a Fixer who disputes a valid BLOCK. Needs a separate handcrafted case.
+- [ ] (Deferred) Reviewer-note consumption: Arbiter writes `reviewer-note` entries but nothing yet reads the accumulated set when spawning a new Reviewer. Glue work.
+- [ ] (Deferred) Loop automation driver — a script / orchestrator skill that drives iter 1 → Fixer → iter 2 → ... automatically without a human invoking each agent. Current state: iteration is human-driven (or explicit orchestrator-body looping).
+- [ ] (Deferred) Stuck-state + max-iter behavior — if Fixer can't converge in 3 iterations, should write a STALLED entry to `issues.md` and exit. Needs the loop automation driver first.
 - [ ] (Deferred) Phase 7: exercise the commit-review loop against BACKLOG items (SYS-D, CNT-D). Next session.
 
 ## Trust model after this cycle
