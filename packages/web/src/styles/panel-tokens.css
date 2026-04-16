@@ -113,6 +113,16 @@
   --tech-state-selected:   var(--panel-accent-info-bright);
   --tech-state-locked:     var(--panel-accent-neutral);
   --tech-state-unique:     var(--panel-accent-pink);
+
+  /* TopBar panel-button accent colors. Previously raw hex props on each
+   * PanelButton call site; tokenized so a future theme change can recolor
+   * the whole row without hunting through JSX. Named by semantic role
+   * rather than hue so renaming survives a palette shift. Partially
+   * addresses the pre-existing raw-hex NOTE flagged on review-ce48c0a. */
+  --panel-button-tech:      #4dabf7;  /* blue */
+  --panel-button-civics:    #cc5de8;  /* magenta */
+  --panel-button-diplomacy: #ba68c8;  /* purple */
+  --panel-button-age:       #ffd54f;  /* gold — dark-text variant */
 }
 
 /* Layout chrome utility classes — SYS-D-12.

@@ -84,11 +84,12 @@ export function TopBar() {
         <WarningIndicator summary={resourceChanges} />
       </div>
 
-      {/* Right: Panel buttons + End Turn */}
+      {/* Right: Panel buttons + End Turn.
+          All panel-button accent colors tokenized via --panel-button-*. */}
       <div className="flex items-center gap-1.5">
-        <PanelButton label="Tech" color="#4dabf7" panelId="tech" onClick={() => togglePanel('tech')} />
-        <PanelButton label="Civics" color="#cc5de8" panelId="civics" onClick={() => togglePanel('civics')} />
-        <PanelButton label="Diplo" color="#ba68c8" panelId="diplomacy" onClick={() => togglePanel('diplomacy')} />
+        <PanelButton label="Tech" color="var(--panel-button-tech)" panelId="tech" onClick={() => togglePanel('tech')} />
+        <PanelButton label="Civics" color="var(--panel-button-civics)" panelId="civics" onClick={() => togglePanel('civics')} />
+        <PanelButton label="Diplo" color="var(--panel-button-diplomacy)" panelId="diplomacy" onClick={() => togglePanel('diplomacy')} />
         <PanelButton label="Ages" color="#ffd54f" dark panelId="age" onClick={() => togglePanel('age')} />
 
         {/* More menu for secondary actions */}
