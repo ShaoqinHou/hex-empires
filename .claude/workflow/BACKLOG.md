@@ -2,6 +2,17 @@
 
 Single source of truth for deferred/pending work. Populated 2026-04-16 from audit-status, ui-cleanup-remaining, and STATUS.md's "known remaining work." When items land, move them to commit messages and delete from here.
 
+## Phase 7 prerequisites (do BEFORE the next parallel-batch blind eval)
+
+These items unblock the next cycle's experiment. Ordered by leverage.
+
+| ID | Item | Source | Est. effort |
+|---|---|---|---|
+| UI-C-VF1 | Refactor `packages/web/src/ui/components/ValidationFeedback.tsx` to derive `isVisible` from `HUDManager.isActive('validationFeedback')` instead of a local `useState<boolean>` toggled by `useEffect`. **Why this blocks Phase 7:** finding F-1196b755 on the blind-eval J-shortcut showed a new HUD agent pattern-matched on this exemplar and copied the antipattern. As long as `ValidationFeedback` violates the rule, every future HUD agent inherits the drift. This is a workflow prerequisite, not polish. | P6c findings F-1196b755 | 30-60 min |
+| WF-GUARD-1 | `safe-commit.sh` + worktree sentinel file. At worktree creation, drop `.worktree-id` with the worktree's absolute path. Any commit runs `git rev-parse --show-toplevel` and refuses to commit if it doesn't match. Catches the Agent-4 leak class. | P6c Bug 1 | medium (1-2 h) |
+| WF-ENF-1 | Add ESLint rule banning `useState<boolean>` whose setter is only called from a `useEffect` watching a value that could be computed from a context hook. Harder to author; optional. Alternative: content-style lint that bans `useState<boolean>.*setIsVisible` in `ui/components/*.tsx` + `ui/panels/*.tsx` unless preceded by a `// enforcement-exception` comment. | P6d skeptic review | medium |
+| WF-ENF-2 | Build a synthetic-BLOCK smoke test for the Reviewer→Fixer→Arbiter loop. Intentionally introduce a rule violation (e.g. raw hex in a panel chrome file) on a throwaway branch, run the full loop, verify Fixer commits the correction and Arbiter is not invoked without dispute. Exercise-only; don't land the synthetic commit. | P6d | 1-2 h |
+
 ## System / codebase (fixable now)
 
 | ID | Item | Source | Est. effort |

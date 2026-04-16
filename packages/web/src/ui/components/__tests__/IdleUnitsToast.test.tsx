@@ -76,8 +76,10 @@ describe('IdleUnitsToast', () => {
   it('auto-dismisses after 2500 ms (toast disappears)', async () => {
     renderWithProviders(<IdleUnitsToast triggerCount={1} />);
 
-    // Toast is visible before the timer fires.
-    expect(screen.getByTestId('idle-units-toast')).toBeTruthy();
+    // Toast is visible before the timer fires — assert on concrete content
+    // rather than `.toBeTruthy()`, which adds no signal (getByTestId already
+    // throws on miss). Review finding F-3cfd936d.
+    expect(screen.getByTestId('idle-units-toast').textContent).toContain('No idle units');
 
     // Advance timers inside act so React flushes the resulting state update.
     await act(async () => {

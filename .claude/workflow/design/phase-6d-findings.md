@@ -5,13 +5,14 @@ Follows: Phase 6a/6b (workflow rebuild), Phase 6c (blind eval — 5 Sonnet dev a
 
 ## TL;DR
 
-The new enforcement stack (slim rules + `inject-rules.sh` + `check-edited-file.sh` + skills + the commit-review loop) produces compliant code on the first pass.
+The new enforcement stack (slim rules + `inject-rules.sh` + `check-edited-file.sh` + skills + the commit-review loop) **produced mostly-compliant code from 5/5 blind-eval agents on additive new-file tasks**. That is the supported claim. Broader claims (the loop works end-to-end, the workflow catches drift in general) are not yet supported by the evidence — see "What we still don't know" below.
+
 - 5/5 blind-eval agents produced code that passes `npm run build` and `npm test`.
-- End-to-end commit-review against the final commit (`600662a`, the J-shortcut) returned `PASS` with zero `BLOCK` findings, 3 `WARN`s, and 2 `NOTE`s.
+- One post-hoc Reviewer run against `600662a` (J-shortcut) returned `PASS` with zero `BLOCK` findings, 3 `WARN`s, and 2 `NOTE`s.
+- Three workflow bugs were found and fixed this cycle.
+- Fixer and Arbiter agents have zero invocations. Their behavior is unproven.
 
-But the eval exposed three workflow bugs that would have gone undetected if the Reviewer had never fired. All three are fixed or documented in this cycle.
-
-## Signal: the workflow is steering agents
+## Supported claim: rule injection steers agents on clean additive tasks
 
 The 5 agents were given feature-level prompts in isolated worktrees with no guidance on hex-empires patterns. The machinery that steered them:
 
@@ -21,7 +22,23 @@ The 5 agents were given feature-level prompts in isolated worktrees with no guid
 - `.claude/skills/{add-content,add-panel,add-hud-element}/` — step-by-step guides
 - `.claude/rules/*.md` — authoritative patterns
 
-Observed: all 5 agents independently wrapped in `PanelShell` / `TooltipShell`, registered ids in the registries, used tokens instead of raw hex, kept engine pure, produced passing tests. This is the inversion of the audit that kicked off this whole exercise (pre-P6: ~120 pattern violations across ~30 files). Rule injection at subagent start is doing real work.
+Observed: all 5 agents independently wrapped in `PanelShell` / `TooltipShell`, registered ids in the registries, used tokens instead of raw hex, kept engine pure, produced passing tests. This is the inversion of the pre-P6 audit baseline (~120 pattern violations across ~30 files). On the specific task shape tested, rule injection is doing real work.
+
+## What we still don't know
+
+The eval tested one axis (new-file additive tasks) under one set of conditions (Sonnet agents, clean-ish task scope). Five things remain un-tested or under-tested:
+
+1. **The BLOCK path has never fired.** Reviewer produced PASS. Fixer and Arbiter have never run. We don't know whether the Fixer correctly addresses only BLOCK findings, whether the dispute protocol works, whether the Arbiter's judgment is sound. First real BLOCK will be the test — or we write a synthetic-BLOCK smoke test in a later cycle.
+
+2. **Legacy drift teaches new agents the antipattern.** Finding F-1196b755 showed the J-shortcut blind agent imitated `ValidationFeedback.tsx`'s `useState<boolean>`-for-visibility antipattern. The rule is documented in `ui-overlays.md`; the sibling file violates it; the agent pattern-matched. Rule injection cannot overpower a contradictory local exemplar. Cleaning `ValidationFeedback.tsx` is a workflow prerequisite, not a polish item — see BACKLOG `UI-C-VF1`.
+
+3. **Tasks were structurally easy.** All five added new files. None required modifying shared infrastructure (the SYSTEMS pipeline, `GameState` type, `App.tsx`'s keydown handler, cross-cutting registries). Real architectural drift lives in modifications, not additions. A harder eval with 2+ agents each editing shared files would tell us whether the workflow survives real conflict.
+
+4. **Worktree isolation has no machine guard.** Agent 4 (Solar Eclipse) committed directly to `main`. The fix is documented (`safe-commit.sh` + sentinel-file guard) but not built. Next parallel batch can repeat the leak unless the guard ships first.
+
+5. **`inject-rules.sh` is text, not enforcement.** Both `ValidationFeedback.tsx` (live) and `IdleUnitsToast.tsx` (blind-eval output) violate the HUD `useState`-visibility antipattern. Neither got a BLOCK — they got a WARN. The injected rules set the expectation; they don't *catch* the violation. Tier-4 lint-as-tests and Tier-2 ESLint are what actually prevent the class. The new `hud-registry-sync.test.ts` (this cycle) is an instance of the right pattern; more such tests are needed before the next batch.
+
+The rule of thumb: **rule injection prevents the violations an agent would make reluctantly; it does not prevent the violations an agent would make confidently by imitating the existing tree**. Tightening the latter is the open work.
 
 ## Bug 1 — Worktree isolation leak (Phase 6c observation)
 
@@ -88,12 +105,17 @@ Three are **one-off judgment calls** that a human or the Reviewer catches on rev
 ## What "Phase 6d done" looks like
 
 - [x] Cherry-pick finished (J-shortcut landed as `600662a`).
-- [x] `commit-review.sh` hook bugs fixed; first successful firing verified.
-- [x] Commit-review loop end-to-end exercised against a real commit.
+- [x] `commit-review.sh` + `log-bash-failure.sh` hook bugs fixed; first successful firing verified.
+- [x] Reviewer leg of the commit-review loop exercised against a real commit (PASS, 3 WARN, 2 NOTE).
 - [x] Reviewer produced a structured, concrete, low-variance report.
+- [x] F-3cfd936d fixed in place (`IdleUnitsToast.test.tsx` vague `.toBeTruthy()` → concrete content assertion).
+- [x] F-c6155628 fixed in place (`hud-elements.md` now has rows for `idleUnitsToast` + the pre-existing missing `yieldsToggle` entry).
+- [x] `hud-registry-sync.test.ts` shipped as Tier-4 lint-as-test — permanently prevents the F-c6155638 drift class.
 - [x] Findings documented (this file).
-- [ ] (Deferred) Fix the 3 WARN findings on `600662a`. The Fixer agent per design only addresses BLOCKs — WARNs stay open for a human or the next edit pass. That's by design; this backlog is tracked via the review report in `scratch/review-600662a.md`.
-- [ ] (Deferred) Build `hud-registry-sync.test.ts` as Tier-4 lint-as-test. Small cost, prevents F-c6155628 class forever.
+- [ ] (Prerequisite for Phase 7, tracked as `UI-C-VF1` in BACKLOG) Refactor `ValidationFeedback.tsx` to drive visibility from `HUDManager.isActive()` instead of local `useState<boolean>`. Unblocks future HUD agents from pattern-matching the antipattern (F-1196b755).
+- [ ] (Deferred) Fix F-dd2174c5 (aria-role overlap) + F-dc002a8f (stale comment). Judgment calls; do on a later cleanup pass.
+- [ ] (Deferred) Fixer + Arbiter have never run. Next real BLOCK-producing commit will test them — or write a synthetic-BLOCK smoke test next cycle.
+- [ ] (Deferred) Worktree isolation guard script (`safe-commit.sh` + sentinel file). Must ship before next parallel batch.
 - [ ] (Deferred) Phase 7: exercise the commit-review loop against BACKLOG items (SYS-D, CNT-D). Next session.
 
 ## Trust model after this cycle
