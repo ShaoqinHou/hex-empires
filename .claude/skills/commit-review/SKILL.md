@@ -171,6 +171,29 @@ ruling if any, final state.>
 <WARN and NOTE findings carried over. These are logged, not fixed.>
 ```
 
+## Step 3b — PRINCIPLE-GAP logging (living registry)
+
+If, during the review of this sha, the Reviewer flagged a finding shape
+that does NOT match any existing trap in `.claude/rules/principles.md`'s
+trap registry, append a one-line entry to `.claude/workflow/issues.md`:
+
+```
+- [<ISO-TS>] [PRINCIPLE-GAP] <finding-id> on <sha>: <1-line description of the pattern>
+```
+
+Do NOT auto-edit `principles.md` from the orchestrator. The Reviewer's
+job is to detect deviation from existing principles, not to author new
+ones. A human periodically triages accumulated PRINCIPLE-GAP entries
+and promotes repeat offenders into the registry.
+
+This is how the workflow stays living without crossing the role
+boundary. It's a journal, not an auto-commit.
+
+Trigger logic: "does not match any existing trap" = you grepped the
+trap-registry table's `Trap` column and none contained a substring
+match to the finding's pattern. Cheap check; skip if all findings map
+to known traps.
+
 ## Step 4 — Batch summary (auto mode only, MANDATORY before exiting)
 
 At the end of `--drain-queue`, write `.claude/workflow/scratch/last-review-summary.md`:
