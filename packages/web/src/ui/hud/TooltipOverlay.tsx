@@ -239,6 +239,25 @@ function LightweightTooltipBody({
   const showCyclePill = stackSize > 1;
   const displayIndex = stackSize > 0 ? (cycleIndex % stackSize) + 1 : 1;
 
+  // Stack summary line — compact "City — 2 units — Farm" overview shown
+  // when the tile holds multiple distinct things. Lets the player glance
+  // at "what's here" before diving into the per-entity lines below.
+  const stackSummaryParts: string[] = [];
+  if (contents.city) stackSummaryParts.push(contents.city.name);
+  const totalOwnUnits = contents.ownUnits.length;
+  const totalEnemyUnits = contents.enemyUnits.length;
+  if (totalOwnUnits > 0) {
+    stackSummaryParts.push(totalOwnUnits === 1 ? '1 unit' : `${totalOwnUnits} units`);
+  }
+  if (totalEnemyUnits > 0) {
+    stackSummaryParts.push(`${totalEnemyUnits} ${totalEnemyUnits === 1 ? 'enemy' : 'enemies'}`);
+  }
+  if (improvement) stackSummaryParts.push(improvement.name);
+  if (resource) stackSummaryParts.push(resource.name);
+  // Only show when there are genuinely multiple things — a lone unit on
+  // empty grassland doesn't need a summary line.
+  const showStackSummary = stackSummaryParts.length > 1;
+
   return (
     <div
       data-testid="tooltip-body-compact"
@@ -323,6 +342,18 @@ function LightweightTooltipBody({
           {enemyCivilian.length > 1 && (
             <span style={{ color: 'var(--hud-tooltip-enemy-civilian)' }}> ×{enemyCivilian.length}</span>
           )}
+        </div>
+      )}
+
+      {/* Stack summary — single-line "City — 2 units — Farm" overview.
+          Only shown when the tile has multiple distinct things. */}
+      {showStackSummary && (
+        <div
+          data-testid="tooltip-stack-summary"
+          className="mt-0.5"
+          style={{ color: 'var(--hud-text-muted)', fontSize: '11px' }}
+        >
+          {stackSummaryParts.join(' \u2014 ')}
         </div>
       )}
 
