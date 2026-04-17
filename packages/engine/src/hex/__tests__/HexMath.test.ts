@@ -34,6 +34,11 @@ describe('coordToKey / keyToCoord', () => {
   it('produces deterministic keys across calls', () => {
     expect(coordToKey({ q: 5, r: -3 })).toBe(coordToKey({ q: 5, r: -3 }));
   });
+
+  it('round-trips positive-only coordinates', () => {
+    const coord = { q: 7, r: 11 };
+    expect(keyToCoord(coordToKey(coord))).toEqual(coord);
+  });
 });
 
 describe('axialToCube / cubeToAxial', () => {
