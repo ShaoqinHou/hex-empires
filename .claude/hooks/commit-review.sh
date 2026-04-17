@@ -179,7 +179,6 @@ LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
 # `C:/Program Files/Git/commit-review`.
 (
   MSYS_NO_PATHCONV=1 claude \
-    --dangerously-skip-permissions \
     --permission-mode bypassPermissions \
     --model sonnet \
     -p "/commit-review --drain-queue" \

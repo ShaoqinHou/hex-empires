@@ -1,7 +1,3 @@
----
-purpose: Auto-appended log by hooks (command failures, review skips, PRINCIPLE-GAP entries). Humans triage periodically.
----
-
 ## Issues Log
 <!-- Hooks auto-append entries here. Format: -->
 <!-- - [YYYY-MM-DDTHH:MM:SSZ] [category] description -->

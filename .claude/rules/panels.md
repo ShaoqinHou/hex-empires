@@ -1,7 +1,3 @@
----
-purpose: PanelManager + PanelShell protocol (authoritative spec). Panel visibility, ESC handling, chrome styling, triggers, testing.
----
-
 # Panel Rules
 
 ## The Rule

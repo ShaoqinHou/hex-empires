@@ -1,7 +1,3 @@
----
-purpose: 41 named detection recipes with grep patterns. Used by Reviewer for mechanical-detection pass.
----
-
 # Standards Registry
 
 Last generated: 2026-04-15

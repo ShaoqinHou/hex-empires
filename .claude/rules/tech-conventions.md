@@ -1,7 +1,3 @@
----
-purpose: TypeScript idioms (strict, no any, named exports), ports, Windows/MINGW64 platform notes, git conventions.
----
-
 # Tech Conventions
 
 ## TypeScript

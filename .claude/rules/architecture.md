@@ -1,7 +1,3 @@
----
-purpose: Engine/renderer separation, system pipeline shape, GameState as single source of truth, data-file purity rule. Foundational layering constraints.
----
-
 # Architecture Rules
 
 ## Core Principle: Engine/Renderer Separation

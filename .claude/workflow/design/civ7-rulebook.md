@@ -1,7 +1,3 @@
----
-purpose: Civilization VII mechanics reference (1483 lines). Primary game-design source for engine implementation.
----
-
 # Civilization VII -- Comprehensive Mechanics Rulebook
 
 Reference document for hex-empires engine implementation.

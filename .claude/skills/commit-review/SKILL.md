@@ -1,6 +1,7 @@
 ---
 name: commit-review
 description: Orchestrate the three-agent review loop (Reviewer → Fixer → Arbiter → iter-2 Reviewer) on one or more commits. Auto-invoked in the background by the PostToolUse hook after every substantive commit. TRIGGER WHEN user says "run commit-review" / "review HEAD" / "review commit <sha>" / "sweep the last N commits", OR you want to re-run review on a commit whose outcome file is missing. DO NOT TRIGGER proactively on every commit — the hook already does that.
+disable-model-invocation: true
 ---
 
 # /commit-review — Orchestrator
@@ -174,17 +175,17 @@ ruling if any, final state.>
 ## Step 3b — PRINCIPLE-GAP logging (living registry)
 
 If, during the review of this sha, the Reviewer flagged a finding shape
-that does NOT match any existing trap in `.claude/rules/principles.md`'s
-trap registry, append a one-line entry to `.claude/workflow/issues.md`:
+that does NOT match any existing trap in the project-root `CLAUDE.md`'s
+trap registry table, append a one-line entry to `.claude/workflow/issues.md`:
 
 ```
 - [<ISO-TS>] [PRINCIPLE-GAP] <finding-id> on <sha>: <1-line description of the pattern>
 ```
 
-Do NOT auto-edit `principles.md` from the orchestrator. The Reviewer's
+Do NOT auto-edit `CLAUDE.md` from the orchestrator. The Reviewer's
 job is to detect deviation from existing principles, not to author new
 ones. A human periodically triages accumulated PRINCIPLE-GAP entries
-and promotes repeat offenders into the registry.
+and promotes repeat offenders into the trap registry in CLAUDE.md.
 
 This is how the workflow stays living without crossing the role
 boundary. It's a journal, not an auto-commit.

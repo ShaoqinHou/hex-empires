@@ -1,7 +1,9 @@
 #!/bin/bash
 # PostToolUse hook for Edit/Write — checks import boundaries
 
-TOOL_INPUT="$1"
+# Claude Code delivers hook payloads via stdin, not as CLI args.
+# Previous version used $1 which was always empty → entire hook was a no-op.
+TOOL_INPUT=$(cat 2>/dev/null || echo "")
 
 FILE_PATH=""
 if command -v jq &>/dev/null; then

@@ -1,11 +1,3 @@
----
-purpose: Engine-side patterns that have no grep-checkable rule today — immutable state updates, state.config vs global registries, seeded RNG, age transitions.
-layer: rule
-injected-at: session-start, subagent-start
-consumed-by: implementer, reviewer, fixer
-last-validated: 2026-04-17
----
-
 # Engine Patterns
 
 The existing `architecture.md` + `import-boundaries.md` cover layering. This doc covers four specific engine patterns that the pre-WF-AUTO-14 workflow had no rule for but that agents routinely got wrong. Most of this was implicit in `inject-rules.sh` comments or only surfaced during Reviewer findings — making it explicit here so both implementer and Reviewer use the same words.

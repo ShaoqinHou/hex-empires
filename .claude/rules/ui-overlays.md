@@ -1,7 +1,3 @@
----
-purpose: TooltipShell + HUDManager protocol (authoritative spec). HUD element priorities, sticky/non-sticky, ESC precedence, token-only chrome.
----
-
 # HUD / Overlay Rules
 
 ## The Rule

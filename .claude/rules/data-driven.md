@@ -1,7 +1,3 @@
----
-purpose: Registry pattern + "adding content = new data file + barrel export" protocol. Zero code changes elsewhere.
----
-
 # Data-Driven Content Rules
 
 ## The Principle
