@@ -1,0 +1,39 @@
+/*
+ * layer-tokens.css — the canonical z-axis for every positioned element
+ * in packages/web. Referenced by panel-tokens.css and hud-tokens.css as
+ * aliases; those sheets re-export the names individual components use
+ * today.
+ *
+ * Numeric values use a decade scheme (0, 10, 20, ...). Any intermediate
+ * value (15, 25, 55) is reserved; when a new layer is needed, insert
+ * here, not at the call site. See .claude/workflow/design/ui-review/
+ * systems/S-01-layer-and-zindex.md for rationale.
+ */
+
+:root {
+  /* Map + map-scoped chrome */
+  --z-map:                 0;
+  --z-map-overlay:        10;
+  --z-map-control:        20;
+
+  /* Application chrome */
+  --z-chrome-bar:         30;
+
+  /* Panels */
+  --z-panel-info:         40;
+  --z-minimap:            45;
+  --z-panel-overlay:      50;
+  --z-panel-float-control:55;
+
+  /* HUD layer (responsive to player action) */
+  --z-hud-fixed-corner:   60;
+  --z-hud-toast:          65;
+  --z-hud-tooltip:        70;
+
+  /* Drama + system */
+  --z-modal:              80;
+  --z-modal-affordance:   85;
+  --z-transition:         90;
+  --z-drag-preview:       95;
+  --z-system-critical:   100;
+}
