@@ -1,27 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  /* Richer, deeper colors for game-like feel */
-  --color-bg: #0d1117;
-  --color-surface: #161b22;
-  --color-surface-hover: #21262d;
-  --color-border: #30363d;
-  --color-text: #f0f6fc;
-  --color-text-muted: #8b949e;
-  --color-accent: #58a6ff;
-  --color-accent-hover: #79c0ff;
+  /* Warm earth-tone palette — values delegated to palette-tokens.css.
+   * The variables below are kept here for backwards-compat with any
+   * legacy consumers that reference them; their values now source from
+   * the palette spec.
+   *
+   * Phase 1 migration: 14 values revalued per phase-1-design-tokens-spec.md
+   * § "Raw hex literals replaced — index.css". */
+  --color-bg:           #1a1510;
+  --color-surface:      #251e14;
+  --color-surface-hover:#2e261a;
+  --color-border:       #4a3e28;
+  --color-text:         #f2e8d0;
+  --color-text-muted:   #a89070;
+  --color-accent:       #d4943a;
+  --color-accent-hover: #e8aa50;
 
-  /* Resource colors - more vibrant */
-  --color-gold: #ffd700;
-  --color-food: #7cfc00;
-  --color-production: #ff6b6b;
-  --color-science: #4dabf7;
-  --color-culture: #cc5de8;
-  --color-faith: #a0aec0;
-  --color-health-high: #51cf66;
-  --color-health-low: #ff6b6b;
+  /* Resource colors - warm-shifted */
+  --color-gold:        #fbbf24;
+  --color-food:        #6aaa3a;
+  --color-production:  #c06040;
+  --color-science:     #4a80c8;
+  --color-culture:     #9060c0;
+  --color-faith:       #c0a870;
+  --color-health-high: #4a8c5a;
+  --color-health-low:  #c53030;
 
-  /* Game UI enhancement colors */
+  /* Game UI enhancement colors — deferred to Phase 4 (warm-shift pass) */
   --color-glow: rgba(88, 166, 255, 0.15);
   --color-glow-strong: rgba(88, 166, 255, 0.3);
   --color-panel-bg: rgba(22, 27, 34, 0.95);
@@ -40,7 +46,10 @@ html, body, #root {
   overflow: hidden;
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--type-body-family);
+  font-size:   var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-leading);
 }
 
 /* Custom animations for validation feedback */
