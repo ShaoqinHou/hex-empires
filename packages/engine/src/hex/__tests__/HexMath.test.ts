@@ -30,6 +30,10 @@ describe('coordToKey / keyToCoord', () => {
     const coord = { q: -42, r: -17 };
     expect(keyToCoord(coordToKey(coord))).toEqual(coord);
   });
+
+  it('produces deterministic keys across calls', () => {
+    expect(coordToKey({ q: 5, r: -3 })).toBe(coordToKey({ q: 5, r: -3 }));
+  });
 });
 
 describe('axialToCube / cubeToAxial', () => {

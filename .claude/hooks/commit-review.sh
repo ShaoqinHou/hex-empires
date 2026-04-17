@@ -81,6 +81,7 @@ esac
 # the presence of these files means we're mid-conflict — no review yet.
 if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || \
    [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT mid-conflict" >> "$TRACE_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -91,7 +92,9 @@ fi
 # match yet).
 PREV=$(git rev-parse ORIG_HEAD 2>/dev/null || echo "")
 CURR=$(git rev-parse HEAD 2>/dev/null || echo "")
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] HEAD=${CURR:0:8} ORIG_HEAD=${PREV:0:8}" >> "$TRACE_FILE" 2>/dev/null || true
 if [ -n "$PREV" ] && [ "$PREV" = "$CURR" ]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT head-unchanged" >> "$TRACE_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -102,20 +105,27 @@ if echo "$LAST_MSG" | grep -qE "^Skip-Review:"; then
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
   echo "- [$TIMESTAMP] [review_skipped] commit $SHA — $(echo "$LAST_MSG" | grep '^Skip-Review:' | head -1)" >> "$BYPASS_LOG"
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT skip-review-trailer" >> "$TRACE_FILE" 2>/dev/null || true
   exit 0
 fi
 
 # Get changed files. Skip if the commit touches only docs/meta.
 SHA=$(git rev-parse HEAD 2>/dev/null || exit 0)
 CHANGED=$(git diff-tree --no-commit-id --name-only -r "$SHA" 2>/dev/null || echo "")
-if [ -z "$CHANGED" ]; then exit 0; fi
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] CHANGED=$(echo "$CHANGED" | tr '\n' ',')" >> "$TRACE_FILE" 2>/dev/null || true
+if [ -z "$CHANGED" ]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT no-changed-files" >> "$TRACE_FILE" 2>/dev/null || true
+  exit 0
+fi
 
 # Filter out paths that don't warrant a code review
 SUBSTANTIVE=$(echo "$CHANGED" | grep -vE '^(\.claude/|.*\.md$|.*\.snap$|dist/|node_modules/|packages/.*/dist/|\.gitignore)' || true)
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] SUBSTANTIVE=$(echo "$SUBSTANTIVE" | tr '\n' ',')" >> "$TRACE_FILE" 2>/dev/null || true
 if [ -z "$SUBSTANTIVE" ]; then
-  # Docs/meta only — no review needed
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT docs-meta-only" >> "$TRACE_FILE" 2>/dev/null || true
   exit 0
 fi
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] PROCEED sha=$SHA" >> "$TRACE_FILE" 2>/dev/null || true
 
 # Write a trigger marker — quick-glance "what's the latest pending review".
 # Back-compat with manual flows. The queue file below is the real work list.
