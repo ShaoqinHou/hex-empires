@@ -2,60 +2,57 @@
  * panel-tokens.css — CSS custom properties for the shared PanelShell
  * chrome, plus layout-chrome utility classes.
  *
- * Values match the game's existing dark-slate aesthetic (see
- * index.css :root tokens and TopBar.tsx gradient). Panel chrome uses
- * a semi-opaque surface over the map with subtle gold accents on the
- * title bar, matching DiplomacyPanel / ReligionPanel / TopBar.
+ * Phase 1 migration: 9 values revalued to warm earth-tone palette per
+ * phase-1-design-tokens-spec.md § "panel-tokens.css — values replaced".
+ * Z-index aliases added pointing to layer-tokens.css canonical scale.
+ * Spacing aliases (--panel-padding-*) moved to spacing-tokens.css.
  *
  * Cycle 2 of the panel-manager refactor.
  */
 
 :root {
-  /* Chrome surface */
-  --panel-bg: rgba(22, 27, 34, 0.96);
-  --panel-border: rgba(48, 54, 61, 0.85);
+  /* Chrome surface — warm earth-tone palette */
+  --panel-bg: rgba(37, 30, 20, 0.96);
+  --panel-border: rgba(74, 62, 40, 0.85);
   --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
   --panel-radius: 8px;
 
-  /* Spacing scale used by title bar + body */
-  --panel-padding-sm: 8px;
-  --panel-padding-md: 12px;
-  --panel-padding-lg: 16px;
+  /* Spacing scale — aliases now defined in spacing-tokens.css.
+   * --panel-padding-sm, --panel-padding-md, --panel-padding-lg are
+   * declared there so they don't need to be repeated here. */
 
   /* Typography */
-  --panel-title-color: #f0f6fc;
-  --panel-text-color: #f0f6fc;
-  --panel-muted-color: #8b949e;
+  --panel-title-color: #f8f0d8;  /* = --color-text-heading */
+  --panel-text-color:  #f2e8d0;  /* = --color-text */
+  --panel-muted-color: #a89070;  /* = --color-text-muted */
 
-  /* Gold accent — title underline, hover states. Matches index.css --color-gold. */
-  --panel-accent-gold: #ffd700;
+  /* Gold accent — title underline, hover states. Matches --color-gold. */
+  --panel-accent-gold: #fbbf24;  /* = --color-gold = --amber-400 */
 
   /* Close button */
   --panel-close-icon-size: 18px;
 
-  /* Backdrop for modal priority */
-  --panel-backdrop: rgba(0, 0, 0, 0.65);
+  /* Backdrop for modal priority — lightened per S-04 (0.65 → 0.45) */
+  --panel-backdrop: rgba(0, 0, 0, 0.45);
 
-  /* Z-index scale
-   * chrome   — always-visible layout (TopBar, BottomBar)
-   * info     — above map, below top bar dropdowns (event log, minimap)
-   * overlay  — above top bar so the panel chrome is clickable (most panels)
-   * modal    — above everything (age transition, crisis, victory) */
-  --panel-z-info: 90;
-  --panel-z-chrome: 100;
-  --panel-z-overlay: 110;
-  --panel-z-modal: 210;
+  /* Turn badge — warm palette update */
+  --panel-turn-badge-text:   #1a1510;  /* = --color-bg */
+  --panel-turn-badge-border: #1a1510;  /* = --color-bg */
 
-  /* HUD z-tiers — shared with panel z-scale so stacking order is predictable
-   * across the two layers. Minimap sits at the info tier (above map, below
-   * top bar dropdowns). When hud-tokens.css lands these values will be
-   * re-exported from there; keeping them here in the interim lets the
-   * Minimap migrate off raw values without a forward reference. */
-  --hud-z-minimap: 90;
+  /* Z-index aliases — canonical values in layer-tokens.css.
+   * Old values: info=90, chrome=100, overlay=110, modal=210.
+   * New values: info=40, chrome=30, overlay=50, modal=80. */
+  --panel-z-info:    var(--z-panel-info);     /* was 90  → 40 */
+  --panel-z-chrome:  var(--z-chrome-bar);     /* was 100 → 30 */
+  --panel-z-overlay: var(--z-panel-overlay);  /* was 110 → 50 */
+  --panel-z-modal:   var(--z-modal);          /* was 210 → 80 */
+
+  /* HUD z-tiers — kept for source compatibility; canonical in layer-tokens.css */
+  --hud-z-minimap: var(--z-minimap);  /* was 90 → 45 */
 
   /* Diplomacy relationship status palette — used by DiplomacyPanel badges.
-   * Values match the hues previously hard-coded in DiplomacyPanel's
-   * STATUS_COLORS map; migrated here in M33 follow-up. */
+   * Deferred to Phase 4 warm-shift pass (per spec "Tokens intentionally NOT
+   * changed in Phase 1"). Values unchanged. */
   --panel-status-war:        #dc2626; /* dark red */
   --panel-status-hostile:    #ef4444; /* red */
   --panel-status-unfriendly: #fb923c; /* orange */
@@ -64,8 +61,7 @@
   --panel-status-helpful:    #4ade80; /* green */
 
   /* Governor specialization palette — used by GovernorPanel badges.
-   * Values match the hues previously hard-coded in GovernorPanel's
-   * SPECIALIZATION_COLORS map; migrated here in M33 follow-up. */
+   * Deferred to Phase 4 warm-shift pass. Values unchanged. */
   --panel-spec-economic:   #fbbf24; /* gold */
   --panel-spec-military:   #ef4444; /* red */
   --panel-spec-scientific: #3b82f6; /* blue */
@@ -74,75 +70,42 @@
   --panel-spec-diplomatic: #10b981; /* green */
 
   /* ─── Accent colors (C11–C13) ─────────────────────────────────────
-   * Semantic accent palette used by panel bodies (chrome — not game
-   * data). Migrated from raw-hex literals in GovernorPanel,
-   * DiplomacyPanel, TechTreePanel, and CivicTreePanel.
-   *
-   * If this block conflicts on merge with a parallel-cycle token
-   * addition, prefer the earlier definition and drop this duplicate —
-   * the values are intentionally the same semantic slots. */
-  --panel-accent-success:        #4ade80;     /* green-400 — positive/friendly */
-  --panel-accent-success-bright: #22c55e;     /* green-500 — stronger success, used in researched-state overlays */
-  --panel-accent-danger:         #ef4444;     /* red-400 — negative/enemy */
-  --panel-accent-info:           #60a5fa;     /* blue-400 — info/alliance */
-  --panel-accent-info-soft:      #93c5fd;     /* blue-300 — softer info */
-  --panel-accent-info-bright:    #3b82f6;     /* blue-500 — stronger info, used in progress fill */
-  --panel-accent-gold-soft:      #fbbf24;     /* amber-400 — softer gold */
-  --panel-accent-gold-bright:    #fcd34d;     /* amber-300 — lighter emphasis (C10) */
-  --panel-accent-purple:         #a855f7;     /* legacy-bonus / wonder / district accent (C10) */
-  --panel-accent-purple-soft:    #c4b5fd;     /* purple-300 — softer reading color (C10) */
+   * Deferred to Phase 4 warm-shift pass. Values unchanged. */
+  --panel-accent-success:        #4ade80;
+  --panel-accent-success-bright: #22c55e;
+  --panel-accent-danger:         #ef4444;
+  --panel-accent-info:           #60a5fa;
+  --panel-accent-info-soft:      #93c5fd;
+  --panel-accent-info-bright:    #3b82f6;
+  --panel-accent-gold-soft:      #fbbf24;     /* = --amber-400 = --color-gold */
+  --panel-accent-gold-bright:    #fcd34d;     /* = --amber-300 = --color-gold-soft */
+  --panel-accent-purple:         #a855f7;
+  --panel-accent-purple-soft:    #c4b5fd;
   --panel-accent-purple-glow:    rgba(168, 85, 247, 0.30);
-  --panel-accent-pink:           #e599f7;     /* pink-300 — civic-in-progress text accent */
-  --panel-accent-neutral:        #475569;     /* slate-600 — muted locked state */
+  --panel-accent-pink:           #e599f7;
+  --panel-accent-neutral:        #475569;
 
-  /* Muted surfaces — replace Tailwind `bg-slate-*/XX` patterns in panel
-   * bodies. Added in the C9 + C10 token sweep. */
-  --panel-muted-bg:        rgba(30, 41, 59, 0.50);   /* slate-800 @ 50% */
-  --panel-muted-bg-soft:   rgba(30, 41, 59, 0.30);   /* slate-800 @ 30% — card interior */
-  --panel-muted-bg-strong: rgba(15, 23, 42, 0.50);   /* slate-900 @ 50% — disabled card */
-  --panel-muted-strong:    #475569;                   /* slate-600 — stronger muted text/border (alias of --panel-accent-neutral) */
-  --panel-muted-border:    rgba(71, 85, 105, 0.30);  /* slate-600 @ 30% — card-interior border */
+  /* Muted surfaces — deferred to Phase 4 warm-shift pass. Values unchanged. */
+  --panel-muted-bg:        rgba(30, 41, 59, 0.50);
+  --panel-muted-bg-soft:   rgba(30, 41, 59, 0.30);
+  --panel-muted-bg-strong: rgba(15, 23, 42, 0.50);
+  --panel-muted-strong:    #475569;
+  --panel-muted-border:    rgba(71, 85, 105, 0.30);
 
-
-  /* Tech / civic tree node-state aliases. Reuse the accent palette
-   * but give call-sites a semantic name for node state (researched /
-   * selected / locked / unique). Per ui-cleanup-remaining.md C13,
-   * node-state coloring is on the chrome/game-data boundary; naming
-   * them makes the intent explicit. */
+  /* Tech / civic tree node-state aliases. */
   --tech-state-researched: var(--panel-accent-success-bright);
   --tech-state-selected:   var(--panel-accent-info-bright);
   --tech-state-locked:     var(--panel-accent-neutral);
   --tech-state-unique:     var(--panel-accent-pink);
 
-  /* TopBar panel-button accent colors. Previously raw hex props on each
-   * PanelButton call site; tokenized so a future theme change can recolor
-   * the whole row without hunting through JSX. Named by semantic role
-   * rather than hue so renaming survives a palette shift. Partially
-   * addresses the pre-existing raw-hex NOTE flagged on review-ce48c0a. */
+  /* TopBar panel-button accent colors. */
   --panel-button-tech:      #4dabf7;  /* blue */
   --panel-button-civics:    #cc5de8;  /* magenta */
   --panel-button-diplomacy: #ba68c8;  /* purple */
   --panel-button-age:       #ffd54f;  /* gold — dark-text variant */
-
-  /* Turn badge — pre-existing raw hex on the "Turn N" text, now
-   * tokenized per review-bb4a89d F-48c16af3. Dark text on the bright
-   * accent gradient; the literal resolves to the same value as
-   * --color-bg but is named semantically for readability.
-   * Border color tokenized per review-0e207d8 F-c68b3dd0. Near-black
-   * dark background shade that frames the accent gradient. */
-  --panel-turn-badge-text:   #0d1117;
-  --panel-turn-badge-border: #1a1f29;
 }
 
-/* Layout chrome utility classes — SYS-D-12.
- *
- * React's CSSProperties.zIndex type is `number | undefined` and does NOT
- * accept a CSS custom-property string. Setting `zIndex: 'var(--panel-z-*)'`
- * inline requires a double-cast `as unknown as number` to bypass the type
- * system. CSS classes accept var() natively so eliminating the cast is
- * simpler than coercing it. These utilities apply the same numeric values
- * the token scale defines — always via var() so a future theme change
- * propagates. */
+/* Layout chrome utility classes — SYS-D-12. */
 .layout-chrome-bar {
   z-index: var(--panel-z-chrome);
 }
