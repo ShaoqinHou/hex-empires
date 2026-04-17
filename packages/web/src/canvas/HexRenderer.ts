@@ -7,6 +7,9 @@ import type { Camera } from './Camera';
 import { drawUnitIcon } from './UnitIcons';
 import { RenderCache, calculateViewportBounds, type ViewportBounds } from './RenderCache';
 import { HEX_SIZE, HEX_WIDTH, HEX_HEIGHT, hexToPixel as hexToPixelUtil, pixelToHex as pixelToHexUtil } from '../utils/hexMath';
+import { getPaletteColor } from './paletteResolver';
+import { getIconImage } from './iconImageCache';
+import { getResourceIcon, getImprovementIcon } from '../assets/loader';
 
 export interface RenderContext {
   state: GameState;
@@ -68,29 +71,52 @@ function drawHexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
   ctx.closePath();
 }
 
-// ── Improved terrain color overrides ─────────────────────────────────────────
-// These override the colors stored in the data registry for better visual contrast.
-const TERRAIN_COLOR_OVERRIDES: Record<string, string> = {
-  grassland: '#5da84e',   // rich green
-  plains:    '#d4b85a',   // golden wheat
-  desert:    '#e8d5a3',   // warm sandy
-  tundra:    '#b0c4ce',   // pale blue-grey
-  snow:      '#eaf4f4',   // crisp white with blue tint
-  coast:     '#5ba0d0',   // clear coastal blue
-  ocean:     '#1e4d7a',   // deep dark blue
+// ── Terrain color resolution via palette tokens ───────────────────────────────
+// Map terrain IDs to CSS custom property names defined in palette-tokens.css.
+// Resolved at render time via paletteResolver so the game respects future theme
+// changes without a code change.  The string values here are the token names,
+// not raw hex — raw hex lives only in palette-tokens.css.
+
+const TERRAIN_TOKEN_MAP: Record<string, string> = {
+  grassland: '--color-grassland',
+  plains:    '--color-plains',
+  desert:    '--color-desert',
+  tundra:    '--color-tundra',
+  snow:      '--color-snow',
+  coast:     '--color-coast',
+  ocean:     '--color-ocean',
 };
 
-// Feature color overrides for better visual quality
-const FEATURE_COLOR_OVERRIDES: Record<string, string> = {
-  hills:       '#8a7560',   // warm earthy brown (overlay)
-  mountains:   '#7a7a82',   // cool grey
-  forest:      '#2a5c1a',   // rich dark green
-  jungle:      '#1a4510',   // very dark jungle green
-  marsh:       '#4a5c30',   // murky green-brown
-  floodplains: '#6a9a40',   // fertile green
-  oasis:       '#38b068',   // vivid oasis green
-  reef:        '#2e7aa8',   // reef blue
+const FEATURE_TOKEN_MAP: Record<string, string> = {
+  hills:       '--color-feature-hills',
+  mountains:   '--color-feature-mountains',
+  forest:      '--color-feature-forest',
+  jungle:      '--color-feature-jungle',
+  marsh:       '--color-feature-marsh',
+  floodplains: '--color-feature-floodplains',
+  oasis:       '--color-feature-oasis',
+  reef:        '--color-feature-reef',
 };
+
+/** Resolve a terrain ID to a canvas-usable color string. */
+function getTerrainColor(terrainId: string, fallback: string): string {
+  const token = TERRAIN_TOKEN_MAP[terrainId];
+  if (token) {
+    const resolved = getPaletteColor(token);
+    if (resolved) return resolved;
+  }
+  return fallback;
+}
+
+/** Resolve a feature ID to a canvas-usable color string. */
+function getFeatureColor(featureId: string, fallback: string): string {
+  const token = FEATURE_TOKEN_MAP[featureId];
+  if (token) {
+    const resolved = getPaletteColor(token);
+    if (resolved) return resolved;
+  }
+  return fallback;
+}
 
 export class HexRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -162,14 +188,16 @@ export class HexRenderer {
     // Draw units (only visible, viewport culled)
     this.drawUnits(rc, viewport);
 
-    // Draw selection highlight
+    // Draw selection highlight — use warm gold token for selection border
     if (rc.selectedHex) {
-      this.drawHexHighlight(rc.selectedHex, 'rgba(255, 255, 255, 0.4)', 3);
+      const selColor = getPaletteColor('--color-tile-border-selected') || 'rgba(255, 220, 100, 0.9)';
+      this.drawHexHighlight(rc.selectedHex, selColor, 3);
     }
 
-    // Draw hover highlight
+    // Draw hover highlight — use subtle white token
     if (rc.hoveredHex) {
-      this.drawHexHighlight(rc.hoveredHex, 'rgba(255, 255, 255, 0.15)', 1);
+      const hovColor = getPaletteColor('--color-tile-border-hover') || 'rgba(255, 255, 255, 0.18)';
+      this.drawHexHighlight(rc.hoveredHex, hovColor, 1);
     }
 
     // Draw path preview (after selection + hover so it sits on top of both overlays)
@@ -207,17 +235,17 @@ export class HexRenderer {
       const terrain = rc.terrainRegistry.get(tile.terrain);
       const feature = tile.feature ? rc.featureRegistry.get(tile.feature) : null;
 
-      // Base terrain color (use override if available, else registry color)
-      const baseColor = (terrain?.id && TERRAIN_COLOR_OVERRIDES[terrain.id])
-        ? TERRAIN_COLOR_OVERRIDES[terrain.id]
-        : (terrain?.color ?? '#333');
+      // Base terrain color — resolve via palette token, fall back to registry color
+      const baseColor = terrain
+        ? getTerrainColor(terrain.id, terrain.color ?? '#333')
+        : '#333';
       drawHexPath(ctx, x, y);
       ctx.fillStyle = baseColor;
       ctx.fill();
 
       // Feature overlay — special rendering for hills/mountains, else semi-transparent tint
       if (feature) {
-        const featureColor = FEATURE_COLOR_OVERRIDES[feature.id] ?? feature.color;
+        const featureColor = getFeatureColor(feature.id, feature.color ?? '#888');
 
         if (feature.id === 'hills') {
           // Hills: darker diagonal-stripe overlay for topographic feel
@@ -244,7 +272,7 @@ export class HexRenderer {
           // Snow cap (white triangle at top of hex)
           ctx.save();
           ctx.globalAlpha = 0.85;
-          ctx.fillStyle = '#e8f0f0';
+          ctx.fillStyle = getTerrainColor('snow', '#fffef7');
           ctx.beginPath();
           ctx.moveTo(x, y - HEX_SIZE * 0.72);           // peak
           ctx.lineTo(x - HEX_SIZE * 0.38, y - HEX_SIZE * 0.18); // left
@@ -253,7 +281,7 @@ export class HexRenderer {
           ctx.fill();
           // Dark outline for definition
           ctx.globalAlpha = 0.5;
-          ctx.strokeStyle = '#6a6a72';
+          ctx.strokeStyle = getFeatureColor('mountains', '#7a7a82');
           ctx.lineWidth = 0.8;
           ctx.stroke();
           ctx.restore();
@@ -266,7 +294,11 @@ export class HexRenderer {
           if (feature.id === 'forest' || feature.id === 'jungle') {
             ctx.save();
             ctx.globalAlpha = 0.5;
-            ctx.fillStyle = feature.id === 'forest' ? '#1a4010' : '#0f2e08';
+            // Darken the base feature color for canopy dots
+            ctx.fillStyle = getFeatureColor(
+              feature.id === 'forest' ? 'forest' : 'jungle',
+              feature.id === 'forest' ? '#4a6428' : '#2e5018'
+            );
             const dotPositions = [
               { dx: -HEX_SIZE * 0.22, dy: -HEX_SIZE * 0.18 },
               { dx:  HEX_SIZE * 0.22, dy: -HEX_SIZE * 0.18 },
@@ -284,7 +316,7 @@ export class HexRenderer {
             // Marsh: wavy horizontal lines
             ctx.save();
             ctx.globalAlpha = 0.35;
-            ctx.strokeStyle = '#2a3a18';
+            ctx.strokeStyle = getFeatureColor('marsh', '#4a5c30');
             ctx.lineWidth = 1;
             for (let row = -1; row <= 1; row++) {
               ctx.beginPath();
@@ -299,9 +331,9 @@ export class HexRenderer {
         }
       }
 
-      // Hex border
+      // Hex border — use token color for inter-tile borders; fallback keeps old look
       drawHexPath(ctx, x, y);
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.strokeStyle = getPaletteColor('--color-tile-border') || 'rgba(0, 0, 0, 0.25)';
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
@@ -360,62 +392,78 @@ export class HexRenderer {
 
     const ctx = this.ctx;
 
-    // Pick colors by resource type — distinct ring + fill for each class
-    let fillColor: string;
-    let ringColor: string;
-    let textColor: string;
-    switch (resource.type) {
-      case 'luxury':
-        fillColor  = '#ffd54f'; // gold
-        ringColor  = '#f9a825';
-        textColor  = '#4a3000';
-        break;
-      case 'strategic':
-        fillColor  = '#b0bec5'; // steel grey
-        ringColor  = '#546e7a';
-        textColor  = '#1a2a2e';
-        break;
-      case 'bonus':
-        fillColor  = '#81c784'; // soft green
-        ringColor  = '#2e7d32';
-        textColor  = '#0a2210';
-        break;
-      default:
-        fillColor  = '#ffffff';
-        ringColor  = '#888';
-        textColor  = '#333';
-    }
-
     // Position: upper-left of hex, clear of improvement icon (upper-right)
     const iconX = cx - HEX_SIZE * 0.35;
     const iconY = cy - HEX_SIZE * 0.35;
     const radius = 6.5;
+    const iconSize = radius * 2;
+
+    // Try asset-pipeline image first (loads async; will appear on subsequent frames)
+    const iconUrl = getResourceIcon(tile.resource);
+    const img = getIconImage(iconUrl);
+
+    if (img) {
+      // Image ready — draw icon with ring badge
+      ctx.save();
+
+      // Ring badge background per type
+      const ringColor = this._resourceRingColor(resource.type);
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 3;
+      ctx.beginPath();
+      ctx.arc(iconX, iconY, radius + 2, 0, Math.PI * 2);
+      ctx.fillStyle = ringColor;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Clip to circle for the icon
+      ctx.beginPath();
+      ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, iconX - radius, iconY - radius, iconSize, iconSize);
+
+      ctx.restore();
+    } else {
+      // Fallback: letter badge while image loads
+      this._drawResourceLetterBadge(ctx, resource, iconX, iconY, radius);
+    }
+  }
+
+  /** Ring color for resource badge by type. Uses warm-palette token colors. */
+  private _resourceRingColor(type: string): string {
+    switch (type) {
+      case 'luxury':   return getPaletteColor('--color-gold')         || '#fbbf24';
+      case 'strategic':return getPaletteColor('--color-text-muted')   || '#a89070';
+      case 'bonus':    return getPaletteColor('--color-success')      || '#4a8c5a';
+      default:         return getPaletteColor('--color-border-accent') || '#7a6030';
+    }
+  }
+
+  /** Letter fallback badge for resource icon before image loads. */
+  private _drawResourceLetterBadge(
+    ctx: CanvasRenderingContext2D,
+    resource: { name: string; type: string },
+    iconX: number, iconY: number, radius: number
+  ): void {
+    const ringColor = this._resourceRingColor(resource.type);
 
     ctx.save();
-
-    // Drop shadow
     ctx.shadowColor = 'rgba(0,0,0,0.7)';
     ctx.shadowBlur = 4;
-
-    // Outer ring (type colour — slightly larger)
     ctx.beginPath();
     ctx.arc(iconX, iconY, radius + 1.5, 0, Math.PI * 2);
     ctx.fillStyle = ringColor;
     ctx.fill();
-
-    // Inner filled circle
     ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = fillColor;
+    ctx.fillStyle = getPaletteColor('--color-surface') || '#251e14';
     ctx.fill();
-
     ctx.restore();
 
-    // First letter of resource name
     ctx.save();
-    ctx.fillStyle = textColor;
-    ctx.font = `bold ${Math.round(radius * 1.2)}px sans-serif`;
+    ctx.fillStyle = getPaletteColor('--color-text') || '#f2e8d0';
+    ctx.font = `bold ${Math.round(radius * 1.1)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(resource.name.charAt(0).toUpperCase(), iconX, iconY);
@@ -426,12 +474,28 @@ export class HexRenderer {
     if (!tile.improvement) return;
 
     const ctx = this.ctx;
-    ctx.save();
 
     // Position: upper-right quadrant of the hex
     const ix = cx + HEX_SIZE * 0.30;
     const iy = cy - HEX_SIZE * 0.28;
     const s = HEX_SIZE * 0.18; // scale unit
+    const iconSize = s * 2.4;
+
+    // Try asset-pipeline image first — draw centered at (ix, iy) if ready
+    const iconUrl = getImprovementIcon(tile.improvement);
+    const img = getIconImage(iconUrl);
+    if (img) {
+      ctx.save();
+      // Subtle drop shadow behind the icon
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = 3;
+      ctx.drawImage(img, ix - iconSize / 2, iy - iconSize / 2, iconSize, iconSize);
+      ctx.restore();
+      return; // asset drawn — skip geometry fallback
+    }
+
+    // Fallback: geometry-based rendering until asset image loads
+    ctx.save();
 
     switch (tile.improvement) {
       case 'farm': {

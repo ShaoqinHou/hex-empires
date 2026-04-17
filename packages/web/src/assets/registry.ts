@@ -156,6 +156,60 @@ export const STATE_ICONS: AssetCategoryRef = {
 };
 
 // ---------------------------------------------------------------------------
+// Resource icons (keyed by resource id)
+// ---------------------------------------------------------------------------
+
+export const RESOURCE_ICONS: AssetCategoryRef = {
+  entries: new Map<string, AssetRef>([
+    // Bonus
+    ['wheat',   { path: '/assets/images/icons/resources/wheat.svg',   source: 'placeholder' }],
+    ['cattle',  { path: '/assets/images/icons/resources/cattle.svg',  source: 'placeholder' }],
+    ['stone',   { path: '/assets/images/icons/resources/stone.svg',   source: 'placeholder' }],
+    ['fish',    { path: '/assets/images/icons/resources/fish.svg',    source: 'placeholder' }],
+    ['deer',    { path: '/assets/images/icons/resources/deer.svg',    source: 'placeholder' }],
+    ['rice',    { path: '/assets/images/icons/resources/rice.svg',    source: 'placeholder' }],
+    ['banana',  { path: '/assets/images/icons/resources/banana.svg',  source: 'placeholder' }],
+    ['maize',   { path: '/assets/images/icons/resources/maize.svg',   source: 'placeholder' }],
+    // Strategic
+    ['iron',    { path: '/assets/images/icons/resources/iron.svg',    source: 'placeholder' }],
+    ['horses',  { path: '/assets/images/icons/resources/horses.svg',  source: 'placeholder' }],
+    ['niter',   { path: '/assets/images/icons/resources/niter.svg',   source: 'placeholder' }],
+    ['coal',    { path: '/assets/images/icons/resources/coal.svg',    source: 'placeholder' }],
+    ['oil',     { path: '/assets/images/icons/resources/oil.svg',     source: 'placeholder' }],
+    ['uranium', { path: '/assets/images/icons/resources/uranium.svg', source: 'placeholder' }],
+    // Luxury
+    ['silk',    { path: '/assets/images/icons/resources/silk.svg',    source: 'placeholder' }],
+    ['gems',    { path: '/assets/images/icons/resources/gems.svg',    source: 'placeholder' }],
+    ['spices',  { path: '/assets/images/icons/resources/spices.svg',  source: 'placeholder' }],
+    ['wine',    { path: '/assets/images/icons/resources/wine.svg',    source: 'placeholder' }],
+    ['ivory',   { path: '/assets/images/icons/resources/ivory.svg',   source: 'placeholder' }],
+    ['cotton',  { path: '/assets/images/icons/resources/cotton.svg',  source: 'placeholder' }],
+    ['incense', { path: '/assets/images/icons/resources/incense.svg', source: 'placeholder' }],
+    ['dyes',    { path: '/assets/images/icons/resources/dyes.svg',    source: 'placeholder' }],
+    ['furs',    { path: '/assets/images/icons/resources/furs.svg',    source: 'placeholder' }],
+  ]),
+  fallback: { path: '/assets/images/icons/resources/_fallback-resource.svg', source: 'placeholder' },
+};
+
+// ---------------------------------------------------------------------------
+// Improvement icons (keyed by improvement id)
+// ---------------------------------------------------------------------------
+
+export const IMPROVEMENT_ICONS: AssetCategoryRef = {
+  entries: new Map<string, AssetRef>([
+    ['farm',        { path: '/assets/images/icons/improvements/farm.svg',        source: 'placeholder' }],
+    ['mine',        { path: '/assets/images/icons/improvements/mine.svg',        source: 'placeholder' }],
+    ['quarry',      { path: '/assets/images/icons/improvements/quarry.svg',      source: 'placeholder' }],
+    ['pasture',     { path: '/assets/images/icons/improvements/pasture.svg',     source: 'placeholder' }],
+    ['plantation',  { path: '/assets/images/icons/improvements/plantation.svg',  source: 'placeholder' }],
+    ['camp',        { path: '/assets/images/icons/improvements/camp.svg',        source: 'placeholder' }],
+    ['fishing-boat',{ path: '/assets/images/icons/improvements/fishing-boat.svg',source: 'placeholder' }],
+    ['road',        { path: '/assets/images/icons/improvements/road.svg',        source: 'placeholder' }],
+  ]),
+  fallback: { path: '/assets/images/icons/improvements/_fallback-improvement.svg', source: 'placeholder' },
+};
+
+// ---------------------------------------------------------------------------
 // Backgrounds
 // ---------------------------------------------------------------------------
 
@@ -242,16 +296,18 @@ export const SFX_MOMENT: AssetCategoryRef = {
 // ---------------------------------------------------------------------------
 
 export const ALL_ASSET_CATEGORIES: ReadonlyMap<string, AssetCategoryRef> = new Map([
-  ['leaders',          LEADER_PORTRAITS],
-  ['civs',             CIV_GLYPHS],
-  ['icons/yields',     YIELD_ICONS],
-  ['icons/actions',    ACTION_ICONS],
-  ['icons/categories', CATEGORY_ICONS],
-  ['icons/states',     STATE_ICONS],
-  ['backgrounds',      BACKGROUNDS],
-  ['music',            MUSIC_TRACKS],
-  ['sfx/ui',           SFX_UI],
-  ['sfx/unit',         SFX_UNIT],
-  ['sfx/city',         SFX_CITY],
-  ['sfx/moment',       SFX_MOMENT],
+  ['leaders',              LEADER_PORTRAITS],
+  ['civs',                 CIV_GLYPHS],
+  ['icons/yields',         YIELD_ICONS],
+  ['icons/actions',        ACTION_ICONS],
+  ['icons/categories',     CATEGORY_ICONS],
+  ['icons/states',         STATE_ICONS],
+  ['icons/resources',      RESOURCE_ICONS],
+  ['icons/improvements',   IMPROVEMENT_ICONS],
+  ['backgrounds',          BACKGROUNDS],
+  ['music',                MUSIC_TRACKS],
+  ['sfx/ui',               SFX_UI],
+  ['sfx/unit',             SFX_UNIT],
+  ['sfx/city',             SFX_CITY],
+  ['sfx/moment',           SFX_MOMENT],
 ]);

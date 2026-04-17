@@ -118,4 +118,35 @@
   --color-faith:       #c0a870;  /* warm bronze-cream; replaces #a0aec0 */
   --color-health-high: #4a8c5a;  /* = --color-success */
   --color-health-low:  #c53030;  /* = --color-danger */
+
+  /* ═══════════════════════════════════════════════════════════════════
+   * TERRAIN COLORS — game-data semantic colors for map tile fills.
+   * Warm earth palette per P8 (warm earth palette) philosophy.
+   * These are read by paletteResolver.ts at runtime; never reference
+   * raw hex values in canvas rendering code.
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  /* ── Base terrains ─────────────────────────────────────────────────  */
+  --color-grassland:   #978546;  /* olive-400 — warm green-brown, not neon grass */
+  --color-plains:      #d4a840;  /* cream-700 — dry warm wheat */
+  --color-desert:      #fde68a;  /* amber-200 — warm sand */
+  --color-tundra:      #c8c0a8;  /* desaturated warm grey — pale, low saturation */
+  --color-snow:        #fffef7;  /* cream-50 — near-white, warm tint */
+  --color-coast:       #5a94c8;  /* warm-palette-compatible coastal blue */
+  --color-ocean:       #2a4e78;  /* deep warm blue (mix of --color-info + dark) */
+
+  /* ── Feature overlay colors ────────────────────────────────────────  */
+  --color-feature-hills:       #8a7560;  /* warm earthy brown */
+  --color-feature-mountains:   #7a7a82;  /* cool grey rock */
+  --color-feature-forest:      #4a6428;  /* deep warm forest green */
+  --color-feature-jungle:      #2e5018;  /* very dark jungle green */
+  --color-feature-marsh:       #4a5c30;  /* murky green-brown */
+  --color-feature-floodplains: #6a9a40;  /* fertile warm green */
+  --color-feature-oasis:       #38b068;  /* vivid oasis green */
+  --color-feature-reef:        #2e7aa8;  /* warm reef blue */
+
+  /* ── Border colors (used by canvas rendering) ──────────────────────  */
+  --color-tile-border:          rgba(0, 0, 0, 0.25);   /* inter-tile border, subtle */
+  --color-tile-border-selected: rgba(255, 220, 100, 0.9); /* selected hex border, warm gold */
+  --color-tile-border-hover:    rgba(255, 255, 255, 0.18); /* hover hex border, soft white */
 }

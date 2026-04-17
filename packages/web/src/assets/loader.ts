@@ -19,6 +19,8 @@ import {
   ACTION_ICONS,
   CATEGORY_ICONS,
   STATE_ICONS,
+  RESOURCE_ICONS,
+  IMPROVEMENT_ICONS,
   BACKGROUNDS,
   MUSIC_TRACKS,
   SFX_UI,
@@ -86,6 +88,26 @@ export function getCategoryIcon(categoryId: string): string {
 /** Returns the icon URL for a UI state (locked/researching/etc.). Falls back to generic state placeholder. */
 export function getStateIcon(stateId: string): string {
   return resolveAsset(STATE_ICONS, stateId).path;
+}
+
+/** Returns the icon URL for a resource id (wheat, iron, silk, etc.). Falls back to generic resource placeholder. */
+export function getResourceIcon(resourceId: string): string {
+  return resolveAsset(RESOURCE_ICONS, resourceId).path;
+}
+
+/** Returns the AssetRef for a resource icon (includes source metadata). */
+export function getResourceIconRef(resourceId: string): AssetRef {
+  return resolveAsset(RESOURCE_ICONS, resourceId);
+}
+
+/** Returns the icon URL for an improvement id (farm, mine, etc.). Falls back to generic improvement placeholder. */
+export function getImprovementIcon(improvementId: string): string {
+  return resolveAsset(IMPROVEMENT_ICONS, improvementId).path;
+}
+
+/** Returns the AssetRef for an improvement icon (includes source metadata). */
+export function getImprovementIconRef(improvementId: string): AssetRef {
+  return resolveAsset(IMPROVEMENT_ICONS, improvementId);
 }
 
 /** Returns the background image URL for a scene key. Falls back to SVG placeholder. */
