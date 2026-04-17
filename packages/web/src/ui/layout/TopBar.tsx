@@ -1,4 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
+import { getYieldIcon } from '@web/assets';
 import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
@@ -78,7 +79,7 @@ export function TopBar() {
 
       {/* Center: Resources */}
       <div className="flex items-center gap-3">
-        <ResourcePill icon="💰" label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
+        <ResourcePill icon="💰" iconSrc={getYieldIcon('gold')} label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
         <ResourcePill icon="🔬" label="Sci" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
         <ResourcePill icon="🎭" label="Cul" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
         <ResourcePill icon="⛪" label="Fai" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" hideWhenZero />
@@ -186,15 +187,17 @@ export function TopBar() {
 }
 
 function ResourcePill({
-  icon, label, value, perTurn, color, hideWhenZero = false,
+  icon, iconSrc, label, value, perTurn, color, hideWhenZero = false,
 }: {
-  icon: string; label: string; value: number; perTurn: number; color: string; hideWhenZero?: boolean;
+  icon: string; iconSrc?: string; label: string; value: number; perTurn: number; color: string; hideWhenZero?: boolean;
 }) {
   // Hide non-core chips that have zero current value AND zero per-turn income.
   if (hideWhenZero && value === 0 && perTurn === 0) return null;
   return (
     <div className="flex items-center gap-1" title={`${label}: ${value} (${perTurn >= 0 ? '+' : ''}${perTurn}/turn)`}>
-      <span className="text-xs">{icon}</span>
+      {iconSrc
+        ? <img src={iconSrc} alt={label} width={14} height={14} aria-hidden="true" />
+        : <span className="text-xs">{icon}</span>}
       <span className="font-mono text-xs font-bold" style={{ color }}>{value}</span>
       {perTurn !== 0 && (
         <span className="text-xs" style={{ color: perTurn >= 0 ? 'var(--color-food)' : 'var(--color-health-low)' }}>
