@@ -289,3 +289,44 @@ A small reason parameter of type "user" | "modalSuspend" | "conflict" is passed 
 
 All three dramatic moments experienced in priority order; no two visible at once; no state loss.
 
+
+## Interaction with other systems
+
+- **S-01 (layering / z-index)**: S-10 uses the z-tiers S-01 defines (canvas < info < overlay < modal < HUD-toast). S-10 decides what OCCUPIES each tier at any moment; S-01 decides the stack order.
+- **S-02 (position anchoring)**: multi-slot at wide/ultra uses S-02 dock-left / dock-right / dock-center zones. This doc defines the order of occupancy; S-02 defines the geometry.
+- **S-03 (sizing per viewport)**: multi-slot widths (480 / 520 / 380 at wide) are defined in S-03. S-10 references them; changes in S-03 propagate here.
+- **S-04 (transparency)**: suspended and unfocused panels drop opacity per S-04. Backdrop for modals per S-04.
+- **S-06 (occlusion and dismissal)**: the ESC cascade and modal-chain priority are implementations of S-06 dismissal-order rules.
+- **S-07 (motion)**: panel-subject changes (log click → city change) use S-07 cross-fade timing; camera pans on mention-click use S-07 ease curves.
+- **S-08 (focus and keyboard)**: focus transfer between co-visible panels, Tab-within-panel semantics, and modal-steals-focus rule all derive from S-08 focus-ownership model.
+- **S-09 (state transitions)**: the focused, unfocused, and suspended visual states of panels are S-09 tokens.
+
+## Implementation phase
+
+Lands across two phases:
+
+**Phase 1.5 — layout architecture** (from `08-master-plan.md` §1.5): the `useViewportClass()` hook, the dock rule table per class, and the breakpoint tokens are prerequisites. The **single-to-multi-slot extension of PanelManager** goes here:
+
+- Add `activePanels: ReadonlyArray<PanelId>` alongside `activePanel`.
+- Add `conflictsWith` to `panelRegistry`.
+- Add `modalQueue` and `suspendedOverlays`.
+- Implement the dock-LEFT behavior in PanelShell layout for wide/ultra.
+- Playwright specs at all three viewport classes validating co-visibility and conflict rules.
+
+Effort: ~3 days on top of the viewport-class work already scheduled for Phase 1.5.
+
+**Phase 5 — drama moments** (per master plan §5, modal redesign work): the **modal-chain priority table and re-queue mechanics** land here. This is the cycle that redesigns AgeTransition, Crisis, TurnSummary, and Victory — the right time to implement the ordering because the modals get touched anyway.
+
+Effort: ~2 days within the Phase 5 modal-redesign budget.
+
+Phases 0–1 ship unchanged — no pre-requisites broken, standard viewport users see no behavioral change until Phase 1.5 lands.
+
+## Open questions
+
+1. **Modal queueing vs interrupting** — the current proposal interrupts (higher tier displaces lower, victim re-queues). Alternative: higher tier queues (everything fires in order of arrival). Interrupting is the Civ VII convention and matches "the critical thing demands attention now"; queueing is cleaner and less jarring. **Recommendation: interrupt for CRITICAL only; queue for all else.** Needs user decision.
+2. **User-configurable multi-slot?** Some players at 4K may prefer single-slot (less cognitive load); some at 1920 may want multi-slot despite the occlusion cost. **Recommendation: default per viewport class, setting to override in AudioSettingsPanel plus a future KeyboardSettings panel. Phase 6 or later; Phase 1.5 ships the defaults only.**
+3. **What happens if a co-visible overlay fires a modal that conflicts with the other co-visible overlay subject?** Example: CityPanel for Rome plus DiplomacyPanel for Cleopatra both open; the Crisis modal references Cleopatra and needs her portrait. **Recommendation: modal does not care, renders as-is; on dismiss both overlays restore. Only a problem if the modal choices affect Cleopatra state and the open DiplomacyPanel would be stale — but that is a React re-render concern, not a panel-coordination concern.**
+4. **How does a panel "re-target" vs open new?** Clicking Rome in the log when CityPanel is open for Carthage should re-target, not close-and-reopen. But clicking Rome on the map currently calls openPanel("city", subject=Rome) — does `PanelManager` need to know about subjects, or do panels handle this internally? **Recommendation: panels handle it internally via a `useCitySelection()` hook or similar; `PanelManager` stays subject-agnostic. Same-id open = re-target.**
+5. **Does the stack-cycle indicator (for multi-entity hex hover) live inside the tooltip or is it a separate HUD?** Cross-ref S-05. **Recommendation: inside `TooltipShell` per `ui-overlays.md`.** Not an S-10 concern in practice.
+
+These are the decisions that need review before Phase 1.5 implementation starts. Everything else in this doc is a direct derivative of the locked decisions plus the panel/HUD rules already in the codebase.
