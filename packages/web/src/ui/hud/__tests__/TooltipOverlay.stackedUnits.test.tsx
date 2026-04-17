@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import type { GameState, UnitState, HexTile } from '@hex/engine';
 import { ALL_UNITS, ALL_BASE_TERRAINS } from '@hex/engine';
 import { TooltipOverlay } from '../TooltipOverlay';
@@ -222,5 +222,92 @@ describe('TooltipOverlay — civilian + military stack (M32 regression)', () => 
     const pill = container.querySelector('[data-testid="tooltip-cycle-pill"]');
     expect(pill).not.toBeNull();
     expect(pill?.textContent).toBe('(1 / 3 — Tab to cycle)');
+  });
+
+  // ── Phase 3.3: Stack summary line ────────────────────────────────────────
+
+  it('does NOT render stack summary when only one entity on tile', () => {
+    const warrior = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([warrior]);
+
+    const { container } = render(
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
+    );
+
+    expect(container.querySelector('[data-testid="tooltip-stack-summary"]')).toBeNull();
+  });
+
+  it('does NOT render stack summary when only units are on the tile (no city/improvement to summarize)', () => {
+    // Stack summary line is only shown when there are multiple distinct
+    // entity types — a tile with only own units has a single "category"
+    // and the summary adds no information over the per-unit lines.
+    const warrior = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const settler = makeUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([warrior, settler]);
+
+    const { container } = render(
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
+    );
+
+    // Two units, no city, no improvement → only 1 summary part → no summary line.
+    expect(container.querySelector('[data-testid="tooltip-stack-summary"]')).toBeNull();
+  });
+
+  // ── Phase 3.5: Tab cycling wrap-around (modulo semantics) ──────────────────
+  //
+  // The HUDManager.cycleIndex increments monotonically; callers wrap via
+  // `cycleIndex % stackSize`. The cycle pill renders `(displayIndex / N)`
+  // where displayIndex = (cycleIndex % stackSize) + 1.
+  //
+  // This test verifies that re-rendering with a cycleIndex of 2 and
+  // stackSize of 2 gives displayIndex = (2 % 2) + 1 = 1 (wrap-around).
+  // The pill must read "(1 / 2 — Tab to cycle)" not "(3 / 2 — Tab to cycle)".
+
+  it('cycle pill displayIndex wraps correctly — two Tab presses on a 2-entity stack wrap back to "1 / 2"', () => {
+    // warrior + settler = stackSize 2 (own military + own civilian).
+    // HUDManager.cycleIndex increments monotonically; displayIndex = (idx % stackSize) + 1.
+    // After 2 Tabs: cycleIndex=2 → displayIndex = (2 % 2) + 1 = 1, pill reads "(1 / 2 — Tab to cycle)".
+    const warrior = makeUnit({ id: 'w1', typeId: 'warrior', position: { q: 0, r: 0 } });
+    const settler = makeUnit({ id: 's1', typeId: 'settler', position: { q: 0, r: 0 } });
+    const state = makeStateWithStackedUnits([warrior, settler]);
+
+    const { container } = render(
+      <HUDManagerProvider>
+        <TooltipOverlay
+          hexToScreen={stubHexToScreen}
+          hoveredHex={{ q: 0, r: 0 }}
+          isAltPressed={false}
+          state={state}
+        />
+      </HUDManagerProvider>,
+    );
+
+    // cycleIndex starts at 0 → pill shows "(1 / 2 — Tab to cycle)".
+    expect(container.querySelector('[data-testid="tooltip-cycle-pill"]')?.textContent)
+      .toBe('(1 / 2 — Tab to cycle)');
+
+    // Tab once → cycleIndex=1 → displayIndex=2
+    act(() => { fireEvent.keyDown(window, { key: 'Tab' }); });
+    expect(container.querySelector('[data-testid="tooltip-cycle-pill"]')?.textContent)
+      .toBe('(2 / 2 — Tab to cycle)');
+
+    // Tab again → cycleIndex=2 → displayIndex = (2 % 2) + 1 = 1 (wraps)
+    act(() => { fireEvent.keyDown(window, { key: 'Tab' }); });
+    expect(container.querySelector('[data-testid="tooltip-cycle-pill"]')?.textContent)
+      .toBe('(1 / 2 — Tab to cycle)');
   });
 });
