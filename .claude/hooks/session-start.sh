@@ -12,7 +12,7 @@ if command -v curl &>/dev/null; then
 fi
 export HEX_QUEUE=0
 if [ -f "$SCRATCH_DIR/review-queue.txt" ]; then
-  HEX_QUEUE=$(grep -c . "$SCRATCH_DIR/review-queue.txt" 2>/dev/null || echo 0)
+  HEX_QUEUE=$(grep -c '[^ ]' "$SCRATCH_DIR/review-queue.txt" 2>/dev/null || echo 0)
 fi
 export HEX_DRIVER="idle"
 if [ -d "$SCRATCH_DIR/.review.lock" ]; then
