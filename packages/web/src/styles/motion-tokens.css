@@ -1,0 +1,75 @@
+/*
+ * motion-tokens.css — duration + easing vocabulary for every animated
+ * element in packages/web. Component code references these tokens; raw
+ * ms literals and cubic-bezier() calls in component .tsx are a BLOCK.
+ *
+ * See .claude/workflow/design/ui-review/systems/S-07-motion-and-animation.md
+ * for the full motion contract per element type.
+ *
+ * @media (prefers-reduced-motion: reduce) halves all durations and is
+ * defined at the bottom of this file so every consumer inherits
+ * reduced-motion automatically.
+ */
+
+:root {
+  /* ── Duration scale ────────────────────────────────────────────────── */
+
+  /** Tiny, must-feel-physical responses: button hover-glow, press depress,
+   *  icon flip, focus-ring fade-in, tooltip fade-out. */
+  --motion-instant: 80ms;
+
+  /** Transient arrivals / departures: tooltip fade-in, toast fade-out,
+   *  notification dismiss, panel tab content swap, HUD element enter. */
+  --motion-fast: 160ms;
+
+  /** Significant UI shifts: panel slide-in + fade-in, modal scale-in,
+   *  dropdown open, fixed-corner tooltip appearance, backdrop darken. */
+  --motion-medium: 240ms;
+
+  /** Consequences the player should read: resource number count-up,
+   *  tech-complete flash, selection-ring pulse, turn transition interstitial. */
+  --motion-slow: 400ms;
+
+  /** Earned interruptions: age transition sequence, victory fanfare,
+   *  defeat somber fade. Runs on 3-8 events per game; never chain them. */
+  --motion-ceremony: 1200ms;
+
+  /* ── Easing scale ──────────────────────────────────────────────────── */
+
+  /** Standard entrance. Fast arrival, soft landing. Panels sliding in,
+   *  tooltips appearing, toasts rising. Default for anything toward the player. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /** Standard exit. Linger, then accelerate away. Panels closing,
+   *  toasts auto-fading, notifications dismissing. */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+
+  /** State shift with no implied direction: tab-to-tab content swap,
+   *  section collapse, modal scale halves. */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /** Triumphant overshoot — slight 10-15% bounce past target before settling.
+   *  Tech-complete badge, city-founded pulse, victory entrance. Use sparingly. */
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Note: --ease-spring requires JS (no CSS cubic-bezier equivalent).
+   * Reserved for future drag-and-drop system; not defined here. */
+}
+
+/* ── Reduced-motion accessibility ─────────────────────────────────────
+ * Halves all durations so motion remains present but below the vestibular
+ * threshold. Durations are clamped to a minimum of --motion-instant (80ms)
+ * so that already-instant motions are not eliminated.
+ *
+ * Translate / scale / rotate effects are NOT removed here — they are
+ * controlled in individual component CSS by checking this media query.
+ * This block only adjusts timing tokens. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-instant:  80ms;   /* already at minimum; no change */
+    --motion-fast:     80ms;   /* 160ms / 2 = 80ms → clamped to 80ms */
+    --motion-medium:  120ms;   /* 240ms / 2 = 120ms */
+    --motion-slow:    200ms;   /* 400ms / 2 = 200ms */
+    --motion-ceremony:600ms;   /* 1200ms / 2 = 600ms */
+  }
+}
