@@ -106,7 +106,9 @@ export function TopBar() {
         <div className="relative">
           <button
             className="px-3 py-1.5 rounded text-xs cursor-pointer hover:opacity-80"
-            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', minHeight: '28px', minWidth: '28px' }}
+            // fixed: var(--chrome-button-sm-size) = 28px, below 32px minimum — justified per
+            // S-03 exceptions (panel-close × pattern); keyboard via ⋯ menu items.
+            style={{ color: 'var(--color-text-muted)', border: 'var(--border-hairline) solid var(--color-border)', minHeight: 'var(--chrome-button-sm-size)', minWidth: 'var(--chrome-button-sm-size)' }}
             onClick={() => setShowMoreMenu(!showMoreMenu)}
           >
             ⋯
@@ -214,7 +216,7 @@ function PanelButton({ label, color, dark, onClick, panelId }: { label: string; 
         background: `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color} 80%, transparent) 100%)`,
         color: dark ? '#0d1117' : '#fff',
         border: `1px solid color-mix(in srgb, ${color} 50%, transparent)`,
-        minHeight: '28px',
+        minHeight: 'var(--chrome-button-sm-size)',
       }}
       onClick={onClick}
     >

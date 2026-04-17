@@ -196,8 +196,10 @@ function baseShellStyle(tier: TooltipTier, interactive: boolean): CSSProperties 
     zIndex: SHELL_Z_INDEX as unknown as number,
     pointerEvents: interactive ? 'auto' : 'none',
     userSelect: 'none',
-    // Max widths keep the shell compact-first; callers pick the tier
-    // and the shell adjusts via padding + a slightly wider max.
+    // Max widths per tier — S-03 table: compact 180/200/220, detailed 320/360/400.
+    // Using standard-viewport values here; full per-class responsive sizing
+    // is a Phase 5 HUD polish deliverable when TooltipShell gains viewport tokens.
+    // fixed: intentional per S-03 standard viewport values
     maxWidth: tier === 'detailed' ? '360px' : '260px',
   };
 }

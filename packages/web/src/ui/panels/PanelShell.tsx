@@ -121,8 +121,7 @@ const titleBarStyle: CSSProperties = {
 
 const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: '15px',
-  fontWeight: 600,
+  font: 'var(--type-heading)',
   color: 'var(--panel-title-color)',
   letterSpacing: '0.02em',
 };

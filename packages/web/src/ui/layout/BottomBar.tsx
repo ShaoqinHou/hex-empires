@@ -115,6 +115,8 @@ export function BottomBar() {
         <div
           className="flex items-center gap-1.5 px-4 overflow-x-auto"
           style={{
+            // fixed: 32px = click-target minimum for portrait buttons;
+            // no S-03 token for this sub-strip; intentional fixed value.
             height: '32px',
             borderBottom: '1px solid rgba(139,148,158,0.2)',
             background: 'rgba(0,0,0,0.2)',
@@ -154,7 +156,7 @@ export function BottomBar() {
       )}
 
       {/* ── Main content row ── */}
-      <div className="flex-1 flex items-center px-4 gap-3 min-h-0 overflow-hidden" style={{ minHeight: '44px' }}>
+      <div className="flex-1 flex items-center px-4 gap-3 min-h-0 overflow-hidden" style={{ minHeight: 'var(--chrome-bar-content-min-height)' }}>
 
         {/* ── UNIT SELECTED ── */}
         {selectedUnit && unitDef && (
@@ -231,8 +233,8 @@ export function BottomBar() {
                   {availableImprovements.slice(0, 3).map(imp => (
                     <span
                       key={imp.id}
-                      className="px-1.5 py-0.5 rounded"
-                      style={{ background: 'rgba(124,252,0,0.1)', color: 'var(--color-text)', border: '1px solid rgba(124,252,0,0.2)', fontSize: '11px' }}
+                      className="px-1.5 py-0.5 rounded text-[11px]"
+                      style={{ background: 'rgba(124,252,0,0.1)', color: 'var(--color-text)', border: 'var(--border-hairline) solid rgba(124,252,0,0.2)' }}
                     >
                       {imp.name}
                     </span>
@@ -406,6 +408,8 @@ export function BottomBar() {
       <div
         className="flex items-center justify-center px-4"
         style={{
+          // fixed: 16px strip height — deliberately minimal; at 48px BottomBar
+          // this strip consumes ~⅓ of the bar, which is intentional visual weight.
           height: '16px',
           borderTop: '1px solid rgba(139,148,158,0.12)',
           background: 'rgba(0,0,0,0.15)',
@@ -413,7 +417,13 @@ export function BottomBar() {
       >
         <span
           className="font-mono"
-          style={{ fontSize: '10px', color: 'rgba(139,148,158,0.55)', letterSpacing: '0.03em' }}
+          style={{
+            // fixed: 10px intentionally below --type-label-size (11px) for
+            // visual de-emphasis; shortcut strip is secondary chrome.
+            fontSize: '10px',
+            color: 'rgba(139,148,158,0.55)',
+            letterSpacing: '0.03em',
+          }}
         >
           {SHORTCUT_LINE}
         </span>
@@ -439,14 +449,21 @@ function InfoPill({ color, border, children }: { color: string; border: string; 
   );
 }
 
+// Progress bar track — fixed micro-visualization dimensions (not chrome layout).
+// 3px track height and 64px width are intentional sub-chrome display values.
+const PROGRESS_TRACK_STYLE = {
+  height: '3px',
+  width: '64px',
+  background: 'rgba(255,255,255,0.1)',
+  marginTop: '2px',
+} as const;
+
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, max)) * 100));
+  // borderRadius pill via class to avoid inline px value (H-15).
   return (
-    <div
-      className="rounded-full overflow-hidden"
-      style={{ height: '3px', width: '64px', background: 'rgba(255,255,255,0.1)', marginTop: '2px' }}
-    >
-      <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '9999px' }} />
+    <div className="rounded-full overflow-hidden" style={PROGRESS_TRACK_STYLE}>
+      <div className="rounded-full h-full" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
 }
@@ -517,11 +534,11 @@ function StackPortrait({
       }}
     >
       <span>{icon}</span>
-      <span style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span className="max-w-[80px] overflow-hidden text-ellipsis whitespace-nowrap">
         {label}
       </span>
       {isSelected && (
-        <span style={{ fontSize: '8px', color: 'rgba(88,166,255,0.8)', marginLeft: '1px' }}>●</span>
+        <span className="text-[8px] ml-px" style={{ color: 'rgba(88,166,255,0.8)' }}>●</span>
       )}
     </button>
   );

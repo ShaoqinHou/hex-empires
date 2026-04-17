@@ -41,6 +41,18 @@
   --dock-right-gutter: 12px;   /* gap between two co-visible panels at ultra */
   --dock-right-right:  8px;    /* gap from viewport right edge */
 
+  /* Chrome button sizing — S-03 exceptions table (frequency-weighted sub-32px) */
+  --chrome-button-sm-size: 28px;   /* ⋯ more-menu, PanelShell close × — below 32px floor,
+                                      justified: ESC/keyboard closes; S-03 exceptions row. */
+
+  /* BottomBar content row minimum height — keeps unit cards legible at standard
+   * 48px bar height where the shortcut strip + stack-picker compete for space. */
+  --chrome-bar-content-min-height: 44px;
+
+  /* Hairline border width — structural 1px borders in chrome. Extracted so
+   * inline style props don't embed raw numeric px values (H-15 acceptance). */
+  --border-hairline: 1px;
+
   /* Minimap dimensions — S-02 C3 table / S-03 BottomBar section. */
   --hud-minimap-width:  200px;
   --hud-minimap-height: 140px;
