@@ -1,0 +1,45 @@
+/*
+ * spacing-tokens.css — the 6-stop spacing scale for packages/web.
+ * Values are locked in systems/S-03-sizing-table.md; this file
+ * materialises those values as CSS custom properties.
+ *
+ * The alias layer below maps existing --panel-padding-* and --hud-padding-*
+ * tokens to the new scale so existing consumers require no changes.
+ *
+ * Note: --panel-padding-lg changes from 16px to 20px (--space-lg).
+ * This is a real visual change — panels gain 4px outer padding.
+ * Locked by parent as deliberate per S-03.
+ */
+
+:root {
+  /* ── Primitive spacing scale ──────────────────────────────────────── */
+
+  /** Icon-to-text gap; pill inner padding; badge inner padding. */
+  --space-xs:  4px;
+
+  /** Gap between list items; compact tooltip padding; gap between sibling icons. */
+  --space-sm:  8px;
+
+  /** Medium chrome body padding; gap between section label and first content row. */
+  --space-md: 12px;
+
+  /** Section break inside panel body; outer padding of TopBar chrome. */
+  --space-lg: 20px;
+
+  /** Gap between panel-wide columns; DramaModal outer padding at standard viewport. */
+  --space-xl: 32px;
+
+  /** Full-screen modal outer padding; hero layout primary/secondary separation. */
+  --space-2xl: 48px;
+
+  /* ── Alias layer — keep existing consumers working during migration ── */
+
+  /** Panel spacing aliases. --panel-padding-lg shifts 16px → 20px (= --space-lg). */
+  --panel-padding-sm: var(--space-sm);   /* was 8px  — no change */
+  --panel-padding-md: var(--space-md);   /* was 12px — no change */
+  --panel-padding-lg: var(--space-lg);   /* was 16px — CHANGES to 20px */
+
+  /** HUD spacing aliases. Values snap to scale. */
+  --hud-padding-sm:   var(--space-xs);   /* was 6px  — snaps to 4px */
+  --hud-padding-md:   var(--space-sm);   /* was 10px — snaps to 8px */
+}
