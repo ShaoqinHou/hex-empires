@@ -147,3 +147,61 @@ html, body, #root {
   -ms-user-select: text;
   user-select: text;
 }
+
+/* ── Viewport-aware root layout (Phase 1.5.1) ──────────────────────────
+ *
+ * .game-app is the root wrapper for the in-game UI. It uses a CSS grid
+ * that adapts to the viewport class:
+ *
+ *   standard (< 1920px):
+ *     3-row grid: TopBar | canvas+overlay-area | BottomBar.
+ *     Panel dock overlays the canvas (no canvas-push).
+ *     TopBar: var(--chrome-topbar-height) = 56px
+ *     BottomBar: var(--chrome-bottombar-height) = 48px
+ *
+ *   wide (1920–2559px):
+ *     Same 3-row grid but chrome bars grow.
+ *     TopBar: 64px, BottomBar: 56px.
+ *     Panel dock pushes the canvas via CSS (dock-push class, Phase 4).
+ *
+ *   ultra (2560px+):
+ *     Chrome bars: 72px / 64px.
+ *     Canvas region: narrower (two docks can be co-visible, Phase 4).
+ *
+ * The chrome-area heights come from layout-tokens.css so they scale with
+ * the viewport class automatically.
+ *
+ * Note: the full push/co-visible dock behaviour (S-02 C4) is wired in
+ * Phase 4 when PanelShell gets viewport-aware container styles. This
+ * Phase 1.5 commit wires the grid template foundation only.
+ *
+ * See: .claude/workflow/design/ui-review/systems/S-02-position-anchoring.md
+ *      .claude/workflow/design/ui-review/systems/S-03-sizing-table.md
+ */
+
+/* Override the flex-col with a 3-row grid so chrome bar heights are
+ * token-driven rather than fixed via Tailwind's h-12 / h-16. */
+.game-app {
+  display: grid;
+  grid-template-rows:
+    var(--chrome-topbar-height)
+    1fr
+    var(--chrome-bottombar-height);
+  grid-template-areas:
+    "topbar"
+    "canvas"
+    "bottombar";
+}
+
+/* Each direct child maps to its named grid area. */
+.game-app > .layout-chrome-bar:first-child {
+  grid-area: topbar;
+}
+
+.game-app > .flex-1 {
+  grid-area: canvas;
+}
+
+.game-app > .layout-chrome-bar:last-child {
+  grid-area: bottombar;
+}

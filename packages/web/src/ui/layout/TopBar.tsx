@@ -50,7 +50,9 @@ export function TopBar() {
   };
 
   return (
-    <div className="h-12 flex items-center justify-between px-3 select-none layout-chrome-bar"
+    /* Height is controlled by the CSS grid row in .game-app (layout-tokens.css
+       --chrome-topbar-height: 56px/64px/72px per viewport class). */
+    <div className="flex items-center justify-between px-3 select-none layout-chrome-bar overflow-hidden"
       style={{
         background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
         borderBottom: '2px solid var(--color-border)',
