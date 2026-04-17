@@ -160,10 +160,14 @@ fi
 # case.
 #
 # Flag stack:
-#   --permission-mode bypassPermissions  Sets the session's permission
-#     MODE to auto-approve. WF-AUTO-11 observed a headless driver on
-#     Windows hitting "permission prompt was declined" on late Write
-#     calls without this; the mode flag covers the full Write path.
+#   --dangerously-skip-permissions  Per-tool-call bypass. WF-AUTO-2b/7
+#     observed this alone wasn't enough — late Write calls still hit
+#     "permission prompt was declined" on Windows. Needed as the
+#     inner layer.
+#   --permission-mode bypassPermissions  Session-mode bypass. Covers
+#     the cases the inner flag misses. Belt-and-braces — 2026-04-17
+#     regression test (review on 1290b7e) showed dropping either flag
+#     re-opens the gap on some Claude Code versions.
 #   --model sonnet  The orchestrator's job is mechanical (read queue,
 #     spawn sub-agents, parse YAML, branch on verdicts, write files).
 #     Sub-agents use their own models per SKILL.md (Sonnet for
@@ -174,6 +178,7 @@ LOG_FILE="$SCRATCH_DIR/review-driver-$(date -u +%Y%m%dT%H%M%SZ).log"
 # `C:/Program Files/Git/commit-review`.
 (
   MSYS_NO_PATHCONV=1 claude \
+    --dangerously-skip-permissions \
     --permission-mode bypassPermissions \
     --model sonnet \
     -p "/commit-review --drain-queue" \
