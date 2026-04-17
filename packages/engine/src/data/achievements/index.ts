@@ -22,8 +22,15 @@ export interface AchievementDef {
    * Condition payload — shape depends on `type` discriminator.
    * Read by `achievementSystem` when evaluating unlock eligibility.
    */
-  readonly condition: any;
+  readonly condition: AchievementCondition;
 }
+
+export type AchievementCondition =
+  | { readonly type: 'cities_at_least'; readonly count: number }
+  | { readonly type: 'combat_wins_at_least'; readonly count: number }
+  | { readonly type: 'techs_researched_at_least'; readonly count: number }
+  | { readonly type: 'buildings_built_at_least'; readonly count: number }
+  | { readonly type: 'age_at_least'; readonly age: Age };
 
 export const ALL_ACHIEVEMENTS: ReadonlyArray<AchievementDef> = [
   {

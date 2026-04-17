@@ -15,6 +15,7 @@ import type { FounderBeliefDef } from '../data/religion/founder-beliefs';
 import type { FollowerBeliefDef } from '../data/religion/follower-beliefs';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
+import type { AchievementDef } from '../data/achievements';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -40,4 +41,5 @@ export interface GameConfig {
   readonly policies: ReadonlyMap<string, PolicyDef>;
   readonly founderBeliefs: ReadonlyMap<string, FounderBeliefDef>;
   readonly followerBeliefs: ReadonlyMap<string, FollowerBeliefDef>;
+  readonly achievements: ReadonlyMap<string, AchievementDef>;
 }

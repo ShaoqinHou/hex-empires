@@ -16,6 +16,7 @@ import type { FounderBeliefDef } from '../data/religion/founder-beliefs';
 import type { FollowerBeliefDef } from '../data/religion/follower-beliefs';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
+import type { AchievementDef } from '../data/achievements';
 import { ALL_UNITS } from '../data/units';
 import { ALL_BUILDINGS } from '../data/buildings';
 import { ALL_DISTRICTS } from '../data/districts';
@@ -33,6 +34,7 @@ import { ALL_PANTHEONS } from '../data/religion';
 import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
 import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
 import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
+import { ALL_ACHIEVEMENTS } from '../data/achievements';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -90,5 +92,8 @@ export function createGameConfig(): GameConfig {
   const followerBeliefs = new Map<string, FollowerBeliefDef>();
   for (const f of ALL_FOLLOWER_BELIEFS) followerBeliefs.set(f.id, f);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs };
+  const achievements = new Map<string, AchievementDef>();
+  for (const a of ALL_ACHIEVEMENTS) achievements.set(a.id, a);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements };
 }

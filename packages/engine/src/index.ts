@@ -146,12 +146,6 @@ export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRES
 // Governor data
 export { ALL_GOVERNORS } from './data/governors';
 
-// Achievement data + system
-export { ALL_ACHIEVEMENTS } from './data/achievements';
-export type { AchievementId, AchievementDef } from './data/achievements';
-export { achievementSystem, getAchievementsForPlayer } from './systems/achievementSystem';
-export type { AchievementsByPlayer } from './systems/achievementSystem';
-
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
 export { createGameConfig } from './state/GameConfigFactory';
@@ -264,3 +258,9 @@ export type { GovernmentDef, PolicyCategory, PolicySlotCounts, PolicyDef } from 
 // Commander data
 export { ALL_COMMANDERS, ALL_COMMANDER_PROMOTIONS, COMMANDER_PROMOTION_XP_COST } from './data/commanders';
 export type { CommanderRole, CommanderUnitDef, CommanderPromotionEntry } from './data/commanders';
+
+// Achievement data + system
+export { ALL_ACHIEVEMENTS } from './data/achievements';
+export type { AchievementId, AchievementDef, AchievementCondition } from './data/achievements';
+export { achievementSystem, getAchievementsForPlayer } from './systems/achievementSystem';
+export type { AchievementsByPlayer } from './systems/achievementSystem';

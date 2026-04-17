@@ -1,14 +1,13 @@
 /**
  * AchievementSystem — evaluates unlock conditions at end of turn.
  * Players accumulate achievements over the course of a game; this
- * system walks ALL_ACHIEVEMENTS, checks each condition against the
- * current state, and records any newly-satisfied ones on the player.
+ * system walks state.config.achievements, checks each condition against
+ * the current state, and records any newly-satisfied ones on the player.
  */
 
 import type { GameState, GameAction } from '../types/GameState';
 import type { PlayerId } from '../types/Ids';
-import { ALL_ACHIEVEMENTS, type AchievementId } from '../data/achievements';
-import { researchSystem } from './researchSystem';
+import type { AchievementId, AchievementCondition } from '../data/achievements';
 
 const AGE_ORDER = ['antiquity', 'exploration', 'modern'] as const;
 
@@ -38,44 +37,30 @@ export function achievementSystem(state: GameState, action: GameAction): GameSta
   const existingSet = new Set(existing);
 
   const newlyUnlocked: AchievementId[] = [];
-  for (const ach of ALL_ACHIEVEMENTS) {
+  for (const ach of state.config.achievements.values()) {
     if (existingSet.has(ach.id)) continue;
     if (conditionSatisfied(state, player, ach.condition)) {
       newlyUnlocked.push(ach.id);
     }
   }
 
-  // "Lucky tip" — small chance to surface a surprise unlock hint when
-  // the player ends a turn with no natural progress. Purely flavor.
-  const hadProgress = newlyUnlocked.length > 0;
-  if (!hadProgress && Math.random() < 0.005) {
-    const unearned = ALL_ACHIEVEMENTS
-      .map(a => a.id)
-      .filter(id => !existingSet.has(id));
-    if (unearned.length > 0) {
-      const luckyIndex = Math.floor(Math.random() * unearned.length);
-      newlyUnlocked.push(unearned[luckyIndex]);
-    }
-  }
-
   if (newlyUnlocked.length === 0) return state;
 
-  const stateWithAchievements = state as unknown as {
-    achievements?: Map<PlayerId, ReadonlyArray<AchievementId>>;
-  };
-  const map = stateWithAchievements.achievements ?? new Map<PlayerId, ReadonlyArray<AchievementId>>();
-  map.set(playerId, [...existing, ...newlyUnlocked]);
+  const nextAchievements = new Map(
+    (state as unknown as { achievements?: Map<PlayerId, ReadonlyArray<AchievementId>> }).achievements ?? [],
+  );
+  nextAchievements.set(playerId, [...existing, ...newlyUnlocked]);
 
   return {
     ...state,
-    achievements: map,
+    achievements: nextAchievements,
   } as unknown as GameState;
 }
 
 function conditionSatisfied(
   state: GameState,
   player: ReturnType<GameState['players']['get']>,
-  condition: any,
+  condition: AchievementCondition,
 ): boolean {
   if (!player) return false;
   switch (condition.type) {
@@ -100,11 +85,5 @@ function conditionSatisfied(
     case 'combat_wins_at_least':
       // Combat stats not yet tracked per-player; stub to false until wired.
       return false;
-    default:
-      return false;
   }
 }
-
-// Re-export so ad-hoc callers of researchSystem from within achievement
-// evaluation logic can share the same instance.
-export { researchSystem };

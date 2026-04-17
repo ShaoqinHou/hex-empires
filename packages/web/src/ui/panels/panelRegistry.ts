@@ -65,6 +65,7 @@ export interface PanelRegistryEntry {
  *   G — government
  *   K — commanders
  *   X — trade routes
+ *   A — achievements
  */
 export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<PanelId, PanelRegistryEntry>([
   ['help',            { id: 'help',            title: 'Help',                icon: '❓',  keyboardShortcut: 'H', priority: 'overlay' }],
