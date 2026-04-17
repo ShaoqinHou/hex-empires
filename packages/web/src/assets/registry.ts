@@ -42,10 +42,10 @@ export const LEADER_PORTRAITS: AssetCategoryRef = {
     ['pericles',       { path: '/assets/images/leaders/pericles.webp',       source: 'placeholder', dimensions: [768, 1024] }],
     ['cyrus',          { path: '/assets/images/leaders/cyrus.webp',          source: 'placeholder', dimensions: [768, 1024] }],
     ['gandhi',         { path: '/assets/images/leaders/gandhi.webp',         source: 'placeholder', dimensions: [768, 1024] }],
-    ['qin-shi-huang',  { path: '/assets/images/leaders/qin-shi-huang.webp',  source: 'placeholder', dimensions: [768, 1024] }],
+    ['qin_shi_huang',  { path: '/assets/images/leaders/qin-shi-huang.webp',  source: 'placeholder', dimensions: [768, 1024] }],
     ['alexander',      { path: '/assets/images/leaders/alexander.webp',      source: 'placeholder', dimensions: [768, 1024] }],
     ['hatshepsut',     { path: '/assets/images/leaders/hatshepsut.webp',     source: 'placeholder', dimensions: [768, 1024] }],
-    ['genghis-khan',   { path: '/assets/images/leaders/genghis-khan.webp',   source: 'placeholder', dimensions: [768, 1024] }],
+    ['genghis_khan',   { path: '/assets/images/leaders/genghis-khan.webp',   source: 'placeholder', dimensions: [768, 1024] }],
   ]),
   fallback: { path: '/assets/images/leaders/_fallback-silhouette.svg', source: 'placeholder' },
 };
