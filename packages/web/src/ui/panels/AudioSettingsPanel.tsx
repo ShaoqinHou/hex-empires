@@ -136,7 +136,7 @@ export function AudioSettingsPanel({ onClose }: AudioSettingsPanelProps) {
         {(soundEnabled || musicEnabled) && (
           <div
             className="pt-4 border-t"
-            style={{ borderColor: '#30363d' }}
+            style={{ borderColor: 'var(--panel-border)' }}
           >
             <div
               className="text-xs font-medium mb-3"
