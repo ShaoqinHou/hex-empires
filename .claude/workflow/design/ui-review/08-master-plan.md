@@ -19,6 +19,29 @@ From the philosophy doc (`00-philosophy.md`) and principle P11 (system-first):
 3. **Interaction-economics fixes ship as quick wins** regardless of phase — e.g., notification auto-dismiss is 3 hours and improves every turn.
 4. **Art/audio budget is a separate concurrent track** — can start on portraits/icons/sound now while code refactors proceed.
 
+## Systems design layer (NEW — upstream of all phases)
+
+After this plan was written, a systems-design pass produced 10 more docs in
+`systems/` that define the UI's LAYOUT LAYER — positioning, sizing, transparency,
+layering, stacking, motion, focus, state transitions, multi-surface coordination.
+Those docs are dependencies of Phase 1 and must be read alongside this plan:
+
+- `systems/00-overview.md` — map + interlock + implementation order
+- `systems/S-01-layer-and-zindex.md` — z-index scale
+- `systems/S-02-position-anchoring.md` — anchor types + dock behavior
+- `systems/S-03-sizing-table.md` — spacing/type/icon scales + per-element sizing
+- `systems/S-04-transparency-semantics.md` — 16 opacity tokens + ghost convention
+- `systems/S-05-map-entity-stacking.md` — the multi-entity hex case (user's flagged problem)
+- `systems/S-06-occlusion-and-dismissal.md` — ESC chain + dismiss matrix
+- `systems/S-07-motion-and-animation.md` — timing + easing + motion contracts
+- `systems/S-08-focus-and-keyboard.md` — shortcut map + conflict resolutions
+- `systems/S-09-state-transitions.md` — 9-state machine per interactive element
+- `systems/S-10-multi-surface-interaction.md` — panel+panel + modal chain
+
+The 10 systems docs land primarily in Phase 1.1 (tokens) and Phase 1.5 (layout
+arch). Phase 2+ consumes them. See `systems/00-overview.md` for the exact
+order-of-implementation.
+
 ## Phase 0 — Quick-win interaction fixes (2-3 days, ship immediately)
 
 High-impact / low-effort items that shouldn't wait for design-system work.

@@ -35,16 +35,17 @@ Each gets a subagent. Each produces a doc in `.claude/workflow/design/ui-review/
 
 | ID | Title | Status | Commit |
 |---|---|---|---|
-| S-01 | Layer & z-index system | pending | — |
-| S-02 | Position anchoring rules | pending | — |
-| S-03 | Sizing table per element per viewport | pending | — |
-| S-04 | Transparency & opacity semantics | pending | — |
-| S-05 | Map entity stacking (scout + troop + building, etc.) | pending | — |
-| S-06 | Occlusion & dismissal rules | pending | — |
-| S-07 | Motion & animation contracts | pending | — |
-| S-08 | Focus & keyboard navigation flow | pending | — |
-| S-09 | State transitions (hover/press/active/disabled/loading) | pending | — |
-| S-10 | Multi-surface interaction (panel+panel, panel+modal, HUD+HUD) | pending | — |
+| S-01 | Layer & z-index system | **DONE** | 8b01c70 |
+| S-02 | Position anchoring rules | **DONE** | 436e618 |
+| S-03 | Sizing table per element per viewport | **DONE** | 436e618 |
+| S-04 | Transparency & opacity semantics | **DONE** | 436e618 |
+| S-05 | Map entity stacking (scout + troop + building, etc.) | **DONE** | ca9ca81 |
+| S-06 | Occlusion & dismissal rules | **DONE** | 436e618 |
+| S-07 | Motion & animation contracts | **DONE** | 436e618 |
+| S-08 | Focus & keyboard navigation flow | **DONE** | 436e618 |
+| S-09 | State transitions (hover/press/active/disabled/loading) | **DONE** | ca9ca81 |
+| S-10 | Multi-surface interaction (panel+panel, panel+modal, HUD+HUD) | **DONE** | b214e35 |
+| 00-overview.md | Map + interlock + implementation order | **DONE** | pending |
 
 ## After all 10 land
 
