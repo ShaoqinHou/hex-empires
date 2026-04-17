@@ -20,6 +20,16 @@ export interface UnitIconOptions {
   maxMovement: number;
   /** Pulse phase 0–1 driven by the render loop (for selected animation) */
   pulseFraction: number;
+  /**
+   * Uniform scale factor for the icon (1.0 = full size, 0.7 = secondary slot).
+   * Defaults to 1.0 when omitted.
+   */
+  scale?: number;
+  /**
+   * When true, draws a red tint overlay on the unit circle to signal "enemy"
+   * ownership at a glance (used for enemy units visible to the player via fog).
+   */
+  enemyTint?: boolean;
 }
 
 export function drawUnitIcon(
@@ -30,9 +40,12 @@ export function drawUnitIcon(
   opts: UnitIconOptions,
 ): void {
   const { playerColor, isSelected, isFortified, health, movementLeft, maxMovement, pulseFraction } = opts;
+  const scale = opts.scale ?? 1.0;
+  const enemyTint = opts.enemyTint ?? false;
 
   ctx.save();
   ctx.translate(cx, cy);
+  if (scale !== 1.0) ctx.scale(scale, scale);
 
   const s = ICON_SIZE;
 
@@ -68,6 +81,18 @@ export function drawUnitIcon(
 
   const drawFn = UNIT_DRAW_MAP[typeId] ?? drawDefaultUnit;
   drawFn(ctx, s);
+
+  // ── 3b. Enemy tint overlay — red wash to distinguish hostile units ─────
+  if (enemyTint) {
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 1.1, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(220, 50, 50, 0.38)';
+    ctx.fill();
+    // Red stroke overrides ownership border
+    ctx.strokeStyle = 'rgba(255, 80, 80, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 
   // ── 4. Fortification shield outline ──────────────────────────────────────
   if (isFortified) {

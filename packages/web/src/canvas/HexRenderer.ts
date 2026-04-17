@@ -1254,55 +1254,238 @@ export class HexRenderer {
     }
   }
 
+  /**
+   * S-05 layered unit rendering.
+   *
+   * Groups all units by tile, then for each occupied tile:
+   *   - Primary unit (S-05 priority: selected > military > civilian) renders
+   *     CENTER at full size.
+   *   - Secondary unit (if present) renders BOTTOM-RIGHT at ~70% scale.
+   *   - When the tile also has a city, primary shifts slightly UP-LEFT so
+   *     city banner and unit sprite don't overlap.
+   *   - When >2 own units would stack (shouldn't happen in practice per the
+   *     1-military + 1-civilian rule, but handled defensively) the extras are
+   *     counted in a "+N" badge drawn by drawStackBadge.
+   *
+   * Enemy units are also rendered per-tile in the same pass, red-tinted.
+   */
   private drawUnits(rc: RenderContext, viewport: ViewportBounds): void {
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
-    // Pulse fraction: 0→1→0 over a 1.5-second cycle, used for selected unit animation
+    // Pulse fraction: 0→1→0 over a 1.5-second cycle
     const pulseFraction = (Math.sin((performance.now() / 750) * Math.PI) + 1) / 2;
 
-    // Build a set of city position keys for quick lookup
+    // Pre-compute sets for quick lookup
     const cityPositionKeys = new Set<string>();
     for (const city of rc.state.cities.values()) {
       cityPositionKeys.add(coordToKey(city.position));
     }
 
+    const isCivilian = (unit: UnitState): boolean => {
+      const def = rc.state.config.units.get(unit.typeId);
+      return def?.category === 'civilian' || def?.category === 'religious';
+    };
+
+    // Group units by tile key so we can determine primary/secondary role
+    const byTile = new Map<string, UnitState[]>();
     for (const unit of rc.state.units.values()) {
-      // Viewport culling
+      const key = coordToKey(unit.position);
+      if (!byTile.has(key)) byTile.set(key, []);
+      byTile.get(key)!.push(unit);
+    }
+
+    const players = [...rc.state.players.keys()];
+
+    for (const [tileKey, tileUnits] of byTile) {
+      // Quick viewport cull on the first unit's position (all share the same tile)
+      const firstUnit = tileUnits[0];
       if (
-        unit.position.q < viewport.minQ ||
-        unit.position.q > viewport.maxQ ||
-        unit.position.r < viewport.minR ||
-        unit.position.r > viewport.maxR
+        firstUnit.position.q < viewport.minQ ||
+        firstUnit.position.q > viewport.maxQ ||
+        firstUnit.position.r < viewport.minR ||
+        firstUnit.position.r > viewport.maxR
       ) {
         continue;
       }
 
-      const { x: baseX, y: baseY } = hexToPixel(unit.position);
-      const players = [...rc.state.players.keys()];
-      const playerIndex = players.indexOf(unit.owner);
-      const playerColor = playerColors[playerIndex % playerColors.length];
-      const isSelected = rc.selectedUnit?.id === unit.id;
+      const { x: baseCx, y: baseCy } = hexToPixel(firstUnit.position);
+      const onCity = cityPositionKeys.has(tileKey);
 
-      // Offset unit when on a city tile so both are visible
-      const onCity = cityPositionKeys.has(coordToKey(unit.position));
-      const x = onCity ? baseX - 10 : baseX;
-      const y = onCity ? baseY - 10 : baseY;
+      // Partition into own vs enemy (from currentPlayer's perspective)
+      const ownUnits = tileUnits
+        .filter(u => u.owner === rc.state.currentPlayerId)
+        .sort((a, b) => {
+          // Selected unit always primary; then military before civilian
+          if (rc.selectedUnit?.id === a.id) return -1;
+          if (rc.selectedUnit?.id === b.id) return  1;
+          const aMil = !isCivilian(a) ? 0 : 1;
+          const bMil = !isCivilian(b) ? 0 : 1;
+          return aMil - bMil;
+        });
 
-      // Get base movement from config for dot rendering
-      const unitDef = rc.state.config.units.get(unit.typeId);
-      const maxMovement = unitDef?.movement ?? 2;
+      const enemyUnits = tileUnits.filter(u => u.owner !== rc.state.currentPlayerId);
 
-      // Unit icon with all enhanced indicators
-      drawUnitIcon(this.ctx, unit.typeId, x, y, {
-        playerColor,
-        isSelected,
-        isFortified: unit.fortified,
-        health: unit.health,
-        movementLeft: unit.movementLeft,
-        maxMovement,
-        pulseFraction: isSelected ? pulseFraction : 0,
-      });
+      // Determine layout offsets.
+      // When there is a city on the tile, shift units up-left so they don't
+      // occlude the city circle (which renders at center with a ~0.35*HEX radius).
+      // When there are TWO own units on the tile, the primary goes center-upper
+      // and the secondary goes bottom-right corner (S-05 layer 8 + 9).
+      const hasTwoOwn = ownUnits.length >= 2;
+      // City shift: move up-left so unit appears "standing at the gates"
+      const cityShiftX = onCity ? -HEX_SIZE * 0.22 : 0;
+      const cityShiftY = onCity ? -HEX_SIZE * 0.18 : 0;
+
+      // ── Primary own unit ────────────────────────────────────────────────
+      if (ownUnits.length >= 1) {
+        const primary = ownUnits[0];
+        const playerIndex = players.indexOf(primary.owner);
+        const playerColor = playerColors[playerIndex % playerColors.length];
+        const isSelected = rc.selectedUnit?.id === primary.id;
+        const unitDef = rc.state.config.units.get(primary.typeId);
+        const maxMovement = unitDef?.movement ?? 2;
+
+        // Center + optional city-shift
+        const px = baseCx + cityShiftX;
+        const py = baseCy + cityShiftY;
+
+        drawUnitIcon(this.ctx, primary.typeId, px, py, {
+          playerColor,
+          isSelected,
+          isFortified: primary.fortified,
+          health: primary.health,
+          movementLeft: primary.movementLeft,
+          maxMovement,
+          pulseFraction: isSelected ? pulseFraction : 0,
+        });
+      }
+
+      // ── Secondary own unit (bottom-right offset, ~70% scale) ────────────
+      // S-05 layer 9: offset 8px right + 8px down at full zoom; scale via
+      // the icon system's scale parameter.
+      if (hasTwoOwn) {
+        const secondary = ownUnits[1];
+        const playerIndex = players.indexOf(secondary.owner);
+        const playerColor = playerColors[playerIndex % playerColors.length];
+        const isSelected = rc.selectedUnit?.id === secondary.id;
+        const unitDef = rc.state.config.units.get(secondary.typeId);
+        const maxMovement = unitDef?.movement ?? 2;
+
+        // Bottom-right offset per S-05: city-shift applies if on city tile
+        const sx = baseCx + HEX_SIZE * 0.28 + cityShiftX;
+        const sy = baseCy + HEX_SIZE * 0.22 + cityShiftY;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.82; // slight fade so primary reads first
+        drawUnitIcon(this.ctx, secondary.typeId, sx, sy, {
+          playerColor,
+          isSelected,
+          isFortified: secondary.fortified,
+          health: secondary.health,
+          movementLeft: secondary.movementLeft,
+          maxMovement,
+          pulseFraction: isSelected ? pulseFraction : 0,
+          scale: 0.70,
+        });
+        this.ctx.restore();
+      }
+
+      // ── Overflow badge for >2 own units on same tile ────────────────────
+      // This should not happen under the 1-military + 1-civilian rule, but
+      // we render a "+N" chip as a safety net.
+      if (ownUnits.length > 2) {
+        this.drawStackBadge(baseCx, baseCy, ownUnits.length - 2);
+      }
+
+      // ── Enemy units ────────────────────────────────────────────────────
+      // Enemy units render red-tinted. Primary enemy center (or slight offset
+      // if own units also occupy the tile); additional enemies get a badge.
+      if (enemyUnits.length >= 1) {
+        const enemy = enemyUnits[0];
+        const playerIndex = players.indexOf(enemy.owner);
+        const playerColor = playerColors[playerIndex % playerColors.length];
+        const unitDef = rc.state.config.units.get(enemy.typeId);
+        const maxMovement = unitDef?.movement ?? 2;
+
+        // Offset enemy when own units are also here, so they don't exactly overlap
+        const ex = ownUnits.length > 0 ? baseCx - HEX_SIZE * 0.14 : baseCx;
+        const ey = ownUnits.length > 0 ? baseCy - HEX_SIZE * 0.14 : baseCy;
+
+        this.ctx.save();
+        // Red tint for enemy units
+        this.ctx.globalCompositeOperation = 'source-over';
+        drawUnitIcon(this.ctx, enemy.typeId, ex, ey, {
+          playerColor,
+          isSelected: false,
+          isFortified: enemy.fortified,
+          health: enemy.health,
+          movementLeft: enemy.movementLeft,
+          maxMovement,
+          pulseFraction: 0,
+          enemyTint: true,
+        });
+        this.ctx.restore();
+      }
+
+      // Enemy overflow badge — top-right of tile
+      if (enemyUnits.length > 1) {
+        this.drawEnemyStackBadge(baseCx, baseCy, enemyUnits.length);
+      }
     }
+  }
+
+  /**
+   * Draw a "+N" overflow chip in the upper-right corner of the hex when
+   * own units beyond the 2-sprite budget are present (defensive; normally
+   * the Civ VII stacking rule prevents this).
+   */
+  private drawStackBadge(cx: number, cy: number, extra: number): void {
+    const ctx = this.ctx;
+    const bx = cx + HEX_SIZE * 0.42;
+    const by = cy - HEX_SIZE * 0.42;
+    const r = HEX_SIZE * 0.14;
+    const label = `+${extra}`;
+
+    ctx.save();
+    ctx.fillStyle = getPaletteColor('--color-surface-raised') || 'rgba(38, 45, 58, 0.92)';
+    ctx.strokeStyle = getPaletteColor('--color-border-accent') || 'rgba(180, 140, 60, 0.85)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx - r * 1.4, by - r, r * 2.8, r * 2, r * 0.5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = getPaletteColor('--color-text') || 'rgba(230, 237, 243, 0.95)';
+    ctx.font = `bold ${Math.round(r * 1.1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, bx, by);
+    ctx.restore();
+  }
+
+  /**
+   * Draw an enemy stack badge in the upper-right corner of the tile when
+   * multiple enemy units are present on it. Shows total count (e.g. "×3").
+   */
+  private drawEnemyStackBadge(cx: number, cy: number, total: number): void {
+    const ctx = this.ctx;
+    const bx = cx + HEX_SIZE * 0.38;
+    const by = cy - HEX_SIZE * 0.38;
+    const r = HEX_SIZE * 0.13;
+    const label = `×${total}`;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(200, 30, 30, 0.88)';
+    ctx.strokeStyle = 'rgba(255, 120, 120, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx - r * 1.5, by - r, r * 3, r * 2, r * 0.5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(r * 1.1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, bx, by);
+    ctx.restore();
   }
 
   private drawHexHighlight(coord: HexCoord, color: string, lineWidth: number): void {
