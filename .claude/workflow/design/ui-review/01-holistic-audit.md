@@ -168,6 +168,47 @@ Below (groups A-F) each surface now gets an **"Interaction economics"** subsecti
 
 Surfaces scoring poorly here are priority fixes even if their LOOK is fine. Interaction pain compounds; look fatigue is one-time.
 
+## H-15 (P0) — Fixed-pixel layout; canvas + panels don't adapt to viewport class
+
+Added after review-of-review. I ran the audit at 1440×900 and observed the canvas at a hard-coded 720×340 (confirmed via JS introspection). The user reports that at larger resolutions (1080p, 2K, 4K) the layout "looks a little bit better but still bad" — meaning the canvas / panels / chrome scale mildly but don't fundamentally restructure for the available space.
+
+This is **the root cause that amplifies H-1, H-3, H-7, H-8, H-11** and probably others. Fixing it unlocks the right fixes for all of those.
+
+### What's wrong (concrete)
+
+- Canvas has a fixed pixel size (720×340 in my test), independent of viewport
+- "Minimap" appearance at 1440×900 is actually the canvas (H-1) — proof that canvas sizing is decoupled from viewport
+- Panels have fixed widths (visible at 400-480px regardless of viewport class)
+- At wide+ viewports, ~60% of the screen is permanent empty space
+- At narrow viewports (if anyone ever plays on a 1366×768 laptop), panels likely clip or occlude the canvas
+
+### What it should be
+
+Per P12 in the philosophy doc:
+- Canvas subscribes to window resize and fills `(viewport − chrome − active-panel-width)` with min/max clamps
+- Panel widths change by viewport class (narrow → 80%; standard → 440px overlay; wide → 480px dockable; ultra → 560px or two co-visible)
+- TopBar / BottomBar grow content at wider viewports (not just pad out)
+- Breakpoints defined as design tokens (`--breakpoint-narrow`, `--breakpoint-standard`, etc.)
+
+### Why this comes before everything else
+
+Every surface-by-surface fix I proposed (canvas-fills-viewport in Phase 2.1, TopBar redesign in Phase 2.2, CityPanel hero-layout in Phase 3.4, etc.) was specified at a single viewport. If I build them without responsive awareness, they lock in fixed sizing and every surface has to be redone for smart-layout adaptation. **Easier to bake in responsiveness from the start.**
+
+### Fix
+
+New Phase 1.5 in master plan (`08-master-plan.md`) parallels Phase 1 (Design system). It lands:
+- Viewport-class detection hook
+- Breakpoint tokens
+- Canvas resize listener + clamped fill behavior
+- Panel dock behavior rules per class
+- Playwright specs at 4 viewport classes
+
+All Phase 2+ work then builds on this foundation and is responsive-first.
+
+### Effort
+
+~1 week parallel to Phase 1. Doesn't delay the overall timeline; just competes for one dev's attention in weeks 1-4. Arguably Phase 1.5 + Phase 2.1 (canvas fills viewport) should be the SAME work unit since they're the same concern.
+
 ---
 
 ## Summary of how these violations cluster

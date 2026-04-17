@@ -104,15 +104,88 @@ Wire to existing events via an `AudioManager` hook.
 
 ---
 
+## Phase 1.5 — Layout architecture (1 week, parallel to Phase 1)
+
+**Added after review-of-review.** Without this, every Phase 2-6 surface would need retrofitting for responsive behavior later, doubling the work. This is the transverse concern per philosophy P12.
+
+### 1.5.1 Viewport-class detection (1 day)
+
+- `useViewportClass()` hook returning `'narrow' | 'standard' | 'wide' | 'ultra'`
+- Listens on `resize` + `orientationchange` with debounce
+- Breakpoint tokens added to design system:
+  - `--breakpoint-narrow-max: 1366px`
+  - `--breakpoint-standard-max: 1919px`
+  - `--breakpoint-wide-max: 2559px`
+  - (ultra: 2560+)
+- All layout-dependent components consume this hook, not raw pixel queries
+
+### 1.5.2 Canvas responsive fill (2 days)
+
+Fixes H-1 + H-15 together. Canvas subscribes to window resize, computes:
+```
+canvasWidth  = viewport.width − activePanelWidth
+canvasHeight = viewport.height − topBarHeight − bottomBarHeight
+```
+- Min clamps (don't shrink below ~480×320 — if viewport is smaller, panels take over)
+- Max clamps (don't grow past 3840px in either dimension — pointless at absurd resolutions)
+- Debounced resize to avoid thrashing
+- Camera zoom / pan state preserved across resizes (don't reset view)
+
+### 1.5.3 Panel dock behavior rules (2 days)
+
+Implement in `PanelManager` + `PanelShell`:
+
+| Priority | narrow | standard | wide | ultra |
+|---|---|---|---|---|
+| `overlay` | full-screen takeover | right-anchored 440px overlay | right-docked 480px, pushes canvas left | right-docked 520px, co-visible with one more |
+| `info` | hidden until toggled | right-anchored collapsed | permanently docked 320px | permanently docked 380px, default-open |
+| `modal` | full-screen always | centered with backdrop (current) | centered with backdrop | centered with backdrop |
+
+Overlay behavior when docking: canvas re-computes its width. Not an absolute-position overlay anymore — flexbox/grid participation.
+
+### 1.5.4 TopBar/BottomBar responsive layouts (1 day)
+
+- At narrow: TopBar collapses Tech/Civics/… into a hamburger; resource chips wrap to 2 rows
+- At standard: current horizontal layout
+- At wide: TopBar shows inline richer content (per-resource per-turn delta as +2 badge next to each number)
+- At ultra: additional strategic ribbon (active crisis, neighbor diplomacy status, turn clock)
+
+BottomBar similarly adapts: at narrow the unit-dossier is a modal sheet; at ultra it's a full sidebar.
+
+### 1.5.5 Playwright specs (1 day)
+
+For each viewport class:
+- Zero `pageerror` on start + one full turn
+- No element overflows viewport
+- No element clips off-screen
+- TopBar and BottomBar render without horizontal scroll
+- Canvas fills its expected region within ±2px
+
+Run on CI for the 4 classes.
+
+### Phase 1.5 deliverable
+
+- `useViewportClass()` hook and token set
+- Canvas that resizes correctly at any viewport
+- Panel dock behavior tested at 4 breakpoints
+- No surface in the existing build breaks under resize
+
+**Scope note:** Phase 1.5 does NOT redesign any surface. It provides the responsive infrastructure so Phase 2+ can BUILD surfaces responsive-first. Existing panels may look weird between their current design and the new infrastructure — that's expected; they'll be redone in later phases.
+
+---
+
 ## Phase 2 — Always-visible + canvas viewport (2 weeks)
 
 Unlocks the biggest per-click impact. Depends on Phase 1.
 
-### 2.1 Canvas fills viewport (H-1 fix) — 3 days
+### 2.1 Canvas fills viewport + minimap split (1-2 days)
 
-- Canvas resize + layout change so hex map occupies the viewport minus TopBar / BottomBar / active-right-column
-- Introduce a separately-rendered real minimap (~200×140) docked bottom-right
+**Most of the canvas-resize work is now in Phase 1.5.2.** This step is what's LEFT after Phase 1.5 lands:
+
+- Separately-rendered real minimap (~200×140 at standard, larger at wide+)
 - Click-drag on minimap to pan, click-teleport, camera-frame indicator
+- Minimap position: bottom-right at standard, potentially pinned into BottomBar at ultra
+- Minimap-viewport decoupling from the main canvas
 
 ### 2.2 TopBar redesign — 4-5 days
 
@@ -289,9 +362,10 @@ After functional redesign is done, the pass that adds the feel:
 ## Sequence at a glance
 
 ```
-Week 1-2:   Phase 0 quick wins + Phase 1 tokens start
-Week 3-4:   Phase 1 shared components + art + audio foundations
-Week 5-6:   Phase 2 canvas + TopBar + BottomBar
+Week 1:     Phase 0 quick wins + Phase 1 tokens start + Phase 1.5 start
+Week 2-3:   Phase 1 shared components (main track) + Phase 1.5 layout arch (parallel)
+Week 4:     Phase 1 art + audio foundations wrap + Phase 1.5 wrap
+Week 5-6:   Phase 2 canvas (simpler now, builds on 1.5) + TopBar + BottomBar
 Week 7-8:   Phase 3 tile tooltip + unit dossier + notifications + CityPanel
 Week 9-11:  Phase 4 TreeView + strategic panels + Diplomacy
 Week 12-14: Phase 5 DramaModal + Setup + AgeTransition + Crisis + Victory
@@ -299,9 +373,11 @@ Week 15:    Phase 6 meta chrome
 Ongoing:    Phase 7 juice pass
 ```
 
-**Fastest "looks totally different" milestone:** end of Week 6 (Phase 2 complete). A brand-new player at Week 6 would see a completely different-feeling game, even though most panels still look mid-work.
+**Net effect of Phase 1.5 addition:** Phase 2 is slightly shorter (responsive infra already done). Total timeline unchanged at ~14-15 weeks.
 
-**Complete redesign milestone:** end of Week 14. Every surface reviewed.
+**Fastest "looks totally different" milestone:** end of Week 6 (Phase 2 complete), and this time it works at ANY viewport, not just 1440×900.
+
+**Complete redesign milestone:** end of Week 14-15. Every surface reviewed, and every surface adapts intelligently to narrow / standard / wide / ultra viewports.
 
 ---
 
@@ -322,12 +398,14 @@ Ongoing:    Phase 7 juice pass
 If only 5 items ship, pick these for maximum perceived quality lift:
 
 1. **Phase 0 quick wins** (notification auto-dismiss, end-turn pulse, etc.) — 2 days
-2. **Phase 2.1 canvas fills viewport** — 3 days  
-3. **Phase 2.2 TopBar redesign** — 4-5 days
+2. **Phase 1.5 layout architecture** (viewport-class detection + responsive canvas + panel dock rules) — 1 week
+3. **Phase 2.2 TopBar redesign** (responsive-first) — 4-5 days
 4. **Phase 3.3 notification system** — 3 days
-5. **Phase 3.4 CityPanel hero layout** — 4 days
+5. **Phase 3.4 CityPanel hero layout** (responsive-first) — 4 days
 
-Total: ~3 weeks. The game feels dramatically different. Everything else compounds gradually after.
+Total: ~3.5-4 weeks. The game feels dramatically different **at every viewport size, not just one**. Everything else compounds gradually after.
+
+**Important change vs the original top-5:** the old list had "canvas fills viewport" as a standalone 3-day item. With Phase 1.5 as the foundation, canvas-fills-viewport is already done (Phase 1.5.2) — what's new in Phase 2 is the minimap decoupling + TopBar work. More budget goes to the responsive foundation because it multiplies: every later surface is responsive-correct for free.
 
 ---
 
@@ -341,5 +419,7 @@ Before committing to work, confirm:
 4. **Civ VII aesthetic** (warm / parchment / bronze) vs **Civ VI aesthetic** (vibrant / illustrated / stylized) vs **Shadow Empire** (hard sci-fi / brutalist) vs something original? Affects token palette choices in Phase 1.
 5. **Music system?** Currently silent (based on AudioSettings panel). Phase 7 should wire music per era. Budget it early.
 6. **Mobile/touch support?** If yes, interaction-economics rules change (larger targets, no hover). Assume desktop-only for now unless confirmed.
+7. **Target viewport classes?** I've proposed 4 (narrow/standard/wide/ultra). If you want to drop narrow (≤1366 — rare on modern desktops) that simplifies Phase 1.5 by ~20%. If you want portrait / mobile added, Phase 1.5 roughly doubles in scope.
+8. **Do high-end viewports (ultra, 2560+) get "more info visible" or just "same things bigger"?** My recommendation is MORE info (a persistent EventLog, permanent unit dossier, strategic ribbon in TopBar) but that's more work. The cheaper path is same-layout-but-scaled, which the user has already implicitly rejected ("looks better but still bad").
 
-Once those six are decided, Phase 1 starts with zero uncertainty.
+Once those eight are decided, Phase 1 + 1.5 start with zero uncertainty.

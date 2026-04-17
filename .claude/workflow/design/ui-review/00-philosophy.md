@@ -123,3 +123,58 @@ Work order flips from "fix panels one by one" to:
 4. **Panel-specific polish** (only for panels that earned their overrides)
 
 This is MORE work up-front but lands as a coherent product; the alternative (one-off fixes) accumulates drift and costs more over time.
+
+## P12 (architectural) — Responsive + smart layout by viewport class
+
+Added after review-of-review: my initial audit ran at 1440×900 and observed how poorly the canvas filled space. User confirmed the UI "looks better at larger resolutions but still bad" — meaning fixed-pixel layouts with mild scaling, not genuine responsive adaptation.
+
+**The distinction that matters:** responsive ≠ scaling. Responsive means at each viewport class the UI shows the **maximum useful information** for that space, with the layout reorganizing accordingly. Scaling means "same layout, bigger / smaller".
+
+### Viewport classes (proposed)
+
+| Class | Width | Typical device | Primary adaptation |
+|---|---|---|---|
+| **narrow** | ≤1366 | laptop / old monitor | Panels expand to 80-90%; map compresses; BottomBar collapses to tab menu |
+| **standard** | 1367-1919 | common desktop (my review viewport) | Current pattern: map dominant, panels right-anchored overlay 400-480px |
+| **wide** | 1920-2559 | 1080p / 2K monitor | Panels can **dock persistent** instead of overlay; minimap larger; unit dossier could be permanent sidebar |
+| **ultra** | 2560+ / ultra-wide / multi-monitor | high-end desktop / 32:9 | **Two panels can coexist** (e.g., CityPanel + EventLog); strategic dashboards show more per surface; TopBar can show richer stats |
+
+### What "smart" means — concrete examples
+
+- **EventLog at standard**: right-anchored `info` panel, user toggles it
+- **EventLog at wide**: can stick as permanent 300px right column; map shifts left; toggle-to-hide
+- **EventLog at ultra**: permanent + default-open
+
+- **Minimap at narrow**: 150×100 overlay in corner
+- **Minimap at standard**: 200×140 corner overlay (current design target)
+- **Minimap at wide**: 280×200, optionally pinned to BottomBar as a row
+- **Minimap at ultra**: 360×240 with surrounding info readouts (strategic view)
+
+- **Unit dossier at standard**: lives in BottomBar when unit selected
+- **Unit dossier at wide**: can be a persistent left sidebar that stays populated between selections (history of "last 3 units selected")
+- **Unit dossier at ultra**: persistent + adjacency-preview panel visible simultaneously
+
+- **TopBar at narrow**: collapses extras into a hamburger menu
+- **TopBar at standard**: current target (horizontal row)
+- **TopBar at wide**: room to show richer resource breakdowns inline (not just total but per-city contribution on hover)
+- **TopBar at ultra**: could include a strategic-threats ribbon, active-crisis indicator, neighbor-civ portraits
+
+### What is NOT smart
+
+- CSS `@media` breakpoints that just resize font / padding
+- "Mobile-first" markup in desktop-game context (scope mismatch)
+- Pure proportional scaling where everything grows together
+
+Smart is **deliberate layout rules per viewport class** that change what's visible, not just how big things are.
+
+### Principles for smart layout decisions
+
+1. **Core action stays core.** End Turn is primary at every viewport. Don't hide it on narrow.
+2. **Promote content at wide viewports; don't just pad.** Extra pixels = extra information, not extra margin.
+3. **Keep the player's mental model consistent.** A panel shouldn't move dramatically between classes; docking behavior can change, but its semantic position shouldn't flip.
+4. **Every layout class passes the same playtest.** Don't only test at 1440×900. Don't only test at 4K.
+5. **Orientation fallback** — if a viewport is narrower than tall (rare), go full-screen panel mode. Hex games don't work well in portrait.
+
+### Implications for the master plan
+
+Insert a **Phase 1.5 (Layout architecture)** parallel to Phase 1 (Design system). Without it, every Phase 2+ surface would need retrofitting for responsive behavior, doubling the work.
