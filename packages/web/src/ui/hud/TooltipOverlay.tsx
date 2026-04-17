@@ -447,6 +447,16 @@ function DetailedTooltipBody({
     })),
   ];
 
+  // The currently-cycled unit index within allUnitsWithDefs. The cycle
+  // maps 0→N-1 over own military, own civilian, then own city (not shown
+  // as a unit row). Enemy units don't participate in the cycle but are
+  // still listed. When cycleIndex points past the own units we treat
+  // no unit as "active" (it's pointing at the city).
+  const activeCyclePos = stackSize > 0 ? cycleIndex % stackSize : 0;
+  // Own units occupy positions 0..ownUnits.length-1 in the cycle; the
+  // city (if owned) is the last slot. We map to allUnitsWithDefs positions.
+  const cycledUnitIndex = activeCyclePos < contents.ownUnits.length ? activeCyclePos : -1;
+
   const showCyclePill = stackSize > 1;
   const displayIndex = stackSize > 0 ? (cycleIndex % stackSize) + 1 : 1;
 
@@ -651,15 +661,33 @@ function DetailedTooltipBody({
       )}
 
       {/* Full unit stats — UnitStateTooltip surfaces hp/xp/movement/
-          promotions in one consistent sub-widget. */}
+          promotions in one consistent sub-widget. The currently-cycled
+          entity gets a ">" prefix so the player knows which slot is active. */}
       {allUnitsWithDefs.length > 0 && (
         <div
           data-testid="tooltip-unit-detail"
           className="pt-2 space-y-2"
           style={{ borderTop: '1px solid var(--hud-border)' }}
         >
-          {allUnitsWithDefs.map(({ unit, def, isEnemy }) => (
-            <div key={unit.id}>
+          {allUnitsWithDefs.map(({ unit, def, isEnemy }, i) => {
+            const isCycled = !isEnemy && i === cycledUnitIndex;
+            return (
+            <div key={unit.id} style={{ position: 'relative' }}>
+              {/* ">" cycle marker — only on the currently-cycled own unit */}
+              {isCycled && (
+                <span
+                  data-testid="tooltip-cycle-marker"
+                  style={{
+                    position: 'absolute',
+                    left: '-10px',
+                    color: 'var(--hud-tooltip-heading)',
+                    fontWeight: 'bold',
+                    fontSize: '10px',
+                    lineHeight: 1,
+                    top: '2px',
+                  }}
+                >&gt;</span>
+              )}
               {def ? (
                 <UnitStateTooltip unitState={unit} unitDef={def} />
               ) : (
@@ -668,7 +696,8 @@ function DetailedTooltipBody({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
