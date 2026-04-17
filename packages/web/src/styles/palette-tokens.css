@@ -1,0 +1,121 @@
+/*
+ * palette-tokens.css — warm earth-tone color system for packages/web.
+ *
+ * STRUCTURE:
+ *   1. Primitive palette — four color families (olive, amber, cream, bronze),
+ *      10 stops each. Raw hex values live ONLY here, never in components.
+ *   2. Semantic color tokens — alias into primitives with meaning-bearing
+ *      names. All component code uses semantic tokens, never primitives.
+ *   3. Resource colors — warm-shifted game-data semantic colors.
+ *
+ * See .claude/workflow/design/ui-review/phase-1-design-tokens-spec.md
+ * § "Color palette — warm earth tones" for hex reference values and rationale.
+ */
+
+:root {
+  /* ═══════════════════════════════════════════════════════════════════
+   * PRIMITIVE PALETTE
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  /* ── Olive (dark muted green-brown — backgrounds, surfaces) ─────── */
+  --olive-50:  #f5f3e8;
+  --olive-100: #e8e3c8;
+  --olive-200: #d4cb9a;
+  --olive-300: #b8a96a;
+  --olive-400: #978546;
+  --olive-500: #7a6f3a;
+  --olive-600: #5e5428;
+  --olive-700: #433b1c;
+  --olive-800: #2a2511;
+  --olive-900: #161409;
+
+  /* ── Amber (gold-orange — accents, highlights, interactive states) ─ */
+  --amber-50:  #fffbeb;
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;
+  --amber-700: #b45309;
+  --amber-800: #92400e;
+  --amber-900: #78350f;
+
+  /* ── Cream (warm white — text, light fills) ─────────────────────── */
+  --cream-50:  #fffef7;
+  --cream-100: #fefce8;
+  --cream-200: #fef9c3;
+  --cream-300: #fef3d0;
+  --cream-400: #f9e8b0;
+  --cream-500: #f2d88a;
+  --cream-600: #e8c86a;
+  --cream-700: #d4a840;
+  --cream-800: #b08820;
+  --cream-900: #7a5e00;
+
+  /* ── Bronze (warm metallic — borders, surfaces, chrome detail) ───── */
+  --bronze-50:  #fdf6ec;
+  --bronze-100: #f7e5c8;
+  --bronze-200: #e8c990;
+  --bronze-300: #d4a85a;
+  --bronze-400: #b8863a;
+  --bronze-500: #9a6b20;
+  --bronze-600: #7c5318;
+  --bronze-700: #5e3d12;
+  --bronze-800: #3e290c;
+  --bronze-900: #1f1406;
+
+  /* ═══════════════════════════════════════════════════════════════════
+   * SEMANTIC COLOR TOKENS
+   * All component code uses these names. Primitives are never referenced
+   * in component .tsx files.
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  /* ── Surfaces ──────────────────────────────────────────────────────  */
+  --color-bg:             #1a1510;  /* near --olive-900 (warm-adjusted) — page background */
+  --color-surface:        #251e14;  /* near --olive-800 — default panel/card surface */
+  --color-surface-hover:  #2e261a;  /* near --olive-700 — hovered card surface */
+  --color-surface-raised: #352c1e;  /* --olive-700 — raised chrome (TopBar, BottomBar) */
+
+  /* ── Borders ───────────────────────────────────────────────────────  */
+  --color-border:         #4a3e28;  /* near --bronze-700 — default border */
+  --color-border-subtle:  #332a1a;  /* near --olive-800 — subtle/ambient border */
+  --color-border-accent:  #7a6030;  /* near --bronze-500 — highlighted border (hover, selected) */
+
+  /* ── Text ──────────────────────────────────────────────────────────  */
+  --color-text:          #f2e8d0;  /* near --cream-100 — primary text */
+  --color-text-heading:  #f8f0d8;  /* near --cream-50  — heading text */
+  --color-text-muted:    #a89070;  /* between --olive-300/--bronze-400 — secondary text */
+  --color-text-subtle:   #6e5c40;  /* near --bronze-600 — very muted text */
+
+  /* ── Interactive accent ────────────────────────────────────────────  */
+  --color-accent:       #d4943a;  /* near --bronze-300 — primary interactive accent */
+  --color-accent-hover: #e8aa50;  /* near --amber-400 — hover state of accent */
+
+  /* ── Gold (resource / primary yellow accent) ───────────────────────  */
+  --color-gold:      #fbbf24;  /* = --amber-400 — gold resource, TopBar gold chip */
+  --color-gold-soft: #fcd34d;  /* = --amber-300 — softer gold, title underlines */
+
+  /* ── State colors ──────────────────────────────────────────────────  */
+  --color-danger:       #c53030;  /* custom warm red — error/combat/critical */
+  --color-danger-soft:  #e05252;  /* softer danger — hover on danger action */
+  --color-warning:      #c47a1a;  /* near --amber-700 — warning/caution */
+  --color-success:      #4a8c5a;  /* custom warm green — positive/allied */
+  --color-success-soft: #6aaa7a;  /* softer success — hovered friendly card */
+  --color-info:         #4a72b8;  /* custom warm blue — information state */
+  --color-info-soft:    #6a8ec8;  /* softer info — hover on info state */
+
+  /* ═══════════════════════════════════════════════════════════════════
+   * RESOURCE COLORS — warm-shifted equivalents
+   * Game-data semantic colors. Warm-shifted to maintain consistency
+   * against the olive/bronze background.
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  --color-food:        #6aaa3a;  /* de-saturated warmer green; replaces #7cfc00 */
+  --color-production:  #c06040;  /* warm terracotta; replaces #ff6b6b */
+  --color-science:     #4a80c8;  /* warmer less-neon blue; replaces #4dabf7 */
+  --color-culture:     #9060c0;  /* warmer purple; replaces #cc5de8 */
+  --color-faith:       #c0a870;  /* warm bronze-cream; replaces #a0aec0 */
+  --color-health-high: #4a8c5a;  /* = --color-success */
+  --color-health-low:  #c53030;  /* = --color-danger */
+}
