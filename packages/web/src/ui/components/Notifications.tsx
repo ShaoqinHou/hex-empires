@@ -17,6 +17,13 @@ interface Notification {
   /** Original event turn + message so we can dispatch DISMISS_EVENT */
   eventTurn: number;
   eventMessage: string;
+  /**
+   * Forward-compat scaffold. When true, right-click dismissal is blocked — the
+   * user must resolve the underlying event via the related panel (crisis,
+   * age transition, etc.) before it clears. Today nothing sets this; reserved
+   * for future turn-gate notifications that enforce acknowledgement.
+   */
+  requiresAction?: boolean;
 }
 
 interface NotificationsProps {
@@ -141,11 +148,13 @@ export function Notifications({ onCityClick }: NotificationsProps) {
       setNotifications(prev => [...prev, ...newNotifications]);
       setNotifiedEventIds(prev => new Set([...prev, ...newNotifications.map(n => n.id)]));
 
-      // Auto-remove non-critical notifications after 8 seconds
-      const nonCritical = newNotifications.filter(n => n.severity !== 'critical');
-      if (nonCritical.length > 0) {
+      // Auto-remove non-critical notifications after 8 seconds. `requiresAction`
+      // (forward-compat; unused today) opts out of auto-dismiss so turn-gate
+      // notifications persist until resolved.
+      const autoExpiring = newNotifications.filter(n => n.severity !== 'critical' && !n.requiresAction);
+      if (autoExpiring.length > 0) {
         const timer = setTimeout(() => {
-          setNotifications(prev => prev.filter(n => !nonCritical.some(nn => nn.id === n.id)));
+          setNotifications(prev => prev.filter(n => !autoExpiring.some(nn => nn.id === n.id)));
         }, 8000);
 
         return () => clearTimeout(timer);
@@ -162,8 +171,19 @@ export function Notifications({ onCityClick }: NotificationsProps) {
   /**
    * Dismiss a single notification. For blocksTurn events, also dispatches
    * DISMISS_EVENT so the turn system clears the blocker.
+   *
+   * Right-click is the primary dismissal affordance — the ×-button was removed
+   * in Phase 0.1 to reduce button density and align with the broader "right-click
+   * to close" interaction model. Non-blocking notifications also auto-dismiss
+   * after ~8s (see the effect above).
+   *
+   * If `notification.requiresAction` is true (forward-compat scaffold; unused
+   * today), dismissal is refused and the caller is expected to surface a hint
+   * that the user needs to open the related panel. Currently this path is
+   * unreachable because nothing sets requiresAction.
    */
   function dismissOne(notification: Notification): void {
+    if (notification.requiresAction) return;
     setNotifications(prev => prev.filter(n => n.id !== notification.id));
     if (notification.severity === 'critical') {
       // DISMISS_EVENT is a new action added in this batch; cast because the web tsc
@@ -174,13 +194,15 @@ export function Notifications({ onCityClick }: NotificationsProps) {
   }
 
   function dismissAll(): void {
-    for (const n of notifications) {
+    const dismissible = notifications.filter(n => !n.requiresAction);
+    for (const n of dismissible) {
       if (n.severity === 'critical') {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         dispatch({ type: 'DISMISS_EVENT', eventMessage: n.eventMessage, eventTurn: n.eventTurn } as any);
       }
     }
-    setNotifications([]);
+    const keepIds = new Set(notifications.filter(n => n.requiresAction).map(n => n.id));
+    setNotifications(prev => prev.filter(n => keepIds.has(n.id)));
   }
 
   const visible = filterNotifications(notifications);
@@ -219,11 +241,16 @@ export function Notifications({ onCityClick }: NotificationsProps) {
         {visible.map(notification => {
           const isClickable = notification.type === 'production' && !!notification.cityId && !!onCityClick;
           const accent = getNotificationColor(notification);
+          const tooltipHint = notification.requiresAction
+            ? 'Resolve in the related panel to clear this'
+            : isClickable
+              ? 'Click to open • right-click to dismiss'
+              : 'Right-click to dismiss';
           return (
             <div
               key={notification.id}
               className={`animate-slide-in${isClickable ? ' cursor-pointer hover:brightness-110' : ''}`}
-              title="Right-click to dismiss"
+              title={tooltipHint}
               style={{
                 backgroundColor: 'var(--color-surface)',
                 borderLeftColor: accent,
@@ -300,31 +327,6 @@ export function Notifications({ onCityClick }: NotificationsProps) {
                     {notification.message}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Dismiss notification"
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--hud-text-muted)',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    lineHeight: 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--hud-notification-close-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--hud-text-muted)';
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    dismissOne(notification);
-                  }}
-                >
-                  ×
-                </button>
               </div>
             </div>
           );
