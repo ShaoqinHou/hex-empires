@@ -1,6 +1,6 @@
 # Engine Patterns
 
-The existing `architecture.md` + `import-boundaries.md` cover layering. This doc covers four specific engine patterns that the pre-WF-AUTO-14 workflow had no rule for but that agents routinely got wrong. Most of this was implicit in `inject-rules.sh` comments or only surfaced during Reviewer findings — making it explicit here so both implementer and Reviewer use the same words.
+The existing `architecture.md` + `import-boundaries.md` cover layering. This doc covers four specific engine patterns that used to live as implicit tribal knowledge but that agents routinely got wrong. They're now explicit so both implementer and Reviewer use the same words.
 
 ---
 
@@ -84,7 +84,7 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
 
 ### Traps
 
-- **`import { ALL_UNITS } from '../data/units/index'`** inside a system file → violates the seam. The `inject-rules.sh` hook has long called this out; `engine-patterns.md` now makes it a first-class rule.
+- **`import { ALL_UNITS } from '../data/units/index'`** inside a system file → violates the seam. This doc is the authoritative source for the rule.
 - **`import { ALL_CIVILIZATIONS } from '../data/civilizations/index'`** same class.
 - **Reading `ALL_X` at module top-level into a const, then using the const** — same bug in slow motion. The const binds at import time to a specific registry, ignoring `state.config`.
 
@@ -181,4 +181,4 @@ Same seed → same draws → deterministic test. Never `Math.random()` inside te
 - **Implementer** reads this before touching a system or state utility. Catches ~40% of Reviewer-flaggable issues at write time.
 - **Reviewer** uses the grep patterns above as structured checks, plus the prose as judgment backup.
 - **Fixer** references the "Correct pattern" code blocks verbatim in BLOCK fixes.
-- **When Reviewer finds a novel engine-side trap**, log a `[PRINCIPLE-GAP]` entry in `issues.md` with the pattern; periodically a human (or the audit-workflow skill) promotes repeat gaps into this doc.
+- **When Reviewer finds a novel engine-side trap**, log a `[PRINCIPLE-GAP]` entry in `issues.md` with the pattern; periodically a human promotes repeat gaps into `emerging-traps.md`, then into CLAUDE.md's trap registry once confirmed.

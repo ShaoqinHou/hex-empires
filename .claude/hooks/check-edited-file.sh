@@ -16,17 +16,19 @@ if [[ ! "$FILE_PATH" =~ \.(ts|tsx)$ ]]; then
   exit 0
 fi
 
-VIOLATIONS=""
+# VIOLATIONS collected as an array so we can dedupe + emit in two formats
+# (real newlines for issues.md, escaped \n for the JSON additionalContext).
+VIOLATIONS=()
 
 # Check 1: Engine files importing from web (DOM, React, Canvas)
 if [[ "$FILE_PATH" =~ packages/engine/ ]]; then
   if [ -f "$FILE_PATH" ]; then
     while IFS= read -r line; do
       if echo "$line" | grep -qE "from.*['\"].*(react|@web/|packages/web)" ; then
-        VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: engine/ imports from web/ or React"
+        VIOLATIONS+=("  - ${FILE_PATH}: engine/ imports from web/ or React")
       fi
       if echo "$line" | grep -qE "(document\.|window\.|canvas|requestAnimationFrame)" ; then
-        VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: engine/ uses browser/DOM API"
+        VIOLATIONS+=("  - ${FILE_PATH}: engine/ uses browser/DOM API")
       fi
     done < "$FILE_PATH"
   fi
@@ -40,7 +42,7 @@ if [[ "$FILE_PATH" =~ systems/ ]] && [[ ! "$FILE_PATH" =~ __tests__ ]]; then
       if echo "$line" | grep -qE "from.*['\"]\./(turn|movement|combat|production|research|growth|diplomacy|resource|age|crisis|victory|effect|visibility|promotion|improvement|buildingPlacement|district|civic|specialist|trade|governor|fortify|ai|religion|government|urbanBuilding|commanderPromotion|resourceAssignment|wonderPlacement)System" ; then
         IMPORTED=$(echo "$line" | sed -n "s|.*from.*['\"]\.\/\([^'\"]*\).*|\1|p")
         if [ -n "$IMPORTED" ] && [ "$IMPORTED" != "$SYSTEM" ]; then
-          VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: ${SYSTEM} imports from ${IMPORTED}"
+          VIOLATIONS+=("  - ${FILE_PATH}: ${SYSTEM} imports from ${IMPORTED}")
         fi
       fi
     done < "$FILE_PATH"
@@ -52,7 +54,7 @@ if [[ "$FILE_PATH" =~ /data/ ]] && [[ ! "$FILE_PATH" =~ index\.ts ]] && [[ ! "$F
   if [ -f "$FILE_PATH" ]; then
     while IFS= read -r line; do
       if echo "$line" | grep -qE "from.*['\"].*(systems/|GameEngine|effects/Effect)" ; then
-        VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: data file imports from systems/engine"
+        VIOLATIONS+=("  - ${FILE_PATH}: data file imports from systems/engine")
       fi
     done < "$FILE_PATH"
   fi
@@ -63,7 +65,7 @@ if [[ "$FILE_PATH" =~ canvas/ ]]; then
   if [ -f "$FILE_PATH" ]; then
     while IFS= read -r line; do
       if echo "$line" | grep -qE "from.*['\"].*/ui/" ; then
-        VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: canvas/ imports from ui/"
+        VIOLATIONS+=("  - ${FILE_PATH}: canvas/ imports from ui/")
       fi
     done < "$FILE_PATH"
   fi
@@ -72,28 +74,39 @@ if [[ "$FILE_PATH" =~ ui/ ]]; then
   if [ -f "$FILE_PATH" ]; then
     while IFS= read -r line; do
       if echo "$line" | grep -qE "from.*['\"].*/canvas/" ; then
-        VIOLATIONS="${VIOLATIONS}\n  - ${FILE_PATH}: ui/ imports from canvas/"
+        VIOLATIONS+=("  - ${FILE_PATH}: ui/ imports from canvas/")
       fi
     done < "$FILE_PATH"
   fi
 fi
 
-if [ -n "$VIOLATIONS" ]; then
+if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+  # Dedupe — same file matching multiple patterns in one check block
+  # (e.g. `react` AND `@web/` on two different lines) would otherwise
+  # emit twin rows with identical text.
+  UNIQUE_VIOLATIONS=$(printf '%s\n' "${VIOLATIONS[@]}" | sort -u)
+
   WORKFLOW_DIR=".claude/workflow"
   ISSUES_FILE="$WORKFLOW_DIR/issues.md"
   mkdir -p "$WORKFLOW_DIR"
 
+  TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   LOCKDIR="$WORKFLOW_DIR/.issues.lockdir"
-  if mkdir "$LOCKDIR" 2>/dev/null; then
-    echo "- [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [import-boundary] ${VIOLATIONS}" >> "$ISSUES_FILE"
-    rmdir "$LOCKDIR"
-  else
+  if ! mkdir "$LOCKDIR" 2>/dev/null; then
     sleep 0.5
-    echo "- [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [import-boundary] ${VIOLATIONS}" >> "$ISSUES_FILE"
+    mkdir "$LOCKDIR" 2>/dev/null || true
   fi
+  {
+    printf -- '- [%s] [import-boundary]\n' "$TS"
+    printf '%s\n' "$UNIQUE_VIOLATIONS"
+  } >> "$ISSUES_FILE"
+  rmdir "$LOCKDIR" 2>/dev/null || true
 
+  # JSON additionalContext: \n escape sequences, not real newlines. The
+  # JSON string decoder on the agent side renders them as line breaks.
+  JSON_VIOLATIONS=$(printf '%s' "$UNIQUE_VIOLATIONS" | sed ':a;N;$!ba;s/\n/\\n/g')
   cat <<EOF
-{"additionalContext": "WARNING: Import boundary violation detected.\n${VIOLATIONS}\n\nRules:\n- engine/ CANNOT import from web/, React, or DOM APIs\n- systems/ CANNOT import from each other\n- data/ CANNOT import from systems/ or engine core\n- canvas/ and ui/ CANNOT import from each other\nSee .claude/rules/import-boundaries.md"}
+{"additionalContext": "WARNING: Import boundary violation detected.\n${JSON_VIOLATIONS}\n\nRules:\n- engine/ CANNOT import from web/, React, or DOM APIs\n- systems/ CANNOT import from each other\n- data/ CANNOT import from systems/ or engine core\n- canvas/ and ui/ CANNOT import from each other\nSee .claude/rules/import-boundaries.md"}
 EOF
 fi
 

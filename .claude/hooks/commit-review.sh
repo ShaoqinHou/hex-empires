@@ -160,15 +160,10 @@ fi
 # case.
 #
 # Flag stack:
-#   --dangerously-skip-permissions  Bypasses permission CHECKS.
 #   --permission-mode bypassPermissions  Sets the session's permission
-#     MODE to auto-approve. Both are needed in practice: WF-AUTO-7
-#     observed the driver completing Reviewer + Fixer + iter-2 work
-#     successfully, then hitting "The permission prompt was declined"
-#     on the final `review-outcome-<sha>.md` + `last-review-summary.md`
-#     writes. Root cause: `--dangerously-skip-permissions` alone does
-#     not cover all Write paths in a long-running headless session on
-#     Windows; the mode flag covers the gap. Belt and braces.
+#     MODE to auto-approve. WF-AUTO-11 observed a headless driver on
+#     Windows hitting "permission prompt was declined" on late Write
+#     calls without this; the mode flag covers the full Write path.
 #   --model sonnet  The orchestrator's job is mechanical (read queue,
 #     spawn sub-agents, parse YAML, branch on verdicts, write files).
 #     Sub-agents use their own models per SKILL.md (Sonnet for

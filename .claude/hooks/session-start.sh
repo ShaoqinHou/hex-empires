@@ -11,8 +11,12 @@ if command -v curl &>/dev/null; then
   curl -s --connect-timeout 1 http://localhost:5174 &>/dev/null && HEX_PORT="up"
 fi
 export HEX_QUEUE=0
-if [ -f "$SCRATCH_DIR/review-queue.txt" ]; then
-  HEX_QUEUE=$(grep -c '[^ ]' "$SCRATCH_DIR/review-queue.txt" 2>/dev/null || echo 0)
+# grep -c on an empty file prints "0" AND exits 1 — so `|| echo 0` would append
+# a second "0" and the captured string becomes "0\n0". Guard with -s (exists +
+# non-empty) and let grep own the number.
+if [ -s "$SCRATCH_DIR/review-queue.txt" ]; then
+  HEX_QUEUE=$(grep -c '[^ ]' "$SCRATCH_DIR/review-queue.txt" 2>/dev/null)
+  [ -z "$HEX_QUEUE" ] && HEX_QUEUE=0
 fi
 export HEX_DRIVER="idle"
 if [ -d "$SCRATCH_DIR/.review.lock" ]; then
