@@ -21,6 +21,12 @@ set -uo pipefail
 SCRATCH_DIR=".claude/workflow/scratch"
 mkdir -p "$SCRATCH_DIR" 2>/dev/null || exit 0
 
+# Diagnostic trace — every invocation logs ENTRY here so we can confirm
+# the hook actually fires on real git-commit calls. Safe to remove once
+# the auto-fire regression is understood.
+TRACE_FILE="$SCRATCH_DIR/hook-trace.log"
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ENTRY pid=$$ pwd=$(pwd)" >> "$TRACE_FILE" 2>/dev/null || true
+
 # Claude Code delivers the hook payload as JSON on stdin. The shape is:
 #   { session_id, transcript_path, cwd, permission_mode, hook_event_name,
 #     tool_name, tool_input: { command, description, ... } }
@@ -29,7 +35,11 @@ mkdir -p "$SCRATCH_DIR" 2>/dev/null || exit 0
 # and exited zero. Root cause diagnosed 2026-04-16 via a debug-probe hook
 # that captured stdin + env on a real invocation.
 STDIN_PAYLOAD=$(cat 2>/dev/null || echo "")
-if [ -z "$STDIN_PAYLOAD" ]; then exit 0; fi
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] STDIN len=${#STDIN_PAYLOAD}" >> "$TRACE_FILE" 2>/dev/null || true
+if [ -z "$STDIN_PAYLOAD" ]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT empty-stdin" >> "$TRACE_FILE" 2>/dev/null || true
+  exit 0
+fi
 
 # Extract the command the tool was asked to run. Only bash-tool payloads
 # carry a meaningful `command`; other tools have different tool_input
@@ -49,13 +59,16 @@ if command -v node >/dev/null 2>&1; then
   " 2>/dev/null || echo "")
 fi
 
+# Trace the command for diagnostics (truncate long payloads)
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] CMD=${CMD:0:120}" >> "$TRACE_FILE" 2>/dev/null || true
+
 # Fire on any command that PRODUCES a commit. cherry-pick + rebase + merge all
 # land commits and should be reviewed the same way direct commits are. We do
 # NOT fire on --abort / --skip / --continue variants that don't produce a new
 # commit; the HEAD-SHA diff below filters those out naturally.
 case "$CMD" in
   *"git commit"*|*"git cherry-pick"*|*"git rebase"*|*"git merge"*|*"git revert"*)
-    # Continue
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] MATCH commit-producing" >> "$TRACE_FILE" 2>/dev/null || true
     ;;
   *)
     exit 0

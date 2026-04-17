@@ -25,6 +25,11 @@ describe('coordToKey / keyToCoord', () => {
   it('round-trips the origin', () => {
     expect(keyToCoord(coordToKey({ q: 0, r: 0 }))).toEqual({ q: 0, r: 0 });
   });
+
+  it('round-trips large negative coordinates', () => {
+    const coord = { q: -42, r: -17 };
+    expect(keyToCoord(coordToKey(coord))).toEqual(coord);
+  });
 });
 
 describe('axialToCube / cubeToAxial', () => {
