@@ -32,7 +32,11 @@ describe('coordToKey / keyToCoord', () => {
   });
 
   it('produces deterministic keys across calls', () => {
-    expect(coordToKey({ q: 5, r: -3 })).toBe(coordToKey({ q: 5, r: -3 }));
+    const key1 = coordToKey({ q: 5, r: -3 });
+    const key2 = coordToKey({ q: 5, r: -3 });
+    expect(key1).toBe(key2);
+    expect(typeof key1).toBe('string');
+    expect(key1.length).toBeGreaterThan(0);
   });
 
   it('round-trips positive-only coordinates', () => {
