@@ -1,0 +1,138 @@
+/*
+ * layout-tokens.css — breakpoint constants, chrome heights, dock widths,
+ * minimap dimensions, and toast anchors per viewport class.
+ *
+ * Viewport classes (locked decision #7 in _loop-state.md):
+ *   standard  — default (1367–1919px)
+ *   wide      — @media (min-width: 1920px)
+ *   ultra     — @media (min-width: 2560px)
+ *
+ * These tokens are referenced by PanelShell, TopBar, BottomBar, and the
+ * useViewportClass hook. Other surfaces read the viewport class (via the
+ * hook) and pick the appropriate token at runtime.
+ *
+ * Values are canonical per S-03 sizing table. S-02 vs S-03 contradiction
+ * noted in Phase 1.5 implement-log: S-02 lists --chrome-topbar-height 48px
+ * but S-03 table specifies 56px standard / 64px wide / 72px ultra. S-03
+ * wins per parent brief ("prefer S-03's sizing table").
+ *
+ * See:
+ *   .claude/workflow/design/ui-review/systems/S-02-position-anchoring.md
+ *   .claude/workflow/design/ui-review/systems/S-03-sizing-table.md
+ */
+
+/* ── Standard viewport (1367–1919px) — default ───────────────────── */
+:root {
+  /* Breakpoint sentinel variables — read-only reference, not used in media
+   * queries (browsers don't support env() inside @media). Docs only. */
+  --breakpoint-standard: 1367px;
+  --breakpoint-wide:     1920px;
+  --breakpoint-ultra:    2560px;
+
+  /* Chrome bar heights — S-03 table: TopBar and BottomBar (no unit selected). */
+  --chrome-topbar-height:    56px;
+  --chrome-bottombar-height: 48px;
+
+  /* Dock geometry — right-column panel dock per S-02 C4. */
+  --dock-right-width-overlay: 440px;   /* overlay priority */
+  --dock-right-width-info:    320px;   /* info priority (EventLog) */
+  --dock-right-top:    calc(var(--chrome-topbar-height) + 8px);
+  --dock-right-bottom: calc(var(--chrome-bottombar-height) + 8px);
+  --dock-right-gutter: 12px;   /* gap between two co-visible panels at ultra */
+  --dock-right-right:  8px;    /* gap from viewport right edge */
+
+  /* Minimap dimensions — S-02 C3 table / S-03 BottomBar section. */
+  --hud-minimap-width:  200px;
+  --hud-minimap-height: 140px;
+  --hud-minimap-bottom: calc(var(--chrome-bottombar-height) + 12px);
+  --hud-minimap-right:  12px;
+
+  /* Toast anchor — S-02 C3 table. */
+  --hud-toast-width:  320px;
+  --hud-toast-bottom: calc(var(--chrome-bottombar-height) + 8px);
+  --hud-toast-right:  12px;
+
+  /* Floating controls (yields toggle, map controls) — S-02 Example 2
+   * computed chain replaces the former hard-coded 14rem hack. */
+  --hud-floating-control-bottom: calc(
+    var(--chrome-bottombar-height) +
+    var(--hud-minimap-height) +
+    28px
+  );
+  --hud-floating-control-right: 12px;
+
+  /* Cursor-follow tooltip offset tokens — S-02 C1 table.
+   * Named aliases for the OFFSET_*_PX constants in TooltipShell.tsx.
+   * Components can reference these instead of the hard-coded constants. */
+  --hud-offset-small: 24px;
+  --hud-offset-auto:  40px;
+  --hud-offset-large: 72px;
+  --hud-viewport-margin: 8px;
+
+  /* Occlusion threshold — S-02 C2 rule.
+   * Not a CSS length but documented here for co-location with S-02 values. */
+  /* --hud-entity-max-occlusion: 0.30; (JS constant, not CSS) */
+
+  /*
+   * CSS-level viewport-class sentinel.
+   *
+   * This custom property can be read by JS via
+   *   getComputedStyle(document.documentElement).getPropertyValue('--viewport-class')
+   * to determine the class purely from CSS state (useful for testing).
+   * It is NOT a colour — it contains the string token 'standard' / 'wide' / 'ultra'.
+   * Browsers treat unknown ident values as valid custom-property strings.
+   */
+  --viewport-class: standard;
+}
+
+/* ── Wide viewport (1920px+) ───────────────────────────────────────── */
+@media (min-width: 1920px) {
+  :root {
+    --chrome-topbar-height:    64px;
+    --chrome-bottombar-height: 56px;
+
+    --dock-right-width-overlay: 480px;
+    --dock-right-width-info:    360px;
+
+    --hud-minimap-width:  280px;
+    --hud-minimap-height: 200px;
+
+    --hud-toast-width:  360px;
+    --hud-toast-bottom: calc(var(--chrome-bottombar-height) + 8px);
+
+    --hud-floating-control-bottom: calc(
+      var(--chrome-bottombar-height) +
+      var(--hud-minimap-height) +
+      28px
+    );
+
+    --viewport-class: wide;
+  }
+}
+
+/* ── Ultra viewport (2560px+) ──────────────────────────────────────── */
+@media (min-width: 2560px) {
+  :root {
+    --chrome-topbar-height:    72px;
+    --chrome-bottombar-height: 64px;
+
+    --dock-right-width-overlay: 520px;
+    --dock-right-width-info:    440px;
+    --dock-right-gutter: 16px;
+
+    --hud-minimap-width:  360px;
+    --hud-minimap-height: 240px;
+    --hud-minimap-bottom: calc(var(--chrome-bottombar-height) + 16px);
+
+    --hud-toast-width:  400px;
+    --hud-toast-bottom: calc(var(--chrome-bottombar-height) + 8px);
+
+    --hud-floating-control-bottom: calc(
+      var(--chrome-bottombar-height) +
+      var(--hud-minimap-height) +
+      28px
+    );
+
+    --viewport-class: ultra;
+  }
+}
