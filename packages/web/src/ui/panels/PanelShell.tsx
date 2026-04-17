@@ -89,12 +89,15 @@ function containerStyle(priority: PanelPriority, width: PanelShellWidth): CSSPro
   }
 
   // overlay + info — right-anchored column beneath the TopBar.
-  // TopBar is 48px tall (h-12); BottomBar has its own room below.
+  // Heights come from layout-tokens.css --dock-right-* tokens so they
+  // adapt automatically with the viewport class (standard/wide/ultra).
+  // --dock-right-top  = --chrome-topbar-height + 8px
+  // --dock-right-bottom = --chrome-bottombar-height + 8px
   return {
     ...base,
-    top: '56px',
-    right: '8px',
-    bottom: '64px',
+    top: 'var(--dock-right-top)',
+    right: 'var(--dock-right-right)',
+    bottom: 'var(--dock-right-bottom)',
     width: WIDTH_PX[width],
     maxHeight: 'none',
   };
