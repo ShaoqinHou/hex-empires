@@ -146,6 +146,12 @@ export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRES
 // Governor data
 export { ALL_GOVERNORS } from './data/governors';
 
+// Achievement data + system
+export { ALL_ACHIEVEMENTS } from './data/achievements';
+export type { AchievementId, AchievementDef } from './data/achievements';
+export { achievementSystem, getAchievementsForPlayer } from './systems/achievementSystem';
+export type { AchievementsByPlayer } from './systems/achievementSystem';
+
 // Save/Load
 export { serializeState, deserializeState } from './state/SaveLoad';
 export { createGameConfig } from './state/GameConfigFactory';
