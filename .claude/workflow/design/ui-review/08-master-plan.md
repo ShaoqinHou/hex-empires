@@ -174,6 +174,55 @@ Run on CI for the 4 classes.
 
 ---
 
+## Phase 1.6 — Asset pipeline (1 week, parallel to Phases 1 + 1.5)
+
+Full spec lives in **`09-asset-pipeline.md`**. Core idea: placeholder assets (AI-generated portraits, CC0 music, silhouette glyphs) must be **drop-in replaceable** with no code changes when commissioned final assets arrive.
+
+### 1.6.1 Asset registry + loader (1 day)
+
+- `packages/web/src/assets/registry.ts` — single source of truth mapping logical names (LeaderId, YieldType, etc.) → paths + source metadata
+- `packages/web/src/assets/loader.ts` — resolve/fallback logic
+- Components import from loader, never hardcode paths
+
+### 1.6.2 Directory structure + fallback assets (0.5 day)
+
+- Lay out `packages/web/public/assets/{images,audio}/...` per spec
+- Create `_fallback-*` files (silhouette portrait, circle icon, generic glyph, silent OGG) — ships with game forever
+
+### 1.6.3 Validator script (1 day)
+
+- `npm run assets:validate` — checks file existence, dimensions, duration, attribution
+- Reports missing/wrong-size/oversized assets
+- Integrates with CI — PRs that break the registry fail loudly
+
+### 1.6.4 Batch-workflow scripts (1 day)
+
+- `npm run assets:replace <category> <key> <file>` — auto-convert + place + update registry
+- `npm run assets:status` — table of how many placeholders remain per category
+- `npm run assets:bulk-mark-source` — for full-category commissions
+
+### 1.6.5 Seed placeholders (1-2 days)
+
+- AI-generate 9 leader portraits (Midjourney/Flux)
+- Export 7 yield icons + 30-40 action/category/state icons (Figma/Illustrator/Figma Community)
+- 12 civ silhouettes (AI or hand)
+- 5 CC0 era music tracks (YouTube Audio Library / Free Music Archive)
+- ~50 CC0 SFX (Kenney / Freesound)
+- Drop into correct paths, validator passes clean
+
+### Phase 1.6 deliverable
+
+- Assets directory structured per spec
+- Every category has at least a fallback
+- Validator passes
+- Real-enough placeholders so the game stops using emoji for UI chrome
+- Replacement workflow documented + scripts working
+- Artist/composer collaboration materials ready (registry + spec + reference)
+
+**Scope note:** When commissioned assets arrive months later, the swap is ~3 minutes per asset via `npm run assets:replace`. No code refactor, no path hunting.
+
+---
+
 ## Phase 2 — Always-visible + canvas viewport (2 weeks)
 
 Unlocks the biggest per-click impact. Depends on Phase 1.
@@ -362,22 +411,25 @@ After functional redesign is done, the pass that adds the feel:
 ## Sequence at a glance
 
 ```
-Week 1:     Phase 0 quick wins + Phase 1 tokens start + Phase 1.5 start
-Week 2-3:   Phase 1 shared components (main track) + Phase 1.5 layout arch (parallel)
-Week 4:     Phase 1 art + audio foundations wrap + Phase 1.5 wrap
+Week 1:     Phase 0 quick wins + Phase 1 tokens start + Phase 1.5 start + Phase 1.6 registry
+Week 2-3:   Phase 1 shared components (main) + Phase 1.5 layout arch + Phase 1.6 pipeline (all parallel)
+Week 4:     Phase 1/1.5/1.6 all wrap; seed placeholder assets in place
 Week 5-6:   Phase 2 canvas (simpler now, builds on 1.5) + TopBar + BottomBar
 Week 7-8:   Phase 3 tile tooltip + unit dossier + notifications + CityPanel
-Week 9-11:  Phase 4 TreeView + strategic panels + Diplomacy
-Week 12-14: Phase 5 DramaModal + Setup + AgeTransition + Crisis + Victory
+Week 9-11:  Phase 4 TreeView + strategic panels + Diplomacy (portraits drop in via 1.6)
+Week 12-14: Phase 5 DramaModal + Setup + AgeTransition + Crisis + Victory (art drops via 1.6)
 Week 15:    Phase 6 meta chrome
-Ongoing:    Phase 7 juice pass
+Ongoing:    Phase 7 juice pass + asset swaps as commissioned work arrives
 ```
 
-**Net effect of Phase 1.5 addition:** Phase 2 is slightly shorter (responsive infra already done). Total timeline unchanged at ~14-15 weeks.
+**Net effect of Phase 1.5 + 1.6:** Phase 2 is slightly shorter (responsive infra already done) and every subsequent surface just-works with placeholder assets. Total timeline still ~14-15 weeks.
 
-**Fastest "looks totally different" milestone:** end of Week 6 (Phase 2 complete), and this time it works at ANY viewport, not just 1440×900.
+**Fastest "looks totally different" milestone:** end of Week 6 (Phase 2 complete), and this time it works at ANY viewport AND uses real icons/portraits instead of emoji.
 
-**Complete redesign milestone:** end of Week 14-15. Every surface reviewed, and every surface adapts intelligently to narrow / standard / wide / ultra viewports.
+**Complete redesign milestone:** end of Week 14-15. Every surface reviewed, every surface adapts to narrow/standard/wide/ultra viewports, every asset is either final or placeholder-with-clear-upgrade-path.
+
+**Asset swap timeline (concurrent, unblocked by code work):**
+- Any week after Phase 1.6 completes (end of Week 4), commissioned assets can land via `npm run assets:replace` with zero code changes. The game's LOOK progressively upgrades during Weeks 5-14 as final assets arrive — even if the art commissions take months to complete.
 
 ---
 
@@ -393,19 +445,22 @@ Ongoing:    Phase 7 juice pass
 
 ---
 
-## If budget is constrained — top-5 ship list
+## If budget is constrained — top-6 ship list
 
-If only 5 items ship, pick these for maximum perceived quality lift:
+If only 6 items ship, pick these for maximum perceived quality lift:
 
 1. **Phase 0 quick wins** (notification auto-dismiss, end-turn pulse, etc.) — 2 days
 2. **Phase 1.5 layout architecture** (viewport-class detection + responsive canvas + panel dock rules) — 1 week
-3. **Phase 2.2 TopBar redesign** (responsive-first) — 4-5 days
-4. **Phase 3.3 notification system** — 3 days
-5. **Phase 3.4 CityPanel hero layout** (responsive-first) — 4 days
+3. **Phase 1.6 asset pipeline** (registry + loader + validator + seed placeholders) — 1 week
+4. **Phase 2.2 TopBar redesign** (responsive-first, using new asset loader) — 4-5 days
+5. **Phase 3.3 notification system** — 3 days
+6. **Phase 3.4 CityPanel hero layout** (responsive-first) — 4 days
 
-Total: ~3.5-4 weeks. The game feels dramatically different **at every viewport size, not just one**. Everything else compounds gradually after.
+Total: ~4-5 weeks. The game feels dramatically different **at every viewport size, with real icons instead of emoji, and every future asset upgrade is drop-in**. Everything else compounds gradually after.
 
-**Important change vs the original top-5:** the old list had "canvas fills viewport" as a standalone 3-day item. With Phase 1.5 as the foundation, canvas-fills-viewport is already done (Phase 1.5.2) — what's new in Phase 2 is the minimap decoupling + TopBar work. More budget goes to the responsive foundation because it multiplies: every later surface is responsive-correct for free.
+**Why Phase 1.6 is in the top-6:** without it, every later upgrade (commissioned portraits, bespoke music, icon set) requires hunting through code to replace paths. Phase 1.6 pays off for the entire life of the project. Cheap if done upfront, costly to retrofit.
+
+**Important change vs earlier top-5:** the old list had "canvas fills viewport" as a standalone 3-day item. With Phase 1.5 as the foundation, canvas-fills-viewport is already done (Phase 1.5.2). Phase 1.6 added because asset-pipeline-as-a-retrofit is painful; as-a-foundation is trivial.
 
 ---
 
