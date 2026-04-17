@@ -42,5 +42,16 @@
         }]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(*)",
+      "Agent(*)"
+    ]
   }
 }

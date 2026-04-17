@@ -258,3 +258,105 @@ No `/loop` needed. The "loop" is the natural sequencing of spawn → notificatio
 - **Polling for build completion** — would use `/loop 30s /check-build` if implemented.
 - **Nightly consistency audit** — `CronCreate` candidate.
 - **Continue through master plan** — event-driven chain (what we should have done for the systems-design loop, and what I'd do now for Phase 1).
+
+---
+
+## Subagent workflow gotchas (discovered 2026-04-18 during UI master-plan loop)
+
+Short reference in `CLAUDE.md` § "Agent coordination"; full reasoning + evidence here.
+
+### 1. Subagent permission inheritance — settings.json ONLY
+
+**Symptom:** A subagent (designer / implementer / general-purpose spawned from an `Agent` tool call) reports `Write permission denied` or a `Bash` heredoc that "was interrupted before completing" — even though the parent session has `Write(*)` and `Bash(*)` permissions and has been writing files freely all session. The subagent then falls back to returning content inline for the parent to persist.
+
+**Root cause:** Subagents only read `.claude/settings.json` (the project-level, checked-in file). They do NOT read `.claude/settings.local.json` (the per-machine, git-ignored file) where most user-added permissions accumulate. Documented as a known issue — [anthropics/claude-code #18950](https://github.com/anthropics/claude-code/issues/18950) and [#10906](https://github.com/anthropics/claude-code/issues/10906).
+
+**Fix:** any permission the subagents need must live in `.claude/settings.json` in a `permissions.allow` block:
+
+```json
+{
+  "hooks": { ... },
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(*)",
+      "Agent(*)"
+    ]
+  }
+}
+```
+
+Yes this checks the permissions into git. For an AI-first workflow that's the right trade — the subagents are functional, and anyone who clones the repo is expected to work with the same tool surface.
+
+**Cross-check:** per-agent frontmatter cannot substitute. `tools:` in the `.md` frontmatter declares which tool *names* the agent is allowed to call (a capability filter); it does NOT pre-grant permission for those tools. Permission grants only come from `settings.json`.
+
+**`permissionMode`:** if an agent's frontmatter sets `permissionMode: dontAsk`, permission prompts are silently auto-denied rather than surfaced to the user. The fallback path the subagent reports (inline return, deferral) is the symptom. Leave `permissionMode` at default unless you have a specific reason.
+
+### 2. Custom agent definitions load at session start only
+
+**Symptom:** You add a new agent file `.claude/agents/newagent.md` mid-session. You call `Agent({ subagent_type: "newagent" })`. Error: `Agent type 'newagent' not found`.
+
+**Root cause:** The agent registry is built once at session start from `.claude/agents/*.md`. Mid-session filesystem changes are not re-scanned. Documented as [#6497](https://github.com/anthropics/claude-code/issues/6497) — a community request for hot-reload that hasn't shipped.
+
+**Workaround — context-preserving restart:**
+
+```
+/exit
+claude --continue
+```
+
+`/exit` quits the CLI; `claude --continue` resumes the same conversation thread (full history, todos, memory) AND triggers a fresh agent-registry scan. This is the canonical way to register a newly-authored agent without losing state.
+
+**Pragmatic alternative (no restart needed):** skip the custom agent and call `Agent({ subagent_type: "general-purpose", model: "sonnet", ... })` — same Sonnet model, same capabilities, zero registry dependency. The custom agent file remains on disk for the next session when you eventually restart.
+
+### 3. `isolation: worktree` uses `origin/main`, not local `HEAD`
+
+**Symptom:** A subagent with `isolation: worktree` in its frontmatter (or passed via the `Agent` tool) starts from a commit that is BEHIND your local `HEAD`. Recent commits from the session are invisible to it. HEAD-MOVED guards in subagent briefs fire falsely, or worse, the subagent does work on the stale snapshot and produces a branch that can't cleanly merge.
+
+**Root cause:** Claude Code's worktree-isolation mechanism creates the worktree from the remote's default branch (`origin/main` for most projects), not from whatever the parent session is currently sitting on. When local `main` is ahead of `origin/main` (common mid-session before any push), the worktree can't see your unpushed commits.
+
+**Preflight check (run before any spawn that requests isolation):**
+
+```bash
+ahead=$(git rev-list --count origin/main..HEAD 2>/dev/null)
+if [ "${ahead:-0}" -gt 0 ]; then
+  echo "WARNING: local main is $ahead commits ahead of origin/main. Worktree isolation will snapshot from origin/main and miss unpushed work."
+fi
+```
+
+**Fixes (in order of preference):**
+
+1. **Push local main to origin** (needs explicit user permission per git-safety rules). Restores worktree isolation to correctness.
+2. **Spawn without `isolation: worktree`.** The subagent works in the parent's checkout; commits land directly on main. Simpler and proven to work (designer has always worked this way).
+3. **Pre-create a worktree manually** from local HEAD (via `git worktree add`) and spawn the agent there via `cwd:` — but the Agent tool schema doesn't expose `cwd`, so this isn't currently possible.
+
+### 4. Sonnet verification — brief convention, not a hook
+
+**Symptom:** After several subagent rounds you realize all the work has been quietly done by Opus because you forgot to pass `model: "sonnet"` explicitly when spawning `general-purpose`. Cost balloons.
+
+**Root cause:** `Agent` tool without an explicit `model:` parameter inherits the parent's model. A custom agent's frontmatter `model: sonnet` IS honored — but only if the named custom agent is in the session's registry (see #2 above).
+
+**Convention enforced via brief:** every subagent brief ends with:
+
+> Return your `runtime-model` — the model you actually ran on. Parent stops the loop if it's anything other than Sonnet.
+
+And the parent checks the return payload's `runtime-model` field on every agent completion. If it's wrong, loop pauses, root-cause the routing, resume.
+
+**Stronger enforcement idea (not shipped):** a post-tool hook that inspects `Agent` tool calls and blocks the spawn if neither `subagent_type` is a Sonnet-frontmatter custom agent nor `model: "sonnet"` is passed explicitly. Deferred; the brief convention has held up this session.
+
+### 5. Loop-state file persistence (compact + restart protocol)
+
+**Symptom:** Auto-compact fires mid-loop or the user does `/exit` + `claude --continue`. The new session picks up with no idea which phase was in progress, which sub-steps were completed, which decisions had been locked in.
+
+**Fix:** the master loop writes a compact-proof state file (for this project: `.claude/workflow/design/ui-review/systems/_loop-state.md`) with:
+
+- Locked decisions (so they aren't re-litigated)
+- Phase list with per-phase status + commit SHAs
+- Workflow bugs discovered + their workarounds (so the next session doesn't re-hit them)
+- Post-compact / post-restart action protocol (what to read, what to decide, where to resume)
+
+Discipline: update this file after every agent return + every phase commit. The cost is small; the recovery value is enormous.

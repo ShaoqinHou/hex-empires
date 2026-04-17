@@ -42,6 +42,15 @@ Anti-pattern: stopping mid-list with "Phase 1 done — should I continue?" when 
 
 Model selection: Sonnet for most work. Opus for dispute/judgment only. Never Opus for work Sonnet handles equally.
 
+### Subagent workflow gotchas (confirmed 2026-04-18)
+
+These bit the loop this session. Full details in `.claude/rules/loop-and-continuous-mode.md` § "Subagent workflow gotchas".
+
+- **Subagents only read `.claude/settings.json`, not `settings.local.json`** ([#18950](https://github.com/anthropics/claude-code/issues/18950)). Permissions that must apply to subagents (Write, Bash, Edit, Agent) live in the checked-in `settings.json` `permissions.allow` block. Silent `Write permission denied` is the symptom.
+- **Custom `.claude/agents/*.md` definitions only load at session start.** Adding a new agent file mid-session: the new `subagent_type` is NOT callable until restart. Workaround: `/exit` then `claude --continue` preserves conversation context while re-scanning the registry. Pragmatic alternative: `Agent({ subagent_type: "general-purpose", model: "sonnet" })` — needs no reload.
+- **`isolation: worktree` creates worktrees from `origin/main`, not local `HEAD`.** If local main is ahead of origin/main (pre-push state), the worktree is stale and cannot see recent commits. Preflight: `git rev-list --count origin/main..HEAD` — nonzero = divergence = don't use isolation. Fix: push main to origin first, OR spawn without isolation (commits land directly on main).
+- **Sonnet verification is convention, not enforcement.** Every subagent brief requires `runtime-model` in the return payload; parent stops the loop if it's anything other than Sonnet. No hook enforces this yet — relies on brief discipline.
+
 ## Key invariants (always in context — .claude/rules/ auto-loads the full docs)
 
 **Engine:**
