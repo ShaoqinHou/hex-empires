@@ -1,5 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
-import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges } from '@hex/engine';
+import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState } from 'react';
@@ -35,8 +35,10 @@ export function TopBar() {
 
   const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
 
-  // Units still waiting on player orders — has movement AND not fortified (a fortified
-  // unit has already chosen its turn action by holding position).
+  // True when every unit has acted (moved or fortified) — drives the End Turn pulse.
+  const turnReady = allUnitsHaveActed(state);
+
+  // Units still waiting on player orders — shown as a reminder badge on End Turn.
   const unitsWithMovement = [...state.units.values()].filter(
     u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified
   ).length;
@@ -132,17 +134,16 @@ export function TopBar() {
           )}
         </div>
 
-        {/* End Turn — always clickable. Pulses when 0 units still need orders
-            (turn-ready signal — matches Civ VII's ready indicator). */}
+        {/* End Turn — always clickable. Pulses (end-turn-ready class) when all
+            units have acted, signalling the player they can safely advance.
+            Animation respects prefers-reduced-motion via CSS. */}
         <button
           data-testid="end-turn-button"
-          className={`px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1 ${
-            unitsWithMovement === 0 ? 'animate-turn-ready' : ''
-          }`}
+          className={`px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1${turnReady ? ' end-turn-ready' : ''}`}
           style={{
-            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+            background: 'linear-gradient(135deg, var(--color-food) 0%, color-mix(in srgb, var(--color-food) 80%, transparent) 100%)',
             color: '#fff',
-            boxShadow: '0 2px 8px rgba(34, 197, 94, 0.4)',
+            boxShadow: turnReady ? '0 2px 8px color-mix(in srgb, var(--panel-accent-gold) 40%, transparent)' : '0 2px 8px rgba(34, 197, 94, 0.4)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             minHeight: '32px',
           }}
