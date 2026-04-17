@@ -56,6 +56,12 @@ describe('axialToCube / cubeToAxial', () => {
     const coord = { q: 5, r: -2 };
     expect(cubeToAxial(axialToCube(coord))).toEqual(coord);
   });
+
+  it('maintains cube constraint q+r+s=0 for negative coords', () => {
+    const cube = axialToCube({ q: -4, r: 7 });
+    expect(cube.q + cube.r + cube.s).toBe(0);
+    expect(cube).toEqual({ q: -4, r: 7, s: -3 });
+  });
 });
 
 describe('neighbors', () => {
