@@ -4,7 +4,9 @@ import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState } from 'react';
 import { usePanelManager } from '../panels/PanelManager';
+import { PANEL_REGISTRY } from '../panels/panelRegistry';
 import type { PanelId } from '../panels/panelRegistry';
+import { KeyBadge } from './KeyBadge';
 
 /** Resource chips that always render even when zero — core economy signals. */
 const CORE_RESOURCES = new Set(['gold', 'science', 'culture']);
@@ -199,11 +201,13 @@ function ResourcePill({
 }
 
 function PanelButton({ label, color, dark, onClick, panelId }: { label: string; color: string; dark?: boolean; onClick?: () => void; panelId?: PanelId }) {
+  const shortcut = panelId ? PANEL_REGISTRY.get(panelId)?.keyboardShortcut : undefined;
   return (
     <button
       data-panel-trigger={panelId}
       className="px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
       style={{
+        position: 'relative',
         background: `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color} 80%, transparent) 100%)`,
         color: dark ? '#0d1117' : '#fff',
         border: `1px solid color-mix(in srgb, ${color} 50%, transparent)`,
@@ -212,6 +216,7 @@ function PanelButton({ label, color, dark, onClick, panelId }: { label: string; 
       onClick={onClick}
     >
       {label}
+      {shortcut && <KeyBadge letter={shortcut} />}
     </button>
   );
 }

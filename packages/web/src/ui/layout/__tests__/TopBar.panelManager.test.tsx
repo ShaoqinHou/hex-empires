@@ -161,7 +161,8 @@ describe('TopBar — PanelManager wiring', () => {
 
     const techBtn = container.querySelector<HTMLButtonElement>('[data-panel-trigger="tech"]');
     expect(techBtn).not.toBeNull();
-    expect(techBtn!.textContent).toBe('Tech');
+    // textContent includes the KeyBadge shortcut letter — use contains check.
+    expect(techBtn!.textContent).toContain('Tech');
 
     fireEvent.click(techBtn!);
     expect(getPanel().activePanel).toBe('tech');
