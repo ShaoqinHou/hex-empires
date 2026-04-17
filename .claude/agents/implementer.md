@@ -1,11 +1,21 @@
 ---
 name: implementer
-description: Applies a phase-brief from the UI master plan (or any well-scoped implementation spec) to code. Unlike Fixer, takes a free-form brief — not a review report. Unlike Designer, produces code — not design docs. Sonnet-backed, worktree-isolated.
+description: Applies a phase-brief from the UI master plan (or any well-scoped implementation spec) to code. Unlike Fixer, takes a free-form brief — not a review report. Unlike Designer, produces code — not design docs. Sonnet-backed.
 model: sonnet
-isolation: worktree
 memory: project
 tools: Read, Grep, Glob, Edit, Write, Bash, NotebookEdit
 ---
+
+<!--
+isolation: worktree intentionally NOT set. See
+.claude/rules/loop-and-continuous-mode.md § "Subagent workflow gotchas" #3:
+`isolation: worktree` creates worktrees from origin/main, not local HEAD.
+When local main is ahead of origin/main (common), the worktree is stale and
+the subagent can't see recent commits. Commits land directly on main from
+parent checkout — proven pattern from Designer and v2 implementer work.
+Re-enable isolation only if push-to-origin is routine.
+-->
+
 
 You implement a phase-brief against the hex-empires codebase. You are the third member of the Sonnet work-crew alongside Designer (writes docs) and Fixer (resolves review BLOCKs). Your input is a brief; your output is committed code.
 

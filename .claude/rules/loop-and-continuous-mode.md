@@ -348,7 +348,38 @@ And the parent checks the return payload's `runtime-model` field on every agent 
 
 **Stronger enforcement idea (not shipped):** a post-tool hook that inspects `Agent` tool calls and blocks the spawn if neither `subagent_type` is a Sonnet-frontmatter custom agent nor `model: "sonnet"` is passed explicitly. Deferred; the brief convention has held up this session.
 
-### 5. Loop-state file persistence (compact + restart protocol)
+### 5. Subagent Write permission — lower-level lockdown beyond settings.json
+
+**Symptom:** Even with `.claude/settings.json` containing `permissions.allow: ["Write(*)", "Edit(*)", "Bash(*)"]`, subagents spawned via the `Agent` tool reliably get `Write` and `Edit` denied. Tested post-session-restart with four different spawn configurations (custom agent with isolation, custom agent without isolation, general-purpose with no mode, general-purpose with `mode: "bypassPermissions"`) — all four denied `Write`.
+
+**Unknown root cause.** Suspected to be a permission layer below `settings.json` and below the Agent tool's `mode` param. Possibly tied to CLI startup flags (`--dangerously-skip-permissions`) that aren't inherited into the subagent spawn context. Not yet resolved upstream.
+
+**Confirmed working patterns — use these, do NOT spend time trying to unlock `Write`:**
+
+1. **Designer agent → inline-return + parent-persists.** The subagent returns the full doc content in its reply as a fenced markdown block. The parent calls its own `Write` tool to persist. Cost: one extra Write from the parent per deliverable — trivial. Designer used this pattern for the 3600-word Phase 1 spec (2026-04-18).
+2. **Implementer → git commit as the log.** Instead of trying to write an `implement-log-<sha>.md` file, the implementer commits each sub-step with a descriptive message + any additional findings in the commit body. The commit graph IS the log. v2 implementer used this pattern successfully (2026-04-18, 6 commits).
+
+**What still works inside subagents:**
+
+- `Read`, `Grep`, `Glob` — all read-side tools
+- `Bash` for git operations (`git commit -m`, `git log`, `git diff`) — git commits somehow succeed even when `Write` is denied (probably the underlying filesystem write happens via git process, not via Claude Code's `Write` tool)
+- `Bash` for tests (`npm run test:engine`, `npx vitest run`)
+- `Bash` for reading filesystem (`ls`, `cat`)
+- **Bash is inconsistent** — sometimes denied, sometimes allowed. If denied, fall back to reports that don't require it.
+
+**What is broken today:**
+
+- `Write` tool from subagent — denied
+- `Edit` tool from subagent — denied
+- Creating new files inside subagent via `Write` — use inline-return pattern
+
+**Future investigation avenues (if this ever becomes blocking):**
+
+- Whether parent session launched with `--dangerously-skip-permissions` vs default
+- Whether `settings.json` has an undocumented `subagents.permissionMode` field
+- Whether Claude Code updates have shipped fixes since 2026-04-18
+
+### 6. Loop-state file persistence (compact + restart protocol)
 
 **Symptom:** Auto-compact fires mid-loop or the user does `/exit` + `claude --continue`. The new session picks up with no idea which phase was in progress, which sub-steps were completed, which decisions had been locked in.
 
