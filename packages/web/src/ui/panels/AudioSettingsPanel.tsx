@@ -1,6 +1,40 @@
 import { useAudio } from '../../hooks/useAudio';
 import { PanelShell } from './PanelShell';
 
+/**
+ * Minimal WebAudio synth for test-button feedback.
+ * Gated by the panel's master soundVolume (0-1 scale).
+ * Sine-wave tone: freq Hz, durationMs, volume 0-1.
+ */
+function playTone(freq: number, durationMs: number, volume: number): void {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.2 * volume, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationMs / 1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + durationMs / 1000);
+    // Auto-close the context after the tone finishes to avoid resource leaks.
+    setTimeout(() => { ctx.close().catch(() => undefined); }, durationMs + 100);
+  } catch {
+    // AudioContext unavailable (test env, headless) — silently ignore.
+  }
+}
+
+/** Quick arpeggio: plays three ascending tones in rapid succession. */
+function playArpeggio(baseFreq: number, volume: number): void {
+  const notes = [baseFreq, baseFreq * 1.25, baseFreq * 1.5];
+  notes.forEach((freq, i) => {
+    setTimeout(() => playTone(freq, 180, volume), i * 120);
+  });
+}
+
 interface AudioSettingsPanelProps {
   readonly onClose: () => void;
 }
@@ -147,11 +181,9 @@ export function AudioSettingsPanel({ onClose }: AudioSettingsPanelProps) {
             <div className="grid grid-cols-2 gap-2">
               {soundEnabled && (
                 <>
+                  {/* 600 Hz — gentle UI click tone */}
                   <button
-                    onClick={() => {
-                      // Placeholder — wired to a real test-sound call in a later cycle.
-                      console.log('Test sound effect');
-                    }}
+                    onClick={() => playTone(600, 300, soundVolume)}
                     className="px-3 py-2 text-xs rounded"
                     style={{
                       backgroundColor: 'var(--panel-border)',
@@ -160,10 +192,9 @@ export function AudioSettingsPanel({ onClose }: AudioSettingsPanelProps) {
                   >
                     Test Sound
                   </button>
+                  {/* 320 Hz — low thud, combat feel */}
                   <button
-                    onClick={() => {
-                      console.log('Test combat sound');
-                    }}
+                    onClick={() => playTone(320, 400, soundVolume)}
                     className="px-3 py-2 text-xs rounded"
                     style={{
                       backgroundColor: 'var(--panel-border)',
@@ -175,10 +206,9 @@ export function AudioSettingsPanel({ onClose }: AudioSettingsPanelProps) {
                 </>
               )}
               {musicEnabled && (
+                /* Arpeggio from 880 Hz — pleasant musical flourish */
                 <button
-                  onClick={() => {
-                    console.log('Test music track');
-                  }}
+                  onClick={() => playArpeggio(880, musicVolume)}
                   className="px-3 py-2 text-xs rounded col-span-2"
                   style={{
                     backgroundColor: 'var(--panel-border)',
