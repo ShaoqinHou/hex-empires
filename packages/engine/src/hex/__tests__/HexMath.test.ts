@@ -21,6 +21,10 @@ describe('coordToKey / keyToCoord', () => {
   it('produces unique keys for different coords', () => {
     expect(coordToKey({ q: 1, r: 2 })).not.toBe(coordToKey({ q: 2, r: 1 }));
   });
+
+  it('round-trips the origin', () => {
+    expect(keyToCoord(coordToKey({ q: 0, r: 0 }))).toEqual({ q: 0, r: 0 });
+  });
 });
 
 describe('axialToCube / cubeToAxial', () => {
