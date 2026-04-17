@@ -373,6 +373,13 @@ export interface GameState {
   readonly lastValidation: ValidationResult | null;
 
   /**
+   * Per-player achievement unlock log. Optional so pre-achievement saves
+   * and test helpers that don't populate it continue to compile; treat
+   * absence as an empty map (no achievements unlocked yet).
+   */
+  readonly unlockedAchievements?: ReadonlyMap<PlayerId, ReadonlyArray<string>>;
+
+  /**
    * ── Religion cycle E — optional runtime slot ──
    *
    * Optional so pre-religion saves migrate as `undefined` and existing

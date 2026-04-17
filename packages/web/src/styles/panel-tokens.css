@@ -85,6 +85,10 @@
   --panel-accent-pink:           #e599f7;
   --panel-accent-neutral:        #475569;
 
+  /* Achievement card surfaces — deferred to Phase 4 warm-shift pass. Values unchanged. */
+  --panel-card-earned-bg: rgba(88, 166, 255, 0.08);
+  --panel-card-locked-bg: rgba(139, 148, 158, 0.04);
+
   /* Muted surfaces — deferred to Phase 4 warm-shift pass. Values unchanged. */
   --panel-muted-bg:        rgba(30, 41, 59, 0.50);
   --panel-muted-bg-soft:   rgba(30, 41, 59, 0.30);

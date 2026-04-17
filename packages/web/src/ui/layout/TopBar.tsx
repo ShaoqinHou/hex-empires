@@ -80,7 +80,7 @@ export function TopBar() {
         <ResourcePill icon="🔬" label="Sci" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
         <ResourcePill icon="🎭" label="Cul" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
         <ResourcePill icon="⛪" label="Fai" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" hideWhenZero />
-        <ResourcePill icon="🤝" label="Inf" value={player?.influence ?? 0} perTurn={0} color="rgba(186, 104, 200, 0.9)" hideWhenZero />
+        <ResourcePill icon="🤝" label="Inf" value={player?.influence ?? 0} perTurn={0} color="var(--color-influence)" hideWhenZero />
 
         {/* Research progress */}
         {currentResearchTech && (
@@ -143,7 +143,7 @@ export function TopBar() {
           style={{
             background: 'linear-gradient(135deg, var(--color-food) 0%, color-mix(in srgb, var(--color-food) 80%, transparent) 100%)',
             color: '#fff',
-            boxShadow: turnReady ? '0 2px 8px color-mix(in srgb, var(--panel-accent-gold) 40%, transparent)' : '0 2px 8px rgba(34, 197, 94, 0.4)',
+            boxShadow: turnReady ? '0 2px 8px color-mix(in srgb, var(--panel-accent-gold) 40%, transparent)' : '0 2px 8px color-mix(in srgb, var(--color-food) 40%, transparent)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             minHeight: '32px',
           }}

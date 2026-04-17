@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { ALL_ACHIEVEMENTS, type AchievementId, type AchievementDef } from '@hex/engine';
+import { ALL_ACHIEVEMENTS, type AchievementDef } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { PanelShell } from './PanelShell';
 
@@ -18,11 +18,8 @@ interface AchievementsPanelProps {
 export function AchievementsPanel({ onClose }: AchievementsPanelProps) {
   const { state } = useGameState();
 
-  const unlocked = useMemo<ReadonlySet<AchievementId>>(() => {
-    const map = (state as unknown as {
-      achievements?: ReadonlyMap<string, ReadonlyArray<AchievementId>>;
-    }).achievements;
-    const list = map?.get(state.currentPlayerId) ?? [];
+  const unlocked = useMemo<ReadonlySet<string>>(() => {
+    const list = state.unlockedAchievements?.get(state.currentPlayerId) ?? [];
     return new Set(list);
   }, [state]);
 
@@ -62,7 +59,7 @@ export function AchievementsPanel({ onClose }: AchievementsPanelProps) {
         <div
           style={{
             height: 1,
-            background: '#30363d',
+            background: 'var(--panel-border)',
             margin: 'var(--panel-padding-lg) 0',
           }}
         />
@@ -113,8 +110,8 @@ function AchievementCard({ achievement, earned }: AchievementCardProps) {
       className="p-3 rounded"
       style={{
         backgroundColor: earned
-          ? 'rgba(88, 166, 255, 0.08)'
-          : 'rgba(139, 148, 158, 0.04)',
+          ? 'var(--panel-card-earned-bg)'
+          : 'var(--panel-card-locked-bg)',
         border: earned
           ? '1px solid var(--panel-border)'
           : '1px solid var(--panel-border)',

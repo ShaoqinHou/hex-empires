@@ -22,8 +22,7 @@ export function getAchievementsForPlayer(
   state: GameState,
   playerId: PlayerId,
 ): ReadonlyArray<AchievementId> {
-  const map = (state as unknown as { achievements?: AchievementsByPlayer }).achievements;
-  return map?.get(playerId) ?? [];
+  return (state.unlockedAchievements?.get(playerId) ?? []) as ReadonlyArray<AchievementId>;
 }
 
 export function achievementSystem(state: GameState, action: GameAction): GameState {
@@ -46,15 +45,10 @@ export function achievementSystem(state: GameState, action: GameAction): GameSta
 
   if (newlyUnlocked.length === 0) return state;
 
-  const nextAchievements = new Map(
-    (state as unknown as { achievements?: Map<PlayerId, ReadonlyArray<AchievementId>> }).achievements ?? [],
-  );
-  nextAchievements.set(playerId, [...existing, ...newlyUnlocked]);
+  const nextUnlocked = new Map(state.unlockedAchievements ?? []);
+  nextUnlocked.set(playerId, [...existing, ...newlyUnlocked]);
 
-  return {
-    ...state,
-    achievements: nextAchievements,
-  } as unknown as GameState;
+  return { ...state, unlockedAchievements: nextUnlocked };
 }
 
 function conditionSatisfied(

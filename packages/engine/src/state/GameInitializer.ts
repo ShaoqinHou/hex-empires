@@ -156,6 +156,7 @@ export function createInitialState(config: GameSetupConfig, seed?: number): Game
     rng: { seed: gameSeed, counter: 0 },
     config: createGameConfig(),
     lastValidation: null,
+    unlockedAchievements: new Map(),
   };
 
   return state;
