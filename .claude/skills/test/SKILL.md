@@ -1,17 +1,14 @@
 ---
 name: test
-description: hex-empires testing conventions — the 4-layer framework (L1 unit, L2 integration, L3 behavioral, L4 output), where each type of test lives, and concrete-assertion rules. TRIGGER WHEN you're writing a new test and need to know where it belongs / how strict the assertions should be, OR the user asks about testing approach / test conventions, OR you're about to write `.toBeDefined()` / `.toBeTruthy()` (check this skill first for the concrete-assertions rule).
+description: Test helper API for hex-empires — the createTestState/createTestUnit/createTestPlayer factory functions and their import path. TRIGGER WHEN writing a new test file and you need the test helpers, OR you need the CityState inline construction pattern. For the 4-layer framework and assertion rules, read .claude/rules/testing.md directly (it's always in context).
 user_invocable: true
 ---
 
-# /test — Testing Conventions
+# /test — Test Helpers
 
-## File Locations
-```
-packages/engine/src/systems/__tests__/{systemName}.test.ts
-packages/engine/src/hex/__tests__/{module}.test.ts
-packages/engine/src/state/__tests__/{module}.test.ts
-```
+See `.claude/rules/testing.md` for the 4-layer framework + concrete-assertion rules (always loaded).
+
+This skill covers only the test-helper API (unique content not in the rule doc).
 
 ## Test Helper
 
@@ -35,15 +32,7 @@ const city: CityState = {
 };
 ```
 
-## Assertion Rules
-- Concrete coordinates: `expect(pos).toEqual({ q: 3, r: -1 })`
-- Exact values: `expect(gold).toBe(150)`
-- State unchanged for invalid actions: `expect(next).toBe(state)`
-- Use seeded RNG, never `Math.random()`
-
-## Running Tests
+## Type-check command
 ```bash
-npm run test:engine      # Engine only
-npm test                 # Full suite
-npx tsc --noEmit -p packages/engine  # Type-check
+npx tsc --noEmit -p packages/engine  # Catches type errors without building
 ```

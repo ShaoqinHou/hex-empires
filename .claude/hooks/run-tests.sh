@@ -1,4 +1,6 @@
 #!/bin/bash
+# NOTE: This is NOT wired as a Claude Code hook in settings.json.
+# It is an agent-invoked utility script. Placement in hooks/ is for convenience.
 # Run tests and write PASS/FAIL marker
 # Usage:
 #   bash .claude/hooks/run-tests.sh                    # Full suite

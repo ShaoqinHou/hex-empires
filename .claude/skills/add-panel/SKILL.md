@@ -2,6 +2,9 @@
 name: add-panel
 description: Step-by-step procedure for adding a new UI panel that conforms to the PanelManager + PanelShell pattern. TRIGGER WHEN you are about to create a new `*Panel.tsx` file in `packages/web/src/ui/panels/`, OR the user asks to "add a panel" / "new settings panel" / "new dashboard" / similar, OR a keyboard shortcut needs to open a new dedicated screen-level UI surface. DO NOT TRIGGER for HUD overlays (use /add-hud-element), or for small edits to existing panels (read `.claude/rules/panels.md` directly).
 user_invocable: true
+paths:
+  - "packages/web/src/ui/panels/**"
+  - "packages/web/src/ui/panels/panelRegistry.ts"
 ---
 
 # /add-panel — Add a New UI Panel

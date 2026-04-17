@@ -30,7 +30,11 @@
       "TaskUpdate(*)",
       "TaskList(*)",
       "TaskGet(*)",
-      "ScheduleWakeup(*)"
+      "ScheduleWakeup(*)",
+      "Bash(rm .claude/skills/commit-review/reviewer-prompt.md)",
+      "Bash(rm .claude/skills/commit-review/fixer-prompt.md)",
+      "Bash(rm .claude/skills/commit-review/arbiter-prompt.md)",
+      "Bash(rm -rf .claude/skills/build)"
     ]
   }
 }
