@@ -1,0 +1,98 @@
+/*
+ * typography-tokens.css — five role composite tokens for packages/web.
+ *
+ * ROLES:
+ *   display  — Cinzel, 32px → 48px, era banners / setup title / victory
+ *   heading  — Cinzel, 18px → 22px, panel title bar / section headers
+ *   body     — Inter, 14px → 15px, panel body / tooltip detail / help text
+ *   label    — Inter, 11px → 12px, section headings / chip labels / hints
+ *   numeric  — Inter (tabular-nums), 15px → 18px, resource chips / yields / HP
+ *
+ * Call sites use the composite shorthand:
+ *   font: var(--type-body)
+ * — never inline font-size, font-weight, or font-family in chrome TSX.
+ *
+ * Viewport-responsive cascade:
+ *   standard  — default (1367–1919px)
+ *   wide      — @media (min-width: 1920px)
+ *   ultra     — @media (min-width: 2560px)
+ *
+ * Fallback stacks include web-safe alternatives so the UI degrades
+ * gracefully before Google Fonts finish loading.
+ *
+ * See phase-1-design-tokens-spec.md § "Typography roles" for the full table.
+ */
+
+:root {
+  /* ── Font family tokens ─────────────────────────────────────────── */
+  --type-display-family: "Cinzel", "Trajan Pro", "Copperplate Gothic", "Georgia", "Times New Roman", serif;
+  --type-heading-family: "Cinzel", "Trajan Pro", "Georgia", serif;
+  --type-body-family:    "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --type-label-family:   "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --type-numeric-family: "Inter", "SF Pro Text", system-ui, -apple-system, Arial, sans-serif;
+
+  /* ── Font weight tokens ─────────────────────────────────────────── */
+  --type-display-weight: 500;
+  --type-heading-weight: 600;
+  --type-body-weight:    400;
+  --type-label-weight:   600;
+  --type-numeric-weight: 600;
+
+  /* ── Line-height tokens ─────────────────────────────────────────── */
+  --type-display-leading: 1.10;
+  --type-heading-leading: 1.25;
+  --type-body-leading:    1.45;
+  --type-label-leading:   1.20;
+  --type-numeric-leading: 1.0;
+
+  /* ── Letter-spacing tokens ──────────────────────────────────────── */
+  --type-display-tracking: 0.005em;
+  --type-heading-tracking: 0;
+  --type-body-tracking:    0;
+  --type-label-tracking:   0.08em;   /* used with text-transform: uppercase */
+  --type-numeric-tracking: 0;
+
+  /* ── Font size tokens — standard viewport (1367–1919px) ─────────── */
+  --type-display-size: 32px;
+  --type-heading-size: 18px;
+  --type-body-size:    14px;
+  --type-label-size:   11px;
+  --type-numeric-size: 15px;
+
+  /* ── Composite shorthand tokens (standard viewport) ─────────────── */
+  /* CSS font shorthand: weight size/line-height family                 */
+  --type-display: var(--type-display-weight) var(--type-display-size)/var(--type-display-leading) var(--type-display-family);
+  --type-heading: var(--type-heading-weight) var(--type-heading-size)/var(--type-heading-leading) var(--type-heading-family);
+  --type-body:    var(--type-body-weight) var(--type-body-size)/var(--type-body-leading) var(--type-body-family);
+  --type-label:   var(--type-label-weight) var(--type-label-size)/var(--type-label-leading) var(--type-label-family);
+  --type-numeric: var(--type-numeric-weight) var(--type-numeric-size)/var(--type-numeric-leading) var(--type-numeric-family);
+}
+
+/* ── Wide viewport (1920px+) ────────────────────────────────────────── */
+@media (min-width: 1920px) {
+  :root {
+    --type-display-size: 40px;
+    --type-heading-size: 20px;
+    --type-body-size:    14px;
+    --type-label-size:   11px;
+    --type-numeric-size: 16px;
+  }
+}
+
+/* ── Ultra viewport (2560px+) ───────────────────────────────────────── */
+@media (min-width: 2560px) {
+  :root {
+    --type-display-size: 48px;
+    --type-heading-size: 22px;
+    --type-body-size:    15px;
+    --type-label-size:   12px;
+    --type-numeric-size: 18px;
+  }
+}
+
+/* ── Numeric utility class ──────────────────────────────────────────── */
+/* Apply to any element that displays tabular numbers (resource chips,
+ * yield cells, combat HP, tech costs). Ensures digit columns align. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
