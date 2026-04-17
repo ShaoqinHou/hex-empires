@@ -1,0 +1,96 @@
+/*
+ * opacity-tokens.css — semantic opacity vocabulary for every alpha value
+ * in packages/web. Component code uses these tokens; raw decimal alphas
+ * and rgba() literals in component .tsx files are a BLOCK.
+ *
+ * See .claude/workflow/design/ui-review/systems/S-04-transparency-semantics.md
+ * for full rationale and usage rules.
+ */
+
+:root {
+  /* ── State-indicator tokens (interactive elements) ─────────────────── */
+
+  /** An element is unavailable — not due to locked content, but due to
+   *  a current-state constraint (not enough gold, already moved, etc.).
+   *  Communicates "later, not here". */
+  --opacity-disabled: 0.30;
+
+  /** An element is unavailable because the content itself is locked —
+   *  future civs, future government options, locked pantheons.
+   *  Paired with filter: grayscale(0.6) by convention (ghost pattern). */
+  --opacity-locked: 0.40;
+
+  /** Visible and interactable but not the focus — secondary items,
+   *  already-viewed achievements, prereq techs not on selected path.
+   *  Communicates "here for reference, not the star". */
+  --opacity-inactive: 0.55;
+
+  /** Supplementary copy — subtitles, empty-state hints, keyboard-hint
+   *  badges, secondary stat lines. Still reads comfortably. */
+  --opacity-muted: 0.70;
+
+  /** Full. Default for active/hovered/selected/primary elements. Included
+   *  so opacity: var(--opacity-hovered) is symmetric in transition code. */
+  --opacity-hovered: 1.00;
+
+  /* ── Backdrop and scrim tokens ─────────────────────────────────────── */
+
+  /** Single darken-below-modal wash. Replaces rgba(0,0,0,0.65) — 0.65
+   *  was too heavy; 0.45 de-focuses the canvas without hiding it. */
+  --opacity-modal-backdrop: 0.45;
+
+  /** Applied behind fixed-corner hover cards (combat preview, multi-entity
+   *  tooltip) that partially occlude tiles. */
+  --opacity-hud-scrim: 0.35;
+
+  /** Extremely subtle full-screen wash during the Turn N→N+1 interstitial.
+   *  Mirrors the current rgba(0,0,0,0.15) raw value. */
+  --opacity-turn-transition-backdrop: 0.15;
+
+  /** Tiles the player has seen but does not currently have visibility of
+   *  (fog-of-war "memory" state). */
+  --opacity-fog-seen: 0.55;
+
+  /** Tiles never explored. Rendered as fog asset, not transparency of the
+   *  map — token exists to be explicit about the distinct state. */
+  --opacity-fog-unseen: 0.00;
+
+  /* ── Panel tint tokens (category hints on panel bodies) ────────────── */
+
+  /** Subtle panel-body background wash hinting at category — earned
+   *  achievement card blue wash, selected civic gold wash. */
+  --opacity-panel-tint: 0.08;
+
+  /** Stronger category hint — hovered card, selected civic/tech in a tree,
+   *  active turn's production card. */
+  --opacity-panel-tint-strong: 0.15;
+
+  /** Glow behind a wonder card, completed age banner gradient, age-transition
+   *  "ready to advance" pulse. Closest to opaque while feeling like a wash. */
+  --opacity-panel-tint-glow: 0.30;
+
+  /* ── Indicator stroke/outline tokens ──────────────────────────────── */
+
+  /** Border or outline only — hex-placement "valid" glow, subtle inset
+   *  border on a card, tech-prereq connector line. */
+  --opacity-indicator-subtle: 0.20;
+
+  /** Stronger outline — selected card border, active panel button ring,
+   *  commander assignment connector. */
+  --opacity-indicator: 0.40;
+
+  /** Filled emphasis — placement hint on target hex, "best placement" star
+   *  background, urban-placement-hint wash. */
+  --opacity-indicator-strong: 0.70;
+
+  /* ── Special tokens ────────────────────────────────────────────────── */
+
+  /** Locked-but-visible silhouette — future civs in AgeTransition picker,
+   *  future government forms, locked pantheons. Combined with
+   *  filter: grayscale(0.6) by convention. */
+  --opacity-ghost: 0.40;
+
+  /** Explicit "must be fully opaque" — critical warnings, death/ruin
+   *  ribbons, victory fanfare text. A semantic marker; do not fade. */
+  --opacity-critical: 1.00;
+}
