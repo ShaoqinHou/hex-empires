@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Gold: coin with G -->
+  <circle cx="12" cy="12" r="9" fill="#d4943a" stroke="#e8b44a" stroke-width="1"/>
+  <text x="12" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a4a10" font-family="sans-serif">G</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Science: simple flask -->
+  <path d="M10 4 L10 12 L6 19 Q5 21 7 21 L17 21 Q19 21 18 19 L14 12 L14 4 Z" fill="none" stroke="#4dabf7" stroke-width="1.5" stroke-linejoin="round"/>
+  <line x1="9" y1="4" x2="15" y2="4" stroke="#4dabf7" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="11" cy="17" r="1.5" fill="#4dabf7" opacity="0.7"/>
+  <circle cx="14" cy="15" r="1" fill="#4dabf7" opacity="0.5"/>
+</svg>

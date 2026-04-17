@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Housing: house outline -->
+  <polygon points="12,4 20,11 20,20 4,20 4,11" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="12,4 22,12 2,12" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linejoin="round"/>
+  <rect x="9" y="14" width="6" height="6" rx="0.5" fill="#94a3b8" opacity="0.6"/>
+</svg>

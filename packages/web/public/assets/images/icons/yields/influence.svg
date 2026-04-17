@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Influence: handshake simplified as two overlapping circles -->
+  <circle cx="9" cy="12" r="6" fill="none" stroke="#34d399" stroke-width="1.5"/>
+  <circle cx="15" cy="12" r="6" fill="none" stroke="#34d399" stroke-width="1.5"/>
+  <path d="M12 7 L12 17" stroke="#34d399" stroke-width="0.5" opacity="0.4"/>
+</svg>

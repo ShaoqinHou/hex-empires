@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Production: hammer head -->
+  <rect x="10" y="4" width="8" height="6" rx="1" fill="#c87941"/>
+  <rect x="11" y="10" width="2" height="10" rx="1" fill="#c87941"/>
+  <line x1="10" y1="7" x2="6" y2="11" stroke="#c87941" stroke-width="2" stroke-linecap="round"/>
+</svg>

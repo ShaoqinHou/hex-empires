@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Civ glyph placeholder: simple shield shape -->
+  <path d="M32 4 L56 14 L56 36 Q56 52 32 60 Q8 52 8 36 L8 14 Z" fill="#2a2a4e" stroke="#4a4a7e" stroke-width="2"/>
+  <text x="32" y="38" text-anchor="middle" font-size="18" fill="#6a6a9e" font-family="sans-serif">?</text>
+</svg>

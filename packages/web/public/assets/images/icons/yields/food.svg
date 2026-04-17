@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Food: stylised wheat/grain -->
+  <path d="M12 20 L12 8" stroke="#6abf6a" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="12" cy="6" rx="3" ry="4" fill="#6abf6a" opacity="0.9"/>
+  <ellipse cx="8" cy="9" rx="2.5" ry="3.5" fill="#6abf6a" opacity="0.7" transform="rotate(-30 8 9)"/>
+  <ellipse cx="16" cy="9" rx="2.5" ry="3.5" fill="#6abf6a" opacity="0.7" transform="rotate(30 16 9)"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg-grad)"/>
+  <!-- Hex grid pattern hint -->
+  <g opacity="0.05" stroke="#6a6a9e" stroke-width="1" fill="none">
+    <polygon points="960,440 1020,480 1020,560 960,600 900,560 900,480"/>
+    <polygon points="1080,440 1140,480 1140,560 1080,600 1020,560 1020,480"/>
+    <polygon points="840,440 900,480 900,560 840,600 780,560 780,480"/>
+    <polygon points="960,320 1020,360 1020,440 960,480 900,440 900,360"/>
+    <polygon points="960,560 1020,600 1020,680 960,720 900,680 900,600"/>
+  </g>
+</svg>

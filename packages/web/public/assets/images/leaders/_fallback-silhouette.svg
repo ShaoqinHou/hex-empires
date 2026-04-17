@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 256" width="192" height="256">
+  <!-- Leader portrait placeholder: head + shoulders silhouette -->
+  <rect width="192" height="256" fill="#1a1a2e"/>
+  <!-- Head -->
+  <circle cx="96" cy="90" r="40" fill="#2a2a4e"/>
+  <!-- Shoulders -->
+  <path d="M16 256 Q16 180 96 170 Q176 180 176 256 Z" fill="#2a2a4e"/>
+  <!-- Crown hint -->
+  <polygon points="66,58 76,42 86,54 96,38 106,54 116,42 126,58" fill="none" stroke="#4a4a7e" stroke-width="2"/>
+</svg>
