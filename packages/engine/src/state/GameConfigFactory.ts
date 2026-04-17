@@ -95,5 +95,5 @@ export function createGameConfig(): GameConfig {
   const achievements = new Map<string, AchievementDef>();
   for (const a of ALL_ACHIEVEMENTS) achievements.set(a.id, a);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements };
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, experimentalAchievements: false };
 }

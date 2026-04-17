@@ -42,6 +42,7 @@ const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').t
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
 const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(m => ({ default: m.TradeRoutesPanel })));
+const AchievementsPanel = lazy(() => import('./ui/panels/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition } = useGame();
@@ -97,6 +98,8 @@ function GameUI() {
       const keyUpper = e.key.toUpperCase();
       for (const [id, entry] of PANEL_REGISTRY) {
         if (entry.keyboardShortcut && keyUpper === entry.keyboardShortcut.toUpperCase()) {
+          // Skip panels gated behind feature flags when the flag is off.
+          if (id === 'achievements' && !state.config.experimentalAchievements) return;
           togglePanel(id);
           return;
         }
@@ -218,6 +221,10 @@ function GameUI() {
           )}
           {activePanel === 'tradeRoutes' && (
             <TradeRoutesPanel onClose={closePanel} />
+          )}
+          {/* AchievementsPanel is experimental — only renders when the feature flag is on. */}
+          {state.config.experimentalAchievements && activePanel === 'achievements' && (
+            <AchievementsPanel onClose={closePanel} />
           )}
          </div>
         </Suspense>

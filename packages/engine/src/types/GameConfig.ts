@@ -42,4 +42,11 @@ export interface GameConfig {
   readonly founderBeliefs: ReadonlyMap<string, FounderBeliefDef>;
   readonly followerBeliefs: ReadonlyMap<string, FollowerBeliefDef>;
   readonly achievements: ReadonlyMap<string, AchievementDef>;
+
+  /**
+   * Feature flag — when false (default), the Achievements panel is hidden
+   * from the UI (no button, no keyboard shortcut). Set to true to enable
+   * the panel while it is still under active development.
+   */
+  readonly experimentalAchievements: boolean;
 }
