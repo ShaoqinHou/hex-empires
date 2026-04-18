@@ -9,7 +9,7 @@ updated: 2026-04-18 (post Phase 3 + full workflow audit)
 
 ## Current position
 
-**HEAD: `0fee3d4` (origin synced).** Master plan through Phase 5 complete. Notification system redesigned: categories + panel-click nav + auto-dismiss policy + requiresAction scaffold. Timing tracker v2 (spawn + complete events, Gantt timeline, parallelism + idle-gap metrics).
+**HEAD: `48b2298` (origin synced).** Master plan through **Phase 6 complete**. All motion shipped: panel transitions, DramaModal fade, TopBar count-up, canvas endpoint-easing + combat lunge + damage numbers, age-transition screen shake. Plus CityPanel hero redesign (§3.4). 358/358 tests green.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -80,7 +80,14 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 5-design | Notification system redesign spec | **DONE** | `82b91ff` (designer on disk — `phase-5-notifications-spec.md`) |
 | 5 | Notification system redesign (category registry + click-to-panel + auto-dismiss policy + requiresAction) | **DONE** | `cf229a3`, `0e0bac0`, `840daff`, `0fee3d4` |
 | timing-v2 | Spawn-event tracking + timeline reporter + sampler limitation doc | **DONE** | `b84178d`, `82b91ff` |
-| 6 | Motion (unit move, panel slide, resource tick, age fade) | pending | ~4 commits |
+| 6-design | Motion spec (Opus designer, 2000 words, 27-row motion palette) | **DONE** | `fb3feca` |
+| 6.1 | Motion tokens (--motion-shake + --motion-modal-stagger) | **DONE** | `593dbb5` |
+| 6.3 | DramaModal reveal=fade + useReducedMotion hook | **DONE** | `0817e0f` |
+| 6.5 + 6.4 | Canvas motion + TopBar count-up (fused by concurrent-worktree race; all work landed) | **DONE** | `ee60d52` |
+| 6.2 | PanelShell transitions + motion-token sweep (Notifications + TooltipShell + buttons) | **DONE** | `91f82a4` |
+| 6.6 | Age-transition screen shake + reduced-motion flash fallback | **DONE** | `48b2298` |
+| 3.4 | CityPanel hero redesign (hero production block + ledger + territory summary) | **DONE** | `dc46f65`, `f076e50`, `d683715` |
+| topbar-hex | Raw-hex cleanup in TopBar | **DONE** | `f911c4e` |
 | 7 | Accessibility + final polish | pending | ~3 commits |
 
 ## Open questions from Phase 1 spec (surface to user before Phase 4)
