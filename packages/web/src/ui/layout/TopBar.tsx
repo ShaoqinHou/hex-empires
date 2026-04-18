@@ -1,4 +1,6 @@
 import { useGameState } from '../../providers/GameProvider';
+// Phase 4.3: gold rule + chrome bar tokens.
+import './chrome-bars.css';
 import { getYieldIcon } from '@web/assets';
 import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
@@ -53,12 +55,17 @@ export function TopBar() {
   return (
     /* Height is controlled by the CSS grid row in .game-app (layout-tokens.css
        --chrome-topbar-height: 56px/64px/72px per viewport class). */
-    <div className="flex items-center justify-between px-3 select-none layout-chrome-bar overflow-hidden"
+    <div
+      data-chrome-bar="top"
+      className="flex items-center justify-between px-3 select-none layout-chrome-bar overflow-hidden"
       style={{
-        background: 'linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%)',
-        borderBottom: '2px solid var(--color-border)',
+        // Phase 4.3: warm olive gradient replaces surface/bg fallback.
+        // --chrome-bar-bg anchors both bars to the same warm-dark surface.
+        background: 'var(--chrome-bar-bg)',
+        // border-bottom replaced by ::after gold rule in chrome-bars.css.
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-      }}>
+      }}
+    >
 
       {/* Left: Turn & Age */}
       <div className="flex items-center gap-3">

@@ -1,4 +1,6 @@
 import { useGameState } from '../../providers/GameProvider';
+// Phase 4.3: gold rule + chrome bar tokens.
+import './chrome-bars.css';
 import { coordToKey, ALL_IMPROVEMENTS, ALL_TECHNOLOGIES, ALL_CIVICS, getTileContents, hasStackedEntities } from '@hex/engine';
 import type { YieldSet, UnitState } from '@hex/engine';
 import type { UnitDef } from '@hex/engine';
@@ -103,10 +105,13 @@ export function BottomBar() {
 
   return (
     <div
+      data-chrome-bar="bottom"
       className="flex flex-col select-none layout-chrome-bar"
       style={{
-        background: 'linear-gradient(0deg, var(--color-bg) 0%, var(--color-surface) 100%)',
-        borderTop: '2px solid var(--color-border)',
+        // Phase 4.3: warm olive gradient replaces surface/bg fallback.
+        // Reversed direction (0deg = bottom-to-top) preserved for BottomBar.
+        background: 'linear-gradient(0deg, rgba(42, 37, 17, 0.98) 0%, rgba(67, 59, 28, 0.98) 100%)',
+        // border-top replaced by ::before gold rule in chrome-bars.css.
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
       }}
     >

@@ -1,0 +1,47 @@
+/*
+ * chrome-bars.css — scoped styles for TopBar and BottomBar chrome.
+ *
+ * Phase 4.3: Gold rule at the bottom of TopBar and top of BottomBar.
+ * Uses --chrome-bar-rule token from panel-tokens.css, mirroring the
+ * --panel-title-rule motif so every chrome edge shares the same motif.
+ *
+ * Selectors target [data-chrome-bar="top"] and [data-chrome-bar="bottom"]
+ * attributes added to the respective root divs.
+ *
+ * Do NOT add layout overrides here — bar structure is owned by TopBar.tsx
+ * and BottomBar.tsx respectively.
+ */
+
+/* TopBar — gold rule at the bottom edge */
+[data-chrome-bar="top"] {
+  position: relative;
+}
+
+[data-chrome-bar="top"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--chrome-bar-rule);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* BottomBar — gold rule at the top edge */
+[data-chrome-bar="bottom"] {
+  position: relative;
+}
+
+[data-chrome-bar="bottom"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--chrome-bar-rule);
+  pointer-events: none;
+  z-index: 1;
+}
