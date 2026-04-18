@@ -1,24 +1,24 @@
 #!/bin/bash
-# Append an agent-return row to the timing log + classify hang risk.
+# Append agent-timing rows. Supports spawn and complete events so the
+# reporter can compute overlap / parallelism / parent-idle gaps.
 #
 # Usage:
+#   # at spawn-time (call this IMMEDIATELY when Agent tool returns):
 #   bash .claude/workflow/scripts/log-agent-timing.sh \
-#     --phase "4.5-drama-modal" \
-#     --agent-id "ab9cb537b4ee046db" \
-#     --subagent designer \
-#     --duration-ms 803626 \
-#     --tokens 135331 \
-#     --status completed \
-#     [--notes "inline return fallback"]
+#     --event spawn --phase "4.5-drama-impl" --agent-id "a8c25df4" --subagent implementer
 #
-# Every subagent return should call this once. Output is appended to
-# .claude/workflow/scratch/agent-timing.jsonl. Classification:
-#   tokens_per_min < 1000 → HANG_SUSPECT (integrator-style idle spin)
-#   tokens_per_min < 5000 and duration > 300000ms (5min) → SLOW (retry loop?)
-#   otherwise HEALTHY
+#   # at completion (from task-notification <usage> block):
+#   bash .claude/workflow/scripts/log-agent-timing.sh \
+#     --event complete --phase "4.5-drama-impl" --agent-id "a8c25df4" \
+#     --subagent implementer --duration-ms 953469 --tokens 144871 --status completed \
+#     [--notes "one-liner"]
+#
+# Default event is "complete" (back-compat). Every subagent's lifecycle is:
+#   one spawn row + one complete row. Reporter pairs them by agent-id.
 
 set -euo pipefail
 
+EVENT="complete"
 PHASE=""
 AGENT_ID=""
 SUBAGENT=""
@@ -29,6 +29,7 @@ NOTES=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --event)        EVENT="$2"; shift 2 ;;
     --phase)        PHASE="$2"; shift 2 ;;
     --agent-id)     AGENT_ID="$2"; shift 2 ;;
     --subagent)     SUBAGENT="$2"; shift 2 ;;
@@ -40,6 +41,31 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+LOG_DIR=".claude/workflow/scratch"
+LOG_FILE="$LOG_DIR/agent-timing.jsonl"
+mkdir -p "$LOG_DIR"
+
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+TS_EPOCH=$(date +%s)
+
+if [ "$EVENT" = "spawn" ]; then
+  export TS="$TIMESTAMP" EP="$TS_EPOCH" PH="$PHASE" AID="$AGENT_ID" SA="$SUBAGENT"
+  node -e "
+    const e = process.env;
+    process.stdout.write(JSON.stringify({
+      kind: 'spawn',
+      timestamp: e.TS,
+      ts_epoch: parseInt(e.EP, 10),
+      phase: e.PH,
+      agent_id: e.AID,
+      subagent: e.SA
+    }) + '\n');
+  " >> "$LOG_FILE"
+  echo "[agent-timing] SPAWN $PHASE / $SUBAGENT / ${AGENT_ID:0:8} @ $TIMESTAMP" >&2
+  exit 0
+fi
+
+# --- complete event ---
 if [ "$DURATION_MS" -gt 0 ]; then
   TOKENS_PER_MIN=$(( TOKENS * 60000 / DURATION_MS ))
 else
@@ -55,23 +81,17 @@ else
 fi
 
 DURATION_MIN=$(awk "BEGIN { printf \"%.1f\", $DURATION_MS / 60000 }")
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-LOG_DIR=".claude/workflow/scratch"
-LOG_FILE="$LOG_DIR/agent-timing.jsonl"
-mkdir -p "$LOG_DIR"
-
-# Pass values via env vars to avoid quoting issues in the node -e body
-export TS="$TIMESTAMP" PH="$PHASE" AID="$AGENT_ID" SA="$SUBAGENT" \
-       DMS="$DURATION_MS" DMIN="$DURATION_MIN" \
-       TKN="$TOKENS" TPM="$TOKENS_PER_MIN" \
+export TS="$TIMESTAMP" EP="$TS_EPOCH" PH="$PHASE" AID="$AGENT_ID" SA="$SUBAGENT" \
+       DMS="$DURATION_MS" DMIN="$DURATION_MIN" TKN="$TOKENS" TPM="$TOKENS_PER_MIN" \
        ST="$STATUS" CL="$CLASS" NOTES="$NOTES"
 
 node -e "
   const e = process.env;
-  const row = {
+  process.stdout.write(JSON.stringify({
     kind: 'complete',
     timestamp: e.TS,
+    ts_epoch: parseInt(e.EP, 10),
     phase: e.PH,
     agent_id: e.AID,
     subagent: e.SA,
@@ -81,9 +101,8 @@ node -e "
     tokens_per_min: parseInt(e.TPM, 10),
     status: e.ST,
     class: e.CL,
-    notes: e.NOTES || null,
-  };
-  process.stdout.write(JSON.stringify(row) + '\n');
+    notes: e.NOTES || null
+  }) + '\n');
 " >> "$LOG_FILE"
 
-echo "[agent-timing] phase=$PHASE subagent=$SUBAGENT duration=${DURATION_MIN}min tokens=$TOKENS tpm=$TOKENS_PER_MIN class=$CLASS" >&2
+echo "[agent-timing] COMPLETE $PHASE / $SUBAGENT / ${AGENT_ID:0:8} — ${DURATION_MIN}min / $TOKENS tokens / $TOKENS_PER_MIN tpm / $CLASS" >&2
