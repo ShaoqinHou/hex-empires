@@ -2,14 +2,14 @@
 title: UI master-plan loop state
 purpose: Persistent state for the event-driven UI master-plan loop. If auto-compact fires OR the session restarts, re-read this to know where we are.
 created: 2026-04-17
-updated: 2026-04-19 (wave-3 canvas bugs: edge-scroll camera drift, movement overlay z-order)
+updated: 2026-04-19 (ALL_X-import-in-ui + chrome-raw-hex-regression trap sweep — all UI panels/HUD clean)
 ---
 
 # Loop state — READ THIS FIRST AFTER SESSION START
 
 ## Current position
 
-**HEAD: `c5751db` (origin synced).** Master plan through **Phase 7 + deployed + wave-3 fixes**. All motion shipped (Phase 6). Phase 7 accessibility complete. Wave-3 canvas fixes: (1) edge-scroll camera drift on load (hasMouseMoved guard), (2) movement overlay z-order (draw after fog-of-war), (3) `state.rng.seed` TS build fix. Previous waves: territory border DIR_TO_EDGE fix, 4-corner viewport culling, amber movement range color, camera re-center on new game. Live at https://cv.rehou.games/hex-empires/. 1911/1911 tests green.
+**HEAD: `2ad7ee9` (origin synced).** Master plan through **Phase 7 + deployed + wave-3 fixes + trap sweep**. All motion shipped (Phase 6). Phase 7 accessibility complete. Trap sweep: eliminated ALL_X-import-in-ui from all 10 affected files (DiplomacyPanel, AgeTransitionPanel, GovernmentPanel, ReligionPanel, GovernorPanel, CityPanel, TooltipOverlay, ResourceTooltip, ImprovementPanel, BottomBar, TopBar) and chrome-raw-hex-regression from UnitCard, BuildingCard, TooltipOverlay resource dots, SetupScreen buttons + ImprovementPanel/BottomBar. 371/371 web + 1553/1553 engine tests green.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -97,6 +97,10 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 7.5 | Skip nav link + sr-only utility | **DONE** | `2eb7662` |
 | deploy | Production build + nginx block + scp to server | **DONE** | https://cv.rehou.games/hex-empires/ |
 | wave-3 | Edge-scroll camera drift + movement overlay z-order + TS seed fix | **DONE** | `078c707`, `4a527f8`, `c5751db` |
+| trap-1 | ALL_X-import-in-ui: DiplomacyPanel + AgeTransitionPanel + GovernmentPanel + ReligionPanel + GovernorPanel (+ raw hex in same files) + new `--panel-accent-gold-dark` token + GovernorPanel var-hex-alpha-interpolation fix | **DONE** | `3b05dc8` |
+| trap-2 | ALL_X-import-in-ui: CityPanel + TooltipOverlay + ResourceTooltip; test mock configs → createGameConfig() | **DONE** | `0b17b4a` |
+| trap-3 | ALL_X-import-in-ui: ImprovementPanel + BottomBar + TopBar; raw hex in BottomBar | **DONE** | `ed02c05`, `2ad7ee9` |
+| trap-4 | chrome-raw-hex-regression: UnitCard CATEGORY_COLORS table + BuildingCard wonder colors + TooltipOverlay resource-type dots + SetupScreen button gradients; add --panel-unit-* + --hud-resource-* + --panel-text-bright + --panel-setup-* tokens | **DONE** | `6f1bc27` |
 
 ## Open questions from Phase 1 spec (surface to user before Phase 4)
 
