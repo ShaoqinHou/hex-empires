@@ -9,7 +9,7 @@ updated: 2026-04-18 (post Phase 3 + full workflow audit)
 
 ## Current position
 
-**HEAD: `83af56a` (origin synced).** Master plan through Phase 3.5 complete. Workflow smoke test (post-reboot) PASSED end-to-end: Sonnet implementer + worktree isolation + state-D Write + 3-commit enforcement + dispute protocol all worked. Phase 4 designer deliberation spawned next.
+**HEAD: `d1eb311` (origin synced).** Master plan through Phase 4 complete. Civ-VII chrome shipped — gold-foil title rule, inset bronze bevel, warm radial modal vignette, TopBar/BottomBar harmonization, warm-shifted status/spec tokens.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -72,7 +72,8 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | audit-3 | Designer → Opus + gotcha #5 rewrite + teams gotcha + CLAUDE.md model rule | **DONE** | `bd65ba5` |
 | audit-4 | vitest/playwright separate + phase-in-flight lock + implementer brief tightening + _loop-state refresh + trap promotions | **DONE** | `2c90f73` |
 | 3.5 | SetupScreen/VictoryPanel palette-token cleanup (workflow smoke) | **DONE** | `006267e`, `3cf5978`, `83af56a` |
-| 4 | Panel chrome Civ-VII treatment (includes 0.3 ⋯ resolution) | pending | ~6 commits — use parallel designer spawns for visual direction |
+| 4-design | Phase 4 designer deliberation (pragmatist + skeptic; integrator timed out) | **DONE** | `0ed04f5` |
+| 4 | Panel chrome Civ-VII treatment (5 sub-steps, synthesized from pragmatist∩skeptic) | **DONE** | `6569587`, `565e5a5`, `be8cdd0`, `d1eb311` (4 real commits; 4.5 verification-only was dropped as empty; ⋯ resolution deferred per both designers' vote — leave to Phase 0 Q4 retirement) |
 | 4.5 | Dialog overhauls (age / crisis / victory / turn-summary) | pending | ~3 commits |
 | 5 | HUD polish (tooltip tiers, toast stack, minimap) | pending | ~4 commits |
 | 6 | Motion (unit move, panel slide, resource tick, age fade) | pending | ~4 commits |
