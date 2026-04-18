@@ -112,6 +112,7 @@ export function VictoryPanel({ onResolve }: VictoryPanelProps) {
       choices={choices}
       onResolve={onResolve}
       tone="triumph"
+      reveal="fade"
     />
   );
 }

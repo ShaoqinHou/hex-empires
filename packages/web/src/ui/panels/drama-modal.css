@@ -4,14 +4,16 @@
  * Phase 4.5: Ceremony-modal layout, hero slot, choice stack, and
  * fade-up reveal animation. Imports panel-tokens.css tokens only.
  *
- * The reveal animation is declared here but wired by DramaModal.tsx
- * only when reveal="fade". When reveal="instant" (Phase 4.5 default),
- * the .drama-modal-reveal class is not applied.
+ * Phase 6.3: Wired reveal="fade" animation timing to motion-tokens.css.
+ * Backdrop: 200ms (--motion-fast); frame: 360ms (~var(--motion-medium) +
+ * extra), delayed by --motion-modal-stagger (80ms) so backdrop dims first.
+ * Under prefers-reduced-motion: drop translateY on frame (fade-only).
  *
- * Respects prefers-reduced-motion: animation is disabled when set.
+ * The reveal animation is applied by DramaModal.tsx only when reveal="fade".
+ * When reveal="instant", the .drama-modal-reveal class is not applied.
  */
 
-/* Fade-up entrance animation */
+/* Fade-up entrance animation — backdrop dims first, frame follows */
 @keyframes drama-fade-up {
   from {
     opacity: 0;
@@ -23,30 +25,40 @@
   }
 }
 
-/* Applied when reveal="fade" */
+/* Reduced-motion variant: fade-only (no translateY) */
+@keyframes drama-fade-only {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Applied when reveal="fade" (full motion) */
 .drama-modal-reveal {
-  animation: drama-fade-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: drama-fade-up 360ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  animation-delay: var(--motion-modal-stagger, 80ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .drama-modal-reveal {
-    animation: none;
+    /* Drop translateY — fade-only. Stagger preserved (below vestibular threshold). */
+    animation: drama-fade-only var(--motion-medium, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+    animation-delay: var(--motion-modal-stagger, 80ms);
   }
 }
 
-/* Backdrop fade-in when reveal="fade" */
+/* Backdrop fade-in when reveal="fade" — 200ms, no stagger (leads the frame) */
 @keyframes drama-backdrop-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 .drama-backdrop-reveal {
-  animation: drama-backdrop-fade 240ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: drama-backdrop-fade 200ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .drama-backdrop-reveal {
-    animation: none;
+    /* Backdrop still dims under reduced-motion — it is not vestibular-triggering. */
+    animation: drama-backdrop-fade var(--motion-fast, 80ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
   }
 }
 

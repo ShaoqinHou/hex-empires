@@ -9,9 +9,11 @@
  * - No close button rendered (DramaModal is dismissible=false by design).
  * - data-testid and data-dismissible attributes present.
  * - Viewport-class switch: stacked layout at standard, 2-column at wide.
+ * - Phase 6.3: reveal="fade" applies .drama-modal-reveal class.
+ *   reveal="instant" omits it (existing tests use instant for sync rendering).
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { DramaModal } from '../DramaModal';
 import type { DramaChoice } from '../DramaModal';
@@ -23,9 +25,21 @@ vi.mock('../../../hooks/useViewportClass', () => ({
   useViewportClass: () => viewportClassRef.value,
 }));
 
+// Mock useReducedMotion — default to false (full motion).
+const reducedMotionRef = { value: false };
+
+vi.mock('../../../hooks/useReducedMotion', () => ({
+  useReducedMotion: () => reducedMotionRef.value,
+}));
+
+beforeEach(() => {
+  reducedMotionRef.value = false;
+});
+
 afterEach(() => {
   cleanup();
   viewportClassRef.value = 'standard';
+  reducedMotionRef.value = false;
 });
 
 const noop = () => {};
@@ -191,5 +205,58 @@ describe('DramaModal', () => {
       <DramaModal id="crisis" title="Crisis" onResolve={noop} />,
     );
     expect(getByTestId('panel-backdrop-crisis')).toBeTruthy();
+  });
+
+  // ── Phase 6.3: reveal="fade" behavior ──────────────────────────────────────
+
+  it('reveal="fade" applies drama-modal-reveal class to container', () => {
+    const { getByTestId } = render(
+      <DramaModal id="age" title="Title" reveal="fade" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-shell-age').classList.contains('drama-modal-reveal')).toBe(true);
+  });
+
+  it('reveal="fade" applies drama-backdrop-reveal class to backdrop', () => {
+    const { getByTestId } = render(
+      <DramaModal id="age" title="Title" reveal="fade" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-backdrop-age').classList.contains('drama-backdrop-reveal')).toBe(true);
+  });
+
+  it('reveal="instant" omits drama-modal-reveal class', () => {
+    const { getByTestId } = render(
+      <DramaModal id="crisis" title="Crisis" reveal="instant" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-shell-crisis').classList.contains('drama-modal-reveal')).toBe(false);
+  });
+
+  it('reveal="instant" omits drama-backdrop-reveal class', () => {
+    const { getByTestId } = render(
+      <DramaModal id="crisis" title="Crisis" reveal="instant" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-backdrop-crisis').classList.contains('drama-backdrop-reveal')).toBe(false);
+  });
+
+  it('default reveal is "fade" (drama-modal-reveal class present when no reveal prop)', () => {
+    const { getByTestId } = render(
+      <DramaModal id="victory" title="Victory!" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-shell-victory').classList.contains('drama-modal-reveal')).toBe(true);
+  });
+
+  it('sets data-reduced-motion="false" when useReducedMotion returns false', () => {
+    reducedMotionRef.value = false;
+    const { getByTestId } = render(
+      <DramaModal id="crisis" title="Crisis" reveal="fade" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-shell-crisis').getAttribute('data-reduced-motion')).toBe('false');
+  });
+
+  it('sets data-reduced-motion="true" when useReducedMotion returns true', () => {
+    reducedMotionRef.value = true;
+    const { getByTestId } = render(
+      <DramaModal id="crisis" title="Crisis" reveal="fade" onResolve={noop} />,
+    );
+    expect(getByTestId('panel-shell-crisis').getAttribute('data-reduced-motion')).toBe('true');
   });
 });

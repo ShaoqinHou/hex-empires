@@ -245,6 +245,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
       choices={[]}
       onResolve={onResolve}
       tone="passage"
+      reveal="fade"
     />
   );
 }

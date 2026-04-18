@@ -25,6 +25,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { PanelId } from './panelRegistry';
 import { useViewportClass } from '../../hooks/useViewportClass';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import '../../styles/panel-tokens.css';
 import './drama-modal.css';
 
@@ -56,6 +57,10 @@ export interface DramaModalProps {
   readonly choices?: ReadonlyArray<DramaChoice>;
   readonly onResolve: () => void;
   readonly tone?: DramaTone;
+  /**
+   * reveal="fade" is the default from Phase 6.3 onward.
+   * Pass reveal="instant" in tests that need synchronous rendering.
+   */
   readonly reveal?: DramaReveal;
 }
 
@@ -219,16 +224,19 @@ export function DramaModal({
   choices,
   onResolve,
   tone = 'passage',
-  reveal = 'instant',
+  reveal = 'fade',
 }: DramaModalProps) {
   const vc = useViewportClass();
   const isWide = vc === 'wide' || vc === 'ultra';
+  const reducedMotion = useReducedMotion();
 
   // Suppress browser context menu on the chrome surface.
   const preventContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
   // For 2-column layout (wide/ultra): hero sits left (CSS grid),
   // content (title + body + choices) on the right.
+  // reveal="fade" applies CSS animation classes; reduced-motion data attr
+  // lets tests assert that the hook result reaches the DOM.
   const revealClass = reveal === 'fade' ? 'drama-modal-reveal' : '';
   const backdropRevealClass = reveal === 'fade' ? 'drama-backdrop-reveal' : '';
 
@@ -299,6 +307,7 @@ export function DramaModal({
         data-panel-priority="modal"
         data-panel-tone={tone}
         data-dismissible="false"
+        data-reduced-motion={reducedMotion ? 'true' : 'false'}
         role="dialog"
         aria-label={title}
         className={`drama-modal ${revealClass}`}
