@@ -51,3 +51,4 @@ export type {
   System,
   ValidationResult,
 } from './GameState';
+export type { NotificationCategory, NotificationPanelTargetHint } from './Notification';

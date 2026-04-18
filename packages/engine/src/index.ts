@@ -55,6 +55,7 @@ export type {
   System,
   ValidationResult,
 } from './types';
+export type { NotificationCategory, NotificationPanelTargetHint } from './types';
 export type { DistrictDef, DistrictSlot, DistrictType, AdjacencyResult } from './types/District';
 export type { Governor, GovernorDef, GovernorAbility, GovernorTitle, GovernorSpecialization } from './types/Governor';
 export { EMPTY_YIELDS, addYields } from './types';

@@ -7,6 +7,7 @@ import type { DistrictSlot } from './District';
 import type { Governor } from './Governor';
 import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
 import type { ReligionSlotState } from './Religion';
+import type { NotificationCategory, NotificationPanelTargetHint } from './Notification';
 
 // ── Turn ──
 
@@ -480,6 +481,18 @@ export interface GameEvent {
    * The turn blocker clears once all blocksTurn events on the current turn are dismissed.
    */
   readonly dismissed?: boolean;
+  /**
+   * Phase 5: content-domain category for structured notification rendering.
+   * When absent the web layer falls back to the `info` category sink.
+   * Populated at the site where the log event is emitted (in each system).
+   */
+  readonly category?: NotificationCategory;
+  /**
+   * Phase 5: hint to the web layer about which panel to open when this
+   * notification is clicked. Uses `NotificationPanelTargetHint` (not `PanelId`)
+   * to keep the engine DOM-free. The web layer narrows this to `PanelId`.
+   */
+  readonly panelTarget?: NotificationPanelTargetHint;
 }
 
 // ── Validation ──
