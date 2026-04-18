@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 /** Cell dimensions matching the CSS grid layout */
 const CELL_WIDTH = 192;
@@ -480,7 +480,7 @@ export function TreeView({
   accentColor,
   costIcon,
   onSelect,
-}: TreeViewProps): JSX.Element {
+}: TreeViewProps): React.ReactElement {
   const activeItem = activeId ? (items.find(i => i.id === activeId) ?? null) : null;
 
   const maxCol = items.length > 0 ? Math.max(...items.map(i => i.treePosition.col)) : 0;
