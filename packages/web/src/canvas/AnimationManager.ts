@@ -813,6 +813,116 @@ export class AnimationManager {
     }
   }
 
+  // ── Phase 6.6 additions ──────────────────────────────────────────────────
+
+  /**
+   * Start the age-transition screen shake on a DOM element (the canvas container).
+   *
+   * Spec §4 row 16: ±4px sinusoidal camera-container shake, 2 oscillations,
+   * 200ms total (--motion-shake). Under prefers-reduced-motion the shake is
+   * disabled entirely and `startBackdropFlash` is called instead.
+   *
+   * Implementation: injects a one-shot CSS keyframe animation on the element.
+   * The animation name is unique per call so concurrent invocations don't
+   * clobber each other (though in practice only one age transition fires per
+   * game). Cleans up after itself via animationend.
+   *
+   * @param element - the canvas or its immediate container (e.g. canvasRef.current)
+   */
+  startAgeShake(element: HTMLElement | null): void {
+    if (!element) return;
+
+    if (this.isReducedMotion()) {
+      this.startBackdropFlash(element);
+      return;
+    }
+
+    const MOTION = getMotionConstants();
+    const durationMs = MOTION.ageShake; // 200ms (--motion-shake)
+    const animName = `age-shake-${this.generateId()}`;
+
+    // Build a <style> tag with the keyframe.
+    // 2 oscillations: 0% → +4px → -4px → +4px → -4px → 0%
+    // Using 5 stops gives ≈2 full sinusoidal cycles.
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes ${animName} {
+        0%   { transform: translateX(0); }
+        20%  { transform: translateX(4px); }
+        40%  { transform: translateX(-4px); }
+        60%  { transform: translateX(4px); }
+        80%  { transform: translateX(-4px); }
+        100% { transform: translateX(0); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    element.style.animation = `${animName} ${durationMs}ms ease-in-out`;
+
+    const cleanup = () => {
+      element.style.animation = '';
+      style.remove();
+      element.removeEventListener('animationend', cleanup);
+    };
+    element.addEventListener('animationend', cleanup, { once: true });
+
+    // Safety timeout: if animationend never fires (e.g. element hidden),
+    // clean up after 2× the duration.
+    setTimeout(cleanup, durationMs * 2);
+  }
+
+  /**
+   * Reduced-motion fallback for the age transition: a 200ms white overlay
+   * flash (opacity 0 → 0.15 peak → 0) preserving the "something happened"
+   * beat without vestibular trigger.
+   *
+   * Creates a fixed-position div overlay on the element's parent (or body
+   * if no parent). Removes itself after the animation completes.
+   *
+   * @param element - the canvas element (used to find the overlay container)
+   */
+  startBackdropFlash(element: HTMLElement | null): void {
+    const container =
+      (element?.parentElement) ??
+      (typeof document !== 'undefined' ? document.body : null);
+    if (!container) return;
+
+    const MOTION = getMotionConstants();
+    const durationMs = MOTION.ageShake; // uses --motion-shake (200ms or 100ms reduced)
+
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-testid', 'age-backdrop-flash');
+    overlay.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'pointer-events:none',
+      'background:white',
+      `animation:age-backdrop-flash-in ${durationMs}ms ease-in-out forwards`,
+      'z-index:9999',
+    ].join(';');
+
+    // Inject the keyframe the first time (idempotent guard on the style id)
+    const styleId = 'age-backdrop-flash-style';
+    if (!document.getElementById(styleId)) {
+      const ks = document.createElement('style');
+      ks.id = styleId;
+      ks.textContent = `
+        @keyframes age-backdrop-flash-in {
+          0%   { opacity: 0; }
+          40%  { opacity: 0.15; }
+          100% { opacity: 0; }
+        }
+      `;
+      document.head.appendChild(ks);
+    }
+
+    container.appendChild(overlay);
+
+    const remove = () => overlay.remove();
+    overlay.addEventListener('animationend', remove, { once: true });
+    setTimeout(remove, durationMs * 2); // safety
+  }
+
   /** Check whether prefers-reduced-motion is currently active. */
   private isReducedMotion(): boolean {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;

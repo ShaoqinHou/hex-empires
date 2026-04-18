@@ -334,13 +334,12 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
         }
       }
 
-      // Age transition flash
+      // Age transition screen shake (spec §4 row 16 / Phase 6.6).
+      // Trigger point: the moment the new age is locked in (state.age.currentAge
+      // changes), NOT when DramaModal opens. The canvas element is the target;
+      // under prefers-reduced-motion AnimationManager falls back to a backdrop flash.
       if (prevState.age.currentAge !== nextState.age.currentAge) {
-        for (const [cityId, city] of nextState.cities) {
-          if (city.owner === nextState.currentPlayerId) {
-            am.add(am.createDamageFlashAnimation(`age-transition-${cityId}`, city.position, true, 400));
-          }
-        }
+        am.startAgeShake(canvasRef.current);
       }
     });
 
