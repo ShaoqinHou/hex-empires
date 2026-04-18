@@ -116,8 +116,9 @@ export function TopBar() {
       </div>
 
       {/* Right: Panel buttons + End Turn.
-          All panel-button accent colors tokenized via --panel-button-*. */}
-      <div className="flex items-center gap-1.5">
+          All panel-button accent colors tokenized via --panel-button-*.
+          role="toolbar" allows screen readers to navigate with arrow keys. */}
+      <div role="toolbar" aria-label="Game controls" className="flex items-center gap-1.5">
         <PanelButton label="Tech" color="var(--panel-button-tech)" panelId="tech" onClick={() => togglePanel('tech')} />
         <PanelButton label="Civics" color="var(--panel-button-civics)" panelId="civics" onClick={() => togglePanel('civics')} />
         <PanelButton label="Diplo" color="var(--panel-button-diplomacy)" panelId="diplomacy" onClick={() => togglePanel('diplomacy')} />

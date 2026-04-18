@@ -253,8 +253,9 @@ export function BottomBar() {
               </InfoPill>
             )}
 
-            {/* Action buttons — pushed right */}
-            <div className="flex gap-2 ml-auto">
+            {/* Action buttons — pushed right.
+                role="toolbar" lets screen readers navigate with arrow keys. */}
+            <div role="toolbar" aria-label="Unit actions" className="flex gap-2 ml-auto">
               {canFoundCity && (
                 <ActionButton
                   label="Found City"
