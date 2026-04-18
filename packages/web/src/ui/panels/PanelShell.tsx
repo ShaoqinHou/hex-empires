@@ -110,7 +110,11 @@ function containerStyle(priority: PanelPriority, width: PanelShellWidth): CSSPro
 const backdropStyle: CSSProperties = {
   position: 'fixed',
   inset: 0,
-  backgroundColor: 'var(--panel-backdrop)',
+  // Phase 4.2: warm radial vignette replaces flat neutral black.
+  // Using `background` (gradient) instead of `backgroundColor`.
+  // --panel-backdrop preserved for any non-modal use; modal uses the
+  // dedicated --panel-backdrop-modal radial gradient token.
+  background: 'var(--panel-backdrop-modal)',
   zIndex: 'var(--panel-z-modal)' as unknown as number,
 };
 
