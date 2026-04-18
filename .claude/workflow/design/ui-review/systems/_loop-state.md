@@ -2,14 +2,14 @@
 title: UI master-plan loop state
 purpose: Persistent state for the event-driven UI master-plan loop. If auto-compact fires OR the session restarts, re-read this to know where we are.
 created: 2026-04-17
-updated: 2026-04-19 (user-screenshot wave fixes + Phase 7 accessibility + deployed)
+updated: 2026-04-19 (wave-3 canvas bugs: edge-scroll camera drift, movement overlay z-order)
 ---
 
 # Loop state — READ THIS FIRST AFTER SESSION START
 
 ## Current position
 
-**HEAD: `2eb7662` (origin synced).** Master plan through **Phase 7 + deployed**. All motion shipped (Phase 6). Phase 7 accessibility complete (ARIA labels, focus rings, toolbar roles, aria-modal + aria-live, skip-nav + sr-only). User-reported screenshot issues fixed: fog-of-war same-turn reveal, canvas edge clipping, scrollbars warm-earth theme, SetupScreen redesign, city banner stacking, labels toggle, territory visibility. Live at https://cv.rehou.games/hex-empires/. 1911/1911 tests green.
+**HEAD: `c5751db` (origin synced).** Master plan through **Phase 7 + deployed + wave-3 fixes**. All motion shipped (Phase 6). Phase 7 accessibility complete. Wave-3 canvas fixes: (1) edge-scroll camera drift on load (hasMouseMoved guard), (2) movement overlay z-order (draw after fog-of-war), (3) `state.rng.seed` TS build fix. Previous waves: territory border DIR_TO_EDGE fix, 4-corner viewport culling, amber movement range color, camera re-center on new game. Live at https://cv.rehou.games/hex-empires/. 1911/1911 tests green.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -96,6 +96,7 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 7.4 | aria-modal on PanelShell + aria-live on Notifications | **DONE** | `1a80ff8` |
 | 7.5 | Skip nav link + sr-only utility | **DONE** | `2eb7662` |
 | deploy | Production build + nginx block + scp to server | **DONE** | https://cv.rehou.games/hex-empires/ |
+| wave-3 | Edge-scroll camera drift + movement overlay z-order + TS seed fix | **DONE** | `078c707`, `4a527f8`, `c5751db` |
 
 ## Open questions from Phase 1 spec (surface to user before Phase 4)
 
