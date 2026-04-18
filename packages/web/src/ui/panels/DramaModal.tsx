@@ -179,7 +179,7 @@ function choiceButtonStyle(tone: 'primary' | 'secondary' | 'danger'): CSSPropert
     return {
       ...base,
       backgroundColor: 'var(--panel-accent-gold)',
-      color: '#1a1510',
+      color: 'var(--panel-turn-badge-text)',
       borderColor: 'var(--panel-accent-gold)',
     };
   }

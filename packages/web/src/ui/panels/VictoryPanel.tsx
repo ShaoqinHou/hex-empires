@@ -73,7 +73,7 @@ export function VictoryPanel({ onResolve }: VictoryPanelProps) {
                     padding: '2px 6px',
                     borderRadius: '4px',
                     backgroundColor: p.achieved ? 'var(--panel-accent-gold)' : 'var(--panel-muted-bg)',
-                    color: p.achieved ? '#1a1510' : 'var(--panel-muted-color)',
+                    color: p.achieved ? 'var(--panel-turn-badge-text)' : 'var(--panel-muted-color)',
                     fontSize: '10px',
                   }}
                 >

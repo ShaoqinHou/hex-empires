@@ -358,13 +358,17 @@ Every strategic panel is a dramatic choice-stage, not a spreadsheet. Tech/Civics
 
 Group E. Rare but memorable.
 
-### 5.1 `<DramaModal>` shell (E-architectural) — 3 days
+### 5.1 `<DramaModal>` shell (E-architectural) — 3 days COMPLETE (Phase 4.5)
 
-Distinct from `<PanelShell>`. Full-screen (or near) with:
-- Background-art slot
-- Headline typography
-- Scene-setting animations
-- Sound-cue hooks
+**Shipped in Phase 4.5 (2026-04-18).** DramaModal.tsx implements the shell spec
+(hero slot, Cinzel display title, subtitle, body, choice stack, tone, viewport-class
+2-col layout). reveal="fade" animation API is wired; implementation deferred to
+Phase 6/7. All four ceremony panels migrated: AgeTransitionPanel (tone="passage"),
+CrisisPanel (tone="crisis"), VictoryPanel (tone="triumph"), TurnSummaryPanel
+(tone="summary", heroHeight=120). 5 new tokens in panel-tokens.css.
+
+Remaining: background-art slot (Phase 5.3-5.6 per-panel art); scene animations
+(Phase 6/7 motion tokens); sound-cue hooks (Phase 7 audio).
 
 ### 5.2 SetupScreen redesign (E.1) — 5 days + art
 
