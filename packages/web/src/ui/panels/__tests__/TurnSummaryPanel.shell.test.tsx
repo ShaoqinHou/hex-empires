@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 
 /**
- * TurnSummaryPanel — smoke test for the PanelShell migration (cycle 3 batch 1).
+ * TurnSummaryPanel — smoke test for the DramaModal migration (Phase 4.5 Step 5).
  *
  * Stubs `useGameState` AND the `calculateResourceChanges` engine helper
- * so the panel renders without the full engine runtime.
+ * so the panel renders without the full engine runtime. Also mocks
+ * useViewportClass (DramaModal calls it; window.matchMedia absent in jsdom).
+ *
+ * heroHeight=120 per spec §11 Q1 recommendation — verifies the compact
+ * hero slot is applied.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -41,6 +45,11 @@ vi.mock('@hex/engine', async () => {
   };
 });
 
+// DramaModal calls useViewportClass which requires window.matchMedia.
+vi.mock('../../../hooks/useViewportClass', () => ({
+  useViewportClass: () => 'standard',
+}));
+
 import { TurnSummaryPanel } from '../TurnSummaryPanel';
 
 function makePlayer(): PlayerState {
@@ -72,19 +81,46 @@ afterEach(() => {
   mockRef.state = null;
 });
 
-describe('TurnSummaryPanel (PanelShell)', () => {
-  it('renders inside PanelShell with the registry title', () => {
+describe('TurnSummaryPanel (DramaModal)', () => {
+  it('renders inside DramaModal with panel-shell-turnSummary testid', () => {
     mockRef.state = makeState();
-    const { getByTestId, getByText } = render(<TurnSummaryPanel onClose={() => {}} />);
+    const { getByTestId } = render(<TurnSummaryPanel onResolve={() => {}} />);
     expect(getByTestId('panel-shell-turnSummary')).toBeTruthy();
-    expect(getByText('Turn Summary')).toBeTruthy();
   });
 
-  it('fires onClose when the shell close button is clicked', () => {
+  it('renders "Turn 1" as the display title', () => {
     mockRef.state = makeState();
-    const onClose = vi.fn();
-    const { getByTestId } = render(<TurnSummaryPanel onClose={onClose} />);
-    fireEvent.click(getByTestId('panel-close-turnSummary'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    const { getAllByText } = render(<TurnSummaryPanel onResolve={() => {}} />);
+    expect(getAllByText('Turn 1').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does NOT render a close X button (DramaModal has no X)', () => {
+    mockRef.state = makeState();
+    const { queryByTestId } = render(<TurnSummaryPanel onResolve={() => {}} />);
+    expect(queryByTestId('panel-close-turnSummary')).toBeNull();
+  });
+
+  it('fires onResolve when the Continue button is clicked', () => {
+    mockRef.state = makeState();
+    const onResolve = vi.fn();
+    const { getByText } = render(<TurnSummaryPanel onResolve={onResolve} />);
+    fireEvent.click(getByText('Continue'));
+    expect(onResolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the age subtitle', () => {
+    mockRef.state = makeState();
+    const { getByText } = render(<TurnSummaryPanel onResolve={() => {}} />);
+    expect(getByText('Antiquity Age')).toBeTruthy();
+  });
+
+  it('applies 120px heroHeight on the hero slot (compact per Q1 recommendation)', () => {
+    mockRef.state = makeState();
+    const { container } = render(<TurnSummaryPanel onResolve={() => {}} />);
+    // DramaModal renders the hero slot with class "drama-hero-slot"
+    const heroSlot = container.querySelector('.drama-hero-slot');
+    expect(heroSlot).toBeTruthy();
+    const style = (heroSlot as HTMLElement).style;
+    expect(style.height).toBe('120px');
   });
 });

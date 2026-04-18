@@ -45,6 +45,13 @@ export interface DramaModalProps {
   readonly title: string;
   readonly subtitle?: string;
   readonly hero?: ReactNode;
+  /**
+   * Override hero slot height in pixels. Defaults to `var(--drama-hero-height)`
+   * (240px standard, 320px wide, 360px ultra via CSS @media).
+   * Use for panels where the full hero height would feel like wasted real estate
+   * (e.g. TurnSummaryPanel uses 120px per spec §11 Q1 recommendation).
+   */
+  readonly heroHeight?: number;
   readonly body?: ReactNode;
   readonly choices?: ReadonlyArray<DramaChoice>;
   readonly onResolve: () => void;
@@ -84,16 +91,19 @@ function containerStyle(isWide: boolean): CSSProperties {
 
 // ── Hero slot ─────────────────────────────────────────────────────────────────
 
-const heroSlotStyle: CSSProperties = {
-  position: 'relative',
-  height: 'var(--drama-hero-height)',
-  flexShrink: 0,
-  overflow: 'hidden',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'rgba(26, 21, 16, 0.60)',
-};
+function getHeroSlotStyle(heroHeight?: number): CSSProperties {
+  return {
+    position: 'relative',
+    height: heroHeight !== undefined ? `${heroHeight}px` : 'var(--drama-hero-height)',
+    flexShrink: 0,
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(26, 21, 16, 0.60)',
+  };
+}
+
 
 const heroVignetteStyle: CSSProperties = {
   position: 'absolute',
@@ -204,6 +214,7 @@ export function DramaModal({
   title,
   subtitle,
   hero,
+  heroHeight,
   body,
   choices,
   onResolve,
@@ -222,7 +233,7 @@ export function DramaModal({
   const backdropRevealClass = reveal === 'fade' ? 'drama-backdrop-reveal' : '';
 
   const heroNode = hero !== undefined && hero !== null ? (
-    <div style={heroSlotStyle} className="drama-hero-slot" aria-hidden="true">
+    <div style={getHeroSlotStyle(heroHeight)} className="drama-hero-slot" aria-hidden="true">
       {hero}
       <div style={heroVignetteStyle} />
     </div>
