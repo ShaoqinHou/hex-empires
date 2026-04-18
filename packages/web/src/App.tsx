@@ -184,7 +184,7 @@ function GameUI() {
             <EventLogPanel onClose={closePanel} />
           )}
           {activePanel === 'age' && (
-            <AgeTransitionPanel onClose={closePanel} />
+            <AgeTransitionPanel onResolve={closePanel} />
           )}
           {activePanel === 'turnSummary' && (
             <TurnSummaryPanel onClose={closePanel} />

@@ -45,6 +45,12 @@ vi.mock('../../../providers/GameProvider', () => ({
   },
 }));
 
+// Mock useViewportClass to avoid window.matchMedia dependency.
+// AgeTransitionPanel now uses DramaModal which calls useViewportClass.
+vi.mock('../../../hooks/useViewportClass', () => ({
+  useViewportClass: () => 'standard',
+}));
+
 // Imports AFTER vi.mock so the panel components pick up the stub.
 import { TechTreePanel } from '../TechTreePanel';
 import { CivicTreePanel } from '../CivicTreePanel';
@@ -184,51 +190,49 @@ describe('CivicTreePanel — PanelShell migration', () => {
 
 // ── AgeTransitionPanel ──
 
-describe('AgeTransitionPanel — PanelShell migration + blocking semantics', () => {
-  it('renders inside a modal PanelShell with id="age"', () => {
+describe('AgeTransitionPanel — DramaModal migration + blocking semantics', () => {
+  it('renders inside a modal shell with id="age"', () => {
     mockRef.state = makeBaseState(makePlayer());
-    const { getByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    const { getByTestId } = render(<AgeTransitionPanel onResolve={() => {}} />);
     const shell = getByTestId('panel-shell-age');
     expect(shell.getAttribute('data-panel-priority')).toBe('modal');
   });
 
   it('renders a backdrop (modal priority)', () => {
     mockRef.state = makeBaseState(makePlayer());
-    const { queryByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    const { queryByTestId } = render(<AgeTransitionPanel onResolve={() => {}} />);
     expect(queryByTestId('panel-backdrop-age')).not.toBeNull();
   });
 
   it('marks the shell root with data-dismissible="false" — blocking modal', () => {
     mockRef.state = makeBaseState(makePlayer());
-    const { getByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    const { getByTestId } = render(<AgeTransitionPanel onResolve={() => {}} />);
     expect(getByTestId('panel-shell-age').getAttribute('data-dismissible')).toBe('false');
   });
 
-  it('does NOT render the PanelShell close X button — blocking modal', () => {
-    // Now that AgeTransitionPanel uses `dismissible={false}`, PanelShell
-    // drops the close button entirely instead of rendering an inert one.
+  it('does NOT render a close X button — DramaModal has no X', () => {
+    // DramaModal never renders a close button regardless of dismissibility.
     mockRef.state = makeBaseState(makePlayer());
-    const { queryByTestId } = render(<AgeTransitionPanel onClose={() => {}} />);
+    const { queryByTestId } = render(<AgeTransitionPanel onResolve={() => {}} />);
     expect(queryByTestId('panel-close-age')).toBeNull();
   });
 
-  it('does NOT call parent onClose when the modal backdrop is clicked — blocking modal', () => {
-    const onClose = vi.fn();
+  it('does NOT call parent onResolve when the modal backdrop is clicked — blocking modal', () => {
+    const onResolve = vi.fn();
     mockRef.state = makeBaseState(makePlayer());
-    const { getByTestId } = render(<AgeTransitionPanel onClose={onClose} />);
+    const { getByTestId } = render(<AgeTransitionPanel onResolve={onResolve} />);
     fireEvent.click(getByTestId('panel-backdrop-age'));
-    expect(onClose).not.toHaveBeenCalled();
+    expect(onResolve).not.toHaveBeenCalled();
   });
 
-  it('dispatches TRANSITION_AGE and calls parent onClose when a civ is picked (ready)', () => {
+  it('dispatches TRANSITION_AGE and calls parent onResolve when a civ is picked (ready)', () => {
     const calls: GameAction[] = [];
     mockRef.dispatch = (action) => { calls.push(action); };
-    const onClose = vi.fn();
+    const onResolve = vi.fn();
     // Player has enough age progress to be `ready` for exploration age.
     mockRef.state = makeBaseState(makePlayer({ ageProgress: 100 }));
-    const { container } = render(<AgeTransitionPanel onClose={onClose} />);
-    // All visible buttons are civ-pick buttons now — the PanelShell X is
-    // not rendered at all with `dismissible={false}`.
+    const { container } = render(<AgeTransitionPanel onResolve={onResolve} />);
+    // All visible buttons are civ-pick buttons now — no close X.
     const civButtons = Array.from(container.querySelectorAll('button')).filter(
       (b) => !b.disabled,
     );
@@ -236,7 +240,7 @@ describe('AgeTransitionPanel — PanelShell migration + blocking semantics', () 
     fireEvent.click(civButtons[0]);
     expect(calls.length).toBe(1);
     expect(calls[0].type).toBe('TRANSITION_AGE');
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onResolve).toHaveBeenCalledTimes(1);
   });
 });
 
