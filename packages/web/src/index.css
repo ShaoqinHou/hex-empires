@@ -53,6 +53,22 @@ html, body, #root {
   line-height: var(--type-body-leading);
 }
 
+/* ── Focus ring — keyboard navigation (Phase 7.2) ───────────────────────────
+ * `:focus-visible` only triggers on keyboard focus (not mouse clicks),
+ * so the amber ring appears only when the player navigates by keyboard.
+ * Canvas elements keep outline: none — they are click-only surfaces.
+ * `outline-offset: 2px` keeps the ring clear of button borders.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+canvas:focus-visible {
+  outline: none;
+}
+
 /* Custom animations for validation feedback */
 @keyframes slide-down {
   0% {
