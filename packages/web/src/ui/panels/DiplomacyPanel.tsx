@@ -1,5 +1,4 @@
 import { useGameState } from '../../providers/GameProvider';
-import { ALL_CIVILIZATIONS, ALL_LEADERS } from '@hex/engine';
 import type { PlayerId, DiplomaticStatus, DiplomacyProposal, DiplomacyRelation } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 
@@ -51,8 +50,8 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
           const hasAlliance = relation?.hasAlliance ?? false;
           const hasFriendship = relation?.hasFriendship ?? false;
 
-          const civ = ALL_CIVILIZATIONS.find(c => c.id === player.civilizationId);
-          const leader = ALL_LEADERS.find(l => l.id === player.leaderId);
+          const civ = state.config.civilizations.get(player.civilizationId);
+          const leader = state.config.leaders.get(player.leaderId);
 
           const isAtWar = status === 'war';
           const canFormalWar = !isAtWar && relationship <= -60;
@@ -121,7 +120,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                   <WarSupportBar value={warSupport} />
                   <span className="text-[10px] font-mono"
                     style={{
-                      color: warSupport > 0 ? '#4ade80' : warSupport < 0 ? '#ef4444' : '#9ca3af',
+                      color: warSupport > 0 ? 'var(--panel-status-helpful)' : warSupport < 0 ? 'var(--panel-status-war)' : 'var(--panel-status-neutral)',
                     }}>
                     {warSupport > 0 ? '+' : ''}{warSupport}
                   </span>
@@ -133,7 +132,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                 {/* Formal War */}
                 <ActionButton
                   label="Formal War"
-                  color="#dc2626"
+                  color="var(--panel-status-war)"
                   disabled={!canFormalWar}
                   tooltip={!canFormalWar && !isAtWar ? 'Requires hostile relationship (< -60)' : undefined}
                   onClick={() => dispatch({
@@ -145,7 +144,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                 {/* Surprise War */}
                 <ActionButton
                   label="Surprise War"
-                  color="#f97316"
+                  color="var(--panel-status-unfriendly)"
                   disabled={!canSurpriseWar}
                   tooltip="Gives defender +50 war support"
                   onClick={() => dispatch({
@@ -157,7 +156,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                 {/* Peace */}
                 <ActionButton
                   label="Propose Peace"
-                  color="#4ade80"
+                  color="var(--panel-status-helpful)"
                   disabled={!canPeace}
                   onClick={() => dispatch({
                     type: 'PROPOSE_DIPLOMACY',
@@ -179,7 +178,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                 {/* Alliance */}
                 <ActionButton
                   label="Alliance"
-                  color="#60a5fa"
+                  color="var(--panel-status-friendly)"
                   disabled={!canAlliance}
                   tooltip={!canAlliance && !isAtWar ? 'Requires helpful status (> 60)' : undefined}
                   onClick={() => dispatch({
@@ -191,7 +190,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
                 {/* Denounce */}
                 <ActionButton
                   label="Denounce"
-                  color="#fb923c"
+                  color="var(--panel-status-unfriendly)"
                   disabled={!canDenounce}
                   onClick={() => dispatch({
                     type: 'PROPOSE_DIPLOMACY',
@@ -235,11 +234,11 @@ function ActionButton({ label, color, disabled, tooltip, onClick }: {
 function RelationshipBar({ value }: { value: number }) {
   // Map -100..+100 to 0..100% for display
   const pct = (value + 100) / 2; // 0=far left, 50=center, 100=far right
-  const color = value > 60 ? '#4ade80'
-    : value > 20 ? '#60a5fa'
-    : value >= -20 ? '#9ca3af'
-    : value >= -60 ? '#fb923c'
-    : '#ef4444';
+  const color = value > 60 ? 'var(--panel-status-helpful)'
+    : value > 20 ? 'var(--panel-status-friendly)'
+    : value >= -20 ? 'var(--panel-status-neutral)'
+    : value >= -60 ? 'var(--panel-status-unfriendly)'
+    : 'var(--panel-status-war)';
 
   return (
     <div className="flex-1 h-1.5 rounded-full relative" style={{ backgroundColor: 'var(--color-bg)' }}>
@@ -259,7 +258,7 @@ function RelationshipBar({ value }: { value: number }) {
 function WarSupportBar({ value }: { value: number }) {
   // Map -100..+100 to 0..100%
   const pct = (value + 100) / 2;
-  const color = value > 0 ? '#4ade80' : value < 0 ? '#ef4444' : '#9ca3af';
+  const color = value > 0 ? 'var(--panel-status-helpful)' : value < 0 ? 'var(--panel-status-war)' : 'var(--panel-status-neutral)';
 
   return (
     <div className="flex-1 h-1.5 rounded-full relative" style={{ backgroundColor: 'var(--color-bg)' }}>

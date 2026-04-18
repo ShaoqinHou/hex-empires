@@ -1,5 +1,4 @@
 import { useGameState } from '../../providers/GameProvider';
-import { ALL_CIVILIZATIONS, ALL_UNITS, ALL_BUILDINGS } from '@hex/engine';
 import type { Age } from '@hex/engine';
 import { DramaModal } from './DramaModal';
 
@@ -19,7 +18,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
   const ready = player.ageProgress >= threshold;
 
   // Available civs for the next age
-  const availableCivs = ALL_CIVILIZATIONS.filter(c => c.age === nextAge);
+  const availableCivs = [...state.config.civilizations.values()].filter(c => c.age === nextAge);
 
   // ── Blocking-modal semantic ──
   // AgeTransition is a blocking modal: the player MUST pick a civ to
@@ -79,7 +78,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
             style={{
               width: `${Math.min(100, (player.ageProgress / threshold) * 100)}%`,
               background: ready
-                ? 'linear-gradient(to right, var(--panel-accent-gold-soft), #eab308)'
+                ? 'linear-gradient(to right, var(--panel-accent-gold-soft), var(--panel-accent-gold-dark))'
                 : undefined,
               backgroundColor: !ready ? getAgeColor(player.age) : undefined,
               boxShadow: ready ? '0 0 20px rgba(251, 191, 36, 0.6)' : 'none',
@@ -135,8 +134,8 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {availableCivs.map(civ => {
-            const uniqueUnit = ALL_UNITS.find(u => u.id === civ.uniqueUnit);
-            const uniqueBuilding = ALL_BUILDINGS.find(b => b.id === civ.uniqueBuilding);
+            const uniqueUnit = civ.uniqueUnit ? state.config.units.get(civ.uniqueUnit) : undefined;
+            const uniqueBuilding = civ.uniqueBuilding ? state.config.buildings.get(civ.uniqueBuilding) : undefined;
 
             return (
               <button
@@ -174,7 +173,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                   {ready && (
                     <div
                       className="px-2 py-1 rounded text-xs font-bold"
-                      style={{ backgroundColor: 'var(--panel-accent-gold-soft)', color: '#0f172a' }}
+                      style={{ backgroundColor: 'var(--panel-accent-gold-soft)', color: 'var(--panel-turn-badge-text)' }}
                     >
                       SELECT
                     </div>
@@ -260,9 +259,9 @@ function getNextAge(current: Age): 'exploration' | 'modern' | null {
 
 function getAgeColor(age: Age): string {
   switch (age) {
-    case 'antiquity': return '#a78bfa'; // purple
-    case 'exploration': return '#60a5fa'; // blue
-    case 'modern': return '#fbbf24'; // gold
+    case 'antiquity': return 'var(--panel-accent-purple)';   // purple
+    case 'exploration': return 'var(--panel-accent-info-bright)'; // blue
+    case 'modern': return 'var(--panel-accent-gold-soft)';  // gold
   }
 }
 

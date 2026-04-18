@@ -26,7 +26,6 @@
  */
 
 import { useGameState } from '../../providers/GameProvider';
-import { ALL_GOVERNMENTS, ALL_POLICIES } from '@hex/engine';
 import type { PlayerState } from '@hex/engine';
 import type { GovernmentDef, PolicyCategory, PolicyDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
@@ -107,15 +106,15 @@ function categoryLabel(cat: PolicyCategory): string {
 }
 
 /** Resolve a slotted policy id to its display name, with fallback. */
-function policyName(id: string): string {
-  const def = ALL_POLICIES.find((p) => p.id === id);
+function policyName(id: string, policies: ReadonlyMap<string, PolicyDef>): string {
+  const def = policies.get(id);
   return def?.name ?? humanizeId(id);
 }
 
 /** Resolve a government id to its def, or `null` if unknown. */
-function findGovernment(id: string | null | undefined): GovernmentDef | null {
+function findGovernment(id: string | null | undefined, governments: ReadonlyMap<string, GovernmentDef>): GovernmentDef | null {
   if (id === null || id === undefined) return null;
-  return ALL_GOVERNMENTS.find((g) => g.id === id) ?? null;
+  return governments.get(id) ?? null;
 }
 
 /**
@@ -147,13 +146,15 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
   const { state } = useGameState();
 
   const player = findHumanPlayer(state.players);
-  const government = findGovernment(player?.governmentId);
+  const government = findGovernment(player?.governmentId, state.config.governments);
   const researched = new Set<string>(player?.researchedCivics ?? []);
 
   // Available-to-slot policies: `unlockCivic` already researched.
-  const availablePolicies: ReadonlyArray<PolicyDef> = ALL_POLICIES.filter((p) =>
+  const availablePolicies: ReadonlyArray<PolicyDef> = [...state.config.policies.values()].filter((p) =>
     researched.has(p.unlockCivic),
   );
+
+  const lookupPolicyName = (id: string) => policyName(id, state.config.policies);
 
   return (
     <PanelShell id="government" title="Government" onClose={onClose} priority="overlay">
@@ -264,7 +265,7 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
                             style={{ color: 'var(--color-text)' }}
                             data-testid={`government-panel-slot-${cat}-${idx}`}
                           >
-                            {slot !== null ? policyName(slot) : '—'}
+                            {slot !== null ? lookupPolicyName(slot) : '—'}
                           </li>
                         ))}
                       </ul>

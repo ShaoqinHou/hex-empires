@@ -15,6 +15,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import type { GameState, PlayerState, CityState } from '@hex/engine';
+import { createGameConfig } from '@hex/engine';
 import type { ReligionRecord } from '../../../../../../packages/engine/src/types/Religion';
 
 // ── vi.mock — stub the useGameState hook ──
@@ -98,6 +99,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     builtWonders: [],
     crises: [],
     log: [],
+    config: createGameConfig(),
     ...overrides,
   } as unknown as GameState;
 }

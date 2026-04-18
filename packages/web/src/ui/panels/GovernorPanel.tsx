@@ -80,7 +80,7 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
                     <span className="font-semibold">{def.name}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded"
                       style={{
-                        backgroundColor: SPECIALIZATION_COLORS[def.specialization] + '22',
+                        backgroundColor: `color-mix(in srgb, ${SPECIALIZATION_COLORS[def.specialization] ?? 'transparent'} 13%, transparent)`,
                         color: SPECIALIZATION_COLORS[def.specialization],
                       }}>
                       {def.specialization}
@@ -95,7 +95,7 @@ export function GovernorPanel({ onClose }: GovernorPanelProps) {
                 <button
                   onClick={() => dispatch({ type: 'RECRUIT_GOVERNOR', governorId: def.id })}
                   className="text-xs px-3 py-1.5 rounded cursor-pointer font-semibold"
-                  style={{ backgroundColor: 'var(--panel-accent-success-bright)', color: '#000' }}>
+                  style={{ backgroundColor: 'var(--panel-accent-success-bright)', color: 'var(--panel-turn-badge-text)' }}>
                   Recruit
                 </button>
               </div>
@@ -145,7 +145,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
         <div className="h-full rounded-full"
           style={{
             width: `${Math.min(100, (governor.experience / governor.experienceToNextLevel) * 100)}%`,
-            backgroundColor: SPECIALIZATION_COLORS[governor.specialization] ?? '#666',
+            backgroundColor: SPECIALIZATION_COLORS[governor.specialization] ?? 'var(--panel-accent-neutral)',
           }}
         />
       </div>

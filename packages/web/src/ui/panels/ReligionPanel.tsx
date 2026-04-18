@@ -26,7 +26,6 @@
  */
 
 import { useGameState } from '../../providers/GameProvider';
-import { ALL_PANTHEONS } from '@hex/engine';
 import type { PlayerState, CityId } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 
@@ -73,10 +72,7 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
 
   const player = findHumanPlayer(state.players);
   const pantheonId = player?.pantheonId ?? null;
-  const pantheon =
-    pantheonId !== null
-      ? ALL_PANTHEONS.find((p) => p.id === pantheonId) ?? null
-      : null;
+  const pantheon = pantheonId !== null ? (state.config.pantheons.get(pantheonId) ?? null) : null;
 
   // Find a religion in state.religion?.religions founded by this player.
   const religions = state.religion?.religions ?? [];

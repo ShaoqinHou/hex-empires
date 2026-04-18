@@ -132,6 +132,7 @@
   --panel-accent-info-bright:    var(--color-info);           /* warm blue  #4a72b8 */
   --panel-accent-gold-soft:      #fbbf24;     /* = --amber-400 = --color-gold */
   --panel-accent-gold-bright:    #fcd34d;     /* = --amber-300 = --color-gold-soft */
+  --panel-accent-gold-dark:      #eab308;     /* = --amber-600 — progress bar gradient endpoint */
   --panel-accent-purple:         #a855f7;
   --panel-accent-purple-soft:    #c4b5fd;
   --panel-accent-purple-glow:    rgba(168, 85, 247, 0.30);
