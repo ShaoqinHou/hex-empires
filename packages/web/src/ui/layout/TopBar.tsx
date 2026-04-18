@@ -154,7 +154,7 @@ export function TopBar() {
           className={`px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1${turnReady ? ' end-turn-ready' : ''}`}
           style={{
             background: 'linear-gradient(135deg, var(--color-food) 0%, color-mix(in srgb, var(--color-food) 80%, transparent) 100%)',
-            color: '#fff',
+            color: 'var(--color-text)',
             boxShadow: turnReady ? '0 2px 8px color-mix(in srgb, var(--panel-accent-gold) 40%, transparent)' : '0 2px 8px color-mix(in srgb, var(--color-food) 40%, transparent)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             minHeight: '32px',
@@ -224,7 +224,7 @@ function PanelButton({ label, color, dark, onClick, panelId }: { label: string; 
       style={{
         position: 'relative',
         background: `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color} 80%, transparent) 100%)`,
-        color: dark ? '#0d1117' : '#fff',
+        color: dark ? 'var(--panel-turn-badge-text)' : 'var(--color-text)',
         border: `1px solid color-mix(in srgb, ${color} 50%, transparent)`,
         minHeight: 'var(--chrome-button-sm-size)',
       }}
