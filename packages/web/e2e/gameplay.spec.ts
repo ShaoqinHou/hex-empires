@@ -68,6 +68,23 @@ async function dispatch(page: Page, action: Record<string, any>) {
   await page.waitForTimeout(100);
 }
 
+/** Dismiss any blocking log events so END_TURN is not gated. */
+async function dismissBlockingEvents(page: Page) {
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
+}
+
 /** Start game with specific config */
 async function startGame(page: Page, options?: { civ?: string; leader?: string }) {
   await page.goto('http://localhost:5174');
@@ -87,15 +104,29 @@ async function startGame(page: Page, options?: { civ?: string; leader?: string }
     if (await civBtn.count() > 0) await civBtn.first().click();
   }
 
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
-  await page.waitForTimeout(300);
+  // Wait for GameProvider's useEffect to expose __gameDispatch — guarantees keyboard
+  // handler (wired in GameUI's earlier useEffect) is also registered.
+  await page.waitForFunction(() => !!(window as any).__gameDispatch, null, { timeout: 10000 });
+  // Park cursor in canvas centre — cursor at (0,0) triggers edge-scroll and
+  // may prevent keyboard events from dispatching correctly.
+  const canvas = page.locator('canvas').first();
+  const box = await canvas.boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(100);
 }
 
 /** End turn and wait for AI + transition */
 async function endTurn(page: Page) {
-  await page.keyboard.press('Enter');
-  await page.waitForTimeout(800);
+  const before = await page.evaluate(() => (window as any).__gameState?.turn ?? 0);
+  await dismissBlockingEvents(page);
+  await dispatch(page, { type: 'END_TURN' });
+  await page.waitForFunction(
+    (b) => ((window as any).__gameState?.turn ?? 0) > b,
+    before,
+    { timeout: 15000 },
+  );
   const overlay = page.locator('.fixed.inset-0.z-50');
   if (await overlay.count() > 0) {
     await overlay.click({ timeout: 2000 }).catch(() => {});
@@ -133,11 +164,11 @@ test.describe('Phase 1: Setup Screen', () => {
     expect(text).toContain('Large');
 
     // EXPECT: AI opponent options (number and label on separate lines)
-    expect(text).toContain('opponent');
-    expect(text).toContain('opponents');
+    expect(text).toContain('Opponent');
+    expect(text).toContain('Opponents');
 
     // EXPECT: Start Game button
-    expect(await page.getByRole('button', { name: /start game/i }).count()).toBe(1);
+    expect(await page.locator('[data-testid="start-game-button"]').count()).toBe(1);
   });
 
   test('leader selection shows ability preview', async ({ page }) => {
@@ -420,9 +451,9 @@ test.describe('Phase 5: Production & Research', () => {
   test('tech tree panel displays technologies', async ({ page }) => {
     await startGame(page);
 
-    // Open tech tree
+    // Open tech tree — TechTreePanel is lazy-loaded; wait for it to mount.
     await page.keyboard.press('t');
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => /Technology Tree/.test(document.body.innerText), null, { timeout: 10000 });
 
     const text = await page.locator('body').innerText();
 

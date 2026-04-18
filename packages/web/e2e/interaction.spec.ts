@@ -35,8 +35,11 @@ async function startGame(page: Page, opts: { seed?: number } = {}) {
   // freshly-cleared storage.
   await page.reload();
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
+  // Wait for GameProvider's useEffect to expose __gameDispatch — guarantees keyboard
+  // handler (wired in GameUI's earlier useEffect) is also registered.
+  await page.waitForFunction(() => !!(window as any).__gameDispatch, null, { timeout: 10000 });
 
   // IMPORTANT: Playwright's cursor defaults to (0,0) which sits inside the 3px edge-scroll
   // threshold. Leaving it there pans the camera ~15px/frame indefinitely. Park it in the
@@ -44,7 +47,7 @@ async function startGame(page: Page, opts: { seed?: number } = {}) {
   const canvas = page.locator('canvas').first();
   const box = await canvas.boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(200);
 }
 
 /**
@@ -603,7 +606,7 @@ test.describe('Setup screen: Resume vs New', () => {
     await page.goto('http://localhost:5174/?seed=2');
     await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
     await page.waitForTimeout(300);
-    await page.getByRole('button', { name: /start game/i }).click();
+    await page.locator('[data-testid="start-game-button"]').click();
     await page.waitForSelector('canvas', { timeout: 10000 });
     // Play one turn to trigger autosave (turn ≥ 2).
     await dispatch(page, { type: 'END_TURN' });
@@ -937,8 +940,8 @@ test.describe('Newly-wired panels (Religion / Government / Commanders)', () => {
   test('Religion panel opens from TopBar overflow menu', async ({ page }) => {
     await startGame(page, { seed: 2 });
 
-    // Open the "⋯" overflow menu — it's the only ⋯ button on the top bar.
-    await page.getByRole('button', { name: '⋯' }).click();
+    // Open the "⋯" overflow menu — button has aria-label="More actions".
+    await page.getByRole('button', { name: 'More actions' }).click();
     await page.waitForTimeout(150);
 
     // Click the Religion entry via its data-testid.

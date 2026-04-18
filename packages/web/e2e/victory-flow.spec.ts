@@ -17,7 +17,7 @@ async function startGame(page: Page, seed = 2) {
   await page.goto(`http://localhost:5174/?seed=${seed}`);
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const box = await page.locator('canvas').first().boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

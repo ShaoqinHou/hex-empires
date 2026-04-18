@@ -12,7 +12,7 @@ async function startGame(page: Page, seed = 2) {
   await page.goto(`http://localhost:5174/?seed=${seed}`);
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const canvas = page.locator('canvas').first();
   const box = await canvas.boundingBox();
@@ -25,9 +25,26 @@ async function dispatch(page: Page, action: Record<string, any>) {
   await page.waitForTimeout(80);
 }
 
+async function dismissBlockingEvents(page: Page) {
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
+}
+
 async function advanceTurns(page: Page, n: number) {
   for (let i = 0; i < n; i++) {
     const before = await page.evaluate(() => (window as any).__gameState.turn);
+    await dismissBlockingEvents(page);
     await dispatch(page, { type: 'END_TURN' });
     await page.waitForFunction(
       (b) => ((window as any).__gameState?.turn ?? 0) > b,
@@ -154,7 +171,7 @@ test.describe('AI behavior over turn progression', () => {
     // Bump AI opponent count to 2 before starting.
     await page.getByRole('button', { name: /^2\s*opponents?$/i }).click();
     await page.waitForTimeout(150);
-    await page.getByRole('button', { name: /start game/i }).click();
+    await page.locator('[data-testid="start-game-button"]').click();
     await page.waitForSelector('canvas', { timeout: 10000 });
     const canvas = page.locator('canvas').first();
     const box = await canvas.boundingBox();

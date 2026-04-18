@@ -29,7 +29,7 @@ async function startGame(page: Page, seed = 2) {
   // Re-navigate so SetupScreen re-renders without the Resume button.
   await page.goto(`http://localhost:5174/?seed=${seed}`);
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const box = await page.locator('canvas').first().boundingBox();
   // Park cursor in canvas center so Playwright's default (0,0) doesn't trigger

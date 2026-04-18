@@ -6,18 +6,28 @@ async function startGame(page: Page) {
   // Suppress auto-help overlay in tests
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   // Wait for setup screen to render
-  const startButton = page.getByRole('button', { name: /start game/i });
+  const startButton = page.locator('[data-testid="start-game-button"]');
   await startButton.waitFor({ timeout: 10000 });
   await startButton.click();
   // Wait for canvas to appear (game started)
   await page.waitForSelector('canvas', { timeout: 10000 });
+  // Wait for GameProvider's useEffect to fire — this sets __gameDispatch and
+  // guarantees all GameUI useEffects (keyboard handler, etc.) have also run,
+  // since React child effects always precede parent effects in the commit phase.
+  await page.waitForFunction(() => !!(window as any).__gameDispatch, null, { timeout: 10000 });
+  // Park cursor in canvas centre so the camera is stable and Playwright's
+  // keyboard events are routed correctly (cursor at 0,0 triggers edge-scroll).
+  const canvas = page.locator('canvas').first();
+  const box = await canvas.boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(100);
 }
 
 test.describe('Setup screen', () => {
   test('shows leader and civ selection before game starts', async ({ page }) => {
     await page.goto('http://localhost:5174');
     const text = await page.locator('body').innerText();
-    expect(text).toMatch(/leader|civilization|start game/i);
+    expect(text).toMatch(/leader|civilization|begin your empire/i);
   });
 });
 
@@ -81,7 +91,9 @@ test.describe('Game interactions', () => {
 
     await page.keyboard.press('t');
     // TechTreePanel is lazy-loaded — wait for the dynamic chunk to load and mount.
-    await page.waitForFunction(() => /Technology Tree/.test(document.body.innerText), { timeout: 5000 });
+    // Note: waitForFunction(fn, arg?, options?) — pass null as arg so the timeout
+    // is correctly placed in the options slot (3rd arg), not the arg slot (2nd).
+    await page.waitForFunction(() => /Technology Tree/.test(document.body.innerText), null, { timeout: 10000 });
 
     const text = await page.locator('body').innerText();
     expect(text).toContain('Technology Tree');

@@ -71,7 +71,14 @@ async function dispatch(page: Page, action: Record<string, any>) {
 
 async function startGameWith(page: Page, numAI: number) {
   await page.goto('http://localhost:5174');
-  await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
+  // Clear autosave so the setup screen always shows "Begin Your Empire →"
+  // (not "Resume Game →") regardless of prior test runs.
+  await page.evaluate(() => {
+    localStorage.removeItem('hex-empires-save');
+    localStorage.removeItem('hex-empires-save-meta');
+    localStorage.setItem('helpShown', 'true');
+  });
+  await page.reload();
   await page.waitForTimeout(300);
 
   // Select AI count — button text is "{numAI}\nopponent(s)"
@@ -80,12 +87,29 @@ async function startGameWith(page: Page, numAI: number) {
   if (await aiBtn.count() > 0) await aiBtn.first().click();
   await page.waitForTimeout(100);
 
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 15000 });
   await page.waitForTimeout(300);
 }
 
+async function dismissBlockingEvents(page: Page) {
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
+}
+
 async function endTurn(page: Page) {
+  await dismissBlockingEvents(page);
   await dispatch(page, { type: 'END_TURN' });
   await page.waitForTimeout(300);
   // Dismiss transition

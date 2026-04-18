@@ -73,20 +73,20 @@ test.describe('Setup screen', () => {
     await expect(page.getByRole('button', { name: /Small/ })).toHaveCount(1);
     await expect(page.getByRole('button', { name: /Medium/ })).toHaveCount(1);
     await expect(page.getByRole('button', { name: /Large/ })).toHaveCount(1);
-    // Dimensions label present (40x30 / 60x40 / 80x50)
+    // Dimensions label present (40×30 / 60×40 / 80×50 — uses Unicode × in redesigned buttons)
     const body = await page.locator('body').innerText();
-    expect(body).toMatch(/40x30/);
-    expect(body).toMatch(/60x40/);
-    expect(body).toMatch(/80x50/);
+    expect(body).toMatch(/40\s*[×x]\s*30/);
+    expect(body).toMatch(/60\s*[×x]\s*40/);
+    expect(body).toMatch(/80\s*[×x]\s*50/);
   });
 
   test('AI opponent count buttons 1 / 2 / 3 are present with opponent(s) suffix', async ({ page }) => {
     await fresh(page);
     const body = await page.locator('body').innerText();
-    // "1 opponent" (singular) and "2 opponents" / "3 opponents" (plural)
-    expect(body).toMatch(/\b1\b[\s\S]{0,40}opponent\b/);
-    expect(body).toMatch(/\b2\b[\s\S]{0,40}opponents\b/);
-    expect(body).toMatch(/\b3\b[\s\S]{0,40}opponents\b/);
+    // "1 Opponent" (singular) and "2 Opponents" / "3 Opponents" (plural, capitalised in redesign)
+    expect(body).toMatch(/\b1\b[\s\S]{0,40}opponent\b/i);
+    expect(body).toMatch(/\b2\b[\s\S]{0,40}opponents\b/i);
+    expect(body).toMatch(/\b3\b[\s\S]{0,40}opponents\b/i);
   });
 
   test('selecting Cleopatra reveals the Mediterranean Bride ability text', async ({ page }) => {
@@ -107,8 +107,8 @@ test.describe('Setup screen', () => {
 
   test('choosing 2 AI opponents starts a 3-player game (1 human + 2 AI)', async ({ page }) => {
     await fresh(page);
-    // Click the AI count button that ends in "2 opponents"
-    await page.getByRole('button', { name: /2\s+opponents/ }).click();
+    // Click the AI count button that ends in "2 Opponents" (capitalised post-wave-2 redesign)
+    await page.getByRole('button', { name: /2\s+opponents/i }).click();
     await page.waitForTimeout(100);
     await page.locator('[data-testid="start-game-button"]').click();
     await page.waitForSelector('canvas', { timeout: 10000 });

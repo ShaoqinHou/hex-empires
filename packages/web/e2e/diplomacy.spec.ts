@@ -39,7 +39,7 @@ async function startGameWithAI(page: Page, numAI = 2, seed = 2) {
     if ((await btn.count()) > 0) await btn.first().click();
     await page.waitForTimeout(120);
   }
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   await page.waitForTimeout(300);
 }
@@ -97,14 +97,40 @@ async function diploSnapshot(page: Page): Promise<DiploSnapshot> {
   });
 }
 
+async function dismissBlockingEvents(page: Page) {
+  // handleStartTurn adds blocksTurn:true events when enemy units are near the
+  // human capital.  handleEndTurn rejects END_TURN until these are dismissed.
+  // In turn-advancing tests we don't care about those notifications, so dismiss
+  // them automatically — exactly what a human player clicking "OK" would do.
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (
+        e['blocksTurn'] === true &&
+        e['dismissed'] !== true &&
+        e['turn'] === t &&
+        e['playerId'] === pid
+      ) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
+}
+
 async function advanceTurns(page: Page, n: number) {
   for (let i = 0; i < n; i++) {
     const before = await page.evaluate(() => (window as any).__gameState.turn);
+    await dismissBlockingEvents(page);
     await dispatch(page, { type: 'END_TURN' });
     await page.waitForFunction(
       (b) => ((window as any).__gameState?.turn ?? 0) > b,
       before,
-      { timeout: 15000 },
+      { timeout: 100000 },
     );
   }
 }

@@ -33,7 +33,7 @@ async function startGame(page: Page, opts: { seed?: number } = {}) {
   });
   await page.reload();
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   await page.waitForFunction(() => (window as any).__gameState != null, undefined, { timeout: 10000 });
   await page.waitForTimeout(300);

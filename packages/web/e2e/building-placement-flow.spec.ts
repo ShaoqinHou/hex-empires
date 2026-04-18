@@ -41,7 +41,7 @@ async function startGame(page: Page, seed = 2): Promise<void> {
   });
   await page.reload();
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const box = await page.locator('canvas').first().boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -50,6 +50,23 @@ async function startGame(page: Page, seed = 2): Promise<void> {
 
 async function dispatch(page: Page, action: Record<string, unknown>): Promise<void> {
   await page.evaluate((a) => (window as unknown as { __gameDispatch: (a: Record<string, unknown>) => void }).__gameDispatch(a), action);
+  await page.waitForTimeout(80);
+}
+
+/** Dismiss any blocking log events so END_TURN is not gated. */
+async function dismissBlockingEvents(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const s = (window as unknown as { __gameState?: { currentPlayerId: string; turn: number; log: Array<Record<string, unknown>> } }).__gameState;
+    const d = (window as unknown as { __gameDispatch?: (a: Record<string, unknown>) => void }).__gameDispatch;
+    if (!s || !d) return;
+    const pid = s.currentPlayerId;
+    const t = s.turn;
+    for (const e of s.log) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
   await page.waitForTimeout(80);
 }
 
@@ -150,18 +167,23 @@ async function enterPlacement(page: Page, cityId: string, buildingId: string): P
   await page.waitForTimeout(100);
 }
 
-/** Return a valid tile for the given city+building using the engine helper. */
+/** Return a valid tile for the given city+building using the engine helper.
+ *  Skips the city-center tile (which already holds the palace). */
 async function pickValidTile(page: Page, cityId: string, fallback: HexCoord): Promise<HexCoord> {
   const tile = await page.evaluate(({ cityId, fallback }) => {
     const s = (window as unknown as { __gameState: { cities: Map<string, { territory: ReadonlyArray<string> }> } }).__gameState;
     const city = s.cities.get(cityId);
     if (!city) return fallback;
-    const key = `${fallback.q},${fallback.r}`;
-    if (city.territory.includes(key)) return fallback;
-    const first = city.territory[0];
-    if (!first) return fallback;
-    const [q, r] = first.split(',').map(Number);
-    return { q, r };
+    const centerKey = `${fallback.q},${fallback.r}`;
+    // Prefer a non-center territory tile so we don't collide with the palace.
+    for (const key of city.territory) {
+      if (key !== centerKey) {
+        const [q, r] = key.split(',').map(Number);
+        return { q, r };
+      }
+    }
+    // Last resort: use the center tile.
+    return fallback;
   }, { cityId, fallback });
   return tile as HexCoord;
 }
@@ -169,6 +191,7 @@ async function pickValidTile(page: Page, cityId: string, fallback: HexCoord): Pr
 /** Advance exactly one full player round (state.turn increases by 1). */
 async function advanceTurn(page: Page): Promise<void> {
   const before = await page.evaluate(() => (window as unknown as { __gameState: { turn: number } }).__gameState.turn);
+  await dismissBlockingEvents(page);
   await dispatch(page, { type: 'END_TURN' });
   await page.waitForFunction(
     (b) => ((window as unknown as { __gameState?: { turn: number } }).__gameState?.turn ?? 0) > b,

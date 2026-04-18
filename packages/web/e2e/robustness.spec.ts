@@ -30,7 +30,7 @@ async function startGame(page: Page, seed = 2, opts: { keepSave?: boolean } = {}
   // the fresh Start Game action.
   if (!opts.keepSave) await page.goto(`http://localhost:5174/?seed=${seed}`);
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const box = await page.locator('canvas').first().boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -40,6 +40,22 @@ async function startGame(page: Page, seed = 2, opts: { keepSave?: boolean } = {}
 async function dispatch(page: Page, action: Record<string, any>) {
   await page.evaluate((a) => (window as any).__gameDispatch(a), action);
   await page.waitForTimeout(60);
+}
+
+async function dismissBlockingEvents(page: Page) {
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
 }
 
 // Known benign React dev-mode warnings that appear in the current build but
@@ -169,6 +185,7 @@ test.describe('Runtime robustness', () => {
     const TURNS = 20;
     for (let i = 0; i < TURNS; i++) {
       const before = await page.evaluate(() => (window as any).__gameState?.turn ?? 0);
+      await dismissBlockingEvents(page);
       await dispatch(page, { type: 'END_TURN' });
       await page.waitForFunction(
         (b) => ((window as any).__gameState?.turn ?? 0) > (b as number),
@@ -195,6 +212,7 @@ test.describe('Runtime robustness', () => {
 
     for (let i = 0; i < 5; i++) {
       const before = await page.evaluate(() => (window as any).__gameState?.turn ?? 0);
+      await dismissBlockingEvents(page);
       await dispatch(page, { type: 'END_TURN' });
       await page.waitForFunction(
         (b) => ((window as any).__gameState?.turn ?? 0) > (b as number),

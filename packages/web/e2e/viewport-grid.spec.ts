@@ -26,21 +26,19 @@ for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
 
     await page.goto('http://localhost:5174/');
-    // Dismiss help and start a game so GameUI mounts.
+    // Dismiss help overlay and clear any saved game so we always see the setup screen.
     await page.evaluate(() => {
       localStorage.setItem('helpShown', 'true');
       localStorage.removeItem('hex-empires-save');
       localStorage.removeItem('hex-empires-save-meta');
     });
     await page.goto(`http://localhost:5174/?seed=42`);
-    // Wait for the game UI to mount.
+    await page.waitForTimeout(300);
+    // Click the Start Game button to get past the setup screen and mount GameUI.
+    await page.locator('[data-testid="start-game-button"]').click();
+    await page.waitForSelector('canvas', { timeout: 10_000 });
+    // Wait for .game-app (the CSS-grid root) to appear.
     await page.waitForSelector('.game-app', { timeout: 10_000 });
-    // Skip the setup screen by starting a new game if needed.
-    const startBtn = page.locator('button', { hasText: /start new game/i });
-    if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await startBtn.click();
-      await page.waitForSelector('[data-testid="end-turn-button"]', { timeout: 10_000 });
-    }
 
     // Assert .game-app uses CSS grid.
     const display = await page.evaluate(() => {
@@ -50,15 +48,17 @@ for (const vp of VIEWPORTS) {
     expect(display).toBe('grid');
 
     // Assert TopBar height matches the token value for this viewport class.
+    // Use data-chrome-bar="top" — the :first-child selector is unreliable
+    // because a visually-hidden skip-link <a> precedes TopBar in the DOM.
     const topbarHeight = await page.evaluate(() => {
-      const el = document.querySelector('.game-app > .layout-chrome-bar:first-child');
+      const el = document.querySelector('[data-chrome-bar="top"]');
       return el ? el.getBoundingClientRect().height : null;
     });
     expect(topbarHeight).toBe(vp.topbarHeight);
 
     // Assert BottomBar height matches the token value for this viewport class.
     const bottombarHeight = await page.evaluate(() => {
-      const el = document.querySelector('.game-app > .layout-chrome-bar:last-child');
+      const el = document.querySelector('[data-chrome-bar="bottom"]');
       return el ? el.getBoundingClientRect().height : null;
     });
     expect(bottombarHeight).toBe(vp.bottombarHeight);

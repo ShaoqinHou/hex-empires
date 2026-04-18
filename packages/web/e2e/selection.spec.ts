@@ -14,7 +14,7 @@ async function startGame(page: Page) {
   await page.goto('http://localhost:5174');
   await page.evaluate(() => localStorage.setItem('helpShown', 'true'));
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   // Park the cursor in the canvas centre so the 3-pixel edge-scroll trigger doesn't
   // drift the camera before tests grab hex screen coords. (Same fix as in interaction.spec.ts.)

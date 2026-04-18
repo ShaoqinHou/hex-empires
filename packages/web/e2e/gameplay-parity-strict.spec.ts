@@ -25,7 +25,7 @@ async function startGame(page: Page, seed = 2) {
   });
   await page.reload();
   await page.waitForTimeout(300);
-  await page.getByRole('button', { name: /start game/i }).click();
+  await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   const box = await page.locator('canvas').first().boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -47,9 +47,26 @@ async function humanPlayer(page: Page) {
   });
 }
 
+async function dismissBlockingEvents(page: Page) {
+  await page.evaluate(() => {
+    const s = (window as any).__gameState;
+    const d = (window as any).__gameDispatch;
+    if (!s || !d) return;
+    const pid: string = s.currentPlayerId;
+    const t: number = s.turn;
+    for (const e of (s.log as Array<Record<string, unknown>>)) {
+      if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
+        d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
+      }
+    }
+  });
+  await page.waitForTimeout(80);
+}
+
 async function advanceTurns(page: Page, n: number) {
   for (let i = 0; i < n; i++) {
     const before = await page.evaluate(() => (window as any).__gameState.turn);
+    await dismissBlockingEvents(page);
     await dispatch(page, { type: 'END_TURN' });
     await page
       .waitForFunction((t) => ((window as any).__gameState?.turn ?? 0) > t, before, {
