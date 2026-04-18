@@ -1,0 +1,210 @@
+/*
+ * city-panel.css — scoped styles for CityPanel hero layout.
+ * Uses only var(--panel-*) and var(--color-*) tokens — no raw hex.
+ */
+
+/* ── Hero Production Block ────────────────────────────────────────── */
+
+.city-hero-production {
+  padding: var(--panel-padding-md, 12px) var(--panel-padding-lg, 20px);
+  border-bottom: 1px solid var(--panel-border);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-production) 8%, var(--panel-bg)),
+    var(--panel-bg)
+  );
+}
+
+.city-hero-production__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--panel-muted-color);
+  margin-bottom: 4px;
+}
+
+.city-hero-production__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--panel-text-color);
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.city-hero-production__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.city-hero-production__bar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--panel-muted-bg, rgba(67, 59, 28, 0.5));
+  overflow: hidden;
+}
+
+.city-hero-production__bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--color-production);
+  transition: width 0.3s ease;
+}
+
+.city-hero-production__pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-production);
+  min-width: 32px;
+  text-align: right;
+}
+
+.city-hero-production__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.city-hero-production__change-btn {
+  font-size: 11px;
+  color: var(--panel-muted-color);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.city-hero-production__change-btn:hover {
+  color: var(--panel-text-color);
+}
+
+.city-hero-production__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.city-hero-production__choose-btn {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--panel-accent-gold);
+  background: none;
+  border: 1px solid var(--panel-accent-gold);
+  border-radius: var(--panel-radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.city-hero-production__choose-btn:hover {
+  background: color-mix(in srgb, var(--panel-accent-gold) 15%, transparent);
+}
+
+/* ── Compact Resource Ledger ─────────────────────────────────────── */
+
+.city-resource-ledger {
+  padding: var(--panel-padding-md, 12px) var(--panel-padding-lg, 20px);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.city-resource-ledger__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--panel-muted-color);
+  margin-bottom: 6px;
+}
+
+.city-resource-ledger__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.city-resource-ledger__item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.city-resource-ledger__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.city-resource-ledger__value {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.city-resource-ledger__delta {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.city-resource-ledger__delta--positive {
+  color: var(--panel-accent-success, var(--color-food));
+}
+
+.city-resource-ledger__delta--negative {
+  color: var(--panel-accent-danger, var(--color-health-low));
+}
+
+.city-resource-ledger__note {
+  font-size: 10px;
+  color: var(--panel-muted-color);
+  margin-top: 4px;
+}
+
+/* ── Worked Tiles Summary ─────────────────────────────────────────── */
+
+.city-worked-tiles {
+  padding: var(--panel-padding-md, 12px) var(--panel-padding-lg, 20px);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.city-worked-tiles__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--panel-muted-color);
+  margin-bottom: 4px;
+}
+
+.city-worked-tiles__summary {
+  font-size: 12px;
+  color: var(--panel-text-color);
+  line-height: 1.4;
+}
+
+.city-worked-tiles__count {
+  font-weight: 700;
+  color: var(--panel-accent-gold);
+}
+
+.city-worked-tiles__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.city-worked-tiles__tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--panel-muted-bg-soft, rgba(67, 59, 28, 0.3));
+  color: var(--panel-muted-color);
+  border: 1px solid var(--panel-muted-border, rgba(74, 62, 40, 0.3));
+}

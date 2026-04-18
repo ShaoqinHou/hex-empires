@@ -322,7 +322,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
       )}
 
       {/* Build/Purchase section */}
-      <div className="px-4 py-2">
+      <div className="px-4 py-2" data-city-build-list="">
         <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
           {isTown ? 'Purchase' : 'Build'}
         </h3>
@@ -446,6 +446,18 @@ function ProgressBar({ value, max, color }: { value: number; max: number; color:
   return (
     <div className="w-full h-1.5 rounded-full my-1" style={{ backgroundColor: 'var(--color-bg)' }}>
       <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
+function HeroProgressBar({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  return (
+    <div className="city-hero-production__bar-track">
+      <div
+        className="city-hero-production__bar-fill"
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
