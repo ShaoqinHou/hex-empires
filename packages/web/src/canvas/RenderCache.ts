@@ -261,26 +261,29 @@ export function calculateViewportBounds(
   canvasWidth: number,
   canvasHeight: number
 ): ViewportBounds {
-  // Convert screen corners to world coords
-  const topLeft = {
-    x: (0 - canvasWidth / 2) / zoom + cameraX,
-    y: (0 - canvasHeight / 2) / zoom + cameraY,
-  };
-  const bottomRight = {
-    x: (canvasWidth - canvasWidth / 2) / zoom + cameraX,
-    y: (canvasHeight - canvasHeight / 2) / zoom + cameraY,
-  };
+  // Sample all 4 screen corners in world space.
+  // For pointy-top hexes, axial q = x/HEX_WIDTH − r/2, so q depends on both x
+  // AND y. Using only top-left + bottom-right misses the extremes:
+  //   minQ is at the bottom-left corner (max y → max r → most negative q shift)
+  //   maxQ is at the top-right corner  (max x, min y → least negative q shift)
+  // Only sampling 2 diagonal corners produced the upper-right / lower-left
+  // corner tile clipping bug.
+  const halfW = canvasWidth / 2;
+  const halfH = canvasHeight / 2;
+  const worldCorners = [
+    { x: (0           - halfW) / zoom + cameraX, y: (0            - halfH) / zoom + cameraY }, // TL
+    { x: (canvasWidth - halfW) / zoom + cameraX, y: (0            - halfH) / zoom + cameraY }, // TR
+    { x: (0           - halfW) / zoom + cameraX, y: (canvasHeight - halfH) / zoom + cameraY }, // BL
+    { x: (canvasWidth - halfW) / zoom + cameraX, y: (canvasHeight - halfH) / zoom + cameraY }, // BR
+  ];
+  const hexCorners = worldCorners.map(c => pixelToHex(c.x, c.y));
 
-  // Convert to hex coordinates (with padding)
   const padding = 2;
-  const minHex = pixelToHex(topLeft.x - padding * HEX_SIZE, topLeft.y - padding * HEX_SIZE);
-  const maxHex = pixelToHex(bottomRight.x + padding * HEX_SIZE, bottomRight.y + padding * HEX_SIZE);
-
   return {
-    minQ: minHex.q - padding,
-    maxQ: maxHex.q + padding,
-    minR: minHex.r - padding,
-    maxR: maxHex.r + padding,
+    minQ: Math.min(...hexCorners.map(h => h.q)) - padding,
+    maxQ: Math.max(...hexCorners.map(h => h.q)) + padding,
+    minR: Math.min(...hexCorners.map(h => h.r)) - padding,
+    maxR: Math.max(...hexCorners.map(h => h.r)) + padding,
   };
 }
 

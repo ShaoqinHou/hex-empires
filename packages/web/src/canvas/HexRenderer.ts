@@ -844,6 +844,12 @@ export class HexRenderer {
 
         const { x, y } = hexToPixel(tile.coord);
 
+        // DIR_TO_EDGE: maps HEX_DIRECTIONS[i] index to the edge vertex pair.
+        // Edge e draws from vertex e to vertex (e+1)%6 (angle = 60*e − 30°).
+        // For pointy-top hexes: E→0, NE→5, NW→4, W→3, SW→2, SE→1.
+        // Using i directly was wrong (only E and W happened to coincide).
+        const DIR_TO_EDGE = [0, 5, 4, 3, 2, 1] as const;
+
         for (let i = 0; i < 6; i++) {
           const dir = HEX_DIRECTIONS[i];
           const neighborCoord: HexCoord = { q: tile.coord.q + dir.q, r: tile.coord.r + dir.r };
@@ -853,9 +859,10 @@ export class HexRenderer {
           // Draw edge only if neighbor is not owned by the same player
           if (neighborOwner === city.owner) continue;
 
-          // Pointy-top hex: vertex i is at angle (60*i - 30) degrees
-          const angle1 = (Math.PI / 180) * (60 * i - 30);
-          const angle2 = (Math.PI / 180) * (60 * ((i + 1) % 6) - 30);
+          // Map direction index to the correct edge for pointy-top hexes
+          const e = DIR_TO_EDGE[i];
+          const angle1 = (Math.PI / 180) * (60 * e - 30);
+          const angle2 = (Math.PI / 180) * (60 * ((e + 1) % 6) - 30);
           ctx.beginPath();
           ctx.moveTo(x + HEX_SIZE * Math.cos(angle1), y + HEX_SIZE * Math.sin(angle1));
           ctx.lineTo(x + HEX_SIZE * Math.cos(angle2), y + HEX_SIZE * Math.sin(angle2));
@@ -887,10 +894,11 @@ export class HexRenderer {
 
       const { x, y } = hexToPixel(tile.coord);
       drawHexPath(ctx, x, y);
-      ctx.fillStyle = 'rgba(100, 181, 246, 0.25)';
+      // Warm amber tint — matches --color-accent (#d4943a); canvas can't use CSS vars
+      ctx.fillStyle = 'rgba(212, 148, 58, 0.18)';
       ctx.fill();
       drawHexPath(ctx, x, y);
-      ctx.strokeStyle = 'rgba(100, 181, 246, 0.5)';
+      ctx.strokeStyle = 'rgba(212, 148, 58, 0.55)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
