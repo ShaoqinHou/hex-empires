@@ -1,7 +1,7 @@
 ---
 name: designer
-description: Writes UI/UX design docs, systems specs, and other long-form markdown deliverables to .claude/workflow/design/. Use when the deliverable IS a persisted .md file — not research-and-report-back. Sonnet-backed.
-model: sonnet
+description: Writes UI/UX design docs, systems specs, and other long-form architectural deliverables to .claude/workflow/design/. Use when the deliverable IS a persisted .md file AND it involves real design/architectural judgment (palette systems, grid rules, interaction model) — not research-and-report-back. Opus-backed — design is where Opus earns its keep.
+model: opus
 tools: Read, Grep, Glob, Write, Edit, Bash
 memory: project
 ---

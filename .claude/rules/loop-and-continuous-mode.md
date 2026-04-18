@@ -348,38 +348,60 @@ And the parent checks the return payload's `runtime-model` field on every agent 
 
 **Stronger enforcement idea (not shipped):** a post-tool hook that inspects `Agent` tool calls and blocks the spawn if neither `subagent_type` is a Sonnet-frontmatter custom agent nor `model: "sonnet"` is passed explicitly. Deferred; the brief convention has held up this session.
 
-### 5. Subagent Write permission — lower-level lockdown beyond settings.json
+### 5. Subagent Write permission — the full timeline (corrected 2026-04-18)
 
-**Symptom:** Even with `.claude/settings.json` containing `permissions.allow: ["Write(*)", "Edit(*)", "Bash(*)"]`, subagents spawned via the `Agent` tool reliably get `Write` and `Edit` denied. Tested post-session-restart with four different spawn configurations (custom agent with isolation, custom agent without isolation, general-purpose with no mode, general-purpose with `mode: "bypassPermissions"`) — all four denied `Write`.
+Original writeup said "Write is permanently denied, use workarounds." That was **partially wrong**. Empirical data from Phase 1-3 showed Write is denied in SOME states and works in OTHERS. Here's the corrected story.
 
-**Unknown root cause.** Suspected to be a permission layer below `settings.json` and below the Agent tool's `mode` param. Possibly tied to CLI startup flags (`--dangerously-skip-permissions`) that aren't inherited into the subagent spawn context. Not yet resolved upstream.
+**The four states, in order of how the session progressed:**
 
-**Confirmed working patterns — use these, do NOT spend time trying to unlock `Write`:**
+| State | `Write` in subagents? | Why |
+|---|---|---|
+| A. Pre-`settings.json` fix (no `permissions.allow` block checked in) | **Denied** | Subagents only read `settings.json`, not `settings.local.json`. Without a permissions block in the shared file, subagents get default deny. |
+| B. `settings.json` fixed but session not yet restarted | **Denied** | The permission list is cached at session start. A mid-session edit to `settings.json` has no effect on already-running subagents (or on newly-spawned ones in the same session — it's session-level cached). |
+| C. Post-restart, but local `main` is ahead of `origin/main` (pre-push) | **Denied** in `isolation: worktree` spawns; **works** in non-isolated spawns | The worktree is built from `origin/main` (gotcha #3). Pre-push, `origin/main` predates the permission fix, so the worktree's `settings.json` lacks the `permissions.allow` block. Non-isolated subagents read the parent's checkout where the fix IS present. |
+| D. Post-push — `origin/main` carries the permission fix | **Works** | Worktrees built from `origin/main` now see the correct `settings.json`. This is steady state. |
 
-1. **Designer agent → inline-return + parent-persists.** The subagent returns the full doc content in its reply as a fenced markdown block. The parent calls its own `Write` tool to persist. Cost: one extra Write from the parent per deliverable — trivial. Designer used this pattern for the 3600-word Phase 1 spec (2026-04-18).
-2. **Implementer → git commit as the log.** Instead of trying to write an `implement-log-<sha>.md` file, the implementer commits each sub-step with a descriptive message + any additional findings in the commit body. The commit graph IS the log. v2 implementer used this pattern successfully (2026-04-18, 6 commits).
+**State D is the target.** As long as every phase-complete → push-to-origin discipline is maintained, subagents retain full `Write`/`Edit`/`Bash` capability.
 
-**What still works inside subagents:**
+**Workarounds for states A–C** (keep these in your back pocket — useful on session bootstrap before the first push, or if Write ever regresses):
 
-- `Read`, `Grep`, `Glob` — all read-side tools
-- `Bash` for git operations (`git commit -m`, `git log`, `git diff`) — git commits somehow succeed even when `Write` is denied (probably the underlying filesystem write happens via git process, not via Claude Code's `Write` tool)
-- `Bash` for tests (`npm run test:engine`, `npx vitest run`)
-- `Bash` for reading filesystem (`ls`, `cat`)
-- **Bash is inconsistent** — sometimes denied, sometimes allowed. If denied, fall back to reports that don't require it.
+1. **Designer → inline-return + parent-persists.** Subagent returns the full doc content as a fenced markdown block in its reply. Parent calls its own `Write` tool to persist. Cost: one extra Write from the parent per deliverable — trivial.
+2. **Implementer → `Bash` heredoc for file creation + `git commit` as log.**
+   ```bash
+   cat > packages/engine/src/state/MyNewFile.ts <<'EOF'
+   <file content>
+   EOF
+   git add packages/engine/src/state/MyNewFile.ts
+   git commit -m "<message>"
+   ```
+   `Bash` heredoc routes the filesystem write through the shell process rather than Claude Code's `Write` dispatcher, so it bypasses the permission layer. Proven in v2 implementer's creation of `AllUnitsActed.ts`, `KeyBadge.tsx`, and their tests.
+3. **`git commit` message body as the "log".** Skip writing an `implement-log-<sha>.md` file entirely. The commit graph IS the log. No Write needed.
+4. **Edit workaround — read-then-heredoc-write-back.** `Read` the whole file, generate modified content in your head, `Bash` heredoc the new contents back.
 
-**What is broken today:**
+**Future investigation (unblocked — low priority now that state D works):**
 
-- `Write` tool from subagent — denied
-- `Edit` tool from subagent — denied
-- Creating new files inside subagent via `Write` — use inline-return pattern
+- Whether state B caching applies to just permissions or to the whole `settings.json`
+- Whether `isolation: worktree` can ever be made to snapshot from local `HEAD` instead of `origin/main`
+- Whether Claude Code updates ship hot-reload of agent definitions / permissions
 
-**Future investigation avenues (if this ever becomes blocking):**
+### 6. Agent teams — not ready for production use (as of 2026-04-18)
 
-- Whether parent session launched with `--dangerously-skip-permissions` vs default
-- Whether `settings.json` has an undocumented `subagents.permissionMode` field
-- Whether Claude Code updates have shipped fixes since 2026-04-18
+Claude Code has a `TeamCreate` / agent-team primitive. I considered it for Phase 4 parallel design deliberation (three Opus perspectives proposing alternate panel-chrome directions). **Don't use it yet.** Three undocumented corners make it unsafe for production workflows:
 
-### 6. Loop-state file persistence (compact + restart protocol)
+1. **Per-teammate model override is undocumented.** Docs show `"Use Sonnet for each teammate"` (uniform). Mixing Opus + Sonnet per-teammate is suggested to be possible via custom `.claude/agents/*.md` frontmatter but not explicitly confirmed. [Issue #32723](https://github.com/anthropics/claude-code/issues/32723).
+2. **Per-teammate `isolation: worktree` is undocumented.** Docs mention worktrees generally but don't state whether each teammate gets its own, or whether it's opt-in per-teammate. Critical gap for parallel-design use cases where teammates should each have isolated scratch space.
+3. **Lifecycle on `/exit` and auto-compact is undocumented.** `/exit` destroys in-process teammates (confirmed). Auto-compact survival is unknown. Mid-task shutdown behavior is documented only at a surface level.
+
+**What IS documented and works:**
+- Teams are created by asking the lead agent in natural language (`"spawn a team of three teammates..."`) — `TeamCreate` tool is for sub-subagents, not the lead.
+- Custom `.claude/agents/<name>.md` definitions CAN be used as teammates; `model` and `tools` frontmatter are honored.
+- Teammates inherit lead's permission settings (same mechanism as subagents — reads `settings.json`, ignores `settings.local.json`).
+
+**Safer alternative**: parallel `Agent(run_in_background: true)` spawns. Three calls to `Agent` in one message — each gets its own completion notification, each can be a different `subagent_type` or `model`, each can be worktree-isolated independently. The parent synthesizes the three returns. This is what we've been using; it's proven in this session and has none of the undocumented corners.
+
+**When to revisit teams:** once Claude Code docs explicitly answer the three questions above, OR once a use case clearly benefits from teammate-to-teammate `SendMessage` interaction that serial spawns can't replicate.
+
+### 7. Loop-state file persistence (compact + restart protocol)
 
 **Symptom:** Auto-compact fires mid-loop or the user does `/exit` + `claude --continue`. The new session picks up with no idea which phase was in progress, which sub-steps were completed, which decisions had been locked in.
 

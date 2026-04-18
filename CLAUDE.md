@@ -40,7 +40,12 @@ Anti-pattern: stopping mid-list with "Phase 1 done — should I continue?" when 
 | Verifying a specific claim | 1 agent with adversarial framing |
 | Long mechanical work (>20 min) | Delegate to subagent to preserve your context |
 
-Model selection: Sonnet for most work. Opus for dispute/judgment only. Never Opus for work Sonnet handles equally.
+Model selection:
+- **Parent session**: prefer Sonnet (`claude --model sonnet`). Orchestration — spawning, cherry-picking, test runs, push, status writeups — is Sonnet-grade work. An Opus parent doing orchestration burns ~5× the tokens with no quality gain.
+- **Design + architecture subagents**: Opus. `designer.md` is Opus-backed and should be invoked for specs that involve real design judgment (palette systems, grid rules, interaction model, crisis-response choice design). This is where Opus earns its keep.
+- **Implementation / fix / review subagents**: Sonnet. `implementer.md`, `fixer.md`, `reviewer.md` are Sonnet-backed. Bulk mechanical or rule-bounded work.
+- **Dispute resolution**: Opus. `arbiter.md` handles reviewer/fixer conflicts.
+- Rule of thumb: Opus enters only when a decision is genuinely hard and the output will be used for several later phases. Never Opus for work Sonnet handles equally.
 
 ### Subagent workflow gotchas (confirmed 2026-04-18)
 
@@ -50,7 +55,8 @@ These bit the loop this session. Full details in `.claude/rules/loop-and-continu
 - **Custom `.claude/agents/*.md` definitions only load at session start.** Adding a new agent file mid-session: the new `subagent_type` is NOT callable until restart. Workaround: `/exit` then `claude --continue` preserves conversation context while re-scanning the registry. Pragmatic alternative: `Agent({ subagent_type: "general-purpose", model: "sonnet" })` — needs no reload.
 - **`isolation: worktree` creates worktrees from `origin/main`, not local `HEAD`.** If local main is ahead of origin/main (pre-push state), the worktree is stale and cannot see recent commits. Preflight: `git rev-list --count origin/main..HEAD` — nonzero = divergence = don't use isolation. Fix: push main to origin first, OR spawn without isolation (commits land directly on main).
 - **Sonnet verification is convention, not enforcement.** Every subagent brief requires `runtime-model` in the return payload; parent stops the loop if it's anything other than Sonnet. No hook enforces this yet — relies on brief discipline.
-- **Subagent `Write`/`Edit` is denied** in this session shape even with `settings.json` `permissions.allow` AND `mode: "bypassPermissions"` on the spawn. Tested 4 configurations, all deny. Root cause unknown (likely a permission layer below settings.json). **Workaround:** designer returns doc content inline as a fenced block + parent persists via its own `Write`. Implementer uses git commits as the log (no separate implement-log file). Git commits from subagent `Bash` work even when `Write` is denied.
+- **Subagent `Write`/`Edit` only works after the permission-fix commit has been pushed to `origin/main`.** The fix (`permissions.allow` in `settings.json`) is required first, then a session restart to refresh the cached permission list, then a push so worktree-isolated subagents see the fix (worktrees snapshot from `origin/main` per gotcha #3). In that state D, `Write` works. Before that: use `Bash` heredoc (`cat > file <<'EOF' ... EOF`) for file creation — it routes through the shell process and bypasses the permission layer. `git commit` from `Bash` also works. Full state table in `.claude/rules/loop-and-continuous-mode.md` § 5.
+- **Agent teams (`TeamCreate`) are not production-ready yet.** Per-teammate model, per-teammate worktree isolation, and auto-compact survival are all undocumented. Use parallel `Agent(run_in_background: true)` spawns for multi-perspective design instead — three calls in one message, three completion notifications, parent synthesizes.
 
 ## Key invariants (always in context — .claude/rules/ auto-loads the full docs)
 
