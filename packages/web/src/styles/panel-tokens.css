@@ -103,32 +103,33 @@
   --hud-z-minimap: var(--z-minimap);  /* was 90 → 45 */
 
   /* Diplomacy relationship status palette — used by DiplomacyPanel badges.
-   * Deferred to Phase 4 warm-shift pass (per spec "Tokens intentionally NOT
-   * changed in Phase 1"). Values unchanged. */
-  --panel-status-war:        #dc2626; /* dark red */
-  --panel-status-hostile:    #ef4444; /* red */
-  --panel-status-unfriendly: #fb923c; /* orange */
-  --panel-status-neutral:    #9ca3af; /* grey */
-  --panel-status-friendly:   #60a5fa; /* blue */
-  --panel-status-helpful:    #4ade80; /* green */
+   * Phase 4.4 warm-shift: cool/neutral hues replaced by warm-palette
+   * equivalents anchored on --color-danger, --color-warning,
+   * --color-success, --color-info (already warm-shifted in palette-tokens.css). */
+  --panel-status-war:        var(--color-danger);        /* warm red   #c53030 */
+  --panel-status-hostile:    var(--color-danger-soft);   /* warm red   #e05252 */
+  --panel-status-unfriendly: var(--color-warning);       /* warm amber #c47a1a */
+  --panel-status-neutral:    var(--color-text-muted);    /* warm grey  #a89070 */
+  --panel-status-friendly:   var(--color-info);          /* warm blue  #4a72b8 */
+  --panel-status-helpful:    var(--color-success);       /* warm green #4a8c5a */
 
   /* Governor specialization palette — used by GovernorPanel badges.
-   * Deferred to Phase 4 warm-shift pass. Values unchanged. */
-  --panel-spec-economic:   #fbbf24; /* gold */
-  --panel-spec-military:   #ef4444; /* red */
-  --panel-spec-scientific: #3b82f6; /* blue */
-  --panel-spec-cultural:   #a855f7; /* purple */
-  --panel-spec-religious:  #f59e0b; /* amber */
-  --panel-spec-diplomatic: #10b981; /* green */
+   * Phase 4.4 warm-shift: anchored to semantic tokens from palette-tokens.css. */
+  --panel-spec-economic:   var(--color-gold);         /* amber  #fbbf24 — unchanged, already warm */
+  --panel-spec-military:   var(--color-danger-soft);  /* warm red #e05252 */
+  --panel-spec-scientific: var(--color-info);         /* warm blue #4a72b8 */
+  --panel-spec-cultural:   var(--panel-accent-purple); /* purple — no warm equivalent in palette; kept */
+  --panel-spec-religious:  var(--color-faith);        /* warm bronze-cream #c0a870 */
+  --panel-spec-diplomatic: var(--color-success-soft); /* warm green #6aaa7a */
 
-  /* ─── Accent colors (C11–C13) ─────────────────────────────────────
-   * Deferred to Phase 4 warm-shift pass. Values unchanged. */
-  --panel-accent-success:        #4ade80;
-  --panel-accent-success-bright: #22c55e;
-  --panel-accent-danger:         #ef4444;
-  --panel-accent-info:           #60a5fa;
-  --panel-accent-info-soft:      #93c5fd;
-  --panel-accent-info-bright:    #3b82f6;
+  /* ─── Accent colors (C11–C13) — Phase 4.4 warm-shift ──────────────
+   * Wired to semantic tokens where warm equivalents exist. */
+  --panel-accent-success:        var(--color-success-soft);   /* warm green #6aaa7a */
+  --panel-accent-success-bright: var(--color-success);        /* warm green #4a8c5a */
+  --panel-accent-danger:         var(--color-danger);         /* warm red   #c53030 */
+  --panel-accent-info:           var(--color-info-soft);      /* warm blue  #6a8ec8 */
+  --panel-accent-info-soft:      var(--color-info-soft);      /* warm blue  #6a8ec8 */
+  --panel-accent-info-bright:    var(--color-info);           /* warm blue  #4a72b8 */
   --panel-accent-gold-soft:      #fbbf24;     /* = --amber-400 = --color-gold */
   --panel-accent-gold-bright:    #fcd34d;     /* = --amber-300 = --color-gold-soft */
   --panel-accent-purple:         #a855f7;
@@ -137,16 +138,18 @@
   --panel-accent-pink:           #e599f7;
   --panel-accent-neutral:        #475569;
 
-  /* Achievement card surfaces — deferred to Phase 4 warm-shift pass. Values unchanged. */
-  --panel-card-earned-bg: rgba(88, 166, 255, 0.08);
-  --panel-card-locked-bg: rgba(139, 148, 158, 0.04);
+  /* Achievement card surfaces — Phase 4.4 warm-shift.
+   * Info-blue softened to warm-blue tint; locked gets a warm-neutral tint. */
+  --panel-card-earned-bg: rgba(74, 114, 184, 0.10);  /* --color-info at 10% */
+  --panel-card-locked-bg: rgba(74, 62, 40, 0.08);    /* --bronze-700 at 8% */
 
-  /* Muted surfaces — deferred to Phase 4 warm-shift pass. Values unchanged. */
-  --panel-muted-bg:        rgba(30, 41, 59, 0.50);
-  --panel-muted-bg-soft:   rgba(30, 41, 59, 0.30);
-  --panel-muted-bg-strong: rgba(15, 23, 42, 0.50);
-  --panel-muted-strong:    #475569;
-  --panel-muted-border:    rgba(71, 85, 105, 0.30);
+  /* Muted surfaces — Phase 4.4 warm-shift.
+   * Cool slate replaced with warm olive/bronze tints. */
+  --panel-muted-bg:        rgba(67, 59, 28, 0.50);   /* --olive-700 at 50% */
+  --panel-muted-bg-soft:   rgba(67, 59, 28, 0.30);   /* --olive-700 at 30% */
+  --panel-muted-bg-strong: rgba(26, 21, 16, 0.50);   /* --color-bg at 50% */
+  --panel-muted-strong:    var(--color-text-subtle);  /* warm #6e5c40 */
+  --panel-muted-border:    rgba(74, 62, 40, 0.30);   /* --color-border at 30% */
 
   /* Tech / civic tree node-state aliases. */
   --tech-state-researched: var(--panel-accent-success-bright);
