@@ -2,14 +2,14 @@
 title: UI master-plan loop state
 purpose: Persistent state for the event-driven UI master-plan loop. If auto-compact fires OR the session restarts, re-read this to know where we are.
 created: 2026-04-17
-updated: 2026-04-18 (post Phase 3 + full workflow audit)
+updated: 2026-04-19 (user-screenshot wave fixes + Phase 7 accessibility + deployed)
 ---
 
 # Loop state — READ THIS FIRST AFTER SESSION START
 
 ## Current position
 
-**HEAD: `48b2298` (origin synced).** Master plan through **Phase 6 complete**. All motion shipped: panel transitions, DramaModal fade, TopBar count-up, canvas endpoint-easing + combat lunge + damage numbers, age-transition screen shake. Plus CityPanel hero redesign (§3.4). 358/358 tests green.
+**HEAD: `2eb7662` (origin synced).** Master plan through **Phase 7 + deployed**. All motion shipped (Phase 6). Phase 7 accessibility complete (ARIA labels, focus rings, toolbar roles, aria-modal + aria-live, skip-nav + sr-only). User-reported screenshot issues fixed: fog-of-war same-turn reveal, canvas edge clipping, scrollbars warm-earth theme, SetupScreen redesign, city banner stacking, labels toggle, territory visibility. Live at https://cv.rehou.games/hex-empires/. 1911/1911 tests green.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -88,7 +88,14 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 6.6 | Age-transition screen shake + reduced-motion flash fallback | **DONE** | `48b2298` |
 | 3.4 | CityPanel hero redesign (hero production block + ledger + territory summary) | **DONE** | `dc46f65`, `f076e50`, `d683715` |
 | topbar-hex | Raw-hex cleanup in TopBar | **DONE** | `f911c4e` |
-| 7 | Accessibility + final polish | pending | ~3 commits |
+| wave-1 | Fog of war + canvas edge + scrollbars + city stacking + territory | **DONE** | `8f89ee2` |
+| wave-2 | SetupScreen redesign + labels toggle + camera centering | **DONE** | `af8c1b6`, `71da502`, `9761160` |
+| 7.1 | ARIA labels on icon-only buttons (TopBar + BottomBar) | **DONE** | `46de270` |
+| 7.2 | Focus rings via :focus-visible | **DONE** | `125f749` |
+| 7.3 | role=toolbar on TopBar + BottomBar | **DONE** | `ca2305d` |
+| 7.4 | aria-modal on PanelShell + aria-live on Notifications | **DONE** | `1a80ff8` |
+| 7.5 | Skip nav link + sr-only utility | **DONE** | `2eb7662` |
+| deploy | Production build + nginx block + scp to server | **DONE** | https://cv.rehou.games/hex-empires/ |
 
 ## Open questions from Phase 1 spec (surface to user before Phase 4)
 
