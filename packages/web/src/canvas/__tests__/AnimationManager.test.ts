@@ -170,15 +170,15 @@ describe('AnimationManager', () => {
       const anim = manager.createUnitMoveAnimation('u1', 'p1', 'warrior', path, 1000);
       manager.add(anim);
 
-      // At start (t=0, progress=0), should be at first hex
-      // easeInOutQuad(0)=0 → segmentProgress=0 → hexToPixel({q:0,r:0})
+      // At start (t=0), rawGlobal=0 → segmentProgress=0 → hexToPixel({q:0,r:0})
       let pos = manager.getUnitPosition(anim, anim.startTime);
       expect(pos).not.toBeNull();
       expect(pos!.x).toBeCloseTo(hexToPixel({ q: 0, r: 0 }).x, 5);
       expect(pos!.y).toBeCloseTo(hexToPixel({ q: 0, r: 0 }).y, 5);
 
-      // At t=500ms (progress=0.5 after easeInOutQuad), segmentProgress=1.0
-      // segmentIndex=1, segmentT=0 → returns hexToPixel({q:1,r:0})
+      // At t=500ms: rawGlobal=0.5, globalSegProgress=0.5*2=1.0
+      // segmentIndex=min(floor(1.0),1)=1, rawSegT=0 → easeOutQuad(0)=0
+      // → start of last segment = hexToPixel({q:1,r:0})
       pos = manager.getUnitPosition(anim, anim.startTime + 500);
       expect(pos).not.toBeNull();
       expect(pos!.x).toBeCloseTo(hexToPixel({ q: 1, r: 0 }).x, 5);
@@ -200,17 +200,19 @@ describe('AnimationManager', () => {
       const anim = manager.createUnitMoveAnimation('u1', 'p1', 'warrior', path, 1000);
       manager.add(anim);
 
-      // At t=500ms: easeInOutQuad(0.5)=0.5, segmentProgress=0.5, segmentT=0.5
-      // interpolates halfway between hexToPixel({q:0,r:0}) and hexToPixel({q:1,r:0})
+      // Phase 6.5 endpoint easing: for a single-segment path (which is both
+      // the first AND last segment), easeOutQuad applies.
+      // At t=500ms: rawGlobal=0.5, rawSegT=0.5, easeOutQuad(0.5)=0.75
+      // → position is 75% of the way from hex0 to hex1.
       const hex0 = hexToPixel({ q: 0, r: 0 });
       const hex1 = hexToPixel({ q: 1, r: 0 });
-      const expectedMidX = hex0.x + (hex1.x - hex0.x) * 0.5;
-      const expectedMidY = hex0.y + (hex1.y - hex0.y) * 0.5;
+      const expected75X = hex0.x + (hex1.x - hex0.x) * 0.75;
+      const expected75Y = hex0.y + (hex1.y - hex0.y) * 0.75;
 
       const pos = manager.getUnitPosition(anim, anim.startTime + 500);
       expect(pos).not.toBeNull();
-      expect(pos!.x).toBeCloseTo(expectedMidX, 5);
-      expect(pos!.y).toBeCloseTo(expectedMidY, 5);
+      expect(pos!.x).toBeCloseTo(expected75X, 5);
+      expect(pos!.y).toBeCloseTo(expected75Y, 5);
 
       // Start and end pixel positions are exactly on the hex centers
       const startPos = manager.getUnitPosition(anim, anim.startTime);

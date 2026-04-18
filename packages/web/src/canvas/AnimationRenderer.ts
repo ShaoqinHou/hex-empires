@@ -16,6 +16,8 @@ import type {
   ProductionCompleteAnimation,
   CityGrowthAnimation,
   FloatingDamageAnimation,
+  DamageNumberAnimation,
+  DefenderTintAnimation,
 } from './AnimationManager';
 import { AnimationManager } from './AnimationManager';
 import type { Camera } from './Camera';
@@ -63,7 +65,13 @@ export class AnimationRenderer {
     this.ctx.save();
     camera.applyTransform(this.ctx);
 
-    // Render animations in order: movement, projectiles, effects, overlays
+    // Render animations in order: movement, projectiles, effects, overlays.
+    // Note: defender-tint and combat-lunge are handled implicitly via
+    // manager.getCombatOffset / manager.getRedTintAlpha — they don't have
+    // dedicated renderX methods because they modify unit sprites rather than
+    // drawing independent visuals. combat-lunge and defender-tint have no
+    // visual body of their own here; the renderer queries the manager's
+    // offset/tint for the unit when drawing the unit sprite in renderUnitMove.
     for (const anim of animations) {
       switch (anim.type) {
         case 'unit-move':
@@ -93,8 +101,20 @@ export class AnimationRenderer {
         case 'floating-damage':
           this.renderFloatingDamage(anim, manager, currentTime);
           break;
+        case 'defender-tint':
+          this.renderDefenderTint(anim, manager, currentTime);
+          break;
+        // 'combat-lunge' and 'damage-number' are handled separately below
+        case 'combat-lunge':
+        case 'damage-number':
+          // No per-animation render pass needed here; handled in renderDamageNumbers
+          break;
       }
     }
+
+    // Damage numbers pass: drawn after units, before HUD overlays.
+    // Spec §4: translateY(0 → -24px) + fade-out over --motion-slow (400ms).
+    this.renderDamageNumbers(manager, currentTime);
 
     this.ctx.restore();
   }
@@ -110,13 +130,26 @@ export class AnimationRenderer {
     // Slight scale effect during movement
     const scale = 1 + Math.sin(progress * Math.PI) * 0.1;
 
+    // Apply any active combat lunge offset for this unit
+    const combatOffset = manager.getCombatOffset(anim.unitId, currentTime);
+
     this.ctx.save();
-    this.ctx.translate(pos.x, pos.y);
+    this.ctx.translate(pos.x + combatOffset.x, pos.y + combatOffset.y);
     this.ctx.scale(scale, scale);
 
     // Draw unit icon with unit type from animation data
-    // For now, use a generic unit icon - in a full implementation, you'd pass unit type
-    drawUnitIcon(this.ctx, 'warrior', 0, 0, animOpts(color));
+    drawUnitIcon(this.ctx, anim.unitTypeId, 0, 0, animOpts(color));
+
+    // Red tint overlay for defender hit flash (spec §4 row 11)
+    const tintAlpha = manager.getRedTintAlpha(anim.unitId, currentTime);
+    if (tintAlpha > 0) {
+      this.ctx.globalAlpha = tintAlpha;
+      this.ctx.fillStyle = '#ff2222';
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, HEX_SIZE * 0.6, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.globalAlpha = 1;
+    }
 
     // Movement trail (fading dots behind)
     const trailLength = 3;
@@ -461,6 +494,80 @@ export class AnimationRenderer {
     // Main text in bright red
     this.ctx.fillStyle = '#ff4444';
     this.ctx.fillText(label, 0, 0);
+
+    this.ctx.restore();
+  }
+
+  // ── Phase 6.5 additions ─────────────────────────────────────────────────
+
+  /**
+   * Render defender tint as a standalone pass for units not currently moving.
+   * (For moving units the tint is applied inside renderUnitMove.)
+   * This handles the case where a stationary unit is hit and has no move anim.
+   */
+  private renderDefenderTint(anim: DefenderTintAnimation, _manager: AnimationManager, currentTime: number): void {
+    const elapsed = currentTime - anim.startTime;
+    const raw = Math.max(0, Math.min(1, elapsed / anim.duration));
+    // Peak at t=0.3, fade to 0 at t=1
+    const shaped = raw < 0.3 ? (raw / 0.3) : (1 - (raw - 0.3) / 0.7);
+    // Quadratic ease-out: t*(2-t)
+    const alpha = shaped * (2 - shaped) * 0.55;
+    if (alpha <= 0) return;
+
+    const { x, y } = hexToPixel(anim.position);
+
+    this.ctx.save();
+    this.ctx.globalAlpha = alpha;
+    this.ctx.fillStyle = '#ff2222';
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, HEX_SIZE * 0.6, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  /**
+   * Render all active damage-number animations.
+   *
+   * Spec §4 row 12: translateY(0 → -24px) + fade-out over --motion-slow (400ms).
+   * Alpha = 1 - t/duration. Y offset = -24 * (t/duration).
+   * Drop shadow for readability at any background.
+   *
+   * Drawn after units, before HUD overlays (called at end of render()).
+   */
+  private renderDamageNumbers(manager: AnimationManager, currentTime: number): void {
+    const numbers = manager.getDamageNumbers();
+    if (numbers.length === 0) return;
+
+    this.ctx.save();
+
+    for (const anim of numbers) {
+      const elapsed = currentTime - anim.startTime;
+      const t = Math.max(0, Math.min(1, elapsed / anim.duration));
+
+      const alpha = 1 - t;
+      if (alpha <= 0.01) continue;
+
+      const { x, y } = hexToPixel(anim.position);
+      // -24px rise over the full duration (spec: "translateY -24px * (t/400ms)")
+      const yOffset = -24 * t;
+
+      this.ctx.save();
+      this.ctx.globalAlpha = alpha;
+      this.ctx.translate(x, y + yOffset);
+      this.ctx.font = 'bold 14px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // Drop shadow for readability
+      this.ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      this.ctx.fillText(anim.label, 1, 1);
+
+      // Main number colour: red for damage, green for heals
+      this.ctx.fillStyle = anim.amount >= 0 ? '#ff4444' : '#44ff88';
+      this.ctx.fillText(anim.label, 0, 0);
+
+      this.ctx.restore();
+    }
 
     this.ctx.restore();
   }

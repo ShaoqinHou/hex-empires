@@ -5,11 +5,24 @@ import { getYieldIcon } from '@web/assets';
 import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePanelManager } from '../panels/PanelManager';
 import { PANEL_REGISTRY } from '../panels/panelRegistry';
 import type { PanelId } from '../panels/panelRegistry';
 import { KeyBadge } from './KeyBadge';
+import { useCountUp } from '../hooks/useCountUp';
+
+/**
+ * Stagger delays for the yield-counter ripple effect (phase-6-motion-spec §4 open-question #3).
+ * gold=0ms, science=120ms, culture=240ms, production=360ms.
+ * Duration matches --motion-slow (400ms).
+ */
+const YIELD_STAGGER: Record<string, number> = {
+  gold:       0,
+  science:    120,
+  culture:    240,
+  production: 360,
+};
 
 /** Resource chips that always render even when zero — core economy signals. */
 const CORE_RESOURCES = new Set(['gold', 'science', 'culture']);
@@ -86,11 +99,11 @@ export function TopBar() {
 
       {/* Center: Resources */}
       <div className="flex items-center gap-3">
-        <ResourcePill icon="💰" iconSrc={getYieldIcon('gold')} label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" />
-        <ResourcePill icon="🔬" label="Sci" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" />
-        <ResourcePill icon="🎭" label="Cul" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" />
-        <ResourcePill icon="⛪" label="Fai" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" hideWhenZero />
-        <ResourcePill icon="🤝" label="Inf" value={player?.influence ?? 0} perTurn={0} color="var(--color-influence)" hideWhenZero />
+        <ResourcePill icon="💰" iconSrc={getYieldIcon('gold')} label="Gold" value={player?.gold ?? 0} perTurn={resourceChanges.goldPerTurn} color="var(--color-gold)" yieldKey="gold" />
+        <ResourcePill icon="🔬" label="Sci" value={player?.science ?? 0} perTurn={resourceChanges.sciencePerTurn} color="var(--color-science)" yieldKey="science" />
+        <ResourcePill icon="🎭" label="Cul" value={player?.culture ?? 0} perTurn={resourceChanges.culturePerTurn} color="var(--color-culture)" yieldKey="culture" />
+        <ResourcePill icon="⛪" label="Fai" value={player?.faith ?? 0} perTurn={0} color="var(--color-faith)" hideWhenZero yieldKey="faith" />
+        <ResourcePill icon="🤝" label="Inf" value={player?.influence ?? 0} perTurn={0} color="var(--color-influence)" hideWhenZero yieldKey="influence" />
 
         {/* Research progress */}
         {currentResearchTech && (
@@ -194,18 +207,44 @@ export function TopBar() {
 }
 
 function ResourcePill({
-  icon, iconSrc, label, value, perTurn, color, hideWhenZero = false,
+  icon, iconSrc, label, value, perTurn, color, hideWhenZero = false, yieldKey,
 }: {
   icon: string; iconSrc?: string; label: string; value: number; perTurn: number; color: string; hideWhenZero?: boolean;
+  /** Optional key used to look up the ripple stagger delay (e.g. "gold", "science"). */
+  yieldKey?: string;
 }) {
   // Hide non-core chips that have zero current value AND zero per-turn income.
   if (hideWhenZero && value === 0 && perTurn === 0) return null;
+
+  // Track the previous value to detect zero-crossing into negative (row 15).
+  const prevRef = useRef<number>(value);
+  const wasNonNegative = prevRef.current >= 0;
+  const isNegative = value < 0;
+  const zeroCross = isNegative && wasNonNegative;
+  prevRef.current = value;
+
+  const stagger = yieldKey !== undefined ? (YIELD_STAGGER[yieldKey] ?? 0) : 0;
+  const displayed = useCountUp(value, {
+    duration: 400, // --motion-slow
+    direction: zeroCross ? 'both' : 'up-only',
+    startDelayMs: stagger,
+  });
+
   return (
     <div className="flex items-center gap-1" title={`${label}: ${value} (${perTurn >= 0 ? '+' : ''}${perTurn}/turn)`}>
       {iconSrc
         ? <img src={iconSrc} alt={label} width={14} height={14} aria-hidden="true" />
         : <span className="text-xs">{icon}</span>}
-      <span className="font-mono text-xs font-bold" style={{ color }}>{value}</span>
+      {/* font-variant-numeric: tabular-nums mandatory per spec row 13. */}
+      <span
+        className={`font-mono text-xs font-bold${isNegative ? ' yield-negative' : ''}`}
+        style={{
+          color: isNegative ? 'var(--color-health-low)' : color,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {displayed}
+      </span>
       {perTurn !== 0 && (
         <span className="text-xs" style={{ color: perTurn >= 0 ? 'var(--color-food)' : 'var(--color-health-low)' }}>
           {perTurn >= 0 ? '+' : ''}{perTurn}
