@@ -82,6 +82,7 @@ interface GameContextValue {
   state: GameState | null;
   dispatch: (action: GameAction) => void;
   initGame: (config: GameSetupConfig) => void;
+  isProcessingAI: boolean;
   terrainRegistry: Registry<TerrainDef>;
   featureRegistry: Registry<TerrainFeatureDef>;
   unitRegistry: Registry<UnitDef>;
@@ -139,6 +140,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [combatPreviewPosition, setCombatPreviewPosition] = useState<{ x: number; y: number } | null>(null);
   const [lastValidation, setLastValidation] = useState<ValidationResult | null>(null);
   const [placementMode, setPlacementMode] = useState<{ readonly cityId: CityId; readonly buildingId: string } | null>(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
 
   const enterPlacementMode = useCallback((cityId: CityId, buildingId: string) => {
     setPlacementMode({ cityId, buildingId });
@@ -210,11 +212,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setLastValidation(null);
       }
 
-      // After END_TURN, process AI players, then start human turn
-      if (action.type === 'END_TURN') {
-        next = processAITurns(engine, next);
-      }
-
       // Notify the canvas layer so it can enqueue animations based on the
       // state diff. The bus decouples Provider from AnimationManager — the
       // canvas owns that dependency, not the provider.
@@ -228,6 +225,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       return next;
     });
+
+    // After END_TURN, show an AI-thinking indicator, then process AI turns
+    // in the next macrotask so React re-renders the loading state first.
+    if (action.type === 'END_TURN') {
+      setIsProcessingAI(true);
+      setTimeout(() => {
+        setState(prev => {
+          if (!prev) return prev;
+          return processAITurns(engine, prev);
+        });
+        setIsProcessingAI(false);
+      }, 50);
+    }
   }, []);
 
   const saveGame = useCallback(() => {
@@ -273,6 +283,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state,
     dispatch,
     initGame,
+    isProcessingAI,
     terrainRegistry: registries.terrainRegistry,
     featureRegistry: registries.featureRegistry,
     unitRegistry,
@@ -299,7 +310,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     placementMode,
     enterPlacementMode,
     exitPlacementMode,
-  }), [state, dispatch, initGame, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation, placementMode, enterPlacementMode, exitPlacementMode]);
+  }), [state, dispatch, initGame, isProcessingAI, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation, placementMode, enterPlacementMode, exitPlacementMode]);
 
   // Expose game state for E2E testing (Playwright can read window.__gameState)
   useEffect(() => {

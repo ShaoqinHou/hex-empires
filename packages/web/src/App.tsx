@@ -46,7 +46,7 @@ const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(
 const AchievementsPanel = lazy(() => import('./ui/panels/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
 
 function GameUI() {
-  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition } = useGame();
+  const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition, isProcessingAI } = useGame();
   const state = nullableState!; // GameUI only renders when state is non-null
   const { activePanel, openPanel, closePanel, togglePanel, isOpen } = usePanelManager();
   const [showYields, setShowYields] = useState(false);
@@ -252,6 +252,32 @@ function GameUI() {
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
         <LabelsToggle showLabels={showLabels} onToggle={() => setShowLabels(v => !v)} />
         <Minimap cameraRef={cameraRef} />
+
+        {/* AI turn loading overlay — shown while processAITurns runs asynchronously */}
+        {isProcessingAI && (
+          <div
+            className="fixed inset-0 flex items-center justify-center pointer-events-none"
+            style={{ zIndex: 500 }}
+            aria-live="polite"
+            aria-label="AI players are taking their turns"
+          >
+            <div
+              className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm"
+              style={{
+                backgroundColor: 'var(--panel-bg)',
+                border: '1px solid var(--panel-border)',
+                color: 'var(--panel-muted-color)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              }}
+            >
+              <span
+                className="inline-block w-3 h-3 rounded-full animate-pulse"
+                style={{ backgroundColor: 'var(--color-production)' }}
+              />
+              AI players are thinking\u2026
+            </div>
+          </div>
+        )}
 
         {/* Turn transition and notifications */}
         <TurnTransition />
