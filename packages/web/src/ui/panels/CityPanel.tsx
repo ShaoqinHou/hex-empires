@@ -58,6 +58,24 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const happinessColor = city.happiness >= 0 ? 'var(--color-food)' : 'var(--color-health-low)';
   const shellTitle = `${city.name} — ${settlementLabel} (Pop ${city.population})`;
 
+  // Worked-tiles summary — non-urban (no placed building) territory tiles
+  const territoryKeys = Array.from(city.territory as Iterable<string>);
+  const totalTiles = territoryKeys.length;
+  const workedTiles = territoryKeys.filter(key => {
+    const tile = state.map.tiles.get(key);
+    return tile && !tile.building;
+  });
+  const workedCount = workedTiles.length;
+  const terrainCounts = new Map<string, number>();
+  for (const key of workedTiles) {
+    const tile = state.map.tiles.get(key);
+    if (!tile) continue;
+    const terrainDef = state.config.terrains.get(tile.terrain);
+    const name = terrainDef?.name ?? tile.terrain;
+    terrainCounts.set(name, (terrainCounts.get(name) ?? 0) + 1);
+  }
+  const terrainTags = [...terrainCounts.entries()].sort((a, b) => b[1] - a[1]);
+
   // Yields for compact ledger — towns convert production to gold
   const ledgerFood = yields.food;
   const ledgerProduction = isTown ? 0 : yields.production;
@@ -195,6 +213,26 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
           )}
         </div>
       </div>
+
+      {/* ── Worked-Tiles Summary ─────────────────────────────────────── */}
+      {totalTiles > 0 && (
+        <div className="city-worked-tiles">
+          <div className="city-worked-tiles__label">Territory</div>
+          <div className="city-worked-tiles__summary">
+            <span className="city-worked-tiles__count">{workedCount}/{totalTiles}</span>
+            {' '}tiles worked
+          </div>
+          {terrainTags.length > 0 && (
+            <div className="city-worked-tiles__tags">
+              {terrainTags.map(([name, count]) => (
+                <span key={name} className="city-worked-tiles__tag">
+                  {name} ×{count}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Built Buildings */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
