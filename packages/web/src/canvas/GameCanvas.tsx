@@ -207,6 +207,21 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     };
   }, []);
 
+  // Re-center camera whenever a brand-new game loads (state.seed changes).
+  // The initialisation effect above only runs on mount, so switching from
+  // an old game to a new one would leave the camera wherever it was.
+  useEffect(() => {
+    const tiles = [...state.map.tiles.values()];
+    if (tiles.length === 0) return;
+    let sumX = 0, sumY = 0;
+    for (const tile of tiles) {
+      const px = hexToPixel(tile.coord);
+      sumX += px.x; sumY += px.y;
+    }
+    cameraRef.current.centerOn(sumX / tiles.length, sumY / tiles.length);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.seed]);
+
   // ── Animation event subscription ──
   //
   // Subscribe to the AnimationEventBus so we can enqueue animations after
@@ -851,26 +866,36 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
   // Edge-of-screen scrolling — triggers at WINDOW edges, not canvas edges.
   // This way the cursor must be at the very edge of the browser window
   // to scroll, which doesn't conflict with TopBar/BottomBar buttons.
+  //
+  // NOTE: `windowMouse` starts at (0,0). Without the `hasMouseMoved` guard
+  // both `mx <= EDGE` and `my <= EDGE` would fire on every animation frame
+  // before the first mousemove, panning the camera hundreds of px to the
+  // top-left before the user has touched anything (confirmed root-cause of
+  // the "all-ocean on load" bug — cam.x reached −279 346 in one test).
   useEffect(() => {
     const EDGE = 3; // pixels from window edge
     let edgeFrame: number;
+    let hasMouseMoved = false;
     const windowMouse = { x: 0, y: 0 };
 
     const trackMouse = (e: MouseEvent) => {
       windowMouse.x = e.clientX;
       windowMouse.y = e.clientY;
+      hasMouseMoved = true;
     };
 
     const edgeScroll = () => {
-      const mx = windowMouse.x;
-      const my = windowMouse.y;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      if (hasMouseMoved) {
+        const mx = windowMouse.x;
+        const my = windowMouse.y;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
-      if (mx <= EDGE) cameraRef.current.panByKey('ArrowLeft');
-      if (mx >= w - EDGE) cameraRef.current.panByKey('ArrowRight');
-      if (my <= EDGE) cameraRef.current.panByKey('ArrowUp');
-      if (my >= h - EDGE) cameraRef.current.panByKey('ArrowDown');
+        if (mx <= EDGE) cameraRef.current.panByKey('ArrowLeft');
+        if (mx >= w - EDGE) cameraRef.current.panByKey('ArrowRight');
+        if (my <= EDGE) cameraRef.current.panByKey('ArrowUp');
+        if (my >= h - EDGE) cameraRef.current.panByKey('ArrowDown');
+      }
 
       edgeFrame = requestAnimationFrame(edgeScroll);
     };
