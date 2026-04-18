@@ -27,6 +27,28 @@ const YIELD_STAGGER: Record<string, number> = {
 /** Resource chips that always render even when zero — core economy signals. */
 const CORE_RESOURCES = new Set(['gold', 'science', 'culture']);
 
+/**
+ * Convert a game turn number to an approximate in-world year string.
+ *
+ * Pacing (mirrors standard Civ pacing):
+ *   Antiquity  turns  1-40  →  4000 BCE … 100 BCE  (approx 97 yrs/turn)
+ *   Exploration  41-80  →  100 BCE … 1500 CE  (approx 40 yrs/turn)
+ *   Modern  81+  →  1500 CE onwards  (approx 25 yrs/turn)
+ */
+function turnToYear(turn: number): string {
+  if (turn <= 40) {
+    const yearBce = 4000 - Math.round((turn - 1) * 97.5);
+    if (yearBce > 0) return `${yearBce} BCE`;
+    return `${Math.abs(yearBce)} CE`;
+  }
+  if (turn <= 80) {
+    const ce = Math.round((turn - 40) * 40);
+    return `${ce} CE`;
+  }
+  const ce = 1600 + Math.round((turn - 80) * 25);
+  return `${ce} CE`;
+}
+
 export function TopBar() {
   const { state, dispatch, saveGame, loadGame } = useGameState();
   const { togglePanel } = usePanelManager();
@@ -80,16 +102,20 @@ export function TopBar() {
       }}
     >
 
-      {/* Left: Turn & Age */}
+      {/* Left: Turn, Year & Age */}
       <div className="flex items-center gap-3">
-        <div className="px-2.5 py-1 rounded"
+        <div className="px-2.5 py-1 rounded flex flex-col items-center"
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
             boxShadow: '0 2px 4px rgba(88, 166, 255, 0.3)',
             border: '1px solid var(--panel-turn-badge-border)',
+            minWidth: '4.5rem',
           }}>
-          <span className="text-xs font-bold" style={{ color: 'var(--panel-turn-badge-text)' }}>
+          <span className="text-xs font-bold leading-tight" style={{ color: 'var(--panel-turn-badge-text)' }}>
             Turn {state.turn}
+          </span>
+          <span className="text-[10px] leading-tight opacity-80" style={{ color: 'var(--panel-turn-badge-text)' }}>
+            {turnToYear(state.turn)}
           </span>
         </div>
         <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: 'var(--color-text-muted)' }}>
