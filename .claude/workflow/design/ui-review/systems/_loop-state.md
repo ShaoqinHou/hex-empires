@@ -77,8 +77,9 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 4.5-design | DramaModal shell spec (Opus designer, inline return) | **DONE** | (spec in `ui-review/phase-4.5-drama-modal-spec.md`) |
 | 4.5 | DramaModal shell + 4 ceremony panel migrations | **DONE** | `a655e7b`, `0708e85`, `f88869f`, `0368eac`, `ac03184`, `4b7f9e0` |
 | workflow-infra | Asset-swap guide + designer bash-escape fix + subagent timing tracker | **DONE** | `6734ce3`, `2a5468a` |
-| 4.5 | Dialog overhauls (age / crisis / victory / turn-summary) | pending | ~3 commits |
-| 5 | HUD polish (tooltip tiers, toast stack, minimap) | pending | ~4 commits |
+| 5-design | Notification system redesign spec | **DONE** | `82b91ff` (designer on disk — `phase-5-notifications-spec.md`) |
+| 5 | Notification system redesign (category registry + click-to-panel + auto-dismiss policy + requiresAction) | **DONE** | `cf229a3`, `0e0bac0`, `840daff`, `0fee3d4` |
+| timing-v2 | Spawn-event tracking + timeline reporter + sampler limitation doc | **DONE** | `b84178d`, `82b91ff` |
 | 6 | Motion (unit move, panel slide, resource tick, age fade) | pending | ~4 commits |
 | 7 | Accessibility + final polish | pending | ~3 commits |
 
