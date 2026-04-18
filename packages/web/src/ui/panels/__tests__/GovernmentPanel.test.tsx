@@ -13,6 +13,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import type { GameState, PlayerState } from '@hex/engine';
 import { createGameConfig } from '@hex/engine';
+import { PanelManagerProvider } from '../PanelManager';
 
 // ── vi.mock — stub the useGameState hook ──
 
@@ -111,7 +112,9 @@ describe('GovernmentPanel', () => {
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
 
     const { getByTestId, queryByTestId } = render(
-      <GovernmentPanel onClose={() => {}} />,
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
     );
 
     const empty = getByTestId('government-panel-current-empty');
@@ -125,7 +128,11 @@ describe('GovernmentPanel', () => {
     const player = makePlayer({ governmentId: 'classical_republic' });
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
 
-    const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
 
     const current = getByTestId('government-panel-current');
     expect(current.textContent).toContain('Classical Republic');
@@ -145,7 +152,11 @@ describe('GovernmentPanel', () => {
     });
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
 
-    const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
 
     expect(getByTestId('government-panel-slot-count-military').textContent)
       .toContain('0');
@@ -156,10 +167,10 @@ describe('GovernmentPanel', () => {
     expect(getByTestId('government-panel-slot-count-wildcard').textContent)
       .toContain('1');
 
-    // The economic slot at index 0 is filled with "serfdom" → "Serfdom".
+    // The economic slot at index 0 is filled with "serfdom" → card contains "Serfdom".
     expect(getByTestId('government-panel-slot-economic-0').textContent)
-      .toBe('Serfdom');
-    // The wildcard slot at index 0 is explicitly null → "—".
+      .toContain('Serfdom');
+    // The wildcard slot at index 0 is explicitly null → dashed-border placeholder showing "—".
     expect(getByTestId('government-panel-slot-wildcard-0').textContent)
       .toBe('—');
   });
@@ -173,7 +184,9 @@ describe('GovernmentPanel', () => {
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
 
     const { getByTestId, queryByTestId } = render(
-      <GovernmentPanel onClose={() => {}} />,
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
     );
 
     // `discipline` and `urban_planning` -- NO; urban_planning is unlocked
@@ -187,7 +200,11 @@ describe('GovernmentPanel', () => {
   it('renders a close button in the header', () => {
     setMockState(makeState());
 
-    const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
     // Migrated to PanelShell — close button is `panel-close-government`.
     expect(getByTestId('panel-close-government')).not.toBeNull();
   });
@@ -196,7 +213,11 @@ describe('GovernmentPanel', () => {
     setMockState(makeState());
 
     const onClose = vi.fn();
-    const { getByTestId } = render(<GovernmentPanel onClose={onClose} />);
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={onClose} />
+      </PanelManagerProvider>,
+    );
 
     fireEvent.click(getByTestId('panel-close-government'));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -204,7 +225,11 @@ describe('GovernmentPanel', () => {
 
   it('renders inside a PanelShell with the correct id and overlay priority', () => {
     setMockState(makeState());
-    const { getByTestId } = render(<GovernmentPanel onClose={() => {}} />);
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
     const shell = getByTestId('panel-shell-government');
     expect(shell.getAttribute('data-panel-priority')).toBe('overlay');
   });
