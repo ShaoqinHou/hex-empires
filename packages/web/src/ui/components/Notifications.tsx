@@ -241,7 +241,11 @@ export function Notifications({ onCityClick }: NotificationsProps) {
       position="fixed-corner"
       tier="detailed"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hud-padding-sm)', width: 320 }}>
+      <div
+        aria-live="polite"
+        aria-label="Game notifications"
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hud-padding-sm)', width: 320 }}
+      >
         {visible.length >= 3 && (
           <button
             type="button"

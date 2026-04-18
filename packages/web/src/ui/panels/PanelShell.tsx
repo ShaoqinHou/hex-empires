@@ -212,6 +212,7 @@ export function PanelShell({
         data-dismissible={dismissible ? 'true' : 'false'}
         data-open="true"
         role="dialog"
+        aria-modal="true"
         aria-label={title}
         style={containerStyle(priority, width)}
         onContextMenu={preventContextMenu}
