@@ -9,7 +9,7 @@ updated: 2026-04-18 (post Phase 3 + full workflow audit)
 
 ## Current position
 
-**HEAD: `bd65ba5` (origin synced).** Master plan through Phase 3 complete. About to continue to Phase 3.5 or Phase 4 post-reboot.
+**HEAD: `83af56a` (origin synced).** Master plan through Phase 3.5 complete. Workflow smoke test (post-reboot) PASSED end-to-end: Sonnet implementer + worktree isolation + state-D Write + 3-commit enforcement + dispute protocol all worked. Phase 4 designer deliberation spawned next.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -70,8 +70,8 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | audit-1 | Subagent permission fix (settings.json) + 5 gotcha docs | **DONE** | `54a71a4` |
 | audit-2 | Accept subagent-Write limitation + gotcha #6 + implementer no-isolation | **DONE** | `ee63d5a` |
 | audit-3 | Designer → Opus + gotcha #5 rewrite + teams gotcha + CLAUDE.md model rule | **DONE** | `bd65ba5` |
-| audit-4 | vitest/playwright separate + phase-in-flight lock + implementer brief tightening + _loop-state refresh + trap promotions | **PENDING (in-flight this session)** | — |
-| 3.5 | Game-state flow (new game / save-load / game-over) | pending | ~2 commits |
+| audit-4 | vitest/playwright separate + phase-in-flight lock + implementer brief tightening + _loop-state refresh + trap promotions | **DONE** | `2c90f73` |
+| 3.5 | SetupScreen/VictoryPanel palette-token cleanup (workflow smoke) | **DONE** | `006267e`, `3cf5978`, `83af56a` |
 | 4 | Panel chrome Civ-VII treatment (includes 0.3 ⋯ resolution) | pending | ~6 commits — use parallel designer spawns for visual direction |
 | 4.5 | Dialog overhauls (age / crisis / victory / turn-summary) | pending | ~3 commits |
 | 5 | HUD polish (tooltip tiers, toast stack, minimap) | pending | ~4 commits |
