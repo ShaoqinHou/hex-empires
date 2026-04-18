@@ -226,7 +226,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                 className="flex flex-col items-center gap-1 px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
                 style={{
                   background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                  color: '#fff',
+                  color: 'var(--color-text-heading)',
                   boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
                   border: '2px solid rgba(255, 255, 255, 0.2)',
                   minWidth: '240px',
@@ -262,7 +262,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
               className="px-12 py-4 rounded-lg font-bold text-lg tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
               style={{
                 background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                color: '#fff',
+                color: 'var(--color-text-heading)',
                 boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
                 border: '2px solid rgba(255, 255, 255, 0.2)',
                 minWidth: '240px',
@@ -360,7 +360,7 @@ function CivCard({
         className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
         style={{
           backgroundColor: civ.color ?? 'var(--color-border)',
-          color: '#fff',
+          color: 'var(--color-text-heading)',
         }}
       >
         {civ.name.charAt(0)}
