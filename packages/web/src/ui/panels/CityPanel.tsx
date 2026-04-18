@@ -4,6 +4,7 @@ import { useGameState } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
 import { PanelShell } from './PanelShell';
+import './city-panel.css';
 
 interface CityPanelProps {
   city: CityState;
@@ -19,7 +20,6 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const settlementCapPenalty = calculateSettlementCapPenalty(state, state.currentPlayerId);
   const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
   const effectiveFoodSurplus = applyHappinessPenalty(yields.food, cityHappiness) - foodConsumed;
-  const foodSurplus = yields.food - foodConsumed;
   const isTown = city.settlementType === 'town';
 
   // Check which buildings are placed on tiles
@@ -32,7 +32,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   }
 
   // Calculate city-specific resource changes for warnings
-  const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
+  void calculateResourceChanges(state, state.currentPlayerId);
   const isStarving = effectiveFoodSurplus < 0 && city.food < growthThreshold * 0.2;
   const hasGoldDeficit = isTown && (applyHappinessPenalty(yields.gold + yields.production, cityHappiness)) < 0;
 
@@ -56,35 +56,84 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
   const settlementLabel = isTown ? 'Town' : (city.isCapital ? 'Capital City' : 'City');
   const happinessColor = city.happiness >= 0 ? 'var(--color-food)' : 'var(--color-health-low)';
-  // PanelShell renders the title in its chrome bar; combine name +
-  // settlement type so the shell title matches the legacy header.
   const shellTitle = `${city.name} — ${settlementLabel} (Pop ${city.population})`;
+
+  // Yields for compact ledger — towns convert production to gold
+  const ledgerFood = yields.food;
+  const ledgerProduction = isTown ? 0 : yields.production;
+  const ledgerGold = yields.gold + (isTown ? yields.production : 0);
+  const ledgerScience = yields.science;
+  const ledgerCulture = yields.culture;
+  const ledgerFaith = yields.faith;
 
   return (
     <PanelShell id="city" title={shellTitle} onClose={onClose} priority="overlay" width="narrow">
-      {/* Happiness */}
-      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Happiness</h3>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-bold" style={{ color: happinessColor }}>
-            {city.happiness >= 0 ? '+' : ''}{city.happiness}
-          </span>
-          {city.happiness < 0 && (
-            <span className="text-xs" style={{ color: 'var(--color-health-low)' }}>
-              (-{Math.min(100, Math.abs(city.happiness) * 2)}% yields)
-            </span>
+
+      {/* ── Hero Production Block (cities only) ─────────────────────── */}
+      {!isTown && (
+        <div className="city-hero-production">
+          <div className="city-hero-production__label">
+            {currentProduction ? 'Building' : 'Production'}
+          </div>
+          {currentProduction ? (
+            <>
+              <div className="city-hero-production__name">
+                {getProductionName(currentProduction.id)}
+              </div>
+              <div className="city-hero-production__bar-row">
+                <HeroProgressBar
+                  value={city.productionProgress}
+                  max={getProductionCost(currentProduction.id)}
+                />
+                <span className="city-hero-production__pct">
+                  {Math.round((city.productionProgress / getProductionCost(currentProduction.id)) * 100)}%
+                </span>
+              </div>
+              <div className="city-hero-production__meta">
+                <span style={{ color: 'var(--panel-muted-color)' }}>
+                  {city.productionProgress}/{getProductionCost(currentProduction.id)}
+                </span>
+                {yields.production > 0 ? (
+                  <span style={{ color: 'var(--color-production)' }} className="font-bold">
+                    {Math.ceil((getProductionCost(currentProduction.id) - city.productionProgress) / yields.production)} turns
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--panel-muted-color)' }}>no production</span>
+                )}
+              </div>
+              <button
+                className="city-hero-production__change-btn"
+                onClick={() => {
+                  document.querySelector('[data-city-build-list]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }}
+              >
+                change build →
+              </button>
+            </>
+          ) : (
+            <div className="city-hero-production__empty">
+              <span style={{ color: 'var(--panel-muted-color)' }}>Nothing queued</span>
+              <button
+                className="city-hero-production__choose-btn"
+                onClick={() => {
+                  document.querySelector('[data-city-build-list]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }}
+              >
+                Choose what to build ↓
+              </button>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Upgrade to City button for towns */}
       {isTown && (
-        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
           <button
             className="w-full px-3 py-2 text-xs font-bold rounded cursor-pointer"
             style={{
               backgroundColor: playerGold >= 100 ? 'var(--color-gold)' : 'var(--color-bg)',
-              color: playerGold >= 100 ? 'var(--color-bg)' : 'var(--color-text-muted)',
+              color: playerGold >= 100 ? 'var(--color-bg)' : 'var(--panel-muted-color)',
               opacity: playerGold >= 100 ? 1 : 0.5,
             }}
             disabled={playerGold < 100}
@@ -95,100 +144,66 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         </div>
       )}
 
-      {/* Yields */}
-      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>Yields</h3>
-          {/* Warning icons for critical issues */}
-          <div className="flex items-center gap-1">
-            {isStarving && (
-              <div className="flex items-center gap-0.5" title="Starving! City will lose population">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-health-low)' }}>
-                  <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                  <line x1="6" y1="1" x2="6" y2="4" />
-                  <line x1="10" y1="1" x2="10" y2="4" />
-                  <line x1="14" y1="1" x2="14" y2="4" />
-                </svg>
-                <span className="text-[10px] font-bold" style={{ color: 'var(--color-health-low)' }}>STARVING</span>
-              </div>
-            )}
-            {hasGoldDeficit && (
-              <div className="flex items-center gap-0.5" title="Gold deficit - town not profitable">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-gold)' }}>
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span className="text-[10px] font-bold" style={{ color: 'var(--color-gold)' }}>DEFICIT</span>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-1 text-xs">
-          <YieldDisplay label="Food" value={yields.food} surplus={effectiveFoodSurplus} color="var(--color-food)" showWarning={isStarving} />
-          <YieldDisplay label="Production" value={isTown ? 0 : yields.production} color="var(--color-production)" />
-          <YieldDisplay label="Gold" value={yields.gold + (isTown ? yields.production : 0)} color="var(--color-gold)" showWarning={hasGoldDeficit} />
-          <YieldDisplay label="Science" value={yields.science} color="var(--color-science)" />
-          <YieldDisplay label="Culture" value={yields.culture} color="var(--color-culture)" />
-          <YieldDisplay label="Faith" value={yields.faith} color="var(--color-faith)" />
-        </div>
-        {isTown && (
-          <div className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Towns convert production to gold
-          </div>
-        )}
-      </div>
-
-      {/* Growth */}
-      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Growth</h3>
-        <div className="text-xs">
-          <ProgressBar value={city.food} max={growthThreshold} color={isStarving ? 'var(--color-health-low)' : 'var(--color-food)'} />
-          <span style={{ color: isStarving ? 'var(--color-health-low)' : 'var(--color-text-muted)' }}>
-            {city.food}/{growthThreshold} ({effectiveFoodSurplus >= 0 ? '+' : ''}{effectiveFoodSurplus}/turn)
-            {isStarving ? (
-              <span className="ml-1 font-bold">⚠️ Starving!</span>
-            ) : effectiveFoodSurplus > 0 ? (
-              <span className="ml-2 font-bold" style={{ color: 'var(--color-food)' }}>
-                {Math.ceil((growthThreshold - city.food) / effectiveFoodSurplus)} turns to grow
-              </span>
-            ) : null}
-          </span>
-        </div>
-      </div>
-
-      {/* Current Production — only for cities */}
-      {!isTown && (
-        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Production</h3>
-          {currentProduction ? (
-            <div className="text-xs">
-              <span className="font-bold">{getProductionName(currentProduction.id)}</span>
-              <ProgressBar value={city.productionProgress} max={getProductionCost(currentProduction.id)} color="var(--color-production)" />
-              <span style={{ color: 'var(--color-text-muted)' }}>
-                {city.productionProgress}/{getProductionCost(currentProduction.id)} ({yields.production}/turn)
-              </span>
-              {yields.production > 0 && (
-                <span className="ml-2 font-bold" style={{ color: 'var(--color-production)' }}>
-                  {Math.ceil((getProductionCost(currentProduction.id) - city.productionProgress) / yields.production)} turns remaining
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Nothing — choose below</span>
+      {/* ── Compact Resource Ledger ──────────────────────────────────── */}
+      <div className="city-resource-ledger">
+        <div className="city-resource-ledger__label">
+          Yields
+          {(isStarving || hasGoldDeficit) && (
+            <span className="ml-2 font-bold" style={{ color: 'var(--panel-accent-danger)' }}>
+              {isStarving ? '⚠ Starving' : '⚠ Deficit'}
+            </span>
           )}
         </div>
-      )}
+        <div className="city-resource-ledger__row">
+          <LedgerItem value={ledgerFood} delta={effectiveFoodSurplus} color="var(--color-food)" label="Food" />
+          {!isTown && <LedgerItem value={ledgerProduction} color="var(--color-production)" label="Prod" />}
+          <LedgerItem value={ledgerGold} color="var(--color-gold)" label="Gold" warn={hasGoldDeficit} />
+          <LedgerItem value={ledgerScience} color="var(--color-science)" label="Sci" />
+          <LedgerItem value={ledgerCulture} color="var(--color-culture)" label="Cul" />
+          {ledgerFaith > 0 && <LedgerItem value={ledgerFaith} color="var(--color-faith)" label="Faith" />}
+        </div>
+        {isTown && (
+          <div className="city-resource-ledger__note">Towns convert production to gold</div>
+        )}
+        {/* Growth bar inline with food */}
+        <div style={{ marginTop: 6 }}>
+          <div className="flex items-center justify-between text-xs mb-0.5">
+            <span style={{ color: 'var(--panel-muted-color)' }}>Growth</span>
+            <span style={{ color: isStarving ? 'var(--panel-accent-danger)' : 'var(--panel-muted-color)' }}>
+              {city.food}/{growthThreshold}
+              {isStarving ? (
+                <span className="ml-1 font-bold" style={{ color: 'var(--panel-accent-danger)' }}> ⚠ Starving!</span>
+              ) : effectiveFoodSurplus > 0 ? (
+                <span className="ml-1 font-bold" style={{ color: 'var(--color-food)' }}>
+                  +{effectiveFoodSurplus}/t — {Math.ceil((growthThreshold - city.food) / effectiveFoodSurplus)}t
+                </span>
+              ) : null}
+            </span>
+          </div>
+          <ProgressBar value={city.food} max={growthThreshold} color={isStarving ? 'var(--panel-accent-danger)' : 'var(--color-food)'} />
+        </div>
+        {/* Happiness inline */}
+        <div className="flex items-center gap-2 mt-2 text-xs">
+          <span style={{ color: 'var(--panel-muted-color)' }}>Happiness</span>
+          <span className="font-bold" style={{ color: happinessColor }}>
+            {city.happiness >= 0 ? '+' : ''}{city.happiness}
+          </span>
+          {city.happiness < 0 && (
+            <span style={{ color: 'var(--panel-accent-danger)' }}>
+              ({Math.min(100, Math.abs(city.happiness) * 2)}% yield penalty)
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Built Buildings */}
-      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+          <h3 className="text-xs uppercase tracking-wide" style={{ color: 'var(--panel-muted-color)' }}>
             Buildings ({city.buildings.length})
           </h3>
           {city.buildings.some(bId => !placedBuildings.has(bId)) && (
-            <span className="text-[10px] font-bold animate-pulse" style={{ color: '#f59e0b' }}>
+            <span className="text-[10px] font-bold animate-pulse" style={{ color: 'var(--panel-accent-gold)' }}>
               NEEDS PLACEMENT
             </span>
           )}
@@ -207,26 +222,21 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                   } ${isWonder ? 'shadow-lg' : ''}`}
                   style={{
                     backgroundColor: !isPlaced
-                      ? 'rgba(245, 158, 11, 0.12)'
+                      ? 'color-mix(in srgb, var(--panel-accent-gold) 12%, transparent)'
                       : isWonder
                       ? 'transparent'
                       : 'var(--color-bg)',
                     border: !isPlaced
-                      ? '1px solid #f59e0b'
+                      ? '1px solid var(--panel-accent-gold)'
                       : isWonder
-                      ? '2px solid #fbbf24'
-                      : '1px solid var(--color-border)',
+                      ? '2px solid var(--panel-accent-gold-bright)'
+                      : '1px solid var(--panel-border)',
                     background: isWonder && isPlaced
-                      ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)'
+                      ? 'linear-gradient(135deg, color-mix(in srgb, var(--panel-accent-gold) 15%, transparent) 0%, color-mix(in srgb, var(--panel-accent-gold) 15%, transparent) 100%)'
                       : undefined,
                   }}
                   onClick={() => {
                     if (isPlaced) return;
-                    // Built-but-unplaced (legacy / pre-cycle-1 production
-                    // queue items) — kick off the same placement flow we
-                    // use for fresh production picks. The canvas overlay
-                    // (cycle 4) handles the tile click + dispatches
-                    // PLACE_BUILDING; close so the map is visible.
                     enterPlacementMode(city.id, bId);
                     onClose();
                   }}
@@ -234,12 +244,12 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className={!isPlaced ? 'animate-pulse' : ''}>{isPlaced ? '✓' : '📍'}</span>
-                    <span className="truncate" style={{ color: !isPlaced ? '#f59e0b' : isWonder ? '#fbbf24' : 'var(--color-text)' }}>
+                    <span className="truncate" style={{ color: !isPlaced ? 'var(--panel-accent-gold)' : isWonder ? 'var(--panel-accent-gold-bright)' : 'var(--panel-text-color)' }}>
                       {isWonder && '🏆 '}
                       {bDef.name}
                     </span>
                     {!isPlaced && (
-                      <span className="ml-auto text-[9px] font-bold shrink-0 animate-pulse" style={{ color: '#f59e0b' }}>
+                      <span className="ml-auto text-[9px] font-bold shrink-0 animate-pulse" style={{ color: 'var(--panel-accent-gold)' }}>
                         PLACE!
                       </span>
                     )}
@@ -248,30 +258,30 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 </div>
               ) : (
                 <span key={bId} className="text-xs px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
+                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--panel-muted-color)' }}>
                   {bId}
                 </span>
               );
             })}
           </div>
         ) : (
-          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>None</span>
+          <span className="text-xs" style={{ color: 'var(--panel-muted-color)' }}>None</span>
         )}
       </div>
 
       {/* Specialist section — only for cities with population > 1 */}
       {!isTown && city.population > 1 && (
-        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>Specialists</h3>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
+          <h3 className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--panel-muted-color)' }}>Specialists</h3>
           <div className="flex items-center justify-between mb-1">
-            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <div className="text-xs" style={{ color: 'var(--panel-muted-color)' }}>
               {city.specialists}/{city.population - 1} assigned
             </div>
             <div className="text-[10px]" style={{ color: 'var(--color-science)' }}>
               +2🔬 +2🎭 per specialist
             </div>
           </div>
-          <div className="text-[10px] mb-2" style={{ color: 'var(--color-health-low)' }}>
+          <div className="text-[10px] mb-2" style={{ color: 'var(--panel-accent-danger)' }}>
             Each specialist: -1 happiness
           </div>
           <div className="flex items-center gap-2">
@@ -279,8 +289,8 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
               className="px-2 py-1 rounded text-xs font-bold cursor-pointer"
               style={{
                 backgroundColor: city.specialists > 0 ? 'var(--color-bg)' : 'var(--color-surface)',
-                color: city.specialists > 0 ? 'var(--color-text)' : 'var(--color-text-muted)',
-                border: '1px solid var(--color-border)',
+                color: city.specialists > 0 ? 'var(--panel-text-color)' : 'var(--panel-muted-color)',
+                border: '1px solid var(--panel-border)',
                 opacity: city.specialists > 0 ? 1 : 0.4,
               }}
               disabled={city.specialists === 0}
@@ -294,7 +304,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                   key={i}
                   className="w-3 h-3 rounded-full"
                   style={{
-                    backgroundColor: i < city.specialists ? 'var(--color-science)' : 'var(--color-border)',
+                    backgroundColor: i < city.specialists ? 'var(--color-science)' : 'var(--panel-border)',
                   }}
                 />
               ))}
@@ -303,8 +313,8 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
               className="px-2 py-1 rounded text-xs font-bold cursor-pointer"
               style={{
                 backgroundColor: city.specialists < city.population - 1 ? 'var(--color-bg)' : 'var(--color-surface)',
-                color: city.specialists < city.population - 1 ? 'var(--color-text)' : 'var(--color-text-muted)',
-                border: '1px solid var(--color-border)',
+                color: city.specialists < city.population - 1 ? 'var(--panel-text-color)' : 'var(--panel-muted-color)',
+                border: '1px solid var(--panel-border)',
                 opacity: city.specialists < city.population - 1 ? 1 : 0.4,
               }}
               disabled={city.specialists >= city.population - 1}
@@ -323,11 +333,11 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
       {/* Build/Purchase section */}
       <div className="px-4 py-2" data-city-build-list="">
-        <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
+        <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--panel-muted-color)' }}>
           {isTown ? 'Purchase' : 'Build'}
         </h3>
 
-        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Units</div>
+        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--panel-muted-color)' }}>Units</div>
         <div className="flex flex-col gap-1 mb-3">
           {availableUnits.map(u => {
             const goldCost = u.cost * 2;
@@ -338,8 +348,8 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 className="flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer"
                 style={{
                   backgroundColor: playerGold >= goldCost ? 'var(--color-bg)' : 'var(--color-surface)',
-                  color: playerGold >= goldCost ? 'var(--color-text)' : 'var(--color-text-muted)',
-                  border: '1px solid var(--color-border)',
+                  color: playerGold >= goldCost ? 'var(--panel-text-color)' : 'var(--panel-muted-color)',
+                  border: '1px solid var(--panel-border)',
                   opacity: playerGold >= goldCost ? 1 : 0.5,
                 }}
                 disabled={playerGold < goldCost}
@@ -367,7 +377,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
           })}
         </div>
 
-        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--color-text-muted)' }}>Buildings</div>
+        <div className="text-[10px] uppercase tracking-wide mb-1 font-bold" style={{ color: 'var(--panel-muted-color)' }}>Buildings</div>
         <div className="flex flex-col gap-1">
           {availableBuildings.map(b => {
             const goldCost = b.cost * 2;
@@ -378,8 +388,8 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                 className="flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer"
                 style={{
                   backgroundColor: playerGold >= goldCost ? 'var(--color-bg)' : 'var(--color-surface)',
-                  color: playerGold >= goldCost ? 'var(--color-text)' : 'var(--color-text-muted)',
-                  border: '1px solid var(--color-border)',
+                  color: playerGold >= goldCost ? 'var(--panel-text-color)' : 'var(--panel-muted-color)',
+                  border: '1px solid var(--panel-border)',
                   opacity: playerGold >= goldCost ? 1 : 0.5,
                 }}
                 disabled={playerGold < goldCost}
@@ -395,11 +405,6 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
                   compact
                   isActive={currentProduction?.id === b.id}
                   onClick={() => {
-                    // Cycle 5: buildings/wonders need a tile — launch placement
-                    // mode instead of dispatching SET_PRODUCTION immediately.
-                    // Close the panel so the player can see the map and pick
-                    // a tile; the canvas overlay (cycle 4) handles the click
-                    // and dispatches SET_PRODUCTION with the tile attached.
                     enterPlacementMode(city.id, b.id);
                     onClose();
                   }}
@@ -420,22 +425,27 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   );
 }
 
-function YieldDisplay({ label, value, surplus, color, showWarning }: { label: string; value: number; surplus?: number; color: string; showWarning?: boolean }) {
+function LedgerItem({
+  value, delta, color, label, warn,
+}: {
+  value: number;
+  delta?: number;
+  color: string;
+  label: string;
+  warn?: boolean;
+}) {
   return (
-    <div className="flex items-center gap-1">
-      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-      <span style={{ color }}>{value}</span>
-      {surplus !== undefined && (
-        <span style={{ color: surplus >= 0 ? 'var(--color-food)' : 'var(--color-health-low)', fontSize: '10px' }}>
-          ({surplus >= 0 ? '+' : ''}{surplus})
+    <div className="city-resource-ledger__item" title={label}>
+      <span className="city-resource-ledger__dot" style={{ backgroundColor: color }} />
+      <span className="city-resource-ledger__value" style={{ color: warn ? 'var(--panel-accent-danger)' : color }}>
+        {value}
+      </span>
+      {delta !== undefined && (
+        <span
+          className={`city-resource-ledger__delta ${delta >= 0 ? 'city-resource-ledger__delta--positive' : 'city-resource-ledger__delta--negative'}`}
+        >
+          {delta >= 0 ? '+' : ''}{delta}
         </span>
-      )}
-      {showWarning && (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-health-low)' }}>
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
       )}
     </div>
   );
@@ -444,7 +454,7 @@ function YieldDisplay({ label, value, surplus, color, showWarning }: { label: st
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = Math.min(100, (value / max) * 100);
   return (
-    <div className="w-full h-1.5 rounded-full my-1" style={{ backgroundColor: 'var(--color-bg)' }}>
+    <div className="w-full h-1.5 rounded-full my-1" style={{ backgroundColor: 'var(--panel-muted-bg)' }}>
       <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
     </div>
   );
