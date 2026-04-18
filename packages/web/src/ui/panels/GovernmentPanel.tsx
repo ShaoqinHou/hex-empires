@@ -3,32 +3,25 @@
  * state (M23 sibling of `ReligionPanel`, intentionally un-wired).
  *
  * Shows:
- *   • Current government — name + legacy-bonus description from
- *     `ALL_GOVERNMENTS` (if any), else a "No government adopted yet" hint.
+ *   • Current government — name + legacy-bonus description (if any),
+ *     else an EmptyState with a CTA to open the Civics Tree.
  *   • Policy slots     — per-category slot counts from the current
- *     government's `policySlots`, with each slot rendered as either the
- *     slotted policy's name or "—" (empty).
- *   • Available policies — the subset of `ALL_POLICIES` whose
- *     `unlockCivic` appears in the human player's `researchedCivics`,
- *     so the player can see what they could slot next.
+ *     government's `policySlots`, with each slot rendered as either a
+ *     filled card or a dashed-border empty placeholder.
+ *   • Available policies — the subset of policies whose `unlockCivic`
+ *     appears in the human player's `researchedCivics`.
  *
  * NOT wired into App.tsx. This panel is intentionally un-integrated —
  * it will slot into a full Government picker UI in a later cycle.
- *
- * Data-import note: `ALL_GOVERNMENTS` and `ALL_POLICIES` ARE re-exported
- * from `@hex/engine` (see `packages/engine/src/index.ts`, the M12
- * Integration barrel block), so we look up the current government and
- * policy definitions directly. If a future state ever holds an id that
- * is NOT in the catalogue (older save, data drift), we fall back to a
- * humanized form of the id (e.g. `classical_republic` → `Classical
- * Republic`), mirroring the fallback `ReligionPanel` uses for belief
- * ids. This keeps the panel render-safe under stale references.
  */
 
+import { usePanelManager } from './PanelManager';
 import { useGameState } from '../../providers/GameProvider';
 import type { PlayerState } from '@hex/engine';
 import type { GovernmentDef, PolicyCategory, PolicyDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
+import { EmptyState } from '../components/EmptyState';
+import { SectionHeader } from '../components/SectionHeader';
 
 interface GovernmentPanelProps {
   readonly onClose: () => void;
@@ -36,11 +29,6 @@ interface GovernmentPanelProps {
 
 // ── Helpers ──
 
-/**
- * Pick the first human player in turn order. The Government UI only
- * ever shows the local human's state — AI government picks surface
- * elsewhere (diplomacy, event log).
- */
 function findHumanPlayer(
   players: ReadonlyMap<string, PlayerState>,
 ): PlayerState | undefined {
@@ -50,11 +38,6 @@ function findHumanPlayer(
   return undefined;
 }
 
-/**
- * Convert a snake_case government / policy id into a human-readable
- * name. Used only as the catalogue-lookup fallback described in the
- * file header.
- */
 function humanizeId(id: string): string {
   return id
     .split('_')
@@ -62,12 +45,6 @@ function humanizeId(id: string): string {
     .join(' ');
 }
 
-/**
- * Describe an `EffectDef` as a short human-readable string. The engine
- * has no central formatter for `EffectDef`, so we render a best-effort
- * summary — enough for a read-only "what does this government give me"
- * line without reaching into yield-calc internals.
- */
 function describeLegacyBonus(g: GovernmentDef): string {
   const e = g.legacyBonus;
   switch (e.type) {
@@ -91,7 +68,6 @@ const CATEGORIES: ReadonlyArray<PolicyCategory> = [
   'wildcard',
 ];
 
-/** Fixed-order display title for a policy category. */
 function categoryLabel(cat: PolicyCategory): string {
   switch (cat) {
     case 'military':
@@ -105,23 +81,19 @@ function categoryLabel(cat: PolicyCategory): string {
   }
 }
 
-/** Resolve a slotted policy id to its display name, with fallback. */
 function policyName(id: string, policies: ReadonlyMap<string, PolicyDef>): string {
   const def = policies.get(id);
   return def?.name ?? humanizeId(id);
 }
 
-/** Resolve a government id to its def, or `null` if unknown. */
-function findGovernment(id: string | null | undefined, governments: ReadonlyMap<string, GovernmentDef>): GovernmentDef | null {
+function findGovernment(
+  id: string | null | undefined,
+  governments: ReadonlyMap<string, GovernmentDef>,
+): GovernmentDef | null {
   if (id === null || id === undefined) return null;
   return governments.get(id) ?? null;
 }
 
-/**
- * Read the slot-array for a given category from the player's
- * `slottedPolicies` map, padded/truncated to `slotCount`. Missing
- * entries become `null` (empty slot).
- */
 function slotArrayFor(
   player: PlayerState | undefined,
   cat: PolicyCategory,
@@ -135,140 +107,126 @@ function slotArrayFor(
   return out;
 }
 
-// Section style tokens — chrome (container/title/close) is provided by
-// PanelShell. We retain only the per-section inner divider styling.
-const SECTION_CLASSES = 'py-3';
-const SECTION_STYLE: React.CSSProperties = {
-  borderBottom: '1px solid var(--color-border)',
-};
+const DIVIDER: React.CSSProperties = { borderBottom: '1px solid var(--color-border)' };
 
 export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
   const { state } = useGameState();
+  const { openPanel } = usePanelManager();
 
   const player = findHumanPlayer(state.players);
   const government = findGovernment(player?.governmentId, state.config.governments);
   const researched = new Set<string>(player?.researchedCivics ?? []);
 
-  // Available-to-slot policies: `unlockCivic` already researched.
-  const availablePolicies: ReadonlyArray<PolicyDef> = [...state.config.policies.values()].filter((p) =>
-    researched.has(p.unlockCivic),
+  const availablePolicies: ReadonlyArray<PolicyDef> = [...state.config.policies.values()].filter(
+    (p) => researched.has(p.unlockCivic),
   );
 
   const lookupPolicyName = (id: string) => policyName(id, state.config.policies);
 
   return (
     <PanelShell id="government" title="Government" onClose={onClose} priority="overlay">
-      <div data-testid="government-panel">
-        {/* Current government section */}
-        <section
-          className={SECTION_CLASSES}
-          style={SECTION_STYLE}
-          data-testid="government-panel-current-section"
-        >
-          <h3
-            className="text-[10px] font-bold uppercase tracking-wider mb-1"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            Current Government
-          </h3>
+      <div data-testid="government-panel" className="flex flex-col gap-0">
+
+        {/* ── Current Government ── */}
+        <section className="py-3" style={DIVIDER} data-testid="government-panel-current-section">
+          <SectionHeader title="Current Government" />
           {government !== null ? (
-            <div data-testid="government-panel-current">
-              <div
-                className="text-sm font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
+            <div data-testid="government-panel-current" className="mt-1">
+              <div className="text-sm font-semibold" style={{ color: 'var(--panel-text-color)' }}>
                 {government.name}
               </div>
-              <div
-                className="text-xs leading-snug mt-1"
-                style={{ color: 'var(--color-text)' }}
-              >
+              <div className="text-xs leading-snug mt-1" style={{ color: 'var(--panel-text-color)' }}>
                 {government.description}
               </div>
               <div
                 className="text-xs leading-snug mt-1"
-                style={{ color: 'var(--color-text-muted)' }}
+                style={{ color: 'var(--panel-muted-color)' }}
                 data-testid="government-panel-legacy-bonus"
               >
                 Legacy bonus: {describeLegacyBonus(government)}
               </div>
             </div>
           ) : (
-            <div data-testid="government-panel-current-empty">
-              <div
-                className="text-sm"
-                style={{ color: 'var(--color-text)' }}
-              >
-                No government adopted yet
-              </div>
-              <div
-                className="text-xs leading-snug mt-1"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                Research a gating civic (Code of Laws, Mysticism, etc.)
-                to adopt your first government.
-              </div>
+            <div className="mt-1" data-testid="government-panel-current-empty">
+              <EmptyState
+                icon="⚖️"
+                title="No government adopted yet"
+                description="Research civic techs such as Code of Laws or Mysticism to unlock your first government form."
+                ctaLabel="Open Civics Tree"
+                onCtaClick={() => openPanel('civics')}
+              />
             </div>
           )}
         </section>
 
-        {/* Policy slots section */}
-        <section
-          className={SECTION_CLASSES}
-          style={SECTION_STYLE}
-          data-testid="government-panel-slots-section"
-        >
-          <h3
-            className="text-[10px] font-bold uppercase tracking-wider mb-2"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            Policy Slots
-          </h3>
+        {/* ── Policy Slots ── */}
+        <section className="py-3" style={DIVIDER} data-testid="government-panel-slots-section">
+          <SectionHeader title="Policy Slots" />
           {government !== null ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 mt-1">
               {CATEGORIES.map((cat) => {
                 const count = government.policySlots[cat];
                 const slots = slotArrayFor(player, cat, count);
                 return (
-                  <div
-                    key={cat}
-                    data-testid={`government-panel-slot-row-${cat}`}
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <span
-                        className="text-xs font-semibold"
-                        style={{ color: 'var(--color-text)' }}
-                      >
+                  <div key={cat} data-testid={`government-panel-slot-row-${cat}`}>
+                    <div className="flex items-baseline justify-between mb-1">
+                      <span className="text-xs font-semibold" style={{ color: 'var(--panel-text-color)' }}>
                         {categoryLabel(cat)}
                       </span>
                       <span
                         className="text-[10px]"
-                        style={{ color: 'var(--color-text-muted)' }}
+                        style={{ color: 'var(--panel-muted-color)' }}
                         data-testid={`government-panel-slot-count-${cat}`}
                       >
                         {count} slot{count === 1 ? '' : 's'}
                       </span>
                     </div>
                     {count === 0 ? (
-                      <div
-                        className="text-[10px] italic"
-                        style={{ color: 'var(--color-text-muted)' }}
-                      >
+                      <div className="text-[10px] italic" style={{ color: 'var(--panel-muted-color)' }}>
                         (none)
                       </div>
                     ) : (
-                      <ul className="mt-0.5 flex flex-col gap-0.5">
-                        {slots.map((slot, idx) => (
-                          <li
-                            key={`${cat}-${idx}`}
-                            className="text-xs"
-                            style={{ color: 'var(--color-text)' }}
-                            data-testid={`government-panel-slot-${cat}-${idx}`}
-                          >
-                            {slot !== null ? lookupPolicyName(slot) : '—'}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="flex flex-col gap-1">
+                        {slots.map((slot, idx) =>
+                          slot !== null ? (
+                            <div
+                              key={`${cat}-${idx}`}
+                              className="flex items-center justify-between px-2 py-1 rounded text-xs"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                                border: '1px solid var(--color-accent)',
+                              }}
+                              data-testid={`government-panel-slot-${cat}-${idx}`}
+                            >
+                              <span style={{ color: 'var(--panel-text-color)' }}>
+                                {lookupPolicyName(slot)}
+                              </span>
+                              <span
+                                className="text-[9px] uppercase tracking-wider px-1 ml-1"
+                                style={{
+                                  color: 'var(--panel-muted-color)',
+                                  border: '1px solid var(--panel-border)',
+                                  borderRadius: '2px',
+                                }}
+                              >
+                                {cat}
+                              </span>
+                            </div>
+                          ) : (
+                            <div
+                              key={`${cat}-${idx}-empty`}
+                              className="px-2 py-1 rounded text-xs"
+                              style={{
+                                border: '1px dashed var(--panel-border)',
+                                color: 'var(--panel-muted-color)',
+                              }}
+                              data-testid={`government-panel-slot-${cat}-${idx}`}
+                            >
+                              —
+                            </div>
+                          ),
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -276,8 +234,8 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
             </div>
           ) : (
             <div
-              className="text-xs"
-              style={{ color: 'var(--color-text-muted)' }}
+              className="text-xs mt-1"
+              style={{ color: 'var(--panel-muted-color)' }}
               data-testid="government-panel-slots-empty"
             >
               Adopt a government to unlock policy slots.
@@ -285,40 +243,34 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
           )}
         </section>
 
-        {/* Available policies section */}
-        <section
-          className={SECTION_CLASSES}
-          data-testid="government-panel-available-section"
-        >
-          <h3
-            className="text-[10px] font-bold uppercase tracking-wider mb-1"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            Available Policies
-          </h3>
+        {/* ── Available Policies ── */}
+        <section className="py-3" data-testid="government-panel-available-section">
+          <SectionHeader title="Available Policies" />
           {availablePolicies.length === 0 ? (
             <div
-              className="text-xs"
-              style={{ color: 'var(--color-text-muted)' }}
+              className="text-xs mt-1"
+              style={{ color: 'var(--panel-muted-color)' }}
               data-testid="government-panel-available-empty"
             >
               Research more civics to unlock policies.
             </div>
           ) : (
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-1 mt-1">
               {availablePolicies.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-baseline justify-between text-xs"
+                  className="flex items-center justify-between text-xs px-2 py-1 rounded"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--panel-bg) 50%, transparent)' }}
                   data-testid={`government-panel-available-${p.id}`}
                 >
-                  <span style={{ color: 'var(--color-text)' }}>{p.name}</span>
+                  <span style={{ color: 'var(--panel-text-color)' }}>{p.name}</span>
                   <span
-                    className="text-[10px] uppercase tracking-wider px-1"
+                    className="text-[9px] uppercase tracking-wider px-1 ml-2"
                     style={{
-                      color: 'var(--color-text-muted)',
-                      border: '1px solid var(--color-border)',
+                      color: 'var(--panel-muted-color)',
+                      border: '1px solid var(--panel-border)',
                       borderRadius: '2px',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {p.category}
