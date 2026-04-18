@@ -214,7 +214,7 @@ function GameUI() {
             <AudioSettingsPanel onClose={closePanel} />
           )}
           {activePanel === 'victory' && (
-            <VictoryPanel onClose={closePanel} />
+            <VictoryPanel onResolve={closePanel} />
           )}
           {activePanel === 'crisis' && (
             <CrisisPanel onResolve={closePanel} />
