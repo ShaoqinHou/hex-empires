@@ -2,7 +2,7 @@ import { useGameState } from '../../providers/GameProvider';
 // Phase 4.3: gold rule + chrome bar tokens.
 import './chrome-bars.css';
 import { getYieldIcon } from '@web/assets';
-import { ALL_TECHNOLOGIES, ALL_CIVICS, calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
+import { calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState, useRef } from 'react';
@@ -64,11 +64,11 @@ export function TopBar() {
   const player = state.players.get(state.currentPlayerId);
 
   const currentResearchTech: TechnologyDef | undefined = player?.currentResearch
-    ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
+    ? (state.config.technologies.get(player.currentResearch) ?? undefined)
     : undefined;
 
   const currentCivicDef: CivicDef | undefined = player?.currentCivic
-    ? ALL_CIVICS.find(c => c.id === player.currentCivic)
+    ? (state.config.civics.get(player.currentCivic) ?? undefined)
     : undefined;
 
   const resourceChanges = calculateResourceChanges(state, state.currentPlayerId);
