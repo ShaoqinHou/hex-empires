@@ -18,17 +18,17 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  melee: '#e53935',
-  ranged: '#42a5f5',
-  cavalry: '#ff9800',
-  siege: '#78909c',
-  naval: '#26c6da',
-  civilian: '#66bb6a',
-  religious: '#ab47bc',
+  melee:    'var(--panel-unit-melee)',
+  ranged:   'var(--panel-unit-ranged)',
+  cavalry:  'var(--panel-unit-cavalry)',
+  siege:    'var(--panel-unit-siege)',
+  naval:    'var(--panel-unit-naval)',
+  civilian: 'var(--panel-unit-civilian)',
+  religious: 'var(--panel-unit-religious)',
 };
 
 export function UnitCard({ unit, isActive, compact, onClick }: UnitCardProps) {
-  const catColor = CATEGORY_COLORS[unit.category] ?? '#999';
+  const catColor = CATEGORY_COLORS[unit.category] ?? 'var(--panel-unit-unknown)';
   const catIcon = CATEGORY_ICONS[unit.category] ?? '?';
 
   if (compact) {
@@ -115,7 +115,7 @@ function StatBadge({ label, value, color, active }: { label: string; value: numb
     <div className="text-center rounded px-1 py-0.5"
       style={{ backgroundColor: active ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)' }}>
       <div className="text-[9px]" style={{ color: active ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>{label}</div>
-      <div className="text-xs font-bold" style={{ color: active ? '#fff' : color }}>{value}</div>
+      <div className="text-xs font-bold" style={{ color: active ? 'var(--panel-text-bright)' : color }}>{value}</div>
     </div>
   );
 }

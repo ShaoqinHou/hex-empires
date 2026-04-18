@@ -516,10 +516,10 @@ function DetailedTooltipBody({
               style={{
                 backgroundColor:
                   resource.type === 'luxury'
-                    ? 'var(--color-resource-luxury, #ffd54f)'
+                    ? 'var(--hud-resource-luxury)'
                     : resource.type === 'strategic'
-                    ? 'var(--color-resource-strategic, #9e9e9e)'
-                    : 'var(--color-resource-bonus, #66bb6a)',
+                    ? 'var(--hud-resource-strategic)'
+                    : 'var(--hud-resource-bonus)',
               }}
             />
             <span className="font-semibold" style={{ color: 'var(--hud-tooltip-resource)' }}>{resource.name}</span>

@@ -164,6 +164,32 @@
   --panel-button-diplomacy: #ba68c8;  /* purple */
   --panel-button-age:       #ffd54f;  /* gold — dark-text variant */
 
+  /* ── Unit category accent colors ────────────────────────────────────
+   * Used by UnitCard, unit-detail HUD tooltips, and any other surface
+   * that encodes unit role visually. Game-data display — intentionally
+   * vivid against the dark chrome background. */
+  --panel-unit-melee:    #e53935;   /* combat red */
+  --panel-unit-ranged:   #42a5f5;   /* archer blue */
+  --panel-unit-cavalry:  #ff9800;   /* cavalry orange */
+  --panel-unit-siege:    #78909c;   /* siege grey-blue */
+  --panel-unit-naval:    #26c6da;   /* naval cyan */
+  --panel-unit-civilian: #66bb6a;   /* civilian green */
+  --panel-unit-religious: #ab47bc;  /* religious purple */
+  --panel-unit-unknown:  #999999;   /* fallback for unknown category */
+
+  /* ── Bright text token ───────────────────────────────────────────────
+   * White text on vivid-colored button surfaces (resume/start game buttons,
+   * active-state labels on colored badges). */
+  --panel-text-bright: #ffffff;
+
+  /* ── SetupScreen primary button gradient endpoints ───────────────────
+   * Vivid green resume-game button + amber-brown start-game gradient end.
+   * Kept separate from in-game chrome tokens because SetupScreen is
+   * intentionally more vibrant than the battlefield UI. */
+  --panel-setup-resume-from: #22c55e;   /* bright green start */
+  --panel-setup-resume-to:   #16a34a;   /* dark green end */
+  --panel-setup-start-to:    #b87830;   /* warm amber-brown gradient end */
+
   /* ─── Phase 4.5 — DramaModal tokens ────────────────────────────────────
    * Used by DramaModal.tsx for ceremony modals (AgeTransition, Crisis,
    * Victory, TurnSummary). Five new tokens + @media overrides below :root.

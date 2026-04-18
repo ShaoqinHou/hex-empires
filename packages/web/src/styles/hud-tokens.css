@@ -123,4 +123,12 @@
   /* ── Floating controls ─────────────────────────────────────────────
    * Z-index now aliased to --hud-z-floating-control above. */
   --hud-floating-control-offset-bottom: 14rem;
+
+  /* ── Resource type dot colors ────────────────────────────────────────
+   * Used in TooltipOverlay to color the small resource-type indicator
+   * beside the resource name (luxury = gold, strategic = grey,
+   * bonus = green). */
+  --hud-resource-luxury:    #ffd54f;   /* warm gold */
+  --hud-resource-strategic: #9e9e9e;   /* neutral grey */
+  --hud-resource-bonus:     #66bb6a;   /* soft green */
 }

@@ -38,10 +38,10 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
           color: isActive
             ? 'var(--color-bg)'
             : isWonder
-            ? '#fbbf24'
+            ? 'var(--panel-accent-gold)'
             : 'var(--color-text)',
           border: isWonder
-            ? '2px solid #fbbf24'
+            ? '2px solid var(--panel-accent-gold)'
             : `1px solid ${isActive ? 'var(--color-accent)' : isBuilt ? 'var(--color-science)' : 'var(--color-border)'}`,
           opacity: isBuilt && !isActive ? 0.7 : 1,
           boxShadow: isWonder ? '0 2px 8px rgba(251, 191, 36, 0.3)' : 'none',
@@ -101,7 +101,7 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
             return (
               <div key={key} className="flex items-center gap-1 text-xs">
                 <span>{yi?.icon}</span>
-                <span style={{ color: isActive ? '#fff' : yi?.color }}>+{val}</span>
+                <span style={{ color: isActive ? 'var(--panel-text-bright)' : yi?.color }}>+{val}</span>
               </div>
             );
           })}
