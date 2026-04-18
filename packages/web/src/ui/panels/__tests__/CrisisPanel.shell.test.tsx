@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
 /**
- * CrisisPanel — smoke test for the PanelShell migration (audit batch 3B).
+ * CrisisPanel — smoke test for the DramaModal migration (Phase 4.5 Step 3).
  *
- * CrisisPanel routes through PanelManager. It accepts an `onClose` prop
- * (wired to `closePanel` in App.tsx) and uses `dismissible={false}` — the
- * X button is not rendered; only choice buttons can advance the panel.
- * After resolution, `onClose` is called programmatically.
+ * CrisisPanel routes through PanelManager. It accepts an `onResolve` prop
+ * (wired to `closePanel` in App.tsx). DramaModal has no X button; only
+ * choice buttons can advance the panel. After resolution, `onResolve` is
+ * called programmatically.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -26,6 +26,11 @@ vi.mock('../../../providers/GameProvider', () => ({
     }
     return { state: mockRef.state, dispatch: mockRef.dispatch };
   },
+}));
+
+// DramaModal calls useViewportClass which requires window.matchMedia.
+vi.mock('../../../hooks/useViewportClass', () => ({
+  useViewportClass: () => 'standard',
 }));
 
 import { CrisisPanel } from '../CrisisPanel';
@@ -64,36 +69,46 @@ afterEach(() => {
   mockRef.dispatch = vi.fn();
 });
 
-describe('CrisisPanel (PanelShell)', () => {
-  it('renders inside PanelShell with the crisis name as title when a crisis is active', () => {
+describe('CrisisPanel (DramaModal)', () => {
+  it('renders inside DramaModal with the crisis name as title when a crisis is active', () => {
     mockRef.state = makeStateWithCrisis();
-    const { getByTestId, getAllByText } = render(
+    const { getByTestId, getByRole } = render(
       <PanelManagerProvider initialPanel="crisis">
-        <CrisisPanel onClose={() => {}} />
+        <CrisisPanel onResolve={() => {}} />
       </PanelManagerProvider>
     );
     expect(getByTestId('panel-shell-crisis')).toBeTruthy();
-    // The crisis name appears in both the shell's title bar and the body h1.
-    expect(getAllByText('Plague').length).toBeGreaterThanOrEqual(1);
+    // DramaModal uses role="dialog" with aria-label = title
+    expect(getByRole('dialog', { name: 'Plague' })).toBeTruthy();
   });
 
-  it('does not render a close button (dismissible=false)', () => {
+  it('does not render a close button (DramaModal has no X)', () => {
     mockRef.state = makeStateWithCrisis();
     const { queryByTestId } = render(
       <PanelManagerProvider initialPanel="crisis">
-        <CrisisPanel onClose={() => {}} />
+        <CrisisPanel onResolve={() => {}} />
       </PanelManagerProvider>
     );
-    // PanelShell only renders data-testid="panel-close-crisis" when dismissible=true.
+    // DramaModal never renders data-testid="panel-close-crisis"
     expect(queryByTestId('panel-close-crisis')).toBeNull();
   });
 
-  it('dispatches RESOLVE_CRISIS and calls onClose when a choice button is clicked', () => {
+  it('renders choice buttons from activeCrisis.choices', () => {
     mockRef.state = makeStateWithCrisis();
-    const onClose = vi.fn();
     const { getByText } = render(
       <PanelManagerProvider initialPanel="crisis">
-        <CrisisPanel onClose={onClose} />
+        <CrisisPanel onResolve={() => {}} />
+      </PanelManagerProvider>
+    );
+    expect(getByText('Quarantine cities')).toBeTruthy();
+  });
+
+  it('dispatches RESOLVE_CRISIS and calls onResolve when a choice button is clicked', () => {
+    mockRef.state = makeStateWithCrisis();
+    const onResolve = vi.fn();
+    const { getByText } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onResolve={onResolve} />
       </PanelManagerProvider>
     );
     fireEvent.click(getByText('Quarantine cities'));
@@ -102,6 +117,16 @@ describe('CrisisPanel (PanelShell)', () => {
       crisisId: 'plague',
       choice: 'quarantine',
     });
-    expect(onClose).toHaveBeenCalledOnce();
+    expect(onResolve).toHaveBeenCalledOnce();
+  });
+
+  it('renders the turn subtitle', () => {
+    mockRef.state = makeStateWithCrisis();
+    const { getByText } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onResolve={() => {}} />
+      </PanelManagerProvider>
+    );
+    expect(getByText('Turn 3')).toBeTruthy();
   });
 });

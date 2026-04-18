@@ -217,7 +217,7 @@ function GameUI() {
             <VictoryPanel onClose={closePanel} />
           )}
           {activePanel === 'crisis' && (
-            <CrisisPanel onClose={closePanel} />
+            <CrisisPanel onResolve={closePanel} />
           )}
           {activePanel === 'tradeRoutes' && (
             <TradeRoutesPanel onClose={closePanel} />

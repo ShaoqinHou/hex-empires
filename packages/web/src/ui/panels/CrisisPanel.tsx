@@ -1,12 +1,13 @@
 import { useGameState } from '../../providers/GameProvider';
 import type { CrisisState } from '@hex/engine';
-import { PanelShell } from './PanelShell';
+import { DramaModal } from './DramaModal';
+import type { DramaChoice } from './DramaModal';
 
 interface CrisisPanelProps {
-  readonly onClose: () => void;
+  readonly onResolve: () => void;
 }
 
-export function CrisisPanel({ onClose }: CrisisPanelProps) {
+export function CrisisPanel({ onResolve }: CrisisPanelProps) {
   const { state, dispatch } = useGameState();
   const activeCrisis: CrisisState | undefined = state.crises.find(c => c.active);
 
@@ -19,55 +20,56 @@ export function CrisisPanel({ onClose }: CrisisPanelProps) {
     // Close the panel after resolution — the engine will clear the active
     // crisis; the useEffect in App.tsx will not re-open since the list is
     // now empty.
-    onClose();
+    onResolve();
   };
 
-  // Crises require an explicit choice — the panel cannot be dismissed by
-  // ESC or the backdrop. dismissible={false} removes the X button and
-  // inerts the backdrop click, matching AgeTransitionPanel's pattern.
-  return (
-    <PanelShell id="crisis" title={activeCrisis.name} onClose={onClose} priority="modal" dismissible={false}>
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-gold)' }}>
-          {activeCrisis.name}
-        </h1>
+  // Map choices to DramaChoice[] — all secondary tone (player picks one option).
+  const dramaChoices: ReadonlyArray<DramaChoice> = activeCrisis.choices.map(c => ({
+    id: c.id,
+    label: c.text,
+    tone: 'secondary' as const,
+    onSelect: () => handleChoice(c.id),
+  }));
 
-        <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-          {/* Use the name as a proxy; full description is in the def.
-              We store the crisis name in CrisisState. The description from the def
-              is used during creation — for the panel we show the choices. */}
-          {getDescription(activeCrisis.id)}
-        </p>
-
-        <div className="space-y-3">
-          {activeCrisis.choices.map(choice => (
-            <button
-              key={choice.id}
-              className="w-full px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition-colors text-left"
-              style={{
-                backgroundColor: 'var(--color-bg)',
-                color: 'var(--color-text)',
-                border: '1px solid var(--color-border)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-              }}
-              onClick={() => handleChoice(choice.id)}
-            >
-              {choice.text}
-            </button>
-          ))}
-        </div>
-
-        <p className="text-xs mt-4" style={{ color: 'var(--color-text-muted)' }}>
-          Turn {activeCrisis.turn}
-        </p>
-      </div>
-    </PanelShell>
+  // Hero glyph — picks a contextual emoji per crisis id.
+  const heroGlyph = getCrisisGlyph(activeCrisis.id);
+  const heroNode = (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '80px', lineHeight: 1.1 }}>{heroGlyph}</div>
+    </div>
   );
+
+  // Body — flavor description text.
+  const bodyNode = (
+    <p style={{ color: 'var(--panel-muted-color)', lineHeight: 1.6 }}>
+      {getDescription(activeCrisis.id)}
+    </p>
+  );
+
+  return (
+    <DramaModal
+      id="crisis"
+      title={activeCrisis.name}
+      subtitle={`Turn ${activeCrisis.turn}`}
+      hero={heroNode}
+      body={bodyNode}
+      choices={dramaChoices}
+      onResolve={onResolve}
+      tone="crisis"
+    />
+  );
+}
+
+/** Pick a contextual glyph for a known crisis id */
+function getCrisisGlyph(crisisId: string): string {
+  const glyphs: Record<string, string> = {
+    plague:            '🦠',
+    barbarian_invasion:'⚔️',
+    golden_age:        '✨',
+    trade_opportunity: '🤝',
+    natural_disaster:  '🌊',
+  };
+  return glyphs[crisisId] ?? '⚠️';
 }
 
 /** Get description for a known crisis id */
