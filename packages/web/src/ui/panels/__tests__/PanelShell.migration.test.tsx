@@ -24,6 +24,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import type { GameState, PlayerState, GameAction } from '@hex/engine';
+import { createGameConfig } from '@hex/engine';
 
 // ── GameProvider mock — a single mockRef shared across all panels ──
 
@@ -115,6 +116,7 @@ function makeBaseState(player: PlayerState, overrides: Partial<GameState> = {}):
     builtWonders: [],
     crises: [],
     log: [],
+    config: createGameConfig(),
     age: {
       currentAge: 'antiquity',
       ageThresholds: { antiquity: 0, exploration: 100, modern: 200 },
