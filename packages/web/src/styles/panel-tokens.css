@@ -162,6 +162,49 @@
   --panel-button-civics:    #cc5de8;  /* magenta */
   --panel-button-diplomacy: #ba68c8;  /* purple */
   --panel-button-age:       #ffd54f;  /* gold — dark-text variant */
+
+  /* ─── Phase 4.5 — DramaModal tokens ────────────────────────────────────
+   * Used by DramaModal.tsx for ceremony modals (AgeTransition, Crisis,
+   * Victory, TurnSummary). Five new tokens + @media overrides below :root.
+   * ────────────────────────────────────────────────────────────────────── */
+
+  /* 1. Hero slot height — standard viewport (< 1920px). */
+  --drama-hero-height: 240px;
+
+  /* 2. Inner vignette on hero slot — frames the hero content visually. */
+  --drama-hero-vignette:
+    radial-gradient(ellipse at center,
+      transparent 40%,
+      rgba(0, 0, 0, 0.35) 100%);
+
+  /* 3. Frame shadow — deeper inset frame for ceremony modals.
+   * Layers: wide dark inset + bronze 1px bevel + outer drop shadow. */
+  --drama-frame-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.35),
+    var(--panel-bevel-inset),
+    var(--panel-shadow);
+
+  /* 4. Intensified backdrop — darker center lifts the hero; near-black edges. */
+  --drama-backdrop:
+    radial-gradient(ellipse at center,
+      rgba(10, 8, 5, 0.55) 0%,
+      rgba(5, 4, 2, 0.85) 100%);
+
+  /* 5. Choice stack gap. */
+  --drama-choice-gap: 10px;
+}
+
+/* Drama hero height @media overrides — mirrors layout-tokens.css breakpoints. */
+@media (min-width: 1920px) {
+  :root {
+    --drama-hero-height: 320px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --drama-hero-height: 360px;
+  }
 }
 
 /* Layout chrome utility classes — SYS-D-12. */
