@@ -127,6 +127,9 @@ export function TopBar() {
         <div className="relative">
           <button
             className="px-3 py-1.5 rounded text-xs cursor-pointer hover:opacity-80"
+            aria-label="More actions"
+            aria-expanded={showMoreMenu}
+            aria-haspopup="menu"
             // fixed: var(--chrome-button-sm-size) = 28px, below 32px minimum — justified per
             // S-03 exceptions (panel-close × pattern); keyboard via ⋯ menu items.
             style={{ color: 'var(--color-text-muted)', border: 'var(--border-hairline) solid var(--color-border)', minHeight: 'var(--chrome-button-sm-size)', minWidth: 'var(--chrome-button-sm-size)' }}
@@ -164,6 +167,7 @@ export function TopBar() {
             Animation respects prefers-reduced-motion via CSS. */}
         <button
           data-testid="end-turn-button"
+          aria-label={unitsWithMovement > 0 ? `End Turn (${unitsWithMovement} units still have movement)` : 'End Turn'}
           className={`px-5 py-2 rounded-lg text-sm font-bold cursor-pointer transition-all hover:brightness-110 ml-1${turnReady ? ' end-turn-ready' : ''}`}
           style={{
             background: 'linear-gradient(135deg, var(--color-food) 0%, color-mix(in srgb, var(--color-food) 80%, transparent) 100%)',
@@ -256,9 +260,11 @@ function ResourcePill({
 
 function PanelButton({ label, color, dark, onClick, panelId }: { label: string; color: string; dark?: boolean; onClick?: () => void; panelId?: PanelId }) {
   const shortcut = panelId ? PANEL_REGISTRY.get(panelId)?.keyboardShortcut : undefined;
+  const ariaLabel = shortcut ? `${label} (keyboard shortcut: ${shortcut})` : label;
   return (
     <button
       data-panel-trigger={panelId}
+      aria-label={ariaLabel}
       className="px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all hover:brightness-110"
       style={{
         position: 'relative',

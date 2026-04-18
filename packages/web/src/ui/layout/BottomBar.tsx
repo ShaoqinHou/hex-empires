@@ -483,6 +483,7 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
 }) {
   return (
     <button
+      aria-label={`${label} (keyboard shortcut: ${shortcut})`}
       className="px-3 py-1.5 text-xs rounded font-bold cursor-pointer flex items-center gap-1.5 transition-all hover:scale-105"
       style={{
         background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
@@ -492,7 +493,7 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
       }}
       onClick={onClick}
     >
-      {icon && <span>{icon}</span>}
+      {icon && <span aria-hidden="true">{icon}</span>}
       {label}
       <span
         className="text-[10px] px-1.5 py-0.5 rounded ml-1"
@@ -527,6 +528,7 @@ function StackPortrait({
     <button
       onClick={onClick}
       title={label}
+      aria-label={isSelected ? `${label} (selected)` : label}
       className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition-all hover:scale-105 shrink-0"
       style={{
         background: isSelected ? 'rgba(88,166,255,0.25)' : 'rgba(255,255,255,0.06)',
