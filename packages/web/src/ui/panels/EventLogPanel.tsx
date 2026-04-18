@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import type { GameEvent } from '@hex/engine';
+import type { GameEvent, GameState } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 import type { PanelId } from './panelRegistry';
 
@@ -80,6 +80,54 @@ const EVENT_LABELS: Record<GameEvent['type'], string> = {
   victory: 'Victory',
   production: 'Production',
 };
+
+function extractEventPosition(
+  event: GameEvent,
+  state: GameState,
+): { q: number; r: number } | null {
+  // City/production/legacy events: match city name in message, then fallback to player's first city
+  if (event.type === 'city' || event.type === 'production' || event.type === 'legacy') {
+    for (const city of state.cities.values()) {
+      if (event.message.includes(city.name)) {
+        return city.position;
+      }
+    }
+    for (const city of state.cities.values()) {
+      if (city.owner === event.playerId) {
+        return city.position;
+      }
+    }
+  }
+  // Combat/move events: first unit belonging to the player
+  if (event.type === 'combat' || event.type === 'move') {
+    for (const unit of state.units.values()) {
+      if (unit.owner === event.playerId) {
+        return unit.position;
+      }
+    }
+  }
+  // Research/civic/diplomacy/age: find player's capital, fallback to any player city
+  if (event.type === 'research' || event.type === 'civic' || event.type === 'age' || event.type === 'diplomacy') {
+    for (const city of state.cities.values()) {
+      if (city.owner === event.playerId && city.isCapital) {
+        return city.position;
+      }
+    }
+    for (const city of state.cities.values()) {
+      if (city.owner === event.playerId) {
+        return city.position;
+      }
+    }
+  }
+  return null;
+}
+
+function panToPosition(pos: { q: number; r: number }): void {
+  const panFn = (window as unknown as { __panToHex?: (q: number, r: number) => void }).__panToHex;
+  if (panFn) {
+    panFn(pos.q, pos.r);
+  }
+}
 
 export function EventLogPanel({ onClose }: EventLogPanelProps) {
   const { state } = useGameState();
@@ -187,11 +235,17 @@ export function EventLogPanel({ onClose }: EventLogPanelProps) {
                       const player = state.players.get(event.playerId);
                       const color = EVENT_COLOR[event.type];
                       const icon = EVENT_ICONS[event.type];
+                      const pos = extractEventPosition(event, state);
 
                       return (
-                        <div key={idx} className="px-3 py-2"
-                          style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          {/* Top row: icon + type badge + player */}
+                        <div
+                          key={idx}
+                          className={`px-3 py-2${pos ? ' cursor-pointer hover:bg-white/[0.03]' : ''}`}
+                          style={{ borderBottom: '1px solid var(--color-border)', transition: 'background-color 0.1s' }}
+                          onClick={pos ? () => panToPosition(pos) : undefined}
+                          title={pos ? `Click to pan to ${EVENT_LABELS[event.type]} event location` : undefined}
+                        >
+                          {/* Top row: icon + type badge + player + optional pin */}
                           <div className="flex items-center gap-1.5 mb-0.5">
                             <span className="text-xs leading-none">{icon}</span>
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
@@ -202,6 +256,15 @@ export function EventLogPanel({ onClose }: EventLogPanelProps) {
                               style={{ color: 'var(--color-text-muted)' }}>
                               {player?.name ?? event.playerId}
                             </span>
+                            {pos && (
+                              <span
+                                className="text-[10px] ml-auto"
+                                style={{ color: 'var(--panel-muted-color)', opacity: 0.6 }}
+                                title="Click to pan camera here"
+                              >
+                                📍
+                              </span>
+                            )}
                           </div>
                           {/* Message */}
                           <div className="text-xs leading-snug" style={{ color: 'var(--color-text)' }}>
