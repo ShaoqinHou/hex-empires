@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { HexCoord, GameState, HexTile, UnitState, UnitDef } from '@hex/engine';
+import type { HexCoord, GameState, GameConfig, HexTile, UnitState, UnitDef } from '@hex/engine';
 import {
   getTileContents,
   calculateCityYields,
   coordToKey,
-  ALL_UNITS,
-  ALL_BASE_TERRAINS,
-  ALL_FEATURES,
-  ALL_IMPROVEMENTS,
-  ALL_RESOURCES,
-  ALL_BUILDINGS,
 } from '@hex/engine';
 import { TooltipShell } from './TooltipShell';
 import { UnitStateTooltip } from '../components/tooltips';
@@ -47,10 +41,10 @@ interface YieldSourceContribution {
  * ("Grassland +2, Forest +1, Farm +1, River +1") AND the compact-tier
  * summed yields. Pure — reads only the tile and engine data arrays.
  */
-function collectYieldSources(tile: HexTile): ReadonlyArray<YieldSourceContribution> {
+function collectYieldSources(tile: HexTile, config: GameConfig): ReadonlyArray<YieldSourceContribution> {
   const sources: YieldSourceContribution[] = [];
 
-  const terrain = ALL_BASE_TERRAINS.find(t => t.id === tile.terrain);
+  const terrain = config.terrains.get(tile.terrain);
   if (terrain) {
     const y = terrain.baseYields;
     if (y.food || y.production || y.gold) {
@@ -64,7 +58,7 @@ function collectYieldSources(tile: HexTile): ReadonlyArray<YieldSourceContributi
   }
 
   if (tile.feature) {
-    const feature = ALL_FEATURES.find(f => f.id === tile.feature);
+    const feature = config.features.get(tile.feature);
     if (feature) {
       const y = feature.yieldModifiers;
       if (y.food || y.production || y.gold) {
@@ -79,7 +73,7 @@ function collectYieldSources(tile: HexTile): ReadonlyArray<YieldSourceContributi
   }
 
   if (tile.improvement) {
-    const improvement = ALL_IMPROVEMENTS.find(i => i.id === tile.improvement);
+    const improvement = config.improvements.get(tile.improvement);
     if (improvement) {
       const y = improvement.yields;
       if (y.food || y.production || y.gold || y.science || y.culture || y.faith) {
@@ -97,7 +91,7 @@ function collectYieldSources(tile: HexTile): ReadonlyArray<YieldSourceContributi
   }
 
   if (tile.resource) {
-    const resource = ALL_RESOURCES.find(r => r.id === tile.resource);
+    const resource = config.resources.get(tile.resource);
     if (resource) {
       // ResourceDef.yieldBonus matches YieldCalculator's expectation; fall
       // back to {} if the test fixture's ResourceDef omits it.
@@ -161,8 +155,8 @@ function formatSourceYields(s: YieldSourceContribution): string {
 
 // ─── Entity splitting (civilian vs military) ──────────────────────────────
 
-function isCivilianUnit(typeId: string): boolean {
-  const def = ALL_UNITS.find(u => u.id === typeId);
+function isCivilianUnit(typeId: string, config: GameConfig): boolean {
+  const def = config.units.get(typeId);
   return def?.category === 'civilian' || def?.category === 'religious';
 }
 
@@ -184,11 +178,11 @@ function LightweightTooltipBody({
   const tile = contents.tile;
   if (!tile) return null;
 
-  const terrain = ALL_BASE_TERRAINS.find(t => t.id === tile.terrain);
-  const feature = tile.feature ? ALL_FEATURES.find(f => f.id === tile.feature) : null;
-  const resource = tile.resource ? ALL_RESOURCES.find(r => r.id === tile.resource) : null;
+  const terrain = state.config.terrains.get(tile.terrain);
+  const feature = tile.feature ? state.config.features.get(tile.feature) : null;
+  const resource = tile.resource ? state.config.resources.get(tile.resource) : null;
   const improvement = contents.improvement
-    ? ALL_IMPROVEMENTS.find(i => i.id === contents.improvement)
+    ? state.config.improvements.get(contents.improvement)
     : null;
 
   // Header: "Terrain (Feature, River)" inline.
@@ -200,16 +194,16 @@ function LightweightTooltipBody({
 
   // Summed yields across every source (terrain + feature + improvement +
   // resource + river). Only non-zero yield types are rendered.
-  const sources = collectYieldSources(tile);
+  const sources = collectYieldSources(tile, state.config);
   const totals = sumYieldSources(sources);
 
   // Per-category entity split preserves the M37-B regression fix: a
   // warrior + settler stack must show BOTH, not "Warrior ×2". Compact
   // tier still shows one entry per category (not the whole list).
-  const ownMilitary = contents.ownUnits.filter(u => !isCivilianUnit(u.typeId));
-  const ownCivilian = contents.ownUnits.filter(u => isCivilianUnit(u.typeId));
-  const enemyMilitary = contents.enemyUnits.filter(u => !isCivilianUnit(u.typeId));
-  const enemyCivilian = contents.enemyUnits.filter(u => isCivilianUnit(u.typeId));
+  const ownMilitary = contents.ownUnits.filter(u => !isCivilianUnit(u.typeId, state.config));
+  const ownCivilian = contents.ownUnits.filter(u => isCivilianUnit(u.typeId, state.config));
+  const enemyMilitary = contents.enemyUnits.filter(u => !isCivilianUnit(u.typeId, state.config));
+  const enemyCivilian = contents.enemyUnits.filter(u => isCivilianUnit(u.typeId, state.config));
 
   const topOwnMilitary = ownMilitary[0] ?? null;
   const topOwnCivilian = ownCivilian[0] ?? null;
@@ -217,7 +211,7 @@ function LightweightTooltipBody({
   const topEnemyCivilian = enemyCivilian[0] ?? null;
 
   const defFor = (u: UnitState | null): UnitDef | undefined =>
-    u ? ALL_UNITS.find(d => d.id === u.typeId) : undefined;
+    u ? state.config.units.get(u.typeId) : undefined;
 
   const topOwnMilitaryDef = defFor(topOwnMilitary);
   const topOwnCivilianDef = defFor(topOwnCivilian);
@@ -389,14 +383,14 @@ function DetailedTooltipBody({
   const tile = contents.tile;
   if (!tile) return null;
 
-  const terrain = ALL_BASE_TERRAINS.find(t => t.id === tile.terrain);
-  const feature = tile.feature ? ALL_FEATURES.find(f => f.id === tile.feature) : null;
-  const resource = tile.resource ? ALL_RESOURCES.find(r => r.id === tile.resource) : null;
+  const terrain = state.config.terrains.get(tile.terrain);
+  const feature = tile.feature ? state.config.features.get(tile.feature) : null;
+  const resource = tile.resource ? state.config.resources.get(tile.resource) : null;
   const improvement = contents.improvement
-    ? ALL_IMPROVEMENTS.find(i => i.id === contents.improvement)
+    ? state.config.improvements.get(contents.improvement)
     : null;
   const tileBuilding = tile.building
-    ? ALL_BUILDINGS.find(b => b.id === tile.building)
+    ? state.config.buildings.get(tile.building)
     : null;
 
   const inlineFeatures: string[] = [];
@@ -404,7 +398,7 @@ function DetailedTooltipBody({
   if (tile.river.length > 0) inlineFeatures.push('River');
   const headerSuffix = inlineFeatures.length > 0 ? ` (${inlineFeatures.join(', ')})` : '';
 
-  const sources = collectYieldSources(tile);
+  const sources = collectYieldSources(tile, state.config);
 
   // Per-source breakdown for the detailed tier — spec (e):
   // "Grassland +1, Farm +1, River +1" listing by contributor.
@@ -416,9 +410,9 @@ function DetailedTooltipBody({
   const cityBuildings = useMemo(() => {
     if (!contents.city) return [];
     return contents.city.buildings
-      .map(id => ALL_BUILDINGS.find(b => b.id === id))
+      .map(id => state.config.buildings.get(id))
       .filter((b): b is NonNullable<typeof b> => b !== undefined);
-  }, [contents.city]);
+  }, [contents.city, state.config]);
 
   // District on this tile — adjacency preview: the current adjacency
   // bonus stored on the district plus its type/level. Detailed per-
@@ -437,12 +431,12 @@ function DetailedTooltipBody({
   const allUnitsWithDefs = [
     ...contents.ownUnits.map(u => ({
       unit: u,
-      def: ALL_UNITS.find(d => d.id === u.typeId),
+      def: state.config.units.get(u.typeId),
       isEnemy: false,
     })),
     ...contents.enemyUnits.map(u => ({
       unit: u,
-      def: ALL_UNITS.find(d => d.id === u.typeId),
+      def: state.config.units.get(u.typeId),
       isEnemy: true,
     })),
   ];

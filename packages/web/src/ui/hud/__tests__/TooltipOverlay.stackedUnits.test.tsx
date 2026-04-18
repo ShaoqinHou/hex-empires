@@ -21,7 +21,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import type { GameState, UnitState, HexTile } from '@hex/engine';
-import { ALL_UNITS, ALL_BASE_TERRAINS } from '@hex/engine';
+import { ALL_BASE_TERRAINS, createGameConfig } from '@hex/engine';
 import { TooltipOverlay } from '../TooltipOverlay';
 import { HUDManagerProvider } from '../HUDManager';
 
@@ -58,9 +58,6 @@ function makeTile(q: number, r: number): HexTile {
 }
 
 function makeStateWithStackedUnits(units: ReadonlyArray<UnitState>): GameState {
-  // Config.units map is consulted by TileContents to categorize civilians — mirror
-  // the ALL_UNITS registry so the engine's sort behaves identically to production.
-  const configUnits = new Map(ALL_UNITS.map(u => [u.id, u] as const));
   const tiles = new Map<string, HexTile>();
   tiles.set(coordKey(0, 0), makeTile(0, 0));
   const unitMap = new Map<string, UnitState>();
@@ -90,7 +87,7 @@ function makeStateWithStackedUnits(units: ReadonlyArray<UnitState>): GameState {
     builtWonders: [],
     crises: [],
     log: [],
-    config: { units: configUnits },
+    config: createGameConfig(),
   } as unknown as GameState;
 }
 

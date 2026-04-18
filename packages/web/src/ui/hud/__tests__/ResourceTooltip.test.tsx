@@ -16,6 +16,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import type { GameState, HexTile, PlayerState } from '@hex/engine';
+import { createGameConfig } from '@hex/engine';
 import { ResourceTooltip } from '../ResourceTooltip';
 import { HUDManagerProvider } from '../HUDManager';
 
@@ -98,7 +99,7 @@ function makeState(
     builtWonders: [],
     crises: [],
     log: [],
-    config: {} as GameState['config'],
+    config: createGameConfig(),
   } as unknown as GameState;
 }
 

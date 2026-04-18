@@ -29,7 +29,7 @@ import type {
   CityState,
   BuildingDef,
 } from '@hex/engine';
-import { ALL_UNITS, ALL_BASE_TERRAINS, ALL_BUILDINGS } from '@hex/engine';
+import { ALL_BASE_TERRAINS, ALL_BUILDINGS, createGameConfig } from '@hex/engine';
 import { TooltipOverlay } from '../TooltipOverlay';
 import { HUDManagerProvider } from '../HUDManager';
 
@@ -73,8 +73,6 @@ interface MakeStateOptions {
 }
 
 function makeState(options: MakeStateOptions = {}): GameState {
-  const configUnits = new Map(ALL_UNITS.map(u => [u.id, u] as const));
-  const configBuildings = new Map(ALL_BUILDINGS.map(b => [b.id, b] as const));
   const tiles = new Map<string, HexTile>();
   tiles.set(coordKey(0, 0), makeTile(0, 0, options.tile));
   const unitMap = new Map<string, UnitState>();
@@ -114,23 +112,7 @@ function makeState(options: MakeStateOptions = {}): GameState {
     builtWonders: [],
     crises: [],
     log: [],
-    config: {
-      units: configUnits,
-      buildings: configBuildings,
-      // Empty maps for fields touched only by `calculateCityYields` paths
-      // (effects / civ / leader bonuses). Populating these keeps the city-
-      // detail branch from crashing on missing config when a tile carries
-      // a city.
-      civilizations: new Map(),
-      leaders: new Map(),
-      technologies: new Map(),
-      civics: new Map(),
-      terrains: new Map(),
-      features: new Map(),
-      promotions: new Map(),
-      resources: new Map(),
-      districts: new Map(),
-    },
+    config: createGameConfig(),
   } as unknown as GameState;
 }
 

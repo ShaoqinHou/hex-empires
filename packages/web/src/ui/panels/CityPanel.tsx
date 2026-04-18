@@ -1,5 +1,5 @@
 import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, ALL_UNITS, ALL_BUILDINGS, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
+import { calculateCityYields, getGrowthThreshold, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
@@ -45,14 +45,30 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
   // Available production items — filter by age AND tech prerequisites
   const researchedTechs = new Set(player?.researchedTechs ?? []);
-  const availableUnits = ALL_UNITS.filter(u =>
+  const availableUnits = [...state.config.units.values()].filter(u =>
     u.age === currentAge && (!u.requiredTech || researchedTechs.has(u.requiredTech))
   );
-  const availableBuildings = ALL_BUILDINGS.filter(b =>
+  const availableBuildings = [...state.config.buildings.values()].filter(b =>
     b.age === currentAge
     && !city.buildings.includes(b.id)
     && (!b.requiredTech || researchedTechs.has(b.requiredTech))
   );
+
+  const getProductionCost = (itemId: string): number => {
+    const unit = state.config.units.get(itemId);
+    if (unit) return unit.cost;
+    const building = state.config.buildings.get(itemId);
+    if (building) return building.cost;
+    return 100;
+  };
+
+  const getProductionName = (itemId: string): string => {
+    const unit = state.config.units.get(itemId);
+    if (unit) return unit.name;
+    const building = state.config.buildings.get(itemId);
+    if (building) return building.name;
+    return itemId;
+  };
 
   const settlementLabel = isTown ? 'Town' : (city.isCapital ? 'Capital City' : 'City');
   const happinessColor = city.happiness >= 0 ? 'var(--color-food)' : 'var(--color-health-low)';
@@ -249,7 +265,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         {city.buildings.length > 0 ? (
           <div className="flex flex-col gap-1">
             {city.buildings.map(bId => {
-              const bDef = ALL_BUILDINGS.find(b => b.id === bId);
+              const bDef = state.config.buildings.get(bId);
               const isPlaced = placedBuildings.has(bId);
               const isWonder = bDef?.isWonder === true;
               return bDef ? (
@@ -510,18 +526,3 @@ function HeroProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function getProductionCost(itemId: string): number {
-  const unit = ALL_UNITS.find(u => u.id === itemId);
-  if (unit) return unit.cost;
-  const building = ALL_BUILDINGS.find(b => b.id === itemId);
-  if (building) return building.cost;
-  return 100;
-}
-
-function getProductionName(itemId: string): string {
-  const unit = ALL_UNITS.find(u => u.id === itemId);
-  if (unit) return unit.name;
-  const building = ALL_BUILDINGS.find(b => b.id === itemId);
-  if (building) return building.name;
-  return itemId;
-}

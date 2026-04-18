@@ -24,7 +24,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { HexCoord, GameState } from '@hex/engine';
-import { ALL_RESOURCES, ALL_IMPROVEMENTS, coordToKey } from '@hex/engine';
+import { coordToKey } from '@hex/engine';
 import { TooltipShell } from './TooltipShell';
 import { useHUDManager } from './HUDManager';
 
@@ -37,8 +37,8 @@ import { useHUDManager } from './HUDManager';
  * `requiredTech`. Returns `null` when no specific tech is needed
  * (e.g. bonus resources harvestable by Farm which has `requiredTech: null`).
  */
-function getRequiredTechForResource(resourceId: string): string | null {
-  for (const imp of ALL_IMPROVEMENTS) {
+function getRequiredTechForResource(resourceId: string, state: GameState): string | null {
+  for (const imp of state.config.improvements.values()) {
     const resourceList = imp.prerequisites.resource;
     if (resourceList && resourceList.includes(resourceId)) {
       return imp.requiredTech;
@@ -61,7 +61,7 @@ function isResourceUnlocked(
   const player = state.players.get(state.currentPlayerId);
   if (!player) return false;
 
-  const requiredTech = getRequiredTechForResource(resourceId);
+  const requiredTech = getRequiredTechForResource(resourceId, state);
   if (requiredTech === null) return true;
 
   return player.researchedTechs.includes(requiredTech);
@@ -100,11 +100,11 @@ interface ResourceTooltipBodyProps {
 }
 
 function ResourceTooltipBody({ resourceId, state }: ResourceTooltipBodyProps) {
-  const resource = ALL_RESOURCES.find(r => r.id === resourceId);
+  const resource = state.config.resources.get(resourceId);
   if (!resource) return null;
 
   const unlocked = isResourceUnlocked(resourceId, state);
-  const requiredTech = getRequiredTechForResource(resourceId);
+  const requiredTech = getRequiredTechForResource(resourceId, state);
   const badge = typeBadgeStyle(resource.type);
 
   // Collect non-zero yield entries.
