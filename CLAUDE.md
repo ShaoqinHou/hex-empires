@@ -113,34 +113,39 @@ All color/font/chrome/image/audio swaps go through tokens + registry — never h
 
 ## Subagent timing + hang detection (mandatory for every spawn)
 
-Every subagent spawn gets a sampling watchdog + a completion log entry. This catches the hang pattern where a run elapses normally but produces ~no tokens (the Phase 4 integrator: 18min / 52 tokens = dead).
+Every subagent spawn logs a **spawn event** + **complete event**. This catches the hang pattern where a run elapses normally but produces ~no tokens (Phase 4 integrator: 18min / 52 tokens = dead) AND lets the parent see wall-clock overlap / parallelism / idle-gap shape.
+
+**Note**: the optional file-size sampler (`sample-agent-output.sh`) is kept in the tree but currently non-viable — Claude Code's task output file is a 0-byte placeholder throughout execution on this runtime. Rely on spawn/complete events + the completion classifier instead.
 
 Protocol:
 
-1. **On spawn** — immediately kick off a background sampler:
-   ```bash
-   bash .claude/workflow/scripts/sample-agent-output.sh \
-     "<phase>" "<agent-id>" "<subagent-type>" "<output-file-path>" &
-   ```
-   The output file path is the `output_file` field of the Agent tool's spawn response. Sampler appends size-delta rows every 60s to `.claude/workflow/scratch/agent-timing.jsonl`. 45-min hard cap.
-
-2. **On return** — log the completion row from the `<usage>` block of the task-notification:
+1. **On spawn** — log the spawn event immediately after the Agent tool returns:
    ```bash
    bash .claude/workflow/scripts/log-agent-timing.sh \
-     --phase "<phase>" --agent-id "<agent-id>" --subagent "<subagent-type>" \
+     --event spawn --phase "<phase>" --agent-id "<id>" --subagent "<type>"
+   ```
+
+2. **On return (task-notification)** — log the completion row from the `<usage>` block:
+   ```bash
+   bash .claude/workflow/scripts/log-agent-timing.sh \
+     --event complete --phase "<phase>" --agent-id "<id>" --subagent "<type>" \
      --duration-ms <duration_ms> --tokens <total_tokens> --status completed \
      [--notes "<one-liner>"]
    ```
-   Classifies: `tokens_per_min < 1000` = HANG_SUSPECT, `< 5000 AND > 5min` = SLOW, else HEALTHY.
+   Classifies: `tokens_per_min < 1000 AND duration > 1min` = HANG_SUSPECT; `< 5000 AND > 5min` = SLOW; else HEALTHY.
 
 3. **Reports:**
    ```bash
-   bash .claude/workflow/scripts/agent-timing-report.sh           # session summary
-   bash .claude/workflow/scripts/agent-timing-report.sh <id>      # time-series for one agent
-   bash .claude/workflow/scripts/agent-timing-report.sh --hangs   # only hang-suspects
+   bash .claude/workflow/scripts/agent-timing-report.sh             # completion summary
+   bash .claude/workflow/scripts/agent-timing-report.sh <id>        # per-agent events
+   bash .claude/workflow/scripts/agent-timing-report.sh --hangs     # hang-suspects
+   bash .claude/workflow/scripts/agent-timing-report.sh --timeline  # Gantt + overlap stats
+   bash .claude/workflow/scripts/agent-timing-report.sh --now       # currently running
    ```
 
-**Healthy rates (observed 2026-04-18 session):** implementer 18k-21k tpm, designer 8k-10k tpm. Sustained sub-1k tpm = hang; investigate, don't just wait.
+**Healthy rates (observed 2026-04-18 session):** implementer 18k-21k tpm, designer 8k-11k tpm. Sustained sub-1k tpm = hang; investigate, don't just wait.
+
+**Watchdog fallback (no live sampler):** check `--now` periodically during long-running work. If an agent exceeds 25 minutes elapsed, consider manual `TaskStop` and respawn — the integrator case showed a 18-min full-hang is possible and won't self-resolve.
 
 ## Rules (auto-loaded from `.claude/rules/`)
 

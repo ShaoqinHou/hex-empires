@@ -1,4 +1,18 @@
 #!/bin/bash
+# ⚠️ KNOWN-LIMITED ON CURRENT CLAUDE CODE RUNTIME (2026-04-18)
+# The task `output_file` path is a 0-byte placeholder — the subagent
+# JSONL transcript is NOT streamed to disk during the run. Tested across
+# multiple spawns (impl + designer); file stays 0 bytes throughout and
+# after completion. Mid-run hang detection via size-sampling is therefore
+# not viable until Claude Code streams transcripts progressively.
+#
+# Kept in the tree in case a future runtime changes this. For actual
+# hang detection today, rely on completion-row classification
+# (tokens_per_min < 1000 → HANG_SUSPECT) in log-agent-timing.sh and the
+# wall-clock/overlap timeline in agent-timing-report.sh.
+#
+# Original design below.
+# -------------------------------------------------------------------
 # Periodically samples a running subagent's output-file byte size, appending
 # rows to agent-timing.jsonl. Lets the parent reconstruct a time-series of
 # per-step activity: growth = working, stall = hang suspect.
