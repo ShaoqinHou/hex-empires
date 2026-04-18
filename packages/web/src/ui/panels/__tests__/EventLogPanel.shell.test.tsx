@@ -62,4 +62,22 @@ describe('EventLogPanel (PanelShell)', () => {
     fireEvent.click(getByTestId('panel-close-log'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders search input and All filter pill', () => {
+    mockRef.state = makeState();
+    const { getByPlaceholderText, getByText } = render(<EventLogPanel onClose={() => {}} />);
+    expect(getByPlaceholderText('Search events…')).toBeTruthy();
+    expect(getByText('All')).toBeTruthy();
+  });
+
+  it('shows "(filtered)" label when search query is active', () => {
+    mockRef.state = {
+      ...makeState(),
+      log: [{ type: 'combat', message: 'Warrior attacked Slinger', turn: 1, playerId: 'p1', data: {} }],
+    } as unknown as GameState;
+    const { getByPlaceholderText, getByText } = render(<EventLogPanel onClose={() => {}} />);
+    const input = getByPlaceholderText('Search events…');
+    fireEvent.change(input, { target: { value: 'Warrior' } });
+    expect(getByText(/filtered/)).toBeTruthy();
+  });
 });

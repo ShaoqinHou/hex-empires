@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import type { GameEvent } from '@hex/engine';
 import { PanelShell } from './PanelShell';
@@ -35,19 +35,36 @@ const EVENT_ICONS: Record<GameEvent['type'], string> = {
   production: '🔨',
 };
 
-// CSS color tokens per type
+// CSS color tokens per type — no raw hex values
 const EVENT_COLOR: Record<GameEvent['type'], string> = {
   combat: 'var(--color-health-low)',
   city: 'var(--color-food)',
   research: 'var(--color-science)',
   civic: 'var(--color-culture)',
-  diplomacy: '#a855f7',   // purple
+  diplomacy: 'var(--panel-accent-purple)',
   move: 'var(--color-text-muted)',
   age: 'var(--color-gold)',
   legacy: 'var(--color-gold)',
-  crisis: '#eab308',      // yellow
+  crisis: 'var(--color-gold)',
   victory: 'var(--color-accent)',
   production: 'var(--color-production)',
+};
+
+const FILTER_TYPES: Array<GameEvent['type'] | null> = [
+  null, 'combat', 'city', 'research', 'civic', 'diplomacy', 'age', 'crisis', 'victory', 'production',
+];
+
+const FILTER_LABELS: Record<string, string> = {
+  null: 'All',
+  combat: '⚔️ Combat',
+  city: '🏰 City',
+  research: '🔬 Research',
+  civic: '📜 Civic',
+  diplomacy: '🤝 Diplomacy',
+  age: '🌅 Age',
+  crisis: '⚡ Crisis',
+  victory: '🏆 Victory',
+  production: '🔨 Build',
 };
 
 const EVENT_LABELS: Record<GameEvent['type'], string> = {
@@ -67,9 +84,15 @@ const EVENT_LABELS: Record<GameEvent['type'], string> = {
 export function EventLogPanel({ onClose }: EventLogPanelProps) {
   const { state } = useGameState();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeCategory, setActiveCategory] = useState<GameEvent['type'] | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter noise, keep chronological order (oldest first → newest at bottom)
-  const filteredEvents = state.log.filter(e => !isNoisy(e.message));
+  // Filter noise, apply category filter, apply search query
+  const filteredEvents = state.log.filter(e =>
+    !isNoisy(e.message) &&
+    (activeCategory === null || e.type === activeCategory) &&
+    (searchQuery === '' || e.message.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   // Auto-scroll to bottom when new events appear
   useEffect(() => {
@@ -89,9 +112,52 @@ export function EventLogPanel({ onClose }: EventLogPanelProps) {
   return (
     <PanelShell id={PANEL_ID} title="Event Log" onClose={onClose} priority="info">
       <div className="flex flex-col h-full">
-        {/* Event count subheader */}
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Search events…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="w-full text-xs mb-2 px-2 py-1 rounded"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--panel-bg) 80%, transparent)',
+            border: '1px solid var(--panel-border)',
+            color: 'var(--panel-text-color)',
+            outline: 'none',
+          }}
+        />
+
+        {/* Category filter pills */}
+        <div className="flex gap-1 overflow-x-auto pb-1 mb-2" style={{ scrollbarWidth: 'none' }}>
+          {FILTER_TYPES.map(type => {
+            const isActive = activeCategory === type;
+            const label = FILTER_LABELS[type ?? 'null'];
+            return (
+              <button
+                key={type ?? 'all'}
+                type="button"
+                onClick={() => setActiveCategory(type)}
+                className="flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full transition-colors"
+                style={{
+                  border: `1px solid ${isActive ? 'var(--panel-accent-gold)' : 'var(--panel-border)'}`,
+                  backgroundColor: isActive
+                    ? 'color-mix(in srgb, var(--panel-accent-gold) 15%, transparent)'
+                    : 'transparent',
+                  color: isActive ? 'var(--panel-accent-gold)' : 'var(--panel-muted-color)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Event count with filter context */}
         <div className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>
-          {filteredEvents.length} events
+          {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+          {(activeCategory !== null || searchQuery !== '') && ' (filtered)'}
         </div>
 
         {/* Scrollable event list */}
