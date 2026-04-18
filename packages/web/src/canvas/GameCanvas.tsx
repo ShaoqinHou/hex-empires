@@ -20,9 +20,11 @@ interface GameCanvasProps {
   onNoIdleUnits?: () => void;
   cameraRef?: React.MutableRefObject<Camera | null>;
   showYields?: boolean;
+  /** When true, draw unit-type text labels below unit icons for readability. */
+  showLabels?: boolean;
 }
 
-export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBuilderSelected, onBuilderDeselected, onNoIdleUnits, cameraRef: externalCameraRef, showYields = false }: GameCanvasProps) {
+export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBuilderSelected, onBuilderDeselected, onNoIdleUnits, cameraRef: externalCameraRef, showYields = false, showLabels = false }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const internalCamera = useRef(new Camera());
 
@@ -416,6 +418,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
         visibility: player?.visibility ?? null,
         explored: player?.explored ?? null,
         showYields,
+        showLabels,
         turnNumber: state.turn,
         placementCityId: placementMode?.cityId ?? null,
         placementValidTiles,
@@ -432,7 +435,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
 
     animFrame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animFrame);
-  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, placementMode, placementValidTiles]);
+  }, [state, selectedHex, selectedUnit, hoveredHex, terrainRegistry, featureRegistry, resourceRegistry, reachableHexes, showYields, showLabels, placementMode, placementValidTiles]);
 
   // ── Modern-RTS click semantics ──
   // LEFT-CLICK = SELECT ONLY. Never moves, never attacks. It picks/cycles own entities on

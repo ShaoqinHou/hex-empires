@@ -31,6 +31,8 @@ export interface RenderContext {
   visibility: ReadonlySet<string> | null;  // currently visible tiles
   explored: ReadonlySet<string> | null;    // ever-seen tiles
   showYields: boolean;
+  /** When true, draw unit-type text labels below each unit icon for readability. */
+  showLabels: boolean;
   turnNumber: number;  // Track turn changes for glow effects
   /**
    * Building-placement rework (Cycle 4) — placement overlay inputs.
@@ -1490,6 +1492,37 @@ export class HexRenderer {
       // Enemy overflow badge — top-right of tile
       if (enemyUnits.length > 1) {
         this.drawEnemyStackBadge(baseCx, baseCy, enemyUnits.length);
+      }
+
+      // ── Unit labels (showLabels mode) ─────────────────────────────────
+      // When showLabels is on, draw the unit type name as a small pill chip
+      // at the bottom of the hex so the player can read the unit type at a glance.
+      if (rc.showLabels && ownUnits.length > 0) {
+        const primary = ownUnits[0];
+        const unitDef = rc.state.config.units.get(primary.typeId);
+        const label = unitDef?.name ?? primary.typeId;
+        const labelX = baseCx;
+        const labelY = baseCy + HEX_SIZE * 0.82;
+
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.font = 'bold 8px sans-serif';
+        const tw = ctx.measureText(label).width;
+        const pw = tw + 6, ph = 11;
+
+        // Pill background
+        ctx.fillStyle = 'rgba(10,8,5,0.80)';
+        const rx = labelX - pw / 2, ry = labelY - ph / 2;
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, pw, ph, 4);
+        ctx.fill();
+
+        // Pill text
+        ctx.fillStyle = 'rgba(242,232,208,0.95)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, labelX, labelY);
+        ctx.restore();
       }
     }
   }

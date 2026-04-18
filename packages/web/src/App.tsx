@@ -7,6 +7,7 @@ import { TopBar } from './ui/layout/TopBar';
 import { BottomBar } from './ui/layout/BottomBar';
 import { Minimap } from './ui/components/Minimap';
 import { YieldsToggle } from './ui/components/YieldsToggle';
+import { LabelsToggle } from './ui/components/LabelsToggle';
 import { TurnTransition } from './ui/components/TurnTransition';
 import { Notifications } from './ui/components/Notifications';
 import { EnemyActivitySummary } from './ui/components/EnemyActivitySummary';
@@ -49,6 +50,7 @@ function GameUI() {
   const state = nullableState!; // GameUI only renders when state is non-null
   const { activePanel, openPanel, closePanel, togglePanel, isOpen } = usePanelManager();
   const [showYields, setShowYields] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
   const [idleUnitsTrigger, setIdleUnitsTrigger] = useState(0);
   const cameraRef = useRef<Camera | null>(null);
 
@@ -96,6 +98,9 @@ function GameUI() {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       const keyUpper = e.key.toUpperCase();
+      // Map-control shortcuts (not panel shortcuts)
+      if (keyUpper === 'L') { setShowLabels(v => !v); return; }
+
       for (const [id, entry] of PANEL_REGISTRY) {
         if (entry.keyboardShortcut && keyUpper === entry.keyboardShortcut.toUpperCase()) {
           // Skip panels gated behind feature flags when the flag is off.
@@ -107,7 +112,7 @@ function GameUI() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [togglePanel]);
+  }, [togglePanel, setShowLabels]);
 
   // Determine if we should show combat preview
   const combatPreviewTarget = useMemo(() => {
@@ -143,6 +148,7 @@ function GameUI() {
         <GameCanvas
           cameraRef={cameraRef}
           showYields={showYields}
+          showLabels={showLabels}
           onToggleYields={() => setShowYields(v => !v)}
           onCityClick={(city) => {
             selectCity(city.id);
@@ -229,6 +235,7 @@ function GameUI() {
          </div>
         </Suspense>
         <YieldsToggle showYields={showYields} onToggle={() => setShowYields(v => !v)} />
+        <LabelsToggle showLabels={showLabels} onToggle={() => setShowLabels(v => !v)} />
         <Minimap cameraRef={cameraRef} />
 
         {/* Turn transition and notifications */}
