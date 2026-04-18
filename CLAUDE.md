@@ -107,6 +107,10 @@ After any Canvas or UI change, run `/verify` before stopping.
 
 Bug-fix fast path: regression test → fix → run tests → `/verify` if visual.
 
+## Asset + theme swapping
+
+All color/font/chrome/image/audio swaps go through tokens + registry — never hardcoded in components. Single authoritative reference: **`.claude/workflow/design/asset-and-theme-swap-guide.md`**. Read it before any visual swap; the swap surface is exactly 11 files (9 CSS token files + `assets/registry.ts` + `assets/loader.ts`).
+
 ## Rules (auto-loaded from `.claude/rules/`)
 
 Full rule docs are auto-loaded at every session start from `.claude/rules/*.md`. Read them when working in their area:

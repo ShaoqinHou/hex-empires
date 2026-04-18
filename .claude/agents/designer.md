@@ -23,14 +23,32 @@ You produce design/specification documents as persisted files. Unlike a research
 1. **Read ALL cited context docs first.** Don't guess — the parent has curated the context list.
 2. **Outline the sections** you'll write before writing prose, so the structure matches the brief.
 3. **Write the document** using the `Write` tool to the exact path the parent specified.
-4. **If Write is blocked**, immediately fall back to `Bash` with a unique heredoc marker:
+4. **If Write is blocked — do NOT retry Write, do NOT use a `cat <<'EOF'` bash heredoc.** The bash heredoc path has a known trap: Claude Code's Bash tool wraps your command in `bash -c '...'`, so any `'` character in your content (apostrophes like "doesn't", "Civ VII's") breaks the outer quote and the shell reports "unexpected EOF while looking for matching `''`". This has burned multiple designer runs — one hit it 5+ times and another timed out after 18 min stuck in the retry loop.
+
+   **Instead, go directly to python heredoc** — python's stdin receives raw bytes and doesn't interpret shell metacharacters:
    ```bash
-   cat > <path> <<'DOCEND_UNIQUE_MARKER'
-   <content>
-   DOCEND_UNIQUE_MARKER
+   python - <<'PYEOF'
+   content = r"""<paste your full markdown content here — single quotes, double quotes, anything is fine>"""
+   with open(r'<absolute-path>', 'w', encoding='utf-8') as f:
+       f.write(content)
+   PYEOF
    ```
-5. **If both are blocked**, return the FULL content inside a ```markdown``` code block as your final message so the parent can persist it — do NOT omit or summarize.
-6. **Verify the file exists** with `ls -la <path>` before reporting back.
+   The outer `<<'PYEOF'` marker is unquoted-safe (no `'` escape issue at that boundary because python's heredoc body is never re-parsed by bash). The `r"""..."""` raw string inside python handles any content including single quotes, double quotes, backslashes, code fences.
+
+   For very large docs (>5000 chars), split into 2-3 `python -` invocations writing with `'a'` (append) mode after the first `'w'` (write). This also sidesteps any subtle transport-size limits.
+
+5. **If python heredoc ALSO fails** (rare — investigate the stderr and report it), fall back to returning the FULL content inside a ```markdown``` fenced block in your reply. The parent will persist via its own Write. Do NOT truncate or summarize; the full content or nothing.
+
+6. **Verify the file exists** with `ls -la <path>` showing non-trivial byte count (>500 bytes for a 1000-word doc) before reporting back. A 21-byte file means only your probe landed — the real write failed silently.
+
+### Write state machine — self-defense
+
+If you've spent >2 tool calls retrying a single write approach, stop and escalate. Sequence:
+1. Try `Write` tool once.
+2. If denied/failed — go straight to python heredoc (skip bash cat-heredoc entirely).
+3. If python heredoc fails twice — return inline.
+
+Never loop on bash heredoc. Never loop on Write after one denial. The 18-min integrator timeout was avoidable — the agent was stuck retrying the same escape-trapped heredoc variant.
 
 ## Hard constraints
 

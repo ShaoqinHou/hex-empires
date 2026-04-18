@@ -401,7 +401,43 @@ Claude Code has a `TeamCreate` / agent-team primitive. I considered it for Phase
 
 **When to revisit teams:** once Claude Code docs explicitly answer the three questions above, OR once a use case clearly benefits from teammate-to-teammate `SendMessage` interaction that serial spawns can't replicate.
 
-### 7. Loop-state file persistence (compact + restart protocol)
+### 7. Bash heredoc + single-quote escape trap (subagent Write fallback)
+
+**Symptom:** A designer / implementer subagent falls back from `Write` (denied) to `Bash` heredoc for file creation:
+```bash
+cat > path/to/doc.md <<'EOF'
+The player's turn...
+EOF
+```
+Shell reports `unexpected EOF while looking for matching '\''`. Agent retries with slight variations, fails again, retries again. Net effect: 10+ failed tool calls, 18-min stream idle timeout, partial response (OR full-content-inline salvage, best case).
+
+**Root cause:** Claude Code's Bash tool wraps your command in `bash -c '<cmd>'`. Any `'` in `<cmd>` — including inside `<<'EOF'` heredoc bodies — breaks the outer quote. The heredoc marker being single-quoted gives the IMPRESSION that apostrophes inside are safe (they are, for the heredoc parser itself), but the outer `bash -c '...'` wrapper parses the command string BEFORE the heredoc marker takes effect. Any apostrophe anywhere in the command string is a trap.
+
+**Reproduction:** any content with words like "doesn't", "player's", "Civ VII's" written via bash heredoc fails at the outer-wrapper level. The failure mode is deterministic — retrying with identical content WILL NOT succeed.
+
+**Fix — use python heredoc instead:**
+```bash
+python - <<'PYEOF'
+content = r"""
+The player's turn begins. It's the player's move. Any ' character is fine.
+"""
+with open(r'/absolute/path/doc.md', 'w', encoding='utf-8') as f:
+    f.write(content)
+PYEOF
+```
+
+Why python works: the outer heredoc body is a single opaque argument passed to `python`'s stdin. Python's `r"""..."""` raw triple-quoted string accepts any content including `'`, `"`, `\`, fenced code blocks, etc. The outer `bash -c` wrapper sees no `'` in the python code — only in the content which is safely inside the heredoc body.
+
+**Retry discipline — hard rule:** if a bash heredoc fails with an escape / EOF error, do NOT retry it. The failure is in the wrapper, not the content. Pivot to python heredoc on the first failure. See `designer.md` § "Write state machine — self-defense" for the 3-strike rule.
+
+**Affected agents:** any subagent writing files via Bash. `designer.md` has the explicit playbook; `implementer.md` mostly uses `Write` or `Edit` and has been less affected (state-D coverage), but the same trap applies if implementer ever falls back to bash cat.
+
+**Prior incidents (2026-04-18):**
+- Phase 4 pragmatist designer — hit it twice with an SVG data URI containing `'`; escaped via python heredoc after ~10 min.
+- Phase 4 skeptic designer — hit it 5+ times with natural apostrophes in prose; gave up and inline-returned ~2100-word content at 21-min elapsed.
+- Phase 4 integrator designer — timed out at 18 min with partial response. No root-cause proof but pattern fits.
+
+### 8. Loop-state file persistence (compact + restart protocol)
 
 **Symptom:** Auto-compact fires mid-loop or the user does `/exit` + `claude --continue`. The new session picks up with no idea which phase was in progress, which sub-steps were completed, which decisions had been locked in.
 
