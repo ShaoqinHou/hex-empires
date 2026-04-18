@@ -101,10 +101,11 @@ export function HelpPanel({ onClose }: HelpPanelProps) {
               className="px-3 py-2 text-xs transition-colors"
               style={{
                 color: isActive ? 'var(--color-accent)' : 'var(--panel-muted-color)',
-                borderBottom: isActive ? '2px solid var(--color-accent)' : '2px solid transparent',
                 marginBottom: '-1px',
                 background: 'none',
-                border: 'none',
+                borderTopWidth: '0',
+                borderLeftWidth: '0',
+                borderRightWidth: '0',
                 borderBottomColor: isActive ? 'var(--color-accent)' : 'transparent',
                 borderBottomWidth: '2px',
                 borderBottomStyle: 'solid',
