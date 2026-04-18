@@ -111,6 +111,37 @@ Bug-fix fast path: regression test → fix → run tests → `/verify` if visual
 
 All color/font/chrome/image/audio swaps go through tokens + registry — never hardcoded in components. Single authoritative reference: **`.claude/workflow/design/asset-and-theme-swap-guide.md`**. Read it before any visual swap; the swap surface is exactly 11 files (9 CSS token files + `assets/registry.ts` + `assets/loader.ts`).
 
+## Subagent timing + hang detection (mandatory for every spawn)
+
+Every subagent spawn gets a sampling watchdog + a completion log entry. This catches the hang pattern where a run elapses normally but produces ~no tokens (the Phase 4 integrator: 18min / 52 tokens = dead).
+
+Protocol:
+
+1. **On spawn** — immediately kick off a background sampler:
+   ```bash
+   bash .claude/workflow/scripts/sample-agent-output.sh \
+     "<phase>" "<agent-id>" "<subagent-type>" "<output-file-path>" &
+   ```
+   The output file path is the `output_file` field of the Agent tool's spawn response. Sampler appends size-delta rows every 60s to `.claude/workflow/scratch/agent-timing.jsonl`. 45-min hard cap.
+
+2. **On return** — log the completion row from the `<usage>` block of the task-notification:
+   ```bash
+   bash .claude/workflow/scripts/log-agent-timing.sh \
+     --phase "<phase>" --agent-id "<agent-id>" --subagent "<subagent-type>" \
+     --duration-ms <duration_ms> --tokens <total_tokens> --status completed \
+     [--notes "<one-liner>"]
+   ```
+   Classifies: `tokens_per_min < 1000` = HANG_SUSPECT, `< 5000 AND > 5min` = SLOW, else HEALTHY.
+
+3. **Reports:**
+   ```bash
+   bash .claude/workflow/scripts/agent-timing-report.sh           # session summary
+   bash .claude/workflow/scripts/agent-timing-report.sh <id>      # time-series for one agent
+   bash .claude/workflow/scripts/agent-timing-report.sh --hangs   # only hang-suspects
+   ```
+
+**Healthy rates (observed 2026-04-18 session):** implementer 18k-21k tpm, designer 8k-10k tpm. Sustained sub-1k tpm = hang; investigate, don't just wait.
+
 ## Rules (auto-loaded from `.claude/rules/`)
 
 Full rule docs are auto-loaded at every session start from `.claude/rules/*.md`. Read them when working in their area:
