@@ -78,6 +78,11 @@
   --hud-notification-info:       #64b5f6;
   --hud-notification-close-hover: #f87171;
 
+  /* Phase 5 — requiresAction amber border (outer frame on persistent toasts).
+   * Derived from --hud-tooltip-heading-strong (#fbbf24) at 55% opacity.
+   * Used for the pulsing amber border and the [requires acknowledgement] pill. */
+  --hud-notification-requires-action-border: rgba(251, 191, 36, 0.55);
+
   /* Combat preview tokens — deferred to Phase 4 warm-shift pass. */
   --hud-combat-attacker-bar: #3b82f6;
   --hud-combat-defender-bar: #8b5cf6;

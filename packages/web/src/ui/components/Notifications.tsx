@@ -1,166 +1,179 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import { TooltipShell } from '../hud/TooltipShell';
 import { useHUDManager } from '../hud/HUDManager';
+import { usePanelManager } from '../panels/PanelManager';
+import type { PanelId } from '../panels/panelRegistry';
+import type { SoundEffect } from '../../audio/AudioManager';
+import { getAudioManager } from '../../audio/AudioManager';
+import {
+  getCategoryEntry,
+  isDiplomaticHostile,
+  NOTIFICATION_CATEGORY_REGISTRY,
+} from './notificationCategoryRegistry';
+import type { NotificationCategory } from '@hex/engine';
 
-/** Mirror of engine's GameEventSeverity — kept in sync. */
-type NotificationSeverity = 'info' | 'warning' | 'critical';
+// ── Local notification shape ─────────────────────────────────────────────────
 
-interface Notification {
-  id: string;
-  message: string;
-  type: 'production' | 'research' | 'civic' | 'info' | 'warning' | 'critical';
-  severity: NotificationSeverity;
-  timestamp: number;
-  /** City ID for production-complete notifications — enables click-to-open city panel */
-  cityId?: string;
-  /** Original event turn + message so we can dispatch DISMISS_EVENT */
-  eventTurn: number;
-  eventMessage: string;
+interface ActiveNotification {
+  readonly id: string;
+  readonly message: string;
+  readonly category: NotificationCategory;
+  /** Resolved accent token (may be overridden for hostile-diplomatic). */
+  readonly accentToken: string;
+  /** When true, outer border switches to amber + pulse; timer is suppressed. */
+  readonly requiresAction: boolean;
   /**
-   * Forward-compat scaffold. When true, right-click dismissal is blocked — the
-   * user must resolve the underlying event via the related panel (crisis,
-   * age transition, etc.) before it clears. Today nothing sets this; reserved
-   * for future turn-gate notifications that enforce acknowledgement.
+   * When true, right-click is blocked (crisis, age).
+   * When false but requiresAction=true (hostile-diplomatic), right-click allowed.
    */
-  requiresAction?: boolean;
+  readonly blockRightClick: boolean;
+  readonly panelTarget: PanelId | null;
+  readonly sound: SoundEffect | null;
+  readonly showGoldRule: boolean;
+  readonly titleLabel: string;
+  /** Original event fields for DISMISS_EVENT dispatch */
+  readonly eventTurn: number;
+  readonly eventMessage: string;
+  readonly dismissMs: number | null;
 }
+
+// ── Per-turn sound de-duplication ────────────────────────────────────────────
+
+/**
+ * Per-turn de-dupe logic.
+ * crisis and age sounds always play (never de-duped within a turn).
+ * Other categories: first toast in that category per turn plays; rest suppressed.
+ */
+function shouldPlaySound(
+  category: NotificationCategory,
+  sound: SoundEffect,
+  playedThisTurn: Set<SoundEffect>,
+): boolean {
+  if (category === 'crisis' || category === 'age') return true;
+  if (playedThisTurn.has(sound)) return false;
+  return true;
+}
+
+// ── Max visible + overflow ───────────────────────────────────────────────────
+
+const MAX_VISIBLE = 4;
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 interface NotificationsProps {
-  /** Called when the user clicks a production-complete notification to open that city's panel */
+  /**
+   * Legacy callback for production toasts (city panel focus).
+   * Kept for backward compat; click behavior now also goes through openPanel.
+   */
   onCityClick?: (cityId: string) => void;
-}
-
-/**
- * Extract a city ID from a production log message by matching a city name.
- * Returns null if no city matches.
- */
-function extractCityId(message: string, cities: ReadonlyMap<string, { id: string; name: string; owner: string }>, playerId: string): string | null {
-  for (const city of cities.values()) {
-    if (city.owner !== playerId) continue;
-    if (message.startsWith(city.name + ' ')) return city.id;
-  }
-  return null;
-}
-
-/**
- * Filter notifications: always show warning + critical; deduplicate info to at most 1
- * per distinct message text per render cycle.
- */
-function filterNotifications(notifications: Notification[]): Notification[] {
-  const seen = new Set<string>();
-  const result: Notification[] = [];
-  let infoCount = 0;
-
-  for (const n of notifications) {
-    if (n.severity === 'critical' || n.severity === 'warning') {
-      result.push(n);
-    } else {
-      // info: deduplicate by message text, limit to 1 per unique message
-      if (!seen.has(n.message)) {
-        seen.add(n.message);
-        infoCount++;
-        // Show at most 2 info toasts at once to reduce noise
-        if (infoCount <= 2) {
-          result.push(n);
-        }
-      }
-    }
-  }
-
-  return result;
 }
 
 export function Notifications({ onCityClick }: NotificationsProps) {
   const { state, dispatch } = useGameState();
   const { register } = useHUDManager();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { openPanel } = usePanelManager();
+
+  const [notifications, setNotifications] = useState<ActiveNotification[]>([]);
   const [notifiedEventIds, setNotifiedEventIds] = useState<Set<string>>(new Set());
+
+  // Per-turn sound de-dupe: { turn -> Set<SoundEffect> }
+  const playedSoundsRef = useRef<Map<number, Set<SoundEffect>>>(new Map());
+
+  // ── Ingest new log events ──────────────────────────────────────────────────
 
   useEffect(() => {
     const player = state.players.get(state.currentPlayerId);
     if (!player) return;
 
-    const newNotifications: Notification[] = [];
-    const now = Date.now();
+    const recentEvents = state.log.filter(
+      e => e.turn === state.turn && e.playerId === state.currentPlayerId,
+    );
 
-    // Check log for recent events from this turn
-    const recentEvents = state.log.filter(e => e.turn === state.turn && e.playerId === state.currentPlayerId);
+    const newNotifications: ActiveNotification[] = [];
 
     for (const event of recentEvents) {
-      // Create a unique ID for this event
       const eventId = `${state.turn}-${event.playerId}-${event.message}`;
+      if (notifiedEventIds.has(eventId)) continue;
+      if (event.message.includes('started for')) continue; // turn-start noise
 
-      // Skip if already notified or if it's a "Turn started" message (redundant with TurnTransition)
-      if (notifiedEventIds.has(eventId) || event.message.includes('started for')) {
-        continue;
-      }
+      // Resolve category (fallback to 'info' if missing)
+      const rawCategory = event.category ?? 'info';
 
-      // event.severity is the new field added in this batch; cast defensively for
-      // the web tsc build which may resolve against an older engine declaration.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const severity: NotificationSeverity = ((event as any).severity as NotificationSeverity | undefined) ?? 'info';
+      // For diplomatic, check hostile override
+      const isHostileDiplomatic = rawCategory === 'diplomatic' && isDiplomaticHostile(event.message);
 
-      let type: Notification['type'] = severity === 'critical' ? 'critical' : severity === 'warning' ? 'warning' : 'info';
-      let cityId: string | undefined;
+      const baseEntry = getCategoryEntry(rawCategory);
 
-      // Determine notification type based on message content (refines the type for styling)
-      const msg = event.message.toLowerCase();
-
-      // Production complete: "CityName produced unitId" or "CityName built buildingId"
-      if (msg.includes(' produced ') || msg.includes(' built ')) {
-        if (severity === 'info') type = 'production';
-        cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
-      } else if (msg.includes('completed') && msg.includes('ready to place')) {
-        // District complete: "CityName completed districtId - ready to place"
-        if (severity === 'info') type = 'production';
-        cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
-      } else if (msg.includes('finished') || msg.includes('completed')) {
-        if (severity === 'info') {
-          if (msg.includes('research') || msg.includes('technology') || msg.includes('researched')) {
-            type = 'research';
-          } else if (msg.includes('civic')) {
-            type = 'civic';
-          } else if (msg.includes('production') || msg.includes('produced')) {
-            type = 'production';
-            cityId = extractCityId(event.message, state.cities, state.currentPlayerId) ?? undefined;
-          }
-        }
-      } else if (msg.includes('researched ')) {
-        if (severity === 'info') type = 'research';
-      } else if (msg.includes('mastered ')) {
-        if (severity === 'info') type = 'research';
-      }
+      const category: NotificationCategory = rawCategory;
+      const accentToken = isHostileDiplomatic
+        ? 'var(--hud-notification-warning)'
+        : baseEntry.accentToken;
+      const requiresAction = isHostileDiplomatic ? true : baseEntry.requiresAction;
+      // block right-click only for crisis and age (not hostile-diplomatic per spec Q1)
+      const blockRightClick = category === 'crisis' || category === 'age';
+      const sound = isHostileDiplomatic ? ('error' as SoundEffect) : baseEntry.sound;
+      const dismissMs = requiresAction ? null : baseEntry.dismissMs;
+      const panelTarget = (event.panelTarget as PanelId | undefined) ?? baseEntry.panelTarget;
+      const showGoldRule = baseEntry.showGoldRule;
+      const titleLabel = isHostileDiplomatic ? 'War Declared!' : baseEntry.titleLabel;
 
       newNotifications.push({
         id: eventId,
         message: event.message,
-        type,
-        severity,
-        timestamp: now,
-        cityId,
+        category,
+        accentToken,
+        requiresAction,
+        blockRightClick,
+        panelTarget,
+        sound,
+        showGoldRule,
+        titleLabel,
         eventTurn: event.turn,
         eventMessage: event.message,
+        dismissMs,
       });
     }
 
-    if (newNotifications.length > 0) {
-      setNotifications(prev => [...prev, ...newNotifications]);
-      setNotifiedEventIds(prev => new Set([...prev, ...newNotifications.map(n => n.id)]));
+    if (newNotifications.length === 0) return;
 
-      // Auto-remove non-critical notifications after 8 seconds. `requiresAction`
-      // (forward-compat; unused today) opts out of auto-dismiss so turn-gate
-      // notifications persist until resolved.
-      const autoExpiring = newNotifications.filter(n => n.severity !== 'critical' && !n.requiresAction);
-      if (autoExpiring.length > 0) {
-        const timer = setTimeout(() => {
-          setNotifications(prev => prev.filter(n => !autoExpiring.some(nn => nn.id === n.id)));
-        }, 8000);
+    // Play sounds (per-turn de-dupe)
+    const turnsPlayed = playedSoundsRef.current;
+    if (!turnsPlayed.has(state.turn)) {
+      turnsPlayed.set(state.turn, new Set());
+    }
+    const playedThisTurn = turnsPlayed.get(state.turn)!;
 
-        return () => clearTimeout(timer);
+    for (const n of newNotifications) {
+      if (n.sound && shouldPlaySound(n.category, n.sound, playedThisTurn)) {
+        try {
+          getAudioManager().playSound(n.sound);
+        } catch {
+          // AudioManager may not be initialized in tests; swallow
+        }
+        playedThisTurn.add(n.sound);
       }
     }
+
+    setNotifications(prev => [...prev, ...newNotifications]);
+    setNotifiedEventIds(prev => new Set([...prev, ...newNotifications.map(n => n.id)]));
   }, [state.turn, state.log, state.currentPlayerId, notifiedEventIds]);
+
+  // ── Per-notification auto-dismiss timers ───────────────────────────────────
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const n of notifications) {
+      if (n.dismissMs === null || n.requiresAction) continue;
+      const timer = setTimeout(() => {
+        setNotifications(prev => prev.filter(x => x.id !== n.id));
+      }, n.dismissMs);
+      timers.push(timer);
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [notifications]);
+
+  // ── HUD registration ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (notifications.length === 0) return;
@@ -168,45 +181,58 @@ export function Notifications({ onCityClick }: NotificationsProps) {
     return unregister;
   }, [notifications.length, register]);
 
-  /**
-   * Dismiss a single notification. For blocksTurn events, also dispatches
-   * DISMISS_EVENT so the turn system clears the blocker.
-   *
-   * Right-click is the primary dismissal affordance — the ×-button was removed
-   * in Phase 0.1 to reduce button density and align with the broader "right-click
-   * to close" interaction model. Non-blocking notifications also auto-dismiss
-   * after ~8s (see the effect above).
-   *
-   * If `notification.requiresAction` is true (forward-compat scaffold; unused
-   * today), dismissal is refused and the caller is expected to surface a hint
-   * that the user needs to open the related panel. Currently this path is
-   * unreachable because nothing sets requiresAction.
-   */
-  function dismissOne(notification: Notification): void {
-    if (notification.requiresAction) return;
-    setNotifications(prev => prev.filter(n => n.id !== notification.id));
-    if (notification.severity === 'critical') {
-      // DISMISS_EVENT is a new action added in this batch; cast because the web tsc
-      // build may resolve against an older engine declaration that lacks it.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      dispatch({ type: 'DISMISS_EVENT', eventMessage: notification.eventMessage, eventTurn: notification.eventTurn } as any);
+  // ── Dismiss helpers ────────────────────────────────────────────────────────
+
+  function dismissOne(n: ActiveNotification): void {
+    if (n.blockRightClick) return;
+    setNotifications(prev => prev.filter(x => x.id !== n.id));
+    if (n.requiresAction || n.category === 'crisis' || n.category === 'age') {
+      dispatch({
+        type: 'DISMISS_EVENT',
+        eventMessage: n.eventMessage,
+        eventTurn: n.eventTurn,
+      });
     }
   }
 
   function dismissAll(): void {
-    const dismissible = notifications.filter(n => !n.requiresAction);
+    const dismissible = notifications.filter(n => !n.blockRightClick);
     for (const n of dismissible) {
-      if (n.severity === 'critical') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dispatch({ type: 'DISMISS_EVENT', eventMessage: n.eventMessage, eventTurn: n.eventTurn } as any);
+      if (n.requiresAction || n.category === 'crisis' || n.category === 'age') {
+        dispatch({
+          type: 'DISMISS_EVENT',
+          eventMessage: n.eventMessage,
+          eventTurn: n.eventTurn,
+        });
       }
     }
-    const keepIds = new Set(notifications.filter(n => n.requiresAction).map(n => n.id));
+    const keepIds = new Set(notifications.filter(n => n.blockRightClick).map(n => n.id));
     setNotifications(prev => prev.filter(n => keepIds.has(n.id)));
   }
 
-  const visible = filterNotifications(notifications);
-  if (visible.length === 0) return null;
+  // ── Click-to-panel ─────────────────────────────────────────────────────────
+
+  function handleClick(n: ActiveNotification): void {
+    if (!n.panelTarget) return;
+    openPanel(n.panelTarget);
+    // Legacy path: production click with city callback
+    if (n.category === 'production' && onCityClick) {
+      const cityMatch = [...state.cities.values()].find(
+        c => c.owner === state.currentPlayerId && n.message.startsWith(c.name + ' '),
+      );
+      if (cityMatch) onCityClick(cityMatch.id);
+    }
+    // Clicking is the acknowledgement for requiresAction (except crisis/age which
+    // already auto-open — but we keep a belt-and-suspenders openPanel call above).
+    dismissOne({ ...n, blockRightClick: false });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const visible = notifications.slice(0, MAX_VISIBLE);
+  const overflow = Math.max(0, notifications.length - MAX_VISIBLE);
+
+  if (notifications.length === 0) return null;
 
   return (
     <TooltipShell
@@ -215,7 +241,7 @@ export function Notifications({ onCityClick }: NotificationsProps) {
       position="fixed-corner"
       tier="detailed"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hud-padding-sm)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hud-padding-sm)', width: 320 }}>
         {visible.length >= 3 && (
           <button
             type="button"
@@ -238,160 +264,175 @@ export function Notifications({ onCityClick }: NotificationsProps) {
             Dismiss All
           </button>
         )}
-        {visible.map(notification => {
-          const isClickable = notification.type === 'production' && !!notification.cityId && !!onCityClick;
-          const accent = getNotificationColor(notification);
-          const tooltipHint = notification.requiresAction
+
+        {visible.map(n => {
+          const isClickable = !!n.panelTarget;
+          const tooltipHint = n.blockRightClick
             ? 'Resolve in the related panel to clear this'
             : isClickable
-              ? 'Click to open • right-click to dismiss'
+              ? 'Click to open panel • right-click to dismiss'
               : 'Right-click to dismiss';
+
           return (
-            <div
-              key={notification.id}
-              className={`animate-slide-in${isClickable ? ' cursor-pointer hover:brightness-110' : ''}`}
-              title={tooltipHint}
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderLeftColor: accent,
-                borderLeftStyle: 'solid',
-                borderLeftWidth: '4px',
-                borderRadius: 'var(--hud-radius)',
-                padding: 'var(--hud-padding-md)',
-                boxShadow: 'var(--hud-shadow)',
-                cursor: isClickable ? 'pointer' : 'default',
-              }}
-              onClick={isClickable ? () => {
-                onCityClick!(notification.cityId!);
-                dismissOne(notification);
-              } : undefined}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dismissOne(notification);
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--hud-padding-md)' }}>
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '9999px',
-                    marginTop: 4,
-                    flexShrink: 0,
-                    backgroundColor: accent,
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 500,
-                      color: 'var(--hud-text-color)',
-                    }}
-                  >
-                    {getNotificationTitle(notification)}
-                    {isClickable && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 12,
-                          fontWeight: 400,
-                          opacity: 0.7,
-                        }}
-                      >
-                        (click to manage)
-                      </span>
-                    )}
-                    {notification.severity === 'critical' && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: 'var(--hud-notification-warning)',
-                          opacity: 0.9,
-                        }}
-                      >
-                        [requires acknowledgement]
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      marginTop: 4,
-                      color: 'var(--hud-text-muted)',
-                    }}
-                  >
-                    {notification.message}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <NotificationToast
+              key={n.id}
+              notification={n}
+              isClickable={isClickable}
+              tooltipHint={tooltipHint}
+              onClick={() => handleClick(n)}
+              onDismiss={() => dismissOne(n)}
+            />
           );
         })}
+
+        {overflow > 0 && (
+          <button
+            type="button"
+            aria-label={`${overflow} more notifications — open event log`}
+            style={{
+              background: 'var(--hud-cycle-indicator-bg)',
+              border: '1px solid var(--panel-border)',
+              borderRadius: 'var(--panel-radius)',
+              color: 'var(--hud-text-muted)',
+              fontSize: 12,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+            onClick={() => openPanel('log')}
+          >
+            +{overflow} more
+          </button>
+        )}
       </div>
+
       <style>{`
         @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
         }
-        .animate-slide-in {
-          animation: slideIn 0.3s ease-out;
+        @keyframes slideOut {
+          from { transform: translateX(0);    opacity: 1; }
+          to   { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes requiresActionPulse {
+          0%   { border-color: var(--hud-notification-requires-action-border); }
+          50%  { border-color: rgba(251, 191, 36, 0.85); }
+          100% { border-color: var(--hud-notification-requires-action-border); }
+        }
+        .animate-slide-in  { animation: slideIn 0.3s ease-out; }
+        .animate-slide-out { animation: slideOut 0.3s ease-in forwards; }
+        .requires-action-pulse {
+          animation: requiresActionPulse 2.4s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .requires-action-pulse { animation: none; }
         }
       `}</style>
     </TooltipShell>
   );
 }
 
-function getNotificationColor(notification: Notification): string {
-  if (notification.severity === 'critical') return 'var(--hud-notification-warning)';
-  if (notification.severity === 'warning') return 'var(--hud-notification-research)';
-  switch (notification.type) {
-    case 'production':
-      return 'var(--hud-notification-production)';
-    case 'research':
-      return 'var(--hud-notification-research)';
-    case 'civic':
-      return 'var(--hud-notification-civic)';
-    case 'warning':
-      return 'var(--hud-notification-warning)';
-    case 'critical':
-      return 'var(--hud-notification-warning)';
-    default:
-      return 'var(--hud-notification-info)';
-  }
+// ── Toast sub-component ───────────────────────────────────────────────────────
+
+interface NotificationToastProps {
+  readonly notification: ActiveNotification;
+  readonly isClickable: boolean;
+  readonly tooltipHint: string;
+  readonly onClick: () => void;
+  readonly onDismiss: () => void;
 }
 
-function getNotificationTitle(notification: Notification): string {
-  if (notification.severity === 'critical') return 'Critical Alert';
-  if (notification.severity === 'warning') {
-    switch (notification.type) {
-      case 'research': return 'Research Complete';
-      case 'civic': return 'Civic Complete';
-      case 'production': return 'Production Complete';
-      default: return 'Notice';
-    }
-  }
-  switch (notification.type) {
-    case 'production':
-      return 'Production Complete';
-    case 'research':
-      return 'Research Complete';
-    case 'civic':
-      return 'Civic Complete';
-    case 'warning':
-      return 'Alert';
-    case 'critical':
-      return 'Critical Alert';
-    default:
-      return 'Notification';
-  }
+function NotificationToast({ notification: n, isClickable, tooltipHint, onClick, onDismiss }: NotificationToastProps) {
+  const outerBorderStyle = n.requiresAction
+    ? 'var(--hud-notification-requires-action-border)'
+    : 'var(--hud-border)';
+
+  return (
+    <div
+      className={[
+        'animate-slide-in',
+        n.requiresAction ? 'requires-action-pulse' : '',
+        isClickable ? 'cursor-pointer' : '',
+      ].filter(Boolean).join(' ')}
+      role={isClickable ? 'button' : 'status'}
+      tabIndex={isClickable ? 0 : undefined}
+      aria-label={isClickable ? `${n.titleLabel}: ${n.message} — click to open panel` : n.message}
+      title={tooltipHint}
+      style={{
+        backgroundColor: 'var(--hud-bg)',
+        border: `1px solid ${outerBorderStyle}`,
+        borderLeftColor: n.accentToken,
+        borderLeftStyle: 'solid',
+        borderLeftWidth: '4px',
+        borderRadius: 'var(--hud-radius)',
+        padding: 'var(--hud-padding-md)',
+        boxShadow: 'var(--hud-shadow)',
+        cursor: isClickable ? 'pointer' : 'default',
+      }}
+      onClick={isClickable ? onClick : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDismiss();
+      }}
+    >
+      {/* Title row */}
+      <div style={{
+        paddingBottom: n.showGoldRule ? 'var(--hud-padding-sm)' : 0,
+        marginBottom: n.showGoldRule ? 'var(--hud-padding-sm)' : 0,
+        borderBottom: n.showGoldRule ? '1px solid var(--hud-tooltip-heading-strong)' : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--hud-padding-sm)',
+      }}>
+        {/* Accent dot */}
+        <span style={{
+          width: 8,
+          height: 8,
+          borderRadius: '9999px',
+          flexShrink: 0,
+          backgroundColor: n.accentToken,
+          display: 'inline-block',
+        }} />
+        <span style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: 'var(--hud-text-color)',
+          flex: 1,
+        }}>
+          {n.titleLabel}
+        </span>
+        {n.requiresAction && (
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--hud-notification-requires-action-border)',
+          }}>
+            [requires acknowledgement]
+          </span>
+        )}
+        {isClickable && !n.requiresAction && (
+          <span style={{
+            fontSize: 11,
+            fontWeight: 400,
+            color: 'var(--hud-text-muted)',
+          }}>
+            (click to open)
+          </span>
+        )}
+      </div>
+
+      {/* Message body */}
+      <div style={{
+        fontSize: 12,
+        marginTop: 4,
+        color: 'var(--hud-text-muted)',
+        lineHeight: 1.4,
+      }}>
+        {n.message}
+      </div>
+    </div>
+  );
 }
