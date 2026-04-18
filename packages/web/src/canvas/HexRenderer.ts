@@ -133,6 +133,13 @@ export class HexRenderer {
     const canvas = ctx.canvas;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Fill the canvas with the ocean/bg color so edges outside the hex grid
+    // show a warm deep-water background rather than transparent black void.
+    const bgColor = getPaletteColor('--color-ocean') || '#1a2c3a';
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.save();
     camera.applyTransform(ctx);
 
@@ -790,7 +797,7 @@ export class HexRenderer {
       const playerIndex = players.indexOf(city.owner);
       const color = playerColors[playerIndex % playerColors.length];
 
-      // Subtle territory fill (10% opacity)
+      // Territory fill (18% opacity — more visible than old 10%)
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
@@ -808,16 +815,16 @@ export class HexRenderer {
         const { x, y } = hexToPixel(tile.coord);
         drawHexPath(ctx, x, y);
         ctx.fillStyle = color;
-        ctx.globalAlpha = 0.1;
+        ctx.globalAlpha = 0.18;
         ctx.fill();
         ctx.globalAlpha = 1;
       }
 
       // Border edges: only draw edges adjacent to non-owned territory
       ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.lineCap = 'round';
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.9;
 
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
@@ -1158,13 +1165,33 @@ export class HexRenderer {
       const color = playerColors[playerIndex % playerColors.length];
 
       // City circle (base marker on tile)
+      const cityR = HEX_SIZE * 0.38;
       ctx.beginPath();
-      ctx.arc(x, y, HEX_SIZE * 0.35, 0, Math.PI * 2);
-      ctx.fillStyle = color;
+      ctx.arc(x, y, cityR, 0, Math.PI * 2);
+      ctx.fillStyle = color + 'cc'; // ~80% opacity fill
       ctx.fill();
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Castle icon inside the circle: battlements on top + tower body
+      const cs = cityR * 0.55; // icon scale factor
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = 1;
+      // Tower body (rectangle)
+      ctx.fillRect(x - cs * 0.55, y - cs * 0.3, cs * 1.1, cs * 0.9);
+      // Battlements: three small squares on top
+      const bW = cs * 0.28, bH = cs * 0.35;
+      ctx.fillRect(x - cs * 0.55, y - cs * 0.3 - bH, bW, bH);
+      ctx.fillRect(x - bW * 0.5, y - cs * 0.3 - bH, bW, bH);
+      ctx.fillRect(x + cs * 0.55 - bW, y - cs * 0.3 - bH, bW, bH);
+      // Door arch (dark)
+      ctx.fillStyle = color + '88';
+      ctx.beginPath();
+      ctx.arc(x, y + cs * 0.15, cs * 0.18, Math.PI, 0);
+      ctx.rect(x - cs * 0.18, y + cs * 0.15, cs * 0.36, cs * 0.45);
+      ctx.fill();
 
       // ── Production progress ring (outside the city circle) ──
       if (city.productionQueue.length > 0 && city.productionProgress > 0) {
@@ -1191,7 +1218,11 @@ export class HexRenderer {
       }
 
       // ── City banner (nameplate above the hex) ──
-      const bannerY = y - HEX_SIZE * 0.85;
+      // Place the banner well above the hex so the 3px selection-highlight ring
+      // (drawn at HEX_SIZE radius, top vertex at y - HEX_SIZE) doesn't occlude it.
+      // bannerY is the vertical CENTER of the banner. With bannerHeight = 16 and a
+      // safety margin of 6px above the top vertex: center = y - HEX_SIZE - 8 - 6 = y - HEX_SIZE*1.44
+      const bannerY = y - HEX_SIZE * 1.55;
       const popText = `${city.population}`;
       const nameText = city.name;
 
@@ -1326,14 +1357,53 @@ export class HexRenderer {
       const enemyUnits = tileUnits.filter(u => u.owner !== rc.state.currentPlayerId);
 
       // Determine layout offsets.
-      // When there is a city on the tile, shift units up-left so they don't
-      // occlude the city circle (which renders at center with a ~0.35*HEX radius).
-      // When there are TWO own units on the tile, the primary goes center-upper
-      // and the secondary goes bottom-right corner (S-05 layer 8 + 9).
+      //
+      // Layout rules to avoid the city-circle + unit icon collision:
+      //
+      //   No city on tile:
+      //     - 1 unit: center
+      //     - 2 units: primary top-center, secondary bottom-right at 70%
+      //
+      //   City on tile (circle at center, radius ≈ HEX_SIZE * 0.35 = 11px):
+      //     - 1 unit: bottom-left quadrant clear of city circle
+      //     - 2 units: primary bottom-left, secondary bottom-right (both 80% scale)
+      //
+      // These positions keep units outside the city circle while keeping them
+      // within the hex boundary.
       const hasTwoOwn = ownUnits.length >= 2;
-      // City shift: move up-left so unit appears "standing at the gates"
-      const cityShiftX = onCity ? -HEX_SIZE * 0.22 : 0;
-      const cityShiftY = onCity ? -HEX_SIZE * 0.18 : 0;
+
+      let px1 = baseCx, py1 = baseCy;           // primary position
+      let px2 = baseCx, py2 = baseCy;           // secondary position
+      let primaryScale = 1.0, secondaryScale = 0.70;
+
+      if (onCity) {
+        // City occupies center. Place units in the lower quadrants.
+        const downShift = HEX_SIZE * 0.45;
+        const sideShift = HEX_SIZE * 0.30;
+        if (hasTwoOwn) {
+          // Primary: bottom-left
+          px1 = baseCx - sideShift;
+          py1 = baseCy + downShift;
+          // Secondary: bottom-right
+          px2 = baseCx + sideShift;
+          py2 = baseCy + downShift;
+          primaryScale = 0.80;
+          secondaryScale = 0.80;
+        } else {
+          // Single unit: bottom-center, slightly left so health bar is visible
+          px1 = baseCx - HEX_SIZE * 0.12;
+          py1 = baseCy + downShift;
+        }
+      } else {
+        // No city: standard S-05 layout
+        if (hasTwoOwn) {
+          // Primary: top-center
+          py1 = baseCy - HEX_SIZE * 0.12;
+          // Secondary: bottom-right at 70%
+          px2 = baseCx + HEX_SIZE * 0.28;
+          py2 = baseCy + HEX_SIZE * 0.22;
+        }
+      }
 
       // ── Primary own unit ────────────────────────────────────────────────
       if (ownUnits.length >= 1) {
@@ -1344,11 +1414,7 @@ export class HexRenderer {
         const unitDef = rc.state.config.units.get(primary.typeId);
         const maxMovement = unitDef?.movement ?? 2;
 
-        // Center + optional city-shift
-        const px = baseCx + cityShiftX;
-        const py = baseCy + cityShiftY;
-
-        drawUnitIcon(this.ctx, primary.typeId, px, py, {
+        drawUnitIcon(this.ctx, primary.typeId, px1, py1, {
           playerColor,
           isSelected,
           isFortified: primary.fortified,
@@ -1356,12 +1422,11 @@ export class HexRenderer {
           movementLeft: primary.movementLeft,
           maxMovement,
           pulseFraction: isSelected ? pulseFraction : 0,
+          scale: primaryScale,
         });
       }
 
-      // ── Secondary own unit (bottom-right offset, ~70% scale) ────────────
-      // S-05 layer 9: offset 8px right + 8px down at full zoom; scale via
-      // the icon system's scale parameter.
+      // ── Secondary own unit ─────────────────────────────────────────────
       if (hasTwoOwn) {
         const secondary = ownUnits[1];
         const playerIndex = players.indexOf(secondary.owner);
@@ -1370,13 +1435,9 @@ export class HexRenderer {
         const unitDef = rc.state.config.units.get(secondary.typeId);
         const maxMovement = unitDef?.movement ?? 2;
 
-        // Bottom-right offset per S-05: city-shift applies if on city tile
-        const sx = baseCx + HEX_SIZE * 0.28 + cityShiftX;
-        const sy = baseCy + HEX_SIZE * 0.22 + cityShiftY;
-
         this.ctx.save();
         this.ctx.globalAlpha = 0.82; // slight fade so primary reads first
-        drawUnitIcon(this.ctx, secondary.typeId, sx, sy, {
+        drawUnitIcon(this.ctx, secondary.typeId, px2, py2, {
           playerColor,
           isSelected,
           isFortified: secondary.fortified,
@@ -1384,7 +1445,7 @@ export class HexRenderer {
           movementLeft: secondary.movementLeft,
           maxMovement,
           pulseFraction: isSelected ? pulseFraction : 0,
-          scale: 0.70,
+          scale: secondaryScale,
         });
         this.ctx.restore();
       }

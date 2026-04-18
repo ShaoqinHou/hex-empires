@@ -159,11 +159,24 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     resize();
     window.addEventListener('resize', resize);
 
-    // Center camera on the player's first unit
+    // Center camera on the player's starting unit if available, otherwise on map center.
+    // Map center in axial coords: the generator uses odd-r offset layout so the center
+    // axial hex is at q = (width/2) - floor(height/4), r = height/2.
     const playerUnit = [...state.units.values()].find(u => u.owner === state.currentPlayerId);
     if (playerUnit) {
       const { x, y } = hexToPixel(playerUnit.position);
       cameraRef.current.centerOn(x, y);
+    } else {
+      const tiles = [...state.map.tiles.values()];
+      if (tiles.length > 0) {
+        // Average all tile positions to find the visual center of the map
+        let sumX = 0, sumY = 0;
+        for (const tile of tiles) {
+          const px = hexToPixel(tile.coord);
+          sumX += px.x; sumY += px.y;
+        }
+        cameraRef.current.centerOn(sumX / tiles.length, sumY / tiles.length);
+      }
     }
 
     // Expose a hex→screen helper for E2E tests (Playwright needs to click on known hexes).

@@ -205,3 +205,38 @@ html, body, #root {
 .game-app > .layout-chrome-bar:last-child {
   grid-area: bottombar;
 }
+
+/* ── Custom scrollbars — warm-earth palette ─────────────────────────────────
+ * Applies to all scrollable areas (SetupScreen, panel bodies, tech tree).
+ * The game canvas area is overflow:hidden so no scrollbars appear there.
+ * Width 6px keeps them unobtrusive. Thumb uses the bronze accent colour.
+ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-accent) 90%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-bg);
+}
+
+/* Firefox scrollbar (limited styling) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-accent) 60%, transparent) var(--color-bg);
+}
