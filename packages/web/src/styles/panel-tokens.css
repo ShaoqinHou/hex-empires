@@ -35,6 +35,58 @@
   /* Backdrop for modal priority — lightened per S-04 (0.65 → 0.45) */
   --panel-backdrop: rgba(0, 0, 0, 0.45);
 
+  /* ─── Phase 4 chrome tokens ──────────────────────────────────────────
+   * 4.1: Gold-foil title underline + inset bronze border.
+   * 4.2: Warm radial vignette on modal backdrop.
+   * 4.3: TopBar + BottomBar chrome harmonization.
+   * ────────────────────────────────────────────────────────────────── */
+
+  /* 4.1a: Title-bar gold underline — fades in from left to center and out. */
+  --panel-title-rule:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--amber-400) 15%,
+      var(--amber-300) 50%,
+      var(--amber-400) 85%,
+      transparent 100%
+    );
+
+  /* 4.1b: Bronze inset bevel — layered on top of --panel-shadow.
+   * Uses --bronze-700 (#5e3d12) as the inset line color: crisp
+   * but not overpowering at 1px. Skeptic-preferred 800 is too
+   * subtle at dark backgrounds; 700 is the integration pick. */
+  --panel-bevel-inset: inset 0 0 0 1px rgba(94, 61, 18, 0.55);
+
+  /* 4.2: Modal backdrop — warm radial vignette (replaces flat black).
+   * rgba values match --olive-900 (#161409) and near-black (#0a0805). */
+  --panel-backdrop-modal:
+    radial-gradient(
+      ellipse at center,
+      rgba(26, 21, 16, 0.35) 0%,
+      rgba(10, 8, 5, 0.65) 100%
+    );
+
+  /* 4.3: Chrome bars (TopBar + BottomBar) background.
+   * Derived from --olive-700 (#433b1c) + --olive-800 (#2a2511) with 0.98 alpha. */
+  --chrome-bar-bg:
+    linear-gradient(
+      180deg,
+      rgba(67, 59, 28, 0.98) 0%,
+      rgba(42, 37, 17, 0.98) 100%
+    );
+
+  /* 4.3: Chrome bars edge rule — mirrors --panel-title-rule for visual harmony. */
+  --chrome-bar-rule:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--amber-400) 20%,
+      var(--amber-300) 50%,
+      var(--amber-400) 80%,
+      transparent 100%
+    );
+
   /* Turn badge — warm palette update */
   --panel-turn-badge-text:   #1a1510;  /* = --color-bg */
   --panel-turn-badge-border: #1a1510;  /* = --color-bg */

@@ -1,0 +1,29 @@
+/*
+ * panel-shell.css — scoped styles for PanelShell chrome.
+ *
+ * Phase 4.1: Gold-foil title underline via ::after pseudo-element on
+ * the title bar. Uses --panel-title-rule token from panel-tokens.css.
+ *
+ * Selector: [data-testid^="panel-shell-"] > div:first-child is the
+ * title bar (the first flex child of the PanelShell container).
+ * ::after is absolutely positioned at the bottom of the title bar,
+ * covering the full inset width minus padding.
+ *
+ * Do NOT add per-panel overrides here — this file is chrome-only.
+ */
+
+/* Title-bar gold underline rule */
+[data-testid^="panel-shell-"] > div:first-child {
+  position: relative;
+}
+
+[data-testid^="panel-shell-"] > div:first-child::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--panel-title-rule);
+  pointer-events: none;
+}

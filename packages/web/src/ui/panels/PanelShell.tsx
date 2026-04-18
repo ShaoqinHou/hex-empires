@@ -26,6 +26,8 @@ import type { PanelId, PanelPriority } from './panelRegistry';
 // whenever a PanelShell is mounted, without requiring every consumer
 // to remember to import it.
 import '../../styles/panel-tokens.css';
+// Phase 4.1 scoped chrome — gold-foil title underline via ::after.
+import './panel-shell.css';
 
 export type PanelShellWidth = 'narrow' | 'wide' | 'full';
 
@@ -66,9 +68,11 @@ function containerStyle(priority: PanelPriority, width: PanelShellWidth): CSSPro
   const base: CSSProperties = {
     position: 'absolute',
     backgroundColor: 'var(--panel-bg)',
-    border: '1px solid var(--panel-border)',
+    // Phase 4.1: border removed in favor of --panel-bevel-inset layered
+    // on top of the outer drop shadow. The inset 1px bronze line reads as
+    // a material frame without a hard CSS border competing with it.
     borderRadius: 'var(--panel-radius)',
-    boxShadow: 'var(--panel-shadow)',
+    boxShadow: 'var(--panel-shadow), var(--panel-bevel-inset)',
     color: 'var(--panel-text-color)',
     zIndex: Z_INDEX_VAR[priority],
     display: 'flex',
@@ -115,7 +119,9 @@ const titleBarStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: 'var(--panel-padding-md) var(--panel-padding-lg)',
-  borderBottom: '1px solid var(--panel-border)',
+  // Phase 4.1: border-bottom replaced by the ::after gold-foil rule
+  // defined in panel-shell.css. The CSS rule requires position:relative
+  // which is also applied via the stylesheet selector.
   flexShrink: 0,
 };
 
