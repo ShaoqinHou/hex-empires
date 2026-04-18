@@ -2,14 +2,14 @@
 title: UI master-plan loop state
 purpose: Persistent state for the event-driven UI master-plan loop. If auto-compact fires OR the session restarts, re-read this to know where we are.
 created: 2026-04-17
-updated: 2026-04-19 (ALL_X-import-in-ui + chrome-raw-hex-regression trap sweep — all UI panels/HUD clean)
+updated: 2026-04-19 (ALL_X-import-in-ui + chrome-raw-hex-regression trap sweep — all UI panels/HUD clean; e2e suite hardened to 197 passed 0 failed)
 ---
 
 # Loop state — READ THIS FIRST AFTER SESSION START
 
 ## Current position
 
-**HEAD: `2ad7ee9` (origin synced).** Master plan through **Phase 7 + deployed + wave-3 fixes + trap sweep**. All motion shipped (Phase 6). Phase 7 accessibility complete. Trap sweep: eliminated ALL_X-import-in-ui from all 10 affected files (DiplomacyPanel, AgeTransitionPanel, GovernmentPanel, ReligionPanel, GovernorPanel, CityPanel, TooltipOverlay, ResourceTooltip, ImprovementPanel, BottomBar, TopBar) and chrome-raw-hex-regression from UnitCard, BuildingCard, TooltipOverlay resource dots, SetupScreen buttons + ImprovementPanel/BottomBar. 371/371 web + 1553/1553 engine tests green.
+**HEAD: `6522fee` (origin synced).** Master plan through **Phase 7 + deployed + wave-3 fixes + trap sweep + e2e hardening**. All motion shipped (Phase 6). Phase 7 accessibility complete. Trap sweep: eliminated ALL_X-import-in-ui + chrome-raw-hex-regression from all affected files. E2e suite hardened: 197 passed, 1 skipped, 0 failed. Key fixes: dismissBlockingEvents helper across all turn-advancing specs, autosave localStorage clear in startGameWith, __gameDispatch wait + mouse-park in startGame, viewport-grid data-chrome-bar attribute selectors, React 18 internal-error noise filter in ai-parity.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -101,6 +101,7 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | trap-2 | ALL_X-import-in-ui: CityPanel + TooltipOverlay + ResourceTooltip; test mock configs → createGameConfig() | **DONE** | `0b17b4a` |
 | trap-3 | ALL_X-import-in-ui: ImprovementPanel + BottomBar + TopBar; raw hex in BottomBar | **DONE** | `ed02c05`, `2ad7ee9` |
 | trap-4 | chrome-raw-hex-regression: UnitCard CATEGORY_COLORS table + BuildingCard wonder colors + TooltipOverlay resource-type dots + SetupScreen button gradients; add --panel-unit-* + --hud-resource-* + --panel-text-bright + --panel-setup-* tokens | **DONE** | `6f1bc27` |
+| e2e-harden | All 18 e2e spec files hardened: dismissBlockingEvents, autosave clear, __gameDispatch wait, mouse-park, data-chrome-bar selectors, React 18 noise filter. 197/198 pass (1 skipped, 0 failed). | **DONE** | `6522fee` |
 
 ## Open questions from Phase 1 spec (surface to user before Phase 4)
 
