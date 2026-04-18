@@ -81,7 +81,10 @@ After any Canvas or UI change, run `/verify` before stopping.
 | var-hex-alpha-interpolation | Use `color-mix(in srgb, ${color} N%, transparent)` |
 | chrome-raw-hex-regression | Finish tokenization in the same commit; don't leave siblings |
 | ALL_X-import-in-system | Use `state.config.X` not `ALL_*` globals |
+| ALL_X-import-in-ui | UI panels reading `ALL_*` globals directly — use `state.config.X` via `useGameState()` |
 | orphan-TODO-stale | Remove TODOs that are already done in the same commit |
+| dead-constant | A `const` / `let` declared but never read (found by TS with `noUnusedLocals`) — delete at introduction, not later |
+| id-casing-mismatch-in-registry | Content registry keys diverge from engine canonical IDs (e.g. `qin-shi-huang` vs `qin_shi_huang`) — silent runtime fallback to placeholder; always cross-check both directions of lookup |
 
 ## Skills (invoke by name when the task matches)
 

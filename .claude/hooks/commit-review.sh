@@ -27,6 +27,27 @@ mkdir -p "$SCRATCH_DIR" 2>/dev/null || exit 0
 TRACE_FILE="$SCRATCH_DIR/hook-trace.log"
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ENTRY pid=$$ pwd=$(pwd)" >> "$TRACE_FILE" 2>/dev/null || true
 
+# PHASE-IN-FLIGHT GUARD
+# When the parent agent is orchestrating a long-running phase-implementer
+# subagent, the hook must NOT spawn a parallel review/fix loop — the Phase 3
+# scenario (2026-04-18) had the hook's fixer ship S-05 layered rendering
+# while the Phase 3 subagent was doing the same work, producing duplicate
+# commits and a merge conflict.
+#
+# Protocol: the parent creates .claude/workflow/scratch/.phase-in-flight
+# before spawning an implementer, removes it after cherry-pick + merge.
+# The file's content (optional) is logged to the trace for audit.
+#
+# The hook exits zero on detection so it's a no-op for the user's commit;
+# the phase-implementer itself is responsible for reviewing its own output
+# (or queuing it via normal /commit-review after the phase closes).
+PHASE_LOCK="$SCRATCH_DIR/.phase-in-flight"
+if [ -f "$PHASE_LOCK" ]; then
+  LOCK_INFO=$(head -c 200 "$PHASE_LOCK" 2>/dev/null | tr -d '\n' || echo "")
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] EXIT phase-in-flight lock=${LOCK_INFO}" >> "$TRACE_FILE" 2>/dev/null || true
+  exit 0
+fi
+
 # Claude Code delivers the hook payload as JSON on stdin. The shape is:
 #   { session_id, transcript_path, cwd, permission_mode, hook_event_name,
 #     tool_name, tool_input: { command, description, ... } }
