@@ -53,6 +53,36 @@ html, body, #root {
   line-height: var(--type-body-leading);
 }
 
+/* ── Screen reader utility (Phase 7.5) ─────────────────────────────────────
+ * .sr-only: visually hidden but accessible to screen readers and focusable.
+ * Tailwind 4 provides sr-only but we declare it explicitly here for clarity
+ * and to ensure the skip-nav link works without relying on JIT generation.
+ * The focus:not-sr-only companion restores visibility on focus so keyboard
+ * users can see the skip link when they tab to it.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 4px 12px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
 /* ── Focus ring — keyboard navigation (Phase 7.2) ───────────────────────────
  * `:focus-visible` only triggers on keyboard focus (not mouse clicks),
  * so the amber ring appears only when the player navigates by keyboard.

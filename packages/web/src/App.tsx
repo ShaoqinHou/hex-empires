@@ -143,8 +143,23 @@ function GameUI() {
 
   return (
     <div className="game-app w-full h-full flex flex-col">
+      {/* Skip navigation link — visually hidden, appears on keyboard focus.
+          Lets screen reader / keyboard-only users jump past chrome to canvas. */}
+      <a
+        href="#game-canvas"
+        className="sr-only focus:not-sr-only"
+        style={{
+          color: 'var(--color-text)',
+          backgroundColor: 'var(--panel-bg)',
+          border: '2px solid var(--color-accent)',
+          borderRadius: 'var(--panel-radius)',
+          zIndex: 300,
+        }}
+      >
+        Skip to game
+      </a>
       <TopBar />
-      <div className="flex-1 relative">
+      <div id="game-canvas" className="flex-1 relative">
         <GameCanvas
           cameraRef={cameraRef}
           showYields={showYields}
