@@ -1,7 +1,7 @@
 import { useGameState } from '../../providers/GameProvider';
 // Phase 4.3: gold rule + chrome bar tokens.
 import './chrome-bars.css';
-import { coordToKey, ALL_IMPROVEMENTS, ALL_TECHNOLOGIES, ALL_CIVICS, getTileContents, hasStackedEntities } from '@hex/engine';
+import { coordToKey, getTileContents, hasStackedEntities } from '@hex/engine';
 import type { YieldSet, UnitState } from '@hex/engine';
 import type { UnitDef } from '@hex/engine';
 import { useMemo } from 'react';
@@ -36,7 +36,7 @@ export function BottomBar() {
     const tileKey = coordToKey(selectedHex);
     const currentTile = state.map.tiles.get(tileKey);
     if (!currentTile) return [];
-    return ALL_IMPROVEMENTS.filter(improvement => {
+    return [...state.config.improvements.values()].filter(improvement => {
       if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) return false;
       if (improvement.prerequisites.terrain && !improvement.prerequisites.terrain.includes(currentTile.terrain)) return false;
       if (improvement.prerequisites.feature) {
@@ -64,14 +64,14 @@ export function BottomBar() {
     const civilianUnits = playerUnits.length - militaryUnits;
 
     const researchTech = player.currentResearch
-      ? ALL_TECHNOLOGIES.find(t => t.id === player.currentResearch)
+      ? (state.config.technologies.get(player.currentResearch) ?? null)
       : null;
     const turnsRemaining = researchTech
       ? Math.max(1, Math.ceil((researchTech.cost - player.researchProgress) / Math.max(1, player.science)))
       : null;
 
     const civicDef = player.currentCivic
-      ? ALL_CIVICS.find(c => c.id === player.currentCivic)
+      ? (state.config.civics.get(player.currentCivic) ?? null)
       : null;
     const civicTurns = civicDef
       ? Math.max(1, Math.ceil((civicDef.cost - player.civicProgress) / Math.max(1, player.culture)))
@@ -216,7 +216,7 @@ export function BottomBar() {
                         className="inline-block px-1.5 py-0.5 rounded mr-1"
                         style={{
                           background: 'rgba(255,213,79,0.15)',
-                          color: '#ffd54f',
+                          color: 'var(--panel-button-age)',
                           border: '1px solid rgba(255,213,79,0.25)',
                           fontSize: '11px',
                         }}
@@ -488,7 +488,7 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
       className="px-3 py-1.5 text-xs rounded font-bold cursor-pointer flex items-center gap-1.5 transition-all hover:scale-105"
       style={{
         background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
-        color: textColor ?? '#0d1117',
+        color: textColor ?? 'var(--panel-turn-badge-text)',
         border: '1px solid rgba(255, 255, 255, 0.2)',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
       }}

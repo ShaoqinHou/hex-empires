@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import { coordToKey, ALL_IMPROVEMENTS } from '@hex/engine';
+import { coordToKey } from '@hex/engine';
 import type { ImprovementDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 
@@ -32,7 +32,7 @@ export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelPro
     const player = state.players.get(state.currentPlayerId);
     if (!player) return [];
 
-    return ALL_IMPROVEMENTS.filter(improvement => {
+    return [...state.config.improvements.values()].filter(improvement => {
       if (improvement.requiredTech && !player.researchedTechs.includes(improvement.requiredTech)) {
         return false;
       }
