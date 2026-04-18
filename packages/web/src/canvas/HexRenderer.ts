@@ -174,13 +174,15 @@ export class HexRenderer {
     // Draw territory borders
     this.drawTerritoryBorders(rc, viewport);
 
-    // Draw reachable hex overlay
+    // Draw fog of war overlay
+    this.drawFogOfWar(rc, viewport);
+
+    // Draw reachable hex overlay AFTER fog so the amber tint is visible even
+    // over fogged tiles (players need to see where their unit can go regardless
+    // of whether they can see the terrain detail there).
     if (rc.reachableHexes) {
       this.drawReachableOverlay(rc, viewport);
     }
-
-    // Draw fog of war overlay
-    this.drawFogOfWar(rc, viewport);
 
     // Draw districts (below cities/units so markers appear on top)
     this.drawDistricts(rc, viewport);
