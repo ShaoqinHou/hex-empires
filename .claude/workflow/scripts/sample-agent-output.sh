@@ -28,6 +28,39 @@ if [ -z "$FILE" ]; then
   exit 1
 fi
 
+# Windows path conversion: Claude Code surfaces paths like
+# C:\Users\... on Windows. MINGW Bash needs /c/Users/... for stat
+# to resolve the file. Convert transparently.
+case "$FILE" in
+  [A-Za-z]:\\*|[A-Za-z]:/*)
+    DRIVE=$(printf '%s' "$FILE" | cut -c1 | tr '[:upper:]' '[:lower:]')
+    REST=$(printf '%s' "$FILE" | cut -c3- | tr '\\' '/')
+    FILE="/$DRIVE$REST"
+    ;;
+esac
+
+# Preflight: probe the file once. If it never appears in the first 10s,
+# emit a diagnostic row so the time-series isn't a silent lie.
+PROBE_WAITED=0
+while [ ! -f "$FILE" ] && [ "$PROBE_WAITED" -lt 10 ]; do
+  sleep 1
+  PROBE_WAITED=$((PROBE_WAITED + 1))
+done
+if [ ! -f "$FILE" ]; then
+  TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  node -e "
+    process.stdout.write(JSON.stringify({
+      kind: 'sampler_path_error',
+      phase: '$PHASE',
+      agent_id: '$AGENT_ID',
+      resolved_path: '$FILE',
+      ts: '$TS',
+      note: 'output file not found after 10s — samples will all be zero; path conversion may have failed'
+    }) + '\n');
+  " >> "$LOG_FILE" 2>/dev/null
+  # Continue anyway — the file might appear later (slow spawn)
+fi
+
 LOG_DIR=".claude/workflow/scratch"
 LOG_FILE="$LOG_DIR/agent-timing.jsonl"
 mkdir -p "$LOG_DIR"

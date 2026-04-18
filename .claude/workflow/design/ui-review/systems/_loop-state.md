@@ -9,7 +9,7 @@ updated: 2026-04-18 (post Phase 3 + full workflow audit)
 
 ## Current position
 
-**HEAD: `d1eb311` (origin synced).** Master plan through Phase 4 complete. Civ-VII chrome shipped — gold-foil title rule, inset bronze bevel, warm radial modal vignette, TopBar/BottomBar harmonization, warm-shifted status/spec tokens.
+**HEAD: `4b7f9e0` (origin synced).** Master plan through Phase 4.5 complete. DramaModal shell shipped + 4 ceremony panels migrated (AgeTransition, Crisis, Victory, TurnSummary). Also landed this session: asset+theme swap guide, designer bash-heredoc escape fix, subagent timing tracker + hang detector.
 
 ## Recap (compact-proof + restart-proof)
 
@@ -74,6 +74,9 @@ Each phase's completion notification triggers the next. No `/loop 5m`. Subagents
 | 3.5 | SetupScreen/VictoryPanel palette-token cleanup (workflow smoke) | **DONE** | `006267e`, `3cf5978`, `83af56a` |
 | 4-design | Phase 4 designer deliberation (pragmatist + skeptic; integrator timed out) | **DONE** | `0ed04f5` |
 | 4 | Panel chrome Civ-VII treatment (5 sub-steps, synthesized from pragmatist∩skeptic) | **DONE** | `6569587`, `565e5a5`, `be8cdd0`, `d1eb311` (4 real commits; 4.5 verification-only was dropped as empty; ⋯ resolution deferred per both designers' vote — leave to Phase 0 Q4 retirement) |
+| 4.5-design | DramaModal shell spec (Opus designer, inline return) | **DONE** | (spec in `ui-review/phase-4.5-drama-modal-spec.md`) |
+| 4.5 | DramaModal shell + 4 ceremony panel migrations | **DONE** | `a655e7b`, `0708e85`, `f88869f`, `0368eac`, `ac03184`, `4b7f9e0` |
+| workflow-infra | Asset-swap guide + designer bash-escape fix + subagent timing tracker | **DONE** | `6734ce3`, `2a5468a` |
 | 4.5 | Dialog overhauls (age / crisis / victory / turn-summary) | pending | ~3 commits |
 | 5 | HUD polish (tooltip tiers, toast stack, minimap) | pending | ~4 commits |
 | 6 | Motion (unit move, panel slide, resource tick, age fade) | pending | ~4 commits |
