@@ -85,7 +85,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
         <h1
           className="text-5xl font-bold tracking-[0.25em] uppercase mb-2"
           style={{
-            color: 'var(--color-gold, #d4a853)',
+            color: 'var(--color-gold)',
             textShadow: '0 0 40px rgba(212, 168, 83, 0.3)',
           }}
         >
@@ -122,7 +122,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
               className="mt-3 p-3 rounded text-xs"
               style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
             >
-              <span className="font-bold" style={{ color: 'var(--color-gold, #d4a853)' }}>
+              <span className="font-bold" style={{ color: 'var(--color-gold)' }}>
                 {selectedLeader.ability.name}:
               </span>{' '}
               <span style={{ color: 'var(--color-text-muted)' }}>
@@ -152,7 +152,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
               className="mt-3 p-3 rounded text-xs"
               style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
             >
-              <span className="font-bold" style={{ color: selectedCiv.color ?? 'var(--color-gold, #d4a853)' }}>
+              <span className="font-bold" style={{ color: selectedCiv.color ?? 'var(--color-gold)' }}>
                 {selectedCiv.uniqueAbility.name}:
               </span>{' '}
               <span style={{ color: 'var(--color-text-muted)' }}>
@@ -176,7 +176,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                     className="flex items-center justify-between px-4 py-3 rounded text-sm transition-colors cursor-pointer"
                     style={{
                       backgroundColor: mapSizeIndex === idx ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
-                      border: `1px solid ${mapSizeIndex === idx ? 'var(--color-gold, #d4a853)' : 'var(--color-border)'}`,
+                      border: `1px solid ${mapSizeIndex === idx ? 'var(--color-gold)' : 'var(--color-border)'}`,
                       color: mapSizeIndex === idx ? 'var(--color-text)' : 'var(--color-text-muted)',
                     }}
                   >
@@ -198,7 +198,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                     className="flex items-center gap-3 px-4 py-3 rounded text-sm transition-colors cursor-pointer"
                     style={{
                       backgroundColor: numAI === count ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
-                      border: `1px solid ${numAI === count ? 'var(--color-gold, #d4a853)' : 'var(--color-border)'}`,
+                      border: `1px solid ${numAI === count ? 'var(--color-gold)' : 'var(--color-border)'}`,
                       color: numAI === count ? 'var(--color-text)' : 'var(--color-text-muted)',
                     }}
                   >
@@ -246,9 +246,9 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                 className="px-10 py-2.5 rounded-lg font-semibold text-sm tracking-wide uppercase transition-all cursor-pointer hover:brightness-110"
                 style={{
                   background: 'linear-gradient(135deg, rgba(59,74,107,0.9) 0%, rgba(39,52,82,0.9) 100%)',
-                  color: 'var(--color-gold, #d4a853)',
+                  color: 'var(--color-gold)',
                   boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-                  border: '1px solid var(--color-gold, #d4a853)',
+                  border: '1px solid var(--color-gold)',
                   minWidth: '240px',
                 }}
               >
@@ -312,7 +312,7 @@ function LeaderCard({
       className="flex flex-col items-center gap-1.5 px-3 py-3 rounded transition-colors cursor-pointer text-center"
       style={{
         backgroundColor: selected ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
-        border: `1px solid ${selected ? 'var(--color-gold, #d4a853)' : 'var(--color-border)'}`,
+        border: `1px solid ${selected ? 'var(--color-gold)' : 'var(--color-border)'}`,
       }}
     >
       {/* Avatar placeholder */}
@@ -320,7 +320,7 @@ function LeaderCard({
         aria-hidden="true"
         className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
         style={{
-          backgroundColor: selected ? 'var(--color-gold, #d4a853)' : 'var(--color-border)',
+          backgroundColor: selected ? 'var(--color-gold)' : 'var(--color-border)',
           color: selected ? 'var(--color-bg)' : 'var(--color-text-muted)',
         }}
       >
@@ -351,7 +351,7 @@ function CivCard({
       className="flex flex-col items-center gap-1.5 px-3 py-3 rounded transition-colors cursor-pointer text-center"
       style={{
         backgroundColor: selected ? 'var(--color-accent, #3b4a6b)' : 'var(--color-bg)',
-        border: `1px solid ${selected ? (civ.color ?? 'var(--color-gold, #d4a853)') : 'var(--color-border)'}`,
+        border: `1px solid ${selected ? (civ.color ?? 'var(--color-gold)') : 'var(--color-border)'}`,
       }}
     >
       {/* Color swatch */}
