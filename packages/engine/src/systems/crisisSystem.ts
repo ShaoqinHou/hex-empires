@@ -42,6 +42,8 @@ function checkCrisisTriggers(state: GameState): GameState {
     type: 'crisis' as const,
     severity: 'critical' as const,
     blocksTurn: true as const,
+    category: 'crisis' as const,
+    panelTarget: 'crisis' as const,
   }));
 
   return {
@@ -187,6 +189,7 @@ function resolveCrisis(state: GameState, crisisId: string, choiceId: string): Ga
       playerId: nextState.currentPlayerId,
       message: `Crisis "${crisis.name}" resolved: chose "${choiceDef.text}"`,
       type: 'crisis' as const,
+      category: 'crisis' as const,
     }],
   };
 }

@@ -139,6 +139,8 @@ function processNormalCivicResearch(state: GameState): GameState {
         playerId: player.id,
         message: `Completed civic: ${player.currentCivic}!`,
         type: 'civic',
+        category: 'civic' as const,
+        panelTarget: 'civics' as const,
       }],
     };
   }
@@ -211,6 +213,8 @@ function processCivicMasteryResearch(state: GameState): GameState {
         playerId: player.id,
         message: `Mastered civic: ${civicDef?.name ?? player.currentCivicMastery}! (+1 Culture per turn)`,
         type: 'civic',
+        category: 'civic' as const,
+        panelTarget: 'civics' as const,
       }],
     };
   }

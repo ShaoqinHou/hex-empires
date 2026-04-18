@@ -89,12 +89,16 @@ function handleTransition(state: GameState, newCivId: string): GameState {
       playerId: state.currentPlayerId,
       message: `Transitioned to ${nextAge} age as ${newCivId}`,
       type: 'age',
+      category: 'age' as const,
+      panelTarget: 'age' as const,
     },
     ...goldenDarkResult.logEntries.map(msg => ({
       turn: state.turn,
       playerId: state.currentPlayerId,
       message: msg,
       type: 'age' as const,
+      category: 'age' as const,
+      panelTarget: 'age' as const,
     })),
   ];
 

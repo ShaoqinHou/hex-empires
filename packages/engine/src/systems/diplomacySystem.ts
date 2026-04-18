@@ -130,6 +130,8 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
           playerId: sourceId,
           message: `Declared ${warType} war on ${targetId}`,
           type: 'diplomacy' as const,
+          category: 'diplomatic' as const,
+          panelTarget: 'diplomacy' as const,
           // Surprise war declared ON this player is critical and blocks turn; formal war is just warning
           severity: isSurprise ? 'critical' as const : 'warning' as const,
           blocksTurn: isSurprise ? true as const : undefined,
@@ -255,6 +257,8 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
       message: logMessage,
       type: 'diplomacy',
       severity: proposalSeverity,
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
     }],
   };
 }
@@ -340,6 +344,8 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
       playerId: sourceId,
       message: `Conducted ${endeavorType} endeavor with ${targetId}`,
       type: 'diplomacy',
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
     }],
   };
 }
@@ -387,6 +393,8 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
       playerId: sourceId,
       message: `Imposed ${sanctionType} sanction on ${targetId}`,
       type: 'diplomacy',
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
     }],
   };
 }

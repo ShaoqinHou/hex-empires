@@ -233,6 +233,8 @@ function handlePurchaseItem(
       playerId: city.owner,
       message: `${city.name} purchased ${itemId}`,
       type: 'production',
+      category: 'production' as const,
+      panelTarget: 'city' as const,
     });
   } else if (itemType === 'building') {
     // Check if this is a wonder (has isWonder flag)
@@ -256,6 +258,8 @@ function handlePurchaseItem(
       message: `${city.name} purchased ${itemId}${isWonder ? ' 🏆' : ''}`,
       type: 'production',
       severity: isWonder ? 'warning' as const : 'info' as const,
+      category: 'production' as const,
+      panelTarget: 'city' as const,
     });
 
     // If it's a wonder, add to global builtWonders
@@ -371,6 +375,8 @@ function processProduction(state: GameState): GameState {
           playerId: currentCity.owner,
           message: `${currentCity.name} produced ${currentItem.id}`,
           type: 'production',
+          category: 'production' as const,
+          panelTarget: 'city' as const,
         });
 
         // Production overflow carries to next project (Civ VII rule)
@@ -431,6 +437,8 @@ function processProduction(state: GameState): GameState {
           message: `${currentCity.name} built ${currentItem.id}${isWonder ? ' 🏆' : ''}`,
           type: 'production',
           severity: isWonder ? 'warning' as const : 'info' as const,
+          category: 'production' as const,
+          panelTarget: 'city' as const,
         });
 
         // Apply the auto-placement (writes the building onto the map tile).
@@ -465,6 +473,8 @@ function processProduction(state: GameState): GameState {
           playerId: currentCity.owner,
           message: `${currentCity.name} completed ${currentItem.id} - ready to place`,
           type: 'production',
+          category: 'production' as const,
+          panelTarget: 'city' as const,
         });
       }
     } else {
