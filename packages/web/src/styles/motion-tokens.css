@@ -34,6 +34,19 @@
    *  defeat somber fade. Runs on 3-8 events per game; never chain them. */
   --motion-ceremony: 1200ms;
 
+  /** 2-oscillation shake total duration. Used by validation-feedback pill
+   *  (S-07 §Validation feedback) and by the age-transition screen shake
+   *  (Phase 6.6). Distinct from --motion-fast — a shake is not a fade;
+   *  naming it separately keeps call sites self-documenting. */
+  --motion-shake: 200ms;
+
+  /** Backdrop-to-body stagger on modal opens. The backdrop dims first;
+   *  the modal body begins its scale-in after this delay. Used by
+   *  PanelShell priority="modal" and DramaModal (Phase 6.2 + 6.3).
+   *  Naming it keeps PanelShell and DramaModal in sync — one token, one
+   *  change if choreography is ever re-tuned. */
+  --motion-modal-stagger: 80ms;
+
   /* ── Easing scale ──────────────────────────────────────────────────── */
 
   /** Standard entrance. Fast arrival, soft landing. Panels sliding in,
@@ -71,5 +84,11 @@
     --motion-medium:  120ms;   /* 240ms / 2 = 120ms */
     --motion-slow:    200ms;   /* 400ms / 2 = 200ms */
     --motion-ceremony:600ms;   /* 1200ms / 2 = 600ms */
+    --motion-shake:   100ms;   /* 200ms / 2 = 100ms (screen shake is disabled
+                                *  entirely in Phase 6.6 under reduced-motion;
+                                *  this halved value covers the validation-
+                                *  feedback shake which is retained) */
+    --motion-modal-stagger: 80ms; /* already at vestibular floor; explicit
+                                   *  redeclaration for clarity */
   }
 }

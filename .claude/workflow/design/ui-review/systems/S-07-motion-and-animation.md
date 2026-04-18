@@ -72,6 +72,8 @@ Five tokens, one rule each. Durations are in `ms`; CSS custom properties live in
 | `--motion-medium` | 240ms | Significant UI shifts: panel slide-in + fade-in, modal scale-in, dropdown open, fixed-corner tooltip appearance, backdrop darken. |
 | `--motion-slow` | 400ms | Consequences the player should *read*: resource number count-up, tech-complete flash, selection-ring pulse, turn transition interstitial. |
 | `--motion-ceremony` | 1200ms | Earned interruptions (P9): age transition sequence, victory fanfare, defeat somber fade. One of these runs on 3-8 events per game; never chain them. |
+| `--motion-shake` | 200ms | 2-oscillation shake total duration. Validation-feedback pill (§Validation feedback); age-transition screen shake (Phase 6.6). Semantic alias — a shake is not a fade; using `--motion-fast` at call sites would require a comment explaining why. Added Phase 6.1. |
+| `--motion-modal-stagger` | 80ms | Backdrop-to-body offset on modal opens. Backdrop dims first; modal body begins scale-in after this delay. Used by PanelShell `priority="modal"` and DramaModal. Added Phase 6.1. |
 
 **Never invent a duration between tokens.** If a motion needs to feel different, change its easing or its distance, not its duration. Consistency over local optimisation.
 
