@@ -236,3 +236,41 @@ Crisis policy base penalties are content-defined per policy card and not publish
 - **Revolt indicator (city/town HUD):** settlements in Revolt display a warning overlay; tooltip shows turns until potential secession.
 
 ---
+
+## Edge cases
+
+- What if a player completes legacy milestones very quickly, hitting 70% unusually early? The crisis is active for many more turns than usual. All three stages accumulate over a longer window with no additional mechanic.
+- What if age progress jumps from below 70% past 80% in one action? [INFERRED] The game evaluates thresholds at END_TURN; both stage1 and stage2 slots would need to be filled simultaneously before the turn completes.
+- What if a player is eliminated during the crisis phase? Their crisis state is irrelevant post-elimination; remaining players continue their own resolution independently.
+- What if Plague appears in both Antiquity and Exploration in the same game? The two instances are independent. The Antiquity Plague ends at transition; the Exploration Plague is a fresh draw and includes the Physician unit.
+- What if Wars of Religion fires but the player has no religious spread? The player has no viable convert branch; crisis policies offer no offsetting benefit. Deliberate design penalty for neglecting religion.
+- What if a city is simultaneously infected (Plague) and in Revolt? Both penalty systems apply independently each turn — yield loss from Plague and building damage from Revolt both tick. [INFERRED]
+- What if crisis policy slots from Stage 1 and Stage 2 are filled but the age transitions before Stage 3 triggers? The transition proceeds normally; Stage 3 only triggers if age progress actually reaches that threshold before transition fires.
+- What if a revolting settlement is captured by a rival civilization mid-crisis? [INFERRED] The settlement leaves the player empire. The Revolt state belongs to the settlement; the new owner inherits the settlement and its state.
+- What if crises are disabled mid-game? Not possible. The Advanced Options disable is pre-game only; crises cannot be turned off once in progress.
+- What if Epic or Marathon speed is used? Since crisis thresholds are percentage-based (not turn-count-based), Stage 1 fires at a later absolute turn but the same proportional point in the age.
+
+---
+
+## Open questions
+
+- Exact policy pool size per crisis type per stage (how many policy cards to choose from when filling each slot). Checked: Game8, The Gamer, Gameranx, Firaxis dev diary — not found.
+- Exact empireScalingFactor formula (how severity scales with empire size). Confirmed as existing; no formula published. Checked: all sources.
+- Whether the fourth crisis policy slot triggers at exactly 90% or has its own separate threshold above 90%. Ambiguous. Checked: game8.co, thegamer.com.
+- Exact Physician unit production cost and which tech/civic unlocks it. One source cites 400-500 Gold; no tech prerequisite confirmed. Checked: gamerant.com, gameranx.com.
+- Complete list of crisis legacy bonuses by crisis type. Only the Plague/Plague Hospital example is sourced. Checked: multiple search result snippets.
+- Whether Wars of Religion crisis interacts with Exploration Legacy Path religious milestones (reducing severity or granting bonus policy options). Not confirmed. Checked: thegamer.com, game8.co.
+- Exact secession timer for settlements in Revolt. Described as "a few turns" across all sources; no precise turn count. Checked: thegamer.com, gameranx.com.
+- Whether crisis legacy unlock requires surviving all three stages or merely reaching the age transition with any crisis in progress. Exact unlock condition not documented.
+
+---
+
+## Mapping to hex-empires
+
+_Populated during implementation, not GDD authoring._
+
+---
+
+## Author notes
+
+The Fandom wiki pages for Crisis (https://civilization.fandom.com/wiki/Crisis_(Civ7)) and the Crisis Policies category both returned HTTP 403 during research; primary Fandom tier sources are unavailable for this entry. All mechanics are sourced from the Firaxis Dev Diary #1, Game8, The Gamer, Gameranx, Game Rant, and press coverage search snippets. The three-stage progression (2/3/4 slots at 70/80/90% age progress) is the most corroborated model. Numeric constants (policy effects, empire scaling formula, exact secession turns, Physician tech prerequisite) could not be confirmed and are flagged [INFERRED] or listed as open questions. The overall system structure — crisis types per age, mandatory policy slotting, cumulative penalties, crisis legacy bonus, and Modern age exclusion — is well-sourced from multiple independent references.
