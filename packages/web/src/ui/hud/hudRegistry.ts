@@ -29,6 +29,7 @@ export type HUDElementId =
   | 'urbanPlacementHint'
   | 'tooltip'
   | 'yieldsToggle'
+  | 'labelsToggle'
   | 'resourceTooltip'
   | 'idleUnitsToast';
 
@@ -67,6 +68,7 @@ export const HUD_REGISTRY: ReadonlyMap<HUDElementId, HUDRegistryEntry> = new Map
   ['urbanPlacementHint',   { id: 'urbanPlacementHint',   priority: 'floating' }],
   ['tooltip',              { id: 'tooltip',              priority: 'floating' }],
   ['yieldsToggle',         { id: 'yieldsToggle',         priority: 'floating' }],
+  ['labelsToggle',         { id: 'labelsToggle',         priority: 'floating' }],
   ['resourceTooltip',      { id: 'resourceTooltip',      priority: 'floating' }],
   ['idleUnitsToast',       { id: 'idleUnitsToast',       priority: 'toast',    defaultTimeout: 2500 }],
 ]);
