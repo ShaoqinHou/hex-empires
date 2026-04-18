@@ -4,6 +4,11 @@
  * Phase 4.1: Gold-foil title underline via ::after pseudo-element on
  * the title bar. Uses --panel-title-rule token from panel-tokens.css.
  *
+ * Phase 6.2: Open/close transition animations per panel priority.
+ * Entry animations fire on mount via @keyframes; all durations reference
+ * motion-tokens.css. Under prefers-reduced-motion: drop translate/scale,
+ * fade-only.
+ *
  * Selector: [data-testid^="panel-shell-"] > div:first-child is the
  * title bar (the first flex child of the PanelShell container).
  * ::after is absolutely positioned at the bottom of the title bar,
@@ -12,7 +17,8 @@
  * Do NOT add per-panel overrides here — this file is chrome-only.
  */
 
-/* Title-bar gold underline rule */
+/* ── Title-bar gold underline rule ──────────────────────────────────── */
+
 [data-testid^="panel-shell-"] > div:first-child {
   position: relative;
 }
@@ -26,4 +32,110 @@
   height: 2px;
   background: var(--panel-title-rule);
   pointer-events: none;
+}
+
+/* ── Phase 6.2: Panel entry animations ──────────────────────────────── */
+
+/* Overlay: slide from right (translateX 16px → 0) + fade-in.
+ * Duration: --motion-medium (240ms), easing: --ease-out.
+ * Fires on mount via data-open="true". */
+@keyframes panel-overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Info tier: fade-only (no translate — quieter than overlay).
+ * Duration: --motion-fast (160ms), easing: --ease-out. */
+@keyframes panel-info-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Modal body: scale(0.96 → 1.0) + fade-in.
+ * Duration: --motion-medium (240ms), easing: --ease-out.
+ * Delayed by --motion-modal-stagger (80ms) so backdrop dims first. */
+@keyframes panel-modal-body-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Modal backdrop: fade-in only (no translate/scale).
+ * Duration: --motion-fast (200ms → closest existing token is --motion-fast
+ * at 160ms; spec says "backdrop --motion-fast" for row 4, using that). */
+@keyframes panel-modal-backdrop-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Apply overlay entry animation */
+[data-testid^="panel-shell-"][data-open="true"][data-panel-priority="overlay"] {
+  animation: panel-overlay-enter var(--motion-medium, 240ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* Apply info entry animation */
+[data-testid^="panel-shell-"][data-open="true"][data-panel-priority="info"] {
+  animation: panel-info-enter var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* Apply modal body entry animation — staggered after backdrop */
+[data-testid^="panel-shell-"][data-open="true"][data-panel-priority="modal"] {
+  animation: panel-modal-body-enter var(--motion-medium, 240ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  animation-delay: var(--motion-modal-stagger, 80ms);
+}
+
+/* Modal backdrop entry animation */
+[data-testid^="panel-backdrop-"][data-open="true"] {
+  animation: panel-modal-backdrop-enter var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* ── Reduced-motion: drop translate/scale, fade-only ─────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-testid^="panel-shell-"][data-open="true"][data-panel-priority="overlay"] {
+    /* Drop translateX — fade-only. Duration auto-halved by motion-tokens.css. */
+    animation: panel-info-enter var(--motion-medium, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  }
+
+  [data-testid^="panel-shell-"][data-open="true"][data-panel-priority="modal"] {
+    /* Drop scale — fade-only. Stagger preserved (below vestibular threshold). */
+    animation: panel-info-enter var(--motion-medium, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+    animation-delay: var(--motion-modal-stagger, 80ms);
+  }
+}
+
+/* ── Phase 6.2: Shared button transition (rows 21-24) ────────────────── */
+/*
+ * Applies to all button elements within panel/HUD chrome surfaces.
+ * background-color transition: hover glow enter (--motion-instant, --ease-out),
+ * hover glow leave (--motion-instant, --ease-in).
+ * transform transition: press down (--motion-instant, --ease-out),
+ * release return (--motion-fast, --ease-out).
+ *
+ * The CSS shorthand "transition: bg, transform" covers both directions because
+ * CSS transitions pick the duration of the direction that applies. We use a
+ * comma-separated list. The 1px translateY on :active is in individual
+ * panel/HUD CSS files; this rule ensures the transition plays.
+ */
+[data-testid^="panel-shell-"] button,
+[data-testid="tooltip-shell"] button {
+  transition:
+    background-color var(--motion-instant, 80ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--motion-instant, 80ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+[data-testid^="panel-shell-"] button:active,
+[data-testid="tooltip-shell"] button:active {
+  transform: translateY(1px);
 }

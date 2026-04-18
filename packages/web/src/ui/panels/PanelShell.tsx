@@ -197,6 +197,7 @@ export function PanelShell({
       {priority === 'modal' && (
         <div
           data-testid={`panel-backdrop-${id}`}
+          data-open="true"
           style={backdropStyle}
           aria-hidden="true"
           onClick={handleBackdropClick}
@@ -209,6 +210,7 @@ export function PanelShell({
         data-panel-priority={priority}
         data-panel-width={width}
         data-dismissible={dismissible ? 'true' : 'false'}
+        data-open="true"
         role="dialog"
         aria-label={title}
         style={containerStyle(priority, width)}

@@ -243,6 +243,26 @@ describe('PanelShell', () => {
     expect(queryByTestId('blocking-body')).not.toBeNull();
   });
 
+  // --- Phase 6.2: data-open attribute for CSS transition targeting ---
+
+  it('stamps data-open="true" on the shell root so CSS entry animations can target it', () => {
+    const { getByTestId } = render(
+      <PanelShell id="help" title="Help" onClose={() => {}}>
+        <div>x</div>
+      </PanelShell>,
+    );
+    expect(getByTestId('panel-shell-help').getAttribute('data-open')).toBe('true');
+  });
+
+  it('stamps data-open="true" on the modal backdrop so CSS entry animations can target it', () => {
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal">
+        <div>x</div>
+      </PanelShell>,
+    );
+    expect(getByTestId('panel-backdrop-age').getAttribute('data-open')).toBe('true');
+  });
+
   it('ESC keydown DOES close a PanelManager-tracked panel when its shell is dismissible (default)', () => {
     // Control case: confirms the inert-ESC behavior above is specifically
     // caused by `dismissible={false}`, not by PanelShell existence.

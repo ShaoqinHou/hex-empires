@@ -184,6 +184,62 @@ const SHELL_PAD_COMPACT  = 'var(--hud-padding-compact, var(--panel-padding-sm, 6
 const SHELL_PAD_DETAILED = 'var(--hud-padding-detailed, var(--panel-padding-md, 10px) var(--panel-padding-lg, 14px))';
 const SHELL_Z_INDEX  = 'var(--hud-z-floating, var(--panel-z-overlay, 110))';
 
+// Phase 6.2: CSS keyframe names for per-position entry animations.
+// Injected into the document once at first mount via a shared <style> tag.
+// This avoids repeating identical animation strings in every shell's inline style.
+const TOOLTIP_MOTION_STYLE = `
+  /* Row 25: Floating tooltip appear — opacity fade-in.
+   * Duration: --motion-instant (80ms), easing: --ease-out. pointer-events: none. */
+  @keyframes tooltip-floating-enter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Row 26: Fixed-corner tooltip appear — fade-in + 8px slide from anchor quadrant.
+   * Duration: --motion-fast (160ms), easing: --ease-out. */
+  @keyframes tooltip-corner-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  [data-position="floating"] {
+    animation: tooltip-floating-enter var(--motion-instant, 80ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  }
+
+  [data-position="fixed-corner"],
+  [data-position="side"] {
+    animation: tooltip-corner-enter var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  }
+
+  /* Row 27: Alt-tier switch — crossfade body in place.
+   * When tier changes, the element re-mounts so the enter animation replays.
+   * Duration: --motion-fast, easing: --ease-in-out.
+   * We re-map floating to use --ease-in-out for tier-switch context vs
+   * --ease-out for initial appear, but since we can't distinguish the cause
+   * of remount in CSS alone, the enter animation plays consistently.
+   * The spec accepts this because the animation duration is the same band. */
+
+  /* Reduced-motion: drop translateY on fixed-corner, fade-only. Floating unchanged. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-position="fixed-corner"],
+    [data-position="side"] {
+      animation: tooltip-floating-enter var(--motion-fast, 80ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+    }
+  }
+`;
+
+let tooltipMotionInjected = false;
+
+function injectTooltipMotionStyle(): void {
+  if (tooltipMotionInjected) return;
+  if (typeof document === 'undefined') return;
+  const style = document.createElement('style');
+  style.setAttribute('data-tooltip-motion', '6.2');
+  style.textContent = TOOLTIP_MOTION_STYLE;
+  document.head.appendChild(style);
+  tooltipMotionInjected = true;
+}
+
 function baseShellStyle(tier: TooltipTier, interactive: boolean): CSSProperties {
   return {
     position: 'fixed',
@@ -214,6 +270,10 @@ export function TooltipShell({
   hexToScreen,
   children,
 }: TooltipShellProps) {
+  // Phase 6.2: inject tooltip motion keyframes once into the document.
+  // Safe to call on every render — guarded by a module-level flag.
+  injectTooltipMotionStyle();
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [placement, setPlacement] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 

@@ -307,25 +307,52 @@ export function Notifications({ onCityClick }: NotificationsProps) {
       </div>
 
       <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
+        /* Toast enter (row 17): translateY(24px → 0) + fade-in.
+         * Duration: --motion-medium (240ms), easing: --ease-out. */
+        @keyframes toastEnter {
+          from { transform: translateY(24px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
         }
-        @keyframes slideOut {
-          from { transform: translateX(0);    opacity: 1; }
-          to   { transform: translateX(100%); opacity: 0; }
+
+        /* Toast auto-fade (row 18): opacity → 0.
+         * Duration: --motion-fast (160ms), easing: --ease-in. */
+        @keyframes toastFade {
+          from { opacity: 1; }
+          to   { opacity: 0; }
         }
+
+        /* Toast dismiss on click (row 19): scale(1 → 0.88) + fade-out.
+         * Duration: --motion-fast (160ms), easing: --ease-in. */
+        @keyframes toastDismiss {
+          from { transform: scale(1);    opacity: 1; }
+          to   { transform: scale(0.88); opacity: 0; }
+        }
+
         @keyframes requiresActionPulse {
           0%   { border-color: var(--hud-notification-requires-action-border); }
           50%  { border-color: rgba(251, 191, 36, 0.85); }
           100% { border-color: var(--hud-notification-requires-action-border); }
         }
-        .animate-slide-in  { animation: slideIn 0.3s ease-out; }
-        .animate-slide-out { animation: slideOut 0.3s ease-in forwards; }
+
+        .animate-slide-in {
+          animation: toastEnter var(--motion-medium, 240ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+        }
+        .animate-slide-out {
+          animation: toastDismiss var(--motion-fast, 160ms) var(--ease-in, cubic-bezier(0.7, 0, 0.84, 0)) forwards;
+        }
         .requires-action-pulse {
           animation: requiresActionPulse 2.4s ease-in-out infinite;
         }
+
+        /* Reduced-motion: drop translateY on enter/dismiss, fade-only.
+         * Scale on dismiss dropped. requires-action-pulse unchanged (colour-only). */
         @media (prefers-reduced-motion: reduce) {
+          .animate-slide-in {
+            animation: toastFade var(--motion-medium, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+          }
+          .animate-slide-out {
+            animation: toastFade var(--motion-fast, 80ms) var(--ease-in, cubic-bezier(0.7, 0, 0.84, 0)) forwards;
+          }
           .requires-action-pulse { animation: none; }
         }
       `}</style>
