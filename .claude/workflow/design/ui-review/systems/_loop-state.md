@@ -9,7 +9,7 @@ updated: 2026-04-18 (post Phase 3 + full workflow audit)
 
 ## Current position
 
-**HEAD: `4b7f9e0` (origin synced).** Master plan through Phase 4.5 complete. DramaModal shell shipped + 4 ceremony panels migrated (AgeTransition, Crisis, Victory, TurnSummary). Also landed this session: asset+theme swap guide, designer bash-heredoc escape fix, subagent timing tracker + hang detector.
+**HEAD: `0fee3d4` (origin synced).** Master plan through Phase 5 complete. Notification system redesigned: categories + panel-click nav + auto-dismiss policy + requiresAction scaffold. Timing tracker v2 (spawn + complete events, Gantt timeline, parallelism + idle-gap metrics).
 
 ## Recap (compact-proof + restart-proof)
 
