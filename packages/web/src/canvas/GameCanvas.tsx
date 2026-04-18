@@ -207,7 +207,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     };
   }, []);
 
-  // Re-center camera whenever a brand-new game loads (state.seed changes).
+  // Re-center camera whenever a brand-new game loads (state.rng.seed changes).
   // The initialisation effect above only runs on mount, so switching from
   // an old game to a new one would leave the camera wherever it was.
   useEffect(() => {
@@ -220,7 +220,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     }
     cameraRef.current.centerOn(sumX / tiles.length, sumY / tiles.length);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.seed]);
+  }, [state.rng.seed]);
 
   // ── Animation event subscription ──
   //
