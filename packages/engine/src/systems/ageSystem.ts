@@ -80,7 +80,25 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     legacyBonuses: bonuses,
     legacyPoints: 0, // spent all legacy points
     gold: player.gold + goldAdjustment,
+    // ── Tech tree reset (§16.1 #9) ──
     researchedTechs,
+    currentResearch: null,
+    researchProgress: 0,
+    masteredTechs: [],
+    currentMastery: null,
+    masteryProgress: 0,
+    // ── Civic tree reset (§16.1 #9) ──
+    researchedCivics: [],
+    currentCivic: null,
+    civicProgress: 0,
+    masteredCivics: [],
+    currentCivicMastery: null,
+    civicMasteryProgress: 0,
+    // ── Government reset — require re-selection in new age ──
+    governmentId: null,
+    slottedPolicies: new Map(),
+    // ── Religion — pantheon only clears on Antiquity→Exploration (§18) ──
+    pantheonId: (state.age.currentAge === 'antiquity') ? null : player.pantheonId,
   });
 
   const logEntries: GameEvent[] = [

@@ -214,30 +214,49 @@ describe('A6: gold / science / culture / faith survive the transition (§16.1)',
   });
 });
 
-// ── A7: cross-age runtime fields survive (pantheon / government / policies)
+// ── A7: government / policies wipe; city resources persist; pantheon wipes Antiquity→Exploration
 
-describe('A7: cross-age runtime fields survive the transition (§16.1 continuity)', () => {
-  it('pantheonId, governmentId, and slottedPolicies persist', () => {
-    // §16.1 treats civ swap as orthogonal to religion (§18) and government
-    // (§14). A pantheon adopted in antiquity must still be set after the
-    // exploration transition — same for government + slotted policies.
+describe('A7: government/policy/pantheon wipe + city.assignedResources persist (W1-B)', () => {
+  it('governmentId and slottedPolicies are reset to null/empty on TRANSITION_AGE', () => {
+    // W1-B: government requires re-selection in new age; legacy policies expire.
     const slotted: ReadonlyMap<string, ReadonlyArray<string | null>> = new Map([
       ['military', ['professional_army', null]],
       ['economic', ['free_market']],
     ]);
     const player = readyToTransitionPlayer({
-      pantheonId: 'god_of_war',
       governmentId: 'classical_republic',
       slottedPolicies: slotted,
     });
     const state = readyToTransitionState(player);
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     const p = next.players.get('p1')!;
-    expect(p.pantheonId).toBe('god_of_war');
-    expect(p.governmentId).toBe('classical_republic');
+    expect(p.governmentId).toBeNull();
     expect(p.slottedPolicies).toBeDefined();
-    expect(p.slottedPolicies!.get('military')).toEqual(['professional_army', null]);
-    expect(p.slottedPolicies!.get('economic')).toEqual(['free_market']);
+    expect(p.slottedPolicies!.size).toBe(0);
+  });
+
+  it('pantheonId is cleared on Antiquity→Exploration transition (§18 / F-02)', () => {
+    // §18: pantheon does NOT carry from Antiquity to Exploration.
+    const player = readyToTransitionPlayer({ pantheonId: 'god_of_war' });
+    const state = readyToTransitionState(player, {
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.pantheonId).toBeNull();
+  });
+
+  it('pantheonId persists on Exploration→Modern transition (§18 — only wipes at Antiquity)', () => {
+    // §18: pantheon carries forward past the Exploration→Modern boundary.
+    const explorationPlayer = readyToTransitionPlayer({
+      age: 'exploration',
+      ageProgress: 100,
+      pantheonId: 'god_of_war',
+    });
+    const state = readyToTransitionState(explorationPlayer, {
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'france' });
+    expect(next.players.get('p1')!.pantheonId).toBe('god_of_war');
   });
 
   it('city.assignedResources persist across the transition', () => {
@@ -309,7 +328,7 @@ describe('A10: previous age research is cleared on transition (§16.1 #9 — tre
   // `researchSystem.END_TURN` would keep accumulating science toward an
   // un-picklable tech. ageSystem currently preserves `currentResearch`
   // via the `...player` spread — flag as a gap.
-  it.fails('currentResearch is reset to null after transition', () => {
+  it('currentResearch is reset to null after transition (W1-B)', () => {
     const player = readyToTransitionPlayer({
       currentResearch: 'pottery', // antiquity-age tech still in progress
       researchProgress: 30,
@@ -318,6 +337,57 @@ describe('A10: previous age research is cleared on transition (§16.1 #9 — tre
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     expect(next.players.get('p1')!.currentResearch).toBeNull();
     expect(next.players.get('p1')!.researchProgress).toBe(0);
+  });
+});
+
+// ── A10b: civic/mastery/gov/policy/pantheon all wiped on transition (W1-B) ─
+
+describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_AGE (W1-B)', () => {
+  it('after Antiquity→Exploration: researchedCivics, masteredCivics, masteredTechs, governmentId, slottedPolicies, pantheonId all cleared', () => {
+    const slotted: ReadonlyMap<string, ReadonlyArray<string | null>> = new Map([
+      ['military', ['professional_army']],
+    ]);
+    const player = readyToTransitionPlayer({
+      researchedCivics: ['code_of_laws', 'craftsmanship'],
+      currentCivic: 'foreign_trade',
+      civicProgress: 25,
+      masteredCivics: ['code_of_laws'],
+      currentCivicMastery: 'craftsmanship',
+      civicMasteryProgress: 10,
+      currentResearch: 'pottery',
+      researchProgress: 30,
+      masteredTechs: ['animal_husbandry'],
+      currentMastery: 'mining',
+      masteryProgress: 5,
+      governmentId: 'classical_republic',
+      slottedPolicies: slotted,
+      pantheonId: 'god_of_war',
+    });
+    const state = readyToTransitionState(player);
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const p = next.players.get('p1')!;
+
+    // Civic tree resets
+    expect(p.researchedCivics).toEqual([]);
+    expect(p.currentCivic).toBeNull();
+    expect(p.civicProgress).toBe(0);
+    expect(p.masteredCivics).toEqual([]);
+    expect(p.currentCivicMastery).toBeNull();
+    expect(p.civicMasteryProgress).toBe(0);
+
+    // Tech tree resets (research + mastery)
+    expect(p.currentResearch).toBeNull();
+    expect(p.researchProgress).toBe(0);
+    expect(p.masteredTechs).toEqual([]);
+    expect(p.currentMastery).toBeNull();
+    expect(p.masteryProgress).toBe(0);
+
+    // Government resets
+    expect(p.governmentId).toBeNull();
+    expect(p.slottedPolicies!.size).toBe(0);
+
+    // Pantheon wipes on Antiquity→Exploration
+    expect(p.pantheonId).toBeNull();
   });
 });
 
