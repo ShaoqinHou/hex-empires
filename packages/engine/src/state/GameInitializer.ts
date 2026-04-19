@@ -189,6 +189,9 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     firedNarrativeEvents: [],
     pendingNarrativeEvents: [],
     ageProgressMeter: 0,
+    // W4-04: Commander state — empty Map at game start (commanders spawned
+    // by production system or cheat commands register themselves here).
+    commanders: new Map(),
   };
 
   // ── W3-06: Apply equipped mementos at game start ──

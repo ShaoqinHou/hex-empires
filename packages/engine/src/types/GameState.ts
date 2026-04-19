@@ -8,6 +8,7 @@ import type { Governor } from './Governor';
 import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
 import type { ReligionSlotState } from './Religion';
 import type { NotificationCategory, NotificationPanelTargetHint } from './Notification';
+import type { CommanderState } from './Commander';
 
 // ── Turn ──
 
@@ -59,6 +60,18 @@ export interface UnitState {
   readonly experience: number;
   readonly promotions: ReadonlyArray<string>;
   readonly fortified: boolean;
+  /**
+   * The direction this unit is facing (0–5, pointy-top hex directions matching HEX_DIRECTIONS index).
+   * 0 = E, 1 = NE, 2 = NW, 3 = W, 4 = SW, 5 = SE.
+   * Optional for backward compatibility — units without a facing value use the legacy count-based flanking.
+   */
+  readonly facing?: 0 | 1 | 2 | 3 | 4 | 5;
+  /**
+   * W4-04: When non-null, this unit has been packed into the named commander's
+   * army via ASSEMBLE_ARMY. Packed units move with the commander and cannot act
+   * independently until DEPLOY_ARMY is dispatched.
+   */
+  readonly packedInCommanderId?: string | null;
 }
 
 // ── Cities ──
@@ -143,6 +156,22 @@ export interface CityState {
   readonly originalOwner?: string;
   /** True if this settlement occupies an Urban tile slot in the V2 district model */
   readonly isUrban?: boolean;
+
+  /**
+   * ── W4-03: Multi-district siege HP model ──
+   *
+   * Per-district tile HP tracking. Maps district tile HexKey → current HP.
+   * Urban districts start at 100 HP; city_center district starts at 200 HP.
+   * Attackers must destroy all non-center districts before the city capital
+   * is accessible for capture.
+   *
+   * Optional so existing CityState construction (engine, web, tests, save files)
+   * keeps compiling and behaving unchanged. When absent, falls back to the legacy
+   * single `defenseHP` bar.
+   *
+   * @deprecated defenseHP — prefer districtHPs for multi-district siege.
+   */
+  readonly districtHPs?: ReadonlyMap<string, number>;
 }
 
 export interface ProductionItem {
@@ -356,6 +385,14 @@ export interface PlayerState {
    */
   readonly pendingGrowthChoices?: ReadonlyArray<PendingGrowthChoice>;
 
+  // ── W4-02: Distant Lands ──
+  /**
+   * When true, this player has unlocked access to the Distant Lands region
+   * (granted by Cartography tech or when the game enters the Exploration age).
+   * Controls whether Distant Lands tiles are revealed in visibilitySystem.
+   */
+  readonly distantLandsReachable?: boolean;
+
   // ── Codex System (W3-08) ──
   /**
    * IDs of codices this player currently owns (earned by mastering techs).
@@ -373,6 +410,17 @@ export interface PlayerState {
    * player switches back to that tech. Cleared on TRANSITION_AGE.
    */
   readonly techProgressMap?: ReadonlyMap<TechnologyId, number>;
+
+  // ── Resource Ownership (W4-05) ──
+  /**
+   * IDs of resources this player currently controls (gained by settling tiles
+   * with resources or via border expansion — F-07). These are the resources
+   * available for assignment to cities via `ASSIGN_RESOURCE`.
+   *
+   * Optional so existing PlayerState construction (engine, web, tests, save
+   * files) keeps compiling unchanged. Systems gracefully no-op when absent.
+   */
+  readonly ownedResources?: ReadonlyArray<ResourceId>;
 }
 
 /**
@@ -621,6 +669,20 @@ export interface GameState {
    * Used by the global age-transition UI bar.
    */
   readonly ageProgressMeter?: number;
+
+  /**
+   * ── W4-04: Commander runtime state ──
+   *
+   * Maps commander UnitId → CommanderState. A unit is "a commander" iff
+   * its id appears in this map. The decorator pattern avoids widening
+   * UnitState for all units during the transition cycles.
+   *
+   * Optional so pre-W4-04 saves, test helpers, and GameInitializer
+   * continue to compile. Systems treat absence as an empty Map (no
+   * commanders registered yet). Age transitions intentionally preserve
+   * this map — commanders persist across ages (F-08).
+   */
+  readonly commanders?: ReadonlyMap<string, CommanderState>;
 }
 
 // ── Actions ──
@@ -638,6 +700,13 @@ export type GameAction =
   | { readonly type: 'MOVE_UNIT'; readonly unitId: UnitId; readonly path: ReadonlyArray<HexCoord> }
   | { readonly type: 'ATTACK_UNIT'; readonly attackerId: UnitId; readonly targetId: UnitId }
   | { readonly type: 'ATTACK_CITY'; readonly attackerId: UnitId; readonly cityId: CityId }
+  | {
+      readonly type: 'ATTACK_DISTRICT';
+      readonly attackerId: UnitId;
+      readonly cityId: CityId;
+      /** HexKey of the specific district tile being targeted (must be in city.districtHPs) */
+      readonly districtTile: string;
+    }
   | {
       readonly type: 'FOUND_CITY';
       readonly unitId: UnitId;
@@ -808,7 +877,19 @@ export type GameAction =
    * turn. Blocked if: building has no codexSlots, city doesn't own building,
    * or slot count is already full.
    */
-  | { readonly type: 'PLACE_CODEX'; readonly codexId: string; readonly buildingId: BuildingId; readonly cityId: CityId };
+  | { readonly type: 'PLACE_CODEX'; readonly codexId: string; readonly buildingId: BuildingId; readonly cityId: CityId }
+  // ── W4-04: Commander army pack/unpack ──
+  /**
+   * Pack up to 6 units adjacent to the commander into the army stack.
+   * Validates: commander exists, all unitIds are adjacent, all are owned by
+   * the same player, and total ≤ 6. Sets packedInCommanderId on each unit.
+   */
+  | { readonly type: 'ASSEMBLE_ARMY'; readonly commanderId: string; readonly unitIds: ReadonlyArray<string> }
+  /**
+   * Unpack the commander's army: place each packed unit on an adjacent tile.
+   * Clears packedInCommanderId on each unit.
+   */
+  | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string };
 
 // ── Events ──
 

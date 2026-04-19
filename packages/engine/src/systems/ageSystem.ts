@@ -113,6 +113,16 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     // attributeTree and wildcard/non-wildcard pools are intentionally NOT reset
     // (the only in-game upgrade system that persists across ages).
     attributePoints: (player.attributePoints ?? 0) + 1,
+    // ── Celebration reset (W3-03 F-06) ──
+    // globalHappiness and celebrationCount reset to 0 on age transition.
+    // socialPolicySlots is intentionally PRESERVED (GDD: slots carry across ages).
+    // activeCelebrationBonus / pendingCelebrationChoice also cleared.
+    globalHappiness: 0,
+    celebrationCount: 0,
+    activeCelebrationBonus: null,
+    celebrationTurnsLeft: 0,
+    celebrationBonus: 0,
+    pendingCelebrationChoice: null,
   });
 
   const logEntries: GameEvent[] = [
@@ -200,6 +210,9 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     }
   }
 
+  // W4-04 (F-08): state.commanders is intentionally NOT reset here.
+  // Commander state (XP, promotions, packed army) persists across age transitions.
+  // The spread `...state` below preserves the commanders map unchanged.
   return {
     ...state,
     players: updatedPlayers,
