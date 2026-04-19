@@ -96,7 +96,11 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     civicMasteryProgress: 0,
     // ── Government reset — require re-selection in new age ──
     governmentId: null,
-    slottedPolicies: new Map(),
+    slottedPolicies: [],
+    // Unlock government selection for the new age (W2-03 CT F-07)
+    governmentLockedForAge: false,
+    // Clear ideology for new age
+    ideology: null,
     // ── Religion — pantheon only clears on Antiquity→Exploration (§18) ──
     pantheonId: (state.age.currentAge === 'antiquity') ? null : player.pantheonId,
   });

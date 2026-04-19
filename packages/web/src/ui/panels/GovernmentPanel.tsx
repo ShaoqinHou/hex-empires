@@ -18,7 +18,7 @@
 import { usePanelManager } from './PanelManager';
 import { useGameState } from '../../providers/GameProvider';
 import type { PlayerState } from '@hex/engine';
-import type { GovernmentDef, PolicyCategory, PolicyDef } from '@hex/engine';
+import type { GovernmentDef, PolicyDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
@@ -61,26 +61,6 @@ function describeLegacyBonus(g: GovernmentDef): string {
   }
 }
 
-const CATEGORIES: ReadonlyArray<PolicyCategory> = [
-  'military',
-  'economic',
-  'diplomatic',
-  'wildcard',
-];
-
-function categoryLabel(cat: PolicyCategory): string {
-  switch (cat) {
-    case 'military':
-      return 'Military';
-    case 'economic':
-      return 'Economic';
-    case 'diplomatic':
-      return 'Diplomatic';
-    case 'wildcard':
-      return 'Wildcard';
-  }
-}
-
 function policyName(id: string, policies: ReadonlyMap<string, PolicyDef>): string {
   const def = policies.get(id);
   return def?.name ?? humanizeId(id);
@@ -94,15 +74,17 @@ function findGovernment(
   return governments.get(id) ?? null;
 }
 
-function slotArrayFor(
+/** Build a flat slot array of the correct length from optional player state. */
+function flatSlotArray(
   player: PlayerState | undefined,
-  cat: PolicyCategory,
-  slotCount: number,
+  total: number,
 ): ReadonlyArray<string | null> {
-  const source = player?.slottedPolicies?.get(cat) ?? [];
+  const source = player?.slottedPolicies ?? [];
   const out: Array<string | null> = [];
-  for (let i = 0; i < slotCount; i++) {
-    out.push(source[i] ?? null);
+  for (let i = 0; i < total; i++) {
+    // slottedPolicies is now ReadonlyArray<string | null>
+    const arr = source as ReadonlyArray<string | null>;
+    out.push(arr[i] ?? null);
   }
   return out;
 }
@@ -159,78 +141,62 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
           )}
         </section>
 
-        {/* ── Policy Slots ── */}
+        {/* ── Policy Slots (flat wildcard — VII §14.2) ── */}
         <section className="py-3" style={DIVIDER} data-testid="government-panel-slots-section">
           <SectionHeader title="Policy Slots" />
           {government !== null ? (
-            <div className="flex flex-col gap-2 mt-1">
-              {CATEGORIES.map((cat) => {
-                const count = government.policySlots[cat];
-                const slots = slotArrayFor(player, cat, count);
-                return (
-                  <div key={cat} data-testid={`government-panel-slot-row-${cat}`}>
-                    <div className="flex items-baseline justify-between mb-1">
-                      <span className="text-xs font-semibold" style={{ color: 'var(--panel-text-color)' }}>
-                        {categoryLabel(cat)}
-                      </span>
-                      <span
-                        className="text-[10px]"
-                        style={{ color: 'var(--panel-muted-color)' }}
-                        data-testid={`government-panel-slot-count-${cat}`}
-                      >
-                        {count} slot{count === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    {count === 0 ? (
-                      <div className="text-[10px] italic" style={{ color: 'var(--panel-muted-color)' }}>
-                        (none)
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        {slots.map((slot, idx) =>
-                          slot !== null ? (
-                            <div
-                              key={`${cat}-${idx}`}
-                              className="flex items-center justify-between px-2 py-1 rounded text-xs"
-                              style={{
-                                backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
-                                border: '1px solid var(--color-accent)',
-                              }}
-                              data-testid={`government-panel-slot-${cat}-${idx}`}
-                            >
-                              <span style={{ color: 'var(--panel-text-color)' }}>
-                                {lookupPolicyName(slot)}
-                              </span>
-                              <span
-                                className="text-[9px] uppercase tracking-wider px-1 ml-1"
-                                style={{
-                                  color: 'var(--panel-muted-color)',
-                                  border: '1px solid var(--panel-border)',
-                                  borderRadius: '2px',
-                                }}
-                              >
-                                {cat}
-                              </span>
-                            </div>
-                          ) : (
-                            <div
-                              key={`${cat}-${idx}-empty`}
-                              className="px-2 py-1 rounded text-xs"
-                              style={{
-                                border: '1px dashed var(--panel-border)',
-                                color: 'var(--panel-muted-color)',
-                              }}
-                              data-testid={`government-panel-slot-${cat}-${idx}`}
-                            >
-                              —
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
+            <div className="flex flex-col gap-1 mt-1">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-xs font-semibold" style={{ color: 'var(--panel-text-color)' }}>
+                  Wildcard
+                </span>
+                <span
+                  className="text-[10px]"
+                  style={{ color: 'var(--panel-muted-color)' }}
+                  data-testid="government-panel-slot-count-total"
+                >
+                  {government.policySlots.total} slot{government.policySlots.total === 1 ? '' : 's'}
+                </span>
+              </div>
+              {flatSlotArray(player, government.policySlots.total).map((slot, idx) =>
+                slot !== null ? (
+                  <div
+                    key={`slot-${idx}`}
+                    className="flex items-center justify-between px-2 py-1 rounded text-xs"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                      border: '1px solid var(--color-accent)',
+                    }}
+                    data-testid={`government-panel-slot-${idx}`}
+                  >
+                    <span style={{ color: 'var(--panel-text-color)' }}>
+                      {lookupPolicyName(slot)}
+                    </span>
+                    <span
+                      className="text-[9px] uppercase tracking-wider px-1 ml-1"
+                      style={{
+                        color: 'var(--panel-muted-color)',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '2px',
+                      }}
+                    >
+                      {state.config.policies.get(slot)?.category ?? 'policy'}
+                    </span>
                   </div>
-                );
-              })}
+                ) : (
+                  <div
+                    key={`slot-${idx}-empty`}
+                    className="px-2 py-1 rounded text-xs"
+                    style={{
+                      border: '1px dashed var(--panel-border)',
+                      color: 'var(--panel-muted-color)',
+                    }}
+                    data-testid={`government-panel-slot-${idx}`}
+                  >
+                    —
+                  </div>
+                ),
+              )}
             </div>
           ) : (
             <div

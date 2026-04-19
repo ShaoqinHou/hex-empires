@@ -48,10 +48,10 @@ export type CodexId = string;
 // ── Policy category ──
 
 /**
- * Taxonomic category for Policies. The rulebook states "any policy
- * fits any slot" (§14.2) — categories here control how many slots a
- * given Government exposes of each flavor, not whether a policy is
- * legal in a slot. The `wildcard` category always accepts any policy.
+ * Taxonomic category for Policies. Per VII §14.2 all slots are wildcard —
+ * any policy may go into any slot. `PolicyCategory` is retained on
+ * `PolicyDef` as a display/sorting hint only; it does NOT gate slot
+ * placement.
  */
 export type PolicyCategory =
   | 'military'
@@ -60,15 +60,15 @@ export type PolicyCategory =
   | 'wildcard';
 
 /**
- * Per-category slot counts on a GovernmentDef. A value of 0 means
- * "this government does not expose a slot of that category." The sum
- * is the Government's base slot count.
+ * Slot count for a GovernmentDef. In VII all slots are equivalent wildcards;
+ * `total` is the Government's base slot count.
+ *
+ * @deprecated The old typed-category struct `{ military, economic, diplomatic,
+ * wildcard }` was removed in W2-03. Any code that referenced it should use
+ * `total` instead.
  */
 export interface PolicySlotCounts {
-  readonly military: number;
-  readonly economic: number;
-  readonly diplomatic: number;
-  readonly wildcard: number;
+  readonly total: number;
 }
 
 // ── Celebration bonus ──
@@ -215,12 +215,9 @@ export interface ActiveCelebrationBonus {
  *
  * - `currentGovernmentId` is null on the first turn of an Age until
  *   the player picks.
- * - `slottedPolicies` is a map keyed by category; the inner array
- *   is ordered by slot index (0..count-1). Sparse holes are
- *   represented by positions pointing at a sentinel — the engine
- *   uses readonly arrays of `PolicyId | null` in practice; typed here
- *   as `ReadonlyArray<PolicyId>` to keep the shape simple, with
- *   system-level invariants enforcing length-equals-slot-count.
+ * - `slottedPolicies` is a flat array of length `policySlots.total`.
+ *   Null entries are empty slots. In VII all slots are wildcard so
+ *   there is no per-category keying.
  * - `unlockedPolicies` is monotonic.
  * - `unlockedGovernments` is monotonic and age-filtered by the UI.
  * - `bonusSlotCount` counts additional wildcard slots accumulated
@@ -230,10 +227,7 @@ export interface ActiveCelebrationBonus {
 export interface GovernmentState {
   readonly playerId: PlayerId;
   readonly currentGovernmentId: GovernmentId | null;
-  readonly slottedPolicies: ReadonlyMap<
-    PolicyCategory,
-    ReadonlyArray<PolicyId>
-  >;
+  readonly slottedPolicies: ReadonlyArray<PolicyId | null>;
   readonly unlockedPolicies: ReadonlyArray<PolicyId>;
   readonly unlockedGovernments: ReadonlyArray<GovernmentId>;
   readonly bonusSlotCount: number;
@@ -268,16 +262,22 @@ export type GovernmentAction =
       readonly governmentId: GovernmentId;
     }
   | {
+      /**
+       * Slot a policy into a flat wildcard slot by index.
+       * `category` was removed in W2-03; all slots are wildcard (VII §14.2).
+       */
       readonly type: 'SLOT_POLICY';
       readonly playerId: PlayerId;
-      readonly category: PolicyCategory;
       readonly slotIndex: number;
       readonly policyId: PolicyId;
     }
   | {
+      /**
+       * Clear a flat wildcard slot by index.
+       * `category` was removed in W2-03; all slots are wildcard (VII §14.2).
+       */
       readonly type: 'UNSLOT_POLICY';
       readonly playerId: PlayerId;
-      readonly category: PolicyCategory;
       readonly slotIndex: number;
     }
   | {
@@ -297,6 +297,15 @@ export type GovernmentAction =
       readonly type: 'UNPLACE_CODEX';
       readonly playerId: PlayerId;
       readonly codexId: CodexId;
+    }
+  | {
+      /**
+       * Select an ideology branch for the Modern age. Requires
+       * `political_theory` civic to be researched. One-time lock per age.
+       */
+      readonly type: 'SELECT_IDEOLOGY';
+      readonly playerId: PlayerId;
+      readonly ideology: 'democracy' | 'fascism' | 'communism';
     };
 
 // ── Constants ──

@@ -17,11 +17,14 @@ export type PolicyCategory =
   | 'diplomatic'
   | 'wildcard';
 
+/**
+ * Slot count for a GovernmentDef. Per VII §14.2 all slots are wildcard;
+ * `total` is the Government's base slot count. The old typed-category
+ * struct `{ military, economic, diplomatic, wildcard }` was removed in
+ * W2-03.
+ */
 export interface PolicySlotCounts {
-  readonly military: number;
-  readonly economic: number;
-  readonly diplomatic: number;
-  readonly wildcard: number;
+  readonly total: number;
 }
 
 export interface GovernmentDef {
@@ -37,12 +40,15 @@ export interface GovernmentDef {
 
 // ── Antiquity ──
 
+// Slot totals are the sum of the old { military, economic, diplomatic, wildcard }
+// per-category counts, flattened to VII-style wildcard (§14.2 W2-03).
+
 export const CLASSICAL_REPUBLIC: GovernmentDef = {
   id: 'classical_republic',
   name: 'Classical Republic',
   age: 'antiquity',
   unlockCivic: 'code_of_laws',
-  policySlots: { military: 0, economic: 1, diplomatic: 0, wildcard: 1 },
+  policySlots: { total: 2 }, // was: military 0, economic 1, diplomatic 0, wildcard 1
   legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
   description:
     'Early representative government. +1 Culture per City while active.',
@@ -53,7 +59,7 @@ export const DESPOTISM: GovernmentDef = {
   name: 'Despotism',
   age: 'antiquity',
   unlockCivic: 'mysticism',
-  policySlots: { military: 2, economic: 0, diplomatic: 0, wildcard: 0 },
+  policySlots: { total: 2 }, // was: military 2, economic 0, diplomatic 0, wildcard 0
   legacyBonus: { type: 'MODIFY_COMBAT', target: 'melee', value: 2 },
   description:
     'Strong-arm rule. +2 Combat Strength to Melee units while active.',
@@ -64,7 +70,7 @@ export const OLIGARCHY: GovernmentDef = {
   name: 'Oligarchy',
   age: 'antiquity',
   unlockCivic: 'state_workforce',
-  policySlots: { military: 0, economic: 1, diplomatic: 1, wildcard: 0 },
+  policySlots: { total: 2 }, // was: military 0, economic 1, diplomatic 1, wildcard 0
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 },
   description:
     'Rule by elite council. +2 Gold per turn to the empire while active.',
@@ -77,7 +83,7 @@ export const FEUDAL_MONARCHY: GovernmentDef = {
   name: 'Feudal Monarchy',
   age: 'exploration',
   unlockCivic: 'divine_right',
-  policySlots: { military: 2, economic: 1, diplomatic: 0, wildcard: 0 },
+  policySlots: { total: 3 }, // was: military 2, economic 1, diplomatic 0, wildcard 0
   legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 2 },
   description:
     'Hereditary royal rule. +2 Food per City-Center while active.',
@@ -88,7 +94,7 @@ export const PLUTOCRACY: GovernmentDef = {
   name: 'Plutocracy',
   age: 'exploration',
   unlockCivic: 'mercantilism',
-  policySlots: { military: 0, economic: 2, diplomatic: 0, wildcard: 1 },
+  policySlots: { total: 3 }, // was: military 0, economic 2, diplomatic 0, wildcard 1
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 4 },
   description:
     'Wealth-driven oligarchy. +4 Gold per turn to the empire while active.',
@@ -99,7 +105,7 @@ export const THEOCRACY: GovernmentDef = {
   name: 'Theocracy',
   age: 'exploration',
   unlockCivic: 'reformed_church',
-  policySlots: { military: 1, economic: 0, diplomatic: 1, wildcard: 1 },
+  policySlots: { total: 3 }, // was: military 1, economic 0, diplomatic 1, wildcard 1
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 },
   description:
     'Religious authority rules the state. +3 Faith per turn to the empire.',
@@ -112,7 +118,7 @@ export const ELECTIVE_REPUBLIC: GovernmentDef = {
   name: 'Elective Republic',
   age: 'modern',
   unlockCivic: 'suffrage',
-  policySlots: { military: 1, economic: 2, diplomatic: 1, wildcard: 0 },
+  policySlots: { total: 4 }, // was: military 1, economic 2, diplomatic 1, wildcard 0
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
   description:
     'Government by elected representatives. +3 Culture per turn to the empire while active.',

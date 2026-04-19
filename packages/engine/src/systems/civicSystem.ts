@@ -36,6 +36,20 @@ function handleSetCivic(state: GameState, civicId: string): GameState {
   // Civ-specific civics are only available to the matching civilization
   if (civicDef.civId !== undefined && civicDef.civId !== player.civilizationId) return state;
 
+  // Ideology branch-lock (W2-03 CT F-08):
+  // If civic belongs to an ideology branch and the player's ideology is set,
+  // civics from the other two branches are locked out.
+  if (civicDef.ideologyBranch !== undefined) {
+    if (player.ideology == null) {
+      // Ideology-branch civics require ideology to be selected first
+      return state;
+    }
+    if (civicDef.ideologyBranch !== player.ideology) {
+      // Wrong ideology branch — locked out
+      return state;
+    }
+  }
+
   // All prerequisites must be researched
   const allPrereqsMet = civicDef.prerequisites.every(
     prereq => player.researchedCivics.includes(prereq)
@@ -121,7 +135,7 @@ function processNormalCivicResearch(state: GameState): GameState {
   const civicCost = state.config.civics.get(player.currentCivic)?.cost ?? 100;
 
   if (newProgress >= civicCost) {
-    // Civic complete!
+    // Civic complete! Open policy swap window (W2-03 GP F-08)
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
@@ -129,6 +143,7 @@ function processNormalCivicResearch(state: GameState): GameState {
       currentCivic: null,
       civicProgress: 0,
       ageProgress: player.ageProgress + 5, // +5 age progress per civic
+      policySwapWindowOpen: true,
     });
 
     return {

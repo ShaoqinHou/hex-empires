@@ -141,14 +141,12 @@ describe('GovernmentPanel', () => {
       .toContain('+1 culture per city');
   });
 
-  it('renders correct slot counts + "—" for empty slots under classical_republic', () => {
-    // Classical Republic → { military: 0, economic: 1, diplomatic: 0, wildcard: 1 }
+  it('renders correct total slot count + flat wildcard slots under classical_republic', () => {
+    // Classical Republic → policySlots.total = 2 (W2-03 flat wildcard model)
+    // slottedPolicies is now ReadonlyArray<string | null>
     const player = makePlayer({
       governmentId: 'classical_republic',
-      slottedPolicies: new Map([
-        ['economic', ['serfdom']],
-        ['wildcard', [null]],
-      ]),
+      slottedPolicies: ['serfdom', null] as unknown as PlayerState['slottedPolicies'],
     });
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
 
@@ -158,20 +156,15 @@ describe('GovernmentPanel', () => {
       </PanelManagerProvider>,
     );
 
-    expect(getByTestId('government-panel-slot-count-military').textContent)
-      .toContain('0');
-    expect(getByTestId('government-panel-slot-count-economic').textContent)
-      .toContain('1');
-    expect(getByTestId('government-panel-slot-count-diplomatic').textContent)
-      .toContain('0');
-    expect(getByTestId('government-panel-slot-count-wildcard').textContent)
-      .toContain('1');
+    // W2-03: single "total" count instead of per-category counts
+    expect(getByTestId('government-panel-slot-count-total').textContent)
+      .toContain('2');
 
-    // The economic slot at index 0 is filled with "serfdom" → card contains "Serfdom".
-    expect(getByTestId('government-panel-slot-economic-0').textContent)
+    // Slot 0 is filled with "serfdom" → card contains "Serfdom"
+    expect(getByTestId('government-panel-slot-0').textContent)
       .toContain('Serfdom');
-    // The wildcard slot at index 0 is explicitly null → dashed-border placeholder showing "—".
-    expect(getByTestId('government-panel-slot-wildcard-0').textContent)
+    // Slot 1 is null → dashed-border placeholder showing "—"
+    expect(getByTestId('government-panel-slot-1').textContent)
       .toBe('—');
   });
 

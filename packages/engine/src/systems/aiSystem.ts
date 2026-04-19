@@ -5,17 +5,8 @@ import type { HexCoord } from '../types/HexCoord';
 import { getLeaderPersonality } from '../types/AIPersonality';
 import type { AIPersonality } from '../types/AIPersonality';
 import { PROMOTION_THRESHOLDS } from '../data/units/promotions';
-import type { PolicyCategory } from '../data/governments/governments';
-
 /** Faith threshold for adopting a pantheon (mirrors PANTHEON_DEFAULT_FAITH_COST). */
 const AI_PANTHEON_FAITH_COST = 25;
-/** Category order used when scanning for an empty policy slot. */
-const POLICY_CATEGORY_ORDER: ReadonlyArray<PolicyCategory> = [
-  'military',
-  'economic',
-  'diplomatic',
-  'wildcard',
-];
 
 /** Diplomacy helpers (mirrored locally to avoid cross-system imports) */
 function aiRelationKey(a: string, b: string): string {
@@ -510,16 +501,16 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
  *
  * Priority order:
  *   1. Adopt a pantheon when the player has none AND has enough faith AND
- *      at least one ALL_PANTHEONS entry is not yet claimed by any player.
+ *      at least one pantheon entry is not yet claimed by any player.
  *   2. Set a government when the player has none AND has researched the
  *      unlock civic for at least one GovernmentDef.
  *   3. Slot a policy when the player HAS a government AND has at least
- *      one empty slot AND a matching PolicyDef whose unlockCivic is
- *      researched exists.
+ *      one empty (null) slot in the flat wildcard array AND a PolicyDef
+ *      whose unlockCivic is researched exists (W2-03 flat wildcard model).
  */
 function pickCivVIIParityAction(
   state: GameState,
-  player: { readonly id: string; readonly faith: number; readonly researchedCivics: ReadonlyArray<string>; readonly pantheonId?: string | null; readonly governmentId?: string | null; readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string | null>> },
+  player: { readonly id: string; readonly faith: number; readonly researchedCivics: ReadonlyArray<string>; readonly pantheonId?: string | null; readonly governmentId?: string | null; readonly slottedPolicies?: ReadonlyArray<string | null> },
 ): GameAction | null {
   // 1. Pantheon
   if (!player.pantheonId && player.faith >= AI_PANTHEON_FAITH_COST) {
@@ -557,33 +548,22 @@ function pickCivVIIParityAction(
     }
   }
 
-  // 3. Slot a policy — needs a government and an empty slot. Wildcard
-  //    slots accept any policy; other slots only accept policies of
-  //    matching category (per GovernmentDef slot semantics).
+  // 3. Slot a policy — W2-03 flat wildcard model: slottedPolicies is a
+  //    flat ReadonlyArray<string | null>; any null entry is an open slot.
   if (player.governmentId && player.slottedPolicies) {
     const researched = new Set(player.researchedCivics);
-    const alreadySlotted = new Set<string>();
-    for (const arr of player.slottedPolicies.values()) {
-      for (const p of arr) {
-        if (p) alreadySlotted.add(p);
-      }
-    }
-    for (const category of POLICY_CATEGORY_ORDER) {
-      const slots = player.slottedPolicies.get(category);
-      if (!slots) continue;
-      const slotIndex = slots.findIndex(s => s === null);
-      if (slotIndex < 0) continue;
+    const alreadySlotted = new Set<string>(
+      player.slottedPolicies.filter((p): p is string => p !== null),
+    );
+    const slotIndex = player.slottedPolicies.findIndex(s => s === null);
+    if (slotIndex >= 0) {
       const policy = [...state.config.policies.values()].find(
-        p =>
-          (category === 'wildcard' || p.category === category) &&
-          researched.has(p.unlockCivic) &&
-          !alreadySlotted.has(p.id),
+        p => researched.has(p.unlockCivic) && !alreadySlotted.has(p.id),
       );
       if (policy) {
         return {
           type: 'SLOT_POLICY',
           playerId: player.id,
-          category,
           slotIndex,
           policyId: policy.id,
         };

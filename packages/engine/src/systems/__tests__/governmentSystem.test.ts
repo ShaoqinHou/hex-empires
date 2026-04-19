@@ -1,3 +1,15 @@
+/**
+ * governmentSystem tests — W2-03 edition.
+ *
+ * All policy slot interactions now use flat wildcard slots (slotIndex only).
+ * Tests cover:
+ *  - Wildcard slot acceptance (any policy in any slot)
+ *  - Per-age government lock (governmentLockedForAge)
+ *  - Policy swap window enforcement (policySwapWindowOpen)
+ *  - Ideology branch-lock (SELECT_IDEOLOGY)
+ *  - UNSLOT_POLICY on flat array
+ *  - Immutability
+ */
 import { describe, it, expect } from 'vitest';
 import {
   governmentSystem,
@@ -10,20 +22,25 @@ import { createTestState, createTestPlayer } from './helpers';
 
 /**
  * Test-scope helper: augment a PlayerState with the optional Government
- * runtime fields. The engine schema does not yet include them (cycle D
- * inlines them), so tests attach them via a structural cast.
+ * runtime fields using the W2-03 flat array schema.
  */
 function withGovernmentFields(
   player: PlayerState,
   overrides: {
     governmentId?: string | null;
-    slottedPolicies?: Map<string, Array<string | null>>;
+    slottedPolicies?: Array<string | null>;
+    governmentLockedForAge?: boolean;
+    policySwapWindowOpen?: boolean;
+    ideology?: 'democracy' | 'fascism' | 'communism' | null;
   } = {},
 ): PlayerState {
   return {
     ...player,
     governmentId: overrides.governmentId ?? null,
-    slottedPolicies: overrides.slottedPolicies ?? new Map(),
+    slottedPolicies: overrides.slottedPolicies ?? [],
+    governmentLockedForAge: overrides.governmentLockedForAge ?? false,
+    policySwapWindowOpen: overrides.policySwapWindowOpen ?? false,
+    ideology: overrides.ideology ?? null,
   } as unknown as PlayerState;
 }
 
@@ -44,7 +61,7 @@ describe('governmentSystem', () => {
 
   // ── ADOPT_GOVERNMENT (SET_GOVERNMENT) — invalid ──
 
-  it('ADOPT_GOVERNMENT with unknown governmentId returns state unchanged', () => {
+  it('SET_GOVERNMENT with unknown governmentId returns state unchanged', () => {
     const player = withGovernmentFields(
       createTestPlayer({ id: 'p1', researchedCivics: ['code_of_laws'] }),
     );
@@ -60,7 +77,7 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
-  it('ADOPT_GOVERNMENT when required civic is not researched returns state unchanged', () => {
+  it('SET_GOVERNMENT when required civic is not researched returns state unchanged', () => {
     const player = withGovernmentFields(
       createTestPlayer({ id: 'p1', researchedCivics: [] }),
     );
@@ -76,7 +93,7 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
-  it('ADOPT_GOVERNMENT gracefully no-ops when PlayerState lacks governmentId/slottedPolicies', () => {
+  it('SET_GOVERNMENT gracefully no-ops when PlayerState lacks governmentId/slottedPolicies', () => {
     // Vanilla helper player — no Government fields.
     const player = createTestPlayer({
       id: 'p1',
@@ -96,17 +113,16 @@ describe('governmentSystem', () => {
 
   // ── ADOPT_GOVERNMENT — valid ──
 
-  it('ADOPT_GOVERNMENT valid sets governmentId and resets slottedPolicies', () => {
-    const prePopulated = new Map<string, Array<string | null>>([
-      ['military', ['conscription', 'discipline']],
-      ['economic', ['free_market']],
-    ]);
+  it('SET_GOVERNMENT valid sets governmentId and resets slottedPolicies as flat array', () => {
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
         researchedCivics: ['code_of_laws'],
       }),
-      { governmentId: null, slottedPolicies: prePopulated },
+      {
+        governmentId: null,
+        slottedPolicies: ['discipline', 'urban_planning'],
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -121,19 +137,20 @@ describe('governmentSystem', () => {
 
     const updated = next.players.get('p1') as PlayerState & {
       governmentId: string | null;
-      slottedPolicies: ReadonlyMap<string, ReadonlyArray<string | null>>;
+      slottedPolicies: ReadonlyArray<string | null>;
+      governmentLockedForAge: boolean;
     };
 
     expect(updated.governmentId).toBe('classical_republic');
-
-    // classical_republic has policySlots { military: 0, economic: 1, diplomatic: 0, wildcard: 1 }
-    expect(updated.slottedPolicies.get('military')).toEqual([]);
-    expect(updated.slottedPolicies.get('economic')).toEqual([null]);
-    expect(updated.slottedPolicies.get('diplomatic')).toEqual([]);
-    expect(updated.slottedPolicies.get('wildcard')).toEqual([null]);
+    // classical_republic has policySlots.total = 2 (W2-03 flat model)
+    expect(updated.slottedPolicies).toHaveLength(2);
+    expect(updated.slottedPolicies[0]).toBeNull();
+    expect(updated.slottedPolicies[1]).toBeNull();
+    // Sets the age lock (W2-03 CT F-07)
+    expect(updated.governmentLockedForAge).toBe(true);
   });
 
-  it('ADOPT_GOVERNMENT when already on that government returns state unchanged', () => {
+  it('SET_GOVERNMENT when already on that government returns state unchanged', () => {
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
@@ -154,23 +171,133 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
-  // ── SLOT_POLICY ──
+  // ── Per-age government lock (W2-03 CT F-07) ──
 
-  it('SLOT_POLICY with wrong-category policy returns state unchanged', () => {
-    // classical_republic has an economic slot (index 0). Try to slot a
-    // military policy (discipline) into it — must be rejected.
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
+  it('SET_GOVERNMENT blocked when governmentLockedForAge is true', () => {
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
-        researchedCivics: ['code_of_laws'], // unlocks discipline
+        researchedCivics: ['code_of_laws', 'state_workforce'],
       }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
+      { governmentId: 'classical_republic', governmentLockedForAge: true },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const action: GovernmentAction = {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'oligarchy',
+    };
+    const next = governmentSystem(state, action);
+    expect(next).toBe(state);
+  });
+
+  it('canAdoptGovernment returns false when governmentLockedForAge is true', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws', 'state_workforce'],
+      }),
+      { governmentId: 'classical_republic', governmentLockedForAge: true },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canAdoptGovernment(state, 'p1', 'oligarchy')).toBe(false);
+  });
+
+  it('canAdoptGovernment returns true when governmentLockedForAge is false', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({ id: 'p1', researchedCivics: ['code_of_laws'] }),
+      { governmentLockedForAge: false },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canAdoptGovernment(state, 'p1', 'classical_republic')).toBe(true);
+  });
+
+  // ── SLOT_POLICY — wildcard flat slots (W2-03 F-01) ──
+
+  it('SLOT_POLICY with policy swap window open places any policy in any slot', () => {
+    // classical_republic has total=2 slots
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    // Slot a military policy (discipline) into slot 0 — no category gate
+    const action: GovernmentAction = {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 0,
+      policyId: 'discipline',
+    };
+    const next = governmentSystem(state, action);
+
+    const updated = next.players.get('p1') as PlayerState & {
+      slottedPolicies: ReadonlyArray<string | null>;
+      policySwapWindowOpen: boolean;
+    };
+    expect(updated.slottedPolicies[0]).toBe('discipline');
+    expect(updated.slottedPolicies[1]).toBeNull();
+    // Consumes the swap window
+    expect(updated.policySwapWindowOpen).toBe(false);
+  });
+
+  it('SLOT_POLICY any category works in any slot (true wildcard)', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws', 'craftsmanship', 'foreign_trade'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    // Slot a diplomatic policy into slot 1 (no category restriction)
+    const action: GovernmentAction = {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 1,
+      policyId: 'diplomatic_league', // diplomatic category
+    };
+    const next = governmentSystem(state, action);
+    const updated = next.players.get('p1') as PlayerState & {
+      slottedPolicies: ReadonlyArray<string | null>;
+    };
+    expect(updated.slottedPolicies[1]).toBe('diplomatic_league');
+  });
+
+  it('SLOT_POLICY blocked when policySwapWindowOpen is false', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: false, // window closed
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -179,27 +306,24 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
-      policyId: 'discipline', // military policy
+      policyId: 'discipline',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
   });
 
   it('SLOT_POLICY with policy whose civic is not researched returns state unchanged', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
         researchedCivics: ['code_of_laws'], // does NOT include craftsmanship
       }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -208,7 +332,6 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
       policyId: 'urban_planning', // requires craftsmanship
     };
@@ -216,54 +339,17 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
-  it('SLOT_POLICY valid places the policy in the target slot', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
-    const player = withGovernmentFields(
-      createTestPlayer({
-        id: 'p1',
-        researchedCivics: ['code_of_laws', 'craftsmanship'],
-      }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
-    );
-    const state = createTestState({
-      players: new Map([['p1', player]]),
-    });
-
-    const action: GovernmentAction = {
-      type: 'SLOT_POLICY',
-      playerId: 'p1',
-      category: 'economic',
-      slotIndex: 0,
-      policyId: 'urban_planning',
-    };
-    const next = governmentSystem(state, action);
-
-    const updated = next.players.get('p1') as PlayerState & {
-      slottedPolicies: ReadonlyMap<string, ReadonlyArray<string | null>>;
-    };
-    expect(updated.slottedPolicies.get('economic')).toEqual(['urban_planning']);
-    // Unchanged sibling slots.
-    expect(updated.slottedPolicies.get('wildcard')).toEqual([null]);
-  });
-
-  it('SLOT_POLICY allows a military policy in a wildcard slot', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
+  it('SLOT_POLICY with out-of-range slot index returns state unchanged', () => {
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
         researchedCivics: ['code_of_laws'],
       }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -272,42 +358,8 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SLOT_POLICY',
       playerId: 'p1',
-      category: 'wildcard',
-      slotIndex: 0,
-      policyId: 'discipline', // military policy but wildcard slot
-    };
-    const next = governmentSystem(state, action);
-
-    const updated = next.players.get('p1') as PlayerState & {
-      slottedPolicies: ReadonlyMap<string, ReadonlyArray<string | null>>;
-    };
-    expect(updated.slottedPolicies.get('wildcard')).toEqual(['discipline']);
-  });
-
-  it('SLOT_POLICY with out-of-range slot index returns state unchanged', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
-    const player = withGovernmentFields(
-      createTestPlayer({
-        id: 'p1',
-        researchedCivics: ['code_of_laws', 'craftsmanship'],
-      }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
-    );
-    const state = createTestState({
-      players: new Map([['p1', player]]),
-    });
-
-    const action: GovernmentAction = {
-      type: 'SLOT_POLICY',
-      playerId: 'p1',
-      category: 'economic',
-      slotIndex: 5, // classical_republic only has 1 economic slot
-      policyId: 'urban_planning',
+      slotIndex: 5, // classical_republic only has 2 slots
+      policyId: 'discipline',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -316,7 +368,7 @@ describe('governmentSystem', () => {
   it('SLOT_POLICY gracefully no-ops when PlayerState lacks Government fields', () => {
     const player = createTestPlayer({
       id: 'p1',
-      researchedCivics: ['code_of_laws', 'craftsmanship'],
+      researchedCivics: ['code_of_laws'],
     });
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -325,9 +377,8 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
-      policyId: 'urban_planning',
+      policyId: 'discipline',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -336,52 +387,15 @@ describe('governmentSystem', () => {
   // ── UNSLOT_POLICY ──
 
   it('UNSLOT_POLICY clears the target slot', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', ['urban_planning']],
-      ['diplomatic', []],
-      ['wildcard', ['discipline']],
-    ]);
-    const player = withGovernmentFields(
-      createTestPlayer({
-        id: 'p1',
-        researchedCivics: ['code_of_laws', 'craftsmanship'],
-      }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
-    );
-    const state = createTestState({
-      players: new Map([['p1', player]]),
-    });
-
-    const action: GovernmentAction = {
-      type: 'UNSLOT_POLICY',
-      playerId: 'p1',
-      category: 'economic',
-      slotIndex: 0,
-    };
-    const next = governmentSystem(state, action);
-
-    const updated = next.players.get('p1') as PlayerState & {
-      slottedPolicies: ReadonlyMap<string, ReadonlyArray<string | null>>;
-    };
-    expect(updated.slottedPolicies.get('economic')).toEqual([null]);
-    // Unchanged slot.
-    expect(updated.slottedPolicies.get('wildcard')).toEqual(['discipline']);
-  });
-
-  it('UNSLOT_POLICY on already-empty slot returns state unchanged', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
         researchedCivics: ['code_of_laws'],
       }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: ['discipline', 'god_king'],
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -390,8 +404,141 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'UNSLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
+    };
+    const next = governmentSystem(state, action);
+
+    const updated = next.players.get('p1') as PlayerState & {
+      slottedPolicies: ReadonlyArray<string | null>;
+    };
+    expect(updated.slottedPolicies[0]).toBeNull();
+    // Slot 1 unchanged
+    expect(updated.slottedPolicies[1]).toBe('god_king');
+  });
+
+  it('UNSLOT_POLICY on already-empty slot returns state unchanged', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const action: GovernmentAction = {
+      type: 'UNSLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 0,
+    };
+    const next = governmentSystem(state, action);
+    expect(next).toBe(state);
+  });
+
+  // ── Policy swap window (W2-03 GP F-08) ──
+
+  it('canSlotPolicy returns false when policySwapWindowOpen is false', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: false,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canSlotPolicy(state, 'p1', 0, 'discipline')).toBe(false);
+  });
+
+  it('canSlotPolicy returns true when policySwapWindowOpen is true', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canSlotPolicy(state, 'p1', 0, 'discipline')).toBe(true);
+  });
+
+  // ── SELECT_IDEOLOGY (W2-03 CT F-08) ──
+
+  it('SELECT_IDEOLOGY sets ideology when political_theory is researched', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['political_theory'],
+      }),
+      { ideology: null },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const action: GovernmentAction = {
+      type: 'SELECT_IDEOLOGY',
+      playerId: 'p1',
+      ideology: 'democracy',
+    };
+    const next = governmentSystem(state, action);
+
+    const updated = next.players.get('p1') as PlayerState & {
+      ideology: string | null;
+    };
+    expect(updated.ideology).toBe('democracy');
+  });
+
+  it('SELECT_IDEOLOGY blocked when political_theory not researched', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({ id: 'p1', researchedCivics: [] }),
+      { ideology: null },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const action: GovernmentAction = {
+      type: 'SELECT_IDEOLOGY',
+      playerId: 'p1',
+      ideology: 'fascism',
+    };
+    const next = governmentSystem(state, action);
+    expect(next).toBe(state);
+  });
+
+  it('SELECT_IDEOLOGY cannot be changed once set', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['political_theory'],
+      }),
+      { ideology: 'communism' },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const action: GovernmentAction = {
+      type: 'SELECT_IDEOLOGY',
+      playerId: 'p1',
+      ideology: 'democracy',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -419,46 +566,38 @@ describe('governmentSystem', () => {
     expect(canAdoptGovernment(state, 'p1', 'classical_republic')).toBe(false);
   });
 
-  it('canSlotPolicy rejects wrong category and accepts wildcard', () => {
-    const slots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
+  it('canSlotPolicy accepts any policy category in any slot (wildcard)', () => {
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
-        researchedCivics: ['code_of_laws'],
+        researchedCivics: ['code_of_laws', 'foreign_trade'],
       }),
-      { governmentId: 'classical_republic', slottedPolicies: slots },
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+      },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
     });
-    expect(canSlotPolicy(state, 'p1', 'economic', 0, 'discipline')).toBe(
-      false,
-    );
-    expect(canSlotPolicy(state, 'p1', 'wildcard', 0, 'discipline')).toBe(
-      true,
-    );
+    // military policy in slot 0
+    expect(canSlotPolicy(state, 'p1', 0, 'discipline')).toBe(true);
+    // diplomatic policy in slot 0 (no category gate)
+    expect(canSlotPolicy(state, 'p1', 0, 'diplomatic_league')).toBe(true);
+    // out of bounds
+    expect(canSlotPolicy(state, 'p1', 5, 'discipline')).toBe(false);
   });
 
   // ── Immutability ──
 
   it('does not mutate the original state when adopting a government', () => {
-    const initialSlots = new Map<string, Array<string | null>>([
-      ['military', []],
-      ['economic', [null]],
-      ['diplomatic', []],
-      ['wildcard', [null]],
-    ]);
     const player = withGovernmentFields(
       createTestPlayer({
         id: 'p1',
         researchedCivics: ['code_of_laws'],
       }),
-      { governmentId: null, slottedPolicies: initialSlots },
+      { governmentId: null, slottedPolicies: [] },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),

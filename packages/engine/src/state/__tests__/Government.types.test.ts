@@ -54,19 +54,11 @@ describe('Government types — compile-time shape tests', () => {
     expect(new Set(cats).size).toBe(4);
   });
 
-  it('PolicySlotCounts has a numeric field per category', () => {
+  it('PolicySlotCounts has a single total wildcard count (W2-03 flat model)', () => {
     const counts: PolicySlotCounts = {
-      military: 2,
-      economic: 1,
-      diplomatic: 0,
-      wildcard: 1,
+      total: 4,
     };
-    const sum =
-      counts.military +
-      counts.economic +
-      counts.diplomatic +
-      counts.wildcard;
-    expect(sum).toBe(4);
+    expect(counts.total).toBe(4);
   });
 
   it('GovernmentCelebrationBonus carries id, name, effects', () => {
@@ -94,10 +86,7 @@ describe('Government types — compile-time shape tests', () => {
       age: 'antiquity',
       unlockCivic: 'code-of-laws',
       policySlots: {
-        military: 0,
-        economic: 1,
-        diplomatic: 0,
-        wildcard: 1,
+        total: 2,
       },
       celebrationBonuses: [
         {
@@ -220,11 +209,11 @@ describe('Government types — compile-time shape tests', () => {
     expect(placement.slotIndex).toBe(0);
   });
 
-  it('GovernmentState supports null-gov startup and non-empty slot maps', () => {
+  it('GovernmentState supports null-gov startup and non-empty flat slot arrays (W2-03)', () => {
     const empty: GovernmentState = {
       playerId: 'p1',
       currentGovernmentId: null,
-      slottedPolicies: new Map(),
+      slottedPolicies: [],
       unlockedPolicies: [],
       unlockedGovernments: [],
       bonusSlotCount: 0,
@@ -236,10 +225,7 @@ describe('Government types — compile-time shape tests', () => {
     const filled: GovernmentState = {
       playerId: 'p1',
       currentGovernmentId: 'classical-republic',
-      slottedPolicies: new Map<PolicyCategory, ReadonlyArray<PolicyId>>([
-        ['economic', ['survey']],
-        ['wildcard', ['ancestor-worship']],
-      ]),
+      slottedPolicies: ['survey', 'ancestor-worship'],
       unlockedPolicies: ['survey', 'ancestor-worship', 'legion-tradition'],
       unlockedGovernments: ['classical-republic', 'despotism'],
       bonusSlotCount: 2,
@@ -252,7 +238,7 @@ describe('Government types — compile-time shape tests', () => {
         ],
       },
     };
-    expect(filled.slottedPolicies.get('economic')).toEqual(['survey']);
+    expect(filled.slottedPolicies[0]).toBe('survey');
     expect(filled.unlockedPolicies).toHaveLength(3);
     expect(filled.bonusSlotCount).toBe(2);
     expect(filled.activeCelebrationBonus?.turnsRemaining).toBe(7);
@@ -288,7 +274,7 @@ describe('Government types — compile-time shape tests', () => {
     expect(inv.unplacedCodices).toEqual(['codex.civic.code-of-laws']);
   });
 
-  it('GovernmentAction covers all six government-scoped actions', () => {
+  it('GovernmentAction covers all seven government-scoped actions (W2-03 flat wildcard)', () => {
     const setGov: GovernmentAction = {
       type: 'SET_GOVERNMENT',
       playerId: 'p1',
@@ -297,14 +283,12 @@ describe('Government types — compile-time shape tests', () => {
     const slot: GovernmentAction = {
       type: 'SLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
       policyId: 'survey',
     };
     const unslot: GovernmentAction = {
       type: 'UNSLOT_POLICY',
       playerId: 'p1',
-      category: 'economic',
       slotIndex: 0,
     };
     const pick: GovernmentAction = {
@@ -325,6 +309,11 @@ describe('Government types — compile-time shape tests', () => {
       playerId: 'p1',
       codexId: 'codex.tech.writing',
     };
+    const ideology: GovernmentAction = {
+      type: 'SELECT_IDEOLOGY',
+      playerId: 'p1',
+      ideology: 'democracy',
+    };
 
     const actions: ReadonlyArray<GovernmentAction> = [
       setGov,
@@ -333,9 +322,10 @@ describe('Government types — compile-time shape tests', () => {
       pick,
       place,
       unplace,
+      ideology,
     ];
     const kinds = new Set(actions.map((a) => a.type));
-    expect(kinds.size).toBe(6);
+    expect(kinds.size).toBe(7);
   });
 
   it('exposes rulebook constants for celebration duration, slot floor, and codex yield', () => {

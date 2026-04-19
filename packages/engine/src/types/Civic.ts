@@ -9,4 +9,11 @@ export interface CivicDef {
   readonly treePosition: { readonly row: number; readonly col: number };
   /** If set, this civic is only available to the specified civilization. Undefined = universal. */
   readonly civId?: string;
+  /**
+   * If set, this civic belongs to an ideology branch and is only available
+   * after the player selects that ideology via SELECT_IDEOLOGY. Civics from
+   * the other two branches are locked out once an ideology is chosen.
+   * Only used in the Modern age (W2-03 CT F-08).
+   */
+  readonly ideologyBranch?: 'democracy' | 'fascism' | 'communism';
 }

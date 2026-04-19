@@ -118,26 +118,16 @@ describe('ALL_GOVERNMENTS', () => {
 
   it('every policy slot total is > 0', () => {
     for (const g of ALL_GOVERNMENTS) {
-      const total =
-        g.policySlots.military +
-        g.policySlots.economic +
-        g.policySlots.diplomatic +
-        g.policySlots.wildcard;
-      expect(total, `${g.id} must have at least one slot`).toBeGreaterThan(0);
+      // W2-03: flat wildcard model — policySlots.total replaces per-category counts
+      expect(g.policySlots.total, `${g.id} must have at least one slot`).toBeGreaterThan(0);
     }
   });
 
-  it('every policy slot count is a non-negative integer', () => {
+  it('every policy slot count is a positive integer', () => {
     for (const g of ALL_GOVERNMENTS) {
-      for (const v of [
-        g.policySlots.military,
-        g.policySlots.economic,
-        g.policySlots.diplomatic,
-        g.policySlots.wildcard,
-      ]) {
-        expect(Number.isInteger(v)).toBe(true);
-        expect(v).toBeGreaterThanOrEqual(0);
-      }
+      // W2-03: flat wildcard model — only policySlots.total exists
+      expect(Number.isInteger(g.policySlots.total)).toBe(true);
+      expect(g.policySlots.total).toBeGreaterThan(0);
     }
   });
 

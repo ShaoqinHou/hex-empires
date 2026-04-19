@@ -10,7 +10,7 @@ import type { GameState, PlayerState, CityState } from '../../types/GameState';
  * Pre-parity saves do not contain the optional fields added during the
  * Civ VII parity cycles:
  *   - PlayerState.governmentId
- *   - PlayerState.slottedPolicies (Map)
+ *   - PlayerState.slottedPolicies (flat array, W2-03 wildcard model)
  *   - PlayerState.pantheonId
  *   - CityState.assignedResources
  *   - CityState.urbanTiles / ruralAssignments / quarters
@@ -18,8 +18,9 @@ import type { GameState, PlayerState, CityState } from '../../types/GameState';
  * These tests pin the contract that legacy saves (JSON without these keys)
  * load cleanly with all of these fields becoming `undefined`, and that the
  * new shapes round-trip safely through serialize/deserialize — including
- * Maps (slottedPolicies, pantheonClaims) which need the generic __type
- * Map handling in SaveLoad.ts.
+ * Maps (pantheonClaims) which need the generic __type Map handling in
+ * SaveLoad.ts. slottedPolicies is now a flat array (W2-03) so it serializes
+ * natively without special treatment.
  *
  * Commander promotions land on the existing `UnitState.promotions` array
  * (no new PlayerState bookkeeping) so we test that pre-parity unit shapes
@@ -205,7 +206,7 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
       players: [{
         id: 'p1',
         name: 'Alice',
-        slottedPolicies: new Map([['military', ['legion-tradition']]]),
+        slottedPolicies: ['legion-tradition', null] as unknown as PlayerState['slottedPolicies'],
       }],
     });
     const json = serializeState(state);
@@ -284,12 +285,8 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
     expect(city.assignedResources).toEqual(['iron', 'horses', 'marble']);
   });
 
-  it('round-trips slottedPolicies Map preserving instance type and contents', () => {
-    const policies = new Map<string, ReadonlyArray<string | null>>([
-      ['military', ['legion-tradition', null]],
-      ['economic', ['free-market']],
-      ['wildcard', [null]],
-    ]);
+  it('round-trips slottedPolicies flat array preserving order and values (W2-03)', () => {
+    const policies = ['legion-tradition', null, 'free-market'] as unknown as PlayerState['slottedPolicies'];
     const state = createTestState({
       players: [{ id: 'p1', name: 'Alice', slottedPolicies: policies }],
     });
@@ -297,11 +294,10 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
     const restored = deserializeState(json);
 
     const restoredPolicies = restored.players.get('p1')!.slottedPolicies;
-    expect(restoredPolicies).toBeInstanceOf(Map);
-    expect(restoredPolicies!.size).toBe(3);
-    expect(restoredPolicies!.get('military')).toEqual(['legion-tradition', null]);
-    expect(restoredPolicies!.get('economic')).toEqual(['free-market']);
-    expect(restoredPolicies!.get('wildcard')).toEqual([null]);
+    expect(Array.isArray(restoredPolicies)).toBe(true);
+    expect((restoredPolicies as ReadonlyArray<string | null>)[0]).toBe('legion-tradition');
+    expect((restoredPolicies as ReadonlyArray<string | null>)[1]).toBeNull();
+    expect((restoredPolicies as ReadonlyArray<string | null>)[2]).toBe('free-market');
   });
 
   it('round-trips pantheonClaims Map in religion slot (shared Map handling)', () => {
@@ -328,7 +324,7 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
         name: 'Alice',
         governmentId: 'classical-republic',
         pantheonId: 'pantheon.sun_god',
-        slottedPolicies: new Map([['military', ['legion-tradition']]]),
+        slottedPolicies: ['legion-tradition', null] as unknown as PlayerState['slottedPolicies'],
       }],
       cities: [{
         id: 'c1',
@@ -350,9 +346,9 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
     // And the rehydrated state objects should deep-equal each other.
     expect(restored2).toEqual(restored1);
 
-    // Spot-check that the Map instances survived both round-trips.
-    expect(restored2.players.get('p1')!.slottedPolicies).toBeInstanceOf(Map);
-    expect(restored2.players.get('p1')!.slottedPolicies!.get('military')).toEqual(['legion-tradition']);
+    // Spot-check that the flat array survived both round-trips.
+    expect(Array.isArray(restored2.players.get('p1')!.slottedPolicies)).toBe(true);
+    expect((restored2.players.get('p1')!.slottedPolicies as ReadonlyArray<string | null>)[0]).toBe('legion-tradition');
     expect(restored2.cities.get('c1')!.assignedResources).toEqual(['iron']);
   });
 
@@ -365,7 +361,7 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
           name: 'Alice',
           governmentId: 'classical-republic',
           pantheonId: 'pantheon.sun_god',
-          slottedPolicies: new Map([['military', ['legion-tradition']]]),
+          slottedPolicies: ['legion-tradition', null] as unknown as PlayerState['slottedPolicies'],
         },
         { id: 'p2', name: 'Bob' },
       ],
@@ -385,8 +381,8 @@ describe('SaveLoad — pre-parity legacy-save migration', () => {
     // p1 carries parity state intact.
     expect(p1.governmentId).toBe('classical-republic');
     expect(p1.pantheonId).toBe('pantheon.sun_god');
-    expect(p1.slottedPolicies).toBeInstanceOf(Map);
-    expect(p1.slottedPolicies!.get('military')).toEqual(['legion-tradition']);
+    expect(Array.isArray(p1.slottedPolicies)).toBe(true);
+    expect((p1.slottedPolicies as ReadonlyArray<string | null>)[0]).toBe('legion-tradition');
 
     // p2 is the legacy shape — all parity fields undefined.
     expect(p2.governmentId).toBeUndefined();

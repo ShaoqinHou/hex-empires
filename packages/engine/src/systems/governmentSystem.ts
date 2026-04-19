@@ -1,33 +1,14 @@
 /**
- * governmentSystem — standalone pure system for Government and Social
- * Policy actions (cycle C of the Government mechanic).
+ * governmentSystem — pure system for Government and Social Policy actions.
  *
- * This system is NOT yet wired into the `GameEngine` pipeline. Wiring,
- * type unification with `GameAction`, and any required `PlayerState`
- * schema extension land in cycle D. The file exists now so UI panels
- * and tests can consume the logic in isolation.
- *
- * Scope:
- *  - `ADOPT_GOVERNMENT` — set the player's current government. Validates
- *    that the target government exists in `ALL_GOVERNMENTS`, that the
- *    player has researched the required `unlockCivic`, and that the
- *    player is not already on that government. On success resets filled
- *    policy slots (switching governments re-exposes a fresh slate of
- *    slots; individual slot shapes may differ).
- *  - `SLOT_POLICY` — place a Policy into a category slot. Validates that
- *    the player currently has a Government, that the Policy exists and
- *    is unlocked (its `unlockCivic` is researched), that the Policy's
- *    category matches the slot's category (wildcard slots accept any),
- *    and that the slot index is within the Government's declared slot
- *    count for that category.
- *  - `UNSLOT_POLICY` — clear a category slot at an index.
- *
- * Graceful no-op: the current `PlayerState` schema does NOT yet expose
- * `governmentId` or `slottedPolicies`. When those fields are missing,
- * the system returns state unchanged rather than throwing. This mirrors
- * the M10 `religionSystem` pattern. Tests exercise the happy path by
- * extending `PlayerState` at the test-scope via `createTestPlayer`
- * overrides, which the helper passes through `...overrides`.
+ * W2-03 changes (wildcard slots + ideology branch-lock + age lock):
+ *  - Policy slots are flat wildcard arrays: `slottedPolicies: ReadonlyArray<PolicyId | null>`.
+ *    SLOT_POLICY / UNSLOT_POLICY use `slotIndex` only (no `category`).
+ *  - canAdoptGovernment checks `player.governmentLockedForAge`. On success,
+ *    SET_GOVERNMENT sets `governmentLockedForAge: true`.
+ *  - SELECT_IDEOLOGY sets `player.ideology` (requires `political_theory` civic).
+ *  - canSlotPolicy gates on `player.policySwapWindowOpen`. SLOT_POLICY
+ *    success consumes the window (sets `policySwapWindowOpen: false`).
  *
  * Import boundaries: only from `../types/` and `../data/governments/`.
  * No cross-system imports; no side effects; fully pure.
@@ -39,37 +20,30 @@ import type {
   GovernmentAction,
   GovernmentId,
   PolicyId,
-  PolicyCategory,
 } from '../types/Government';
 import type { GovernmentDef } from '../data/governments/governments';
 import type { PolicyDef } from '../data/governments/policies';
 
 /**
  * Widened action union accepted by governmentSystem. The engine-level
- * `GameAction` does not yet include `GovernmentAction`; cycle D will
- * unify them. For now governmentSystem accepts either so callers and
- * tests can dispatch the Government-scoped shapes directly.
+ * `GameAction` includes `GovernmentAction` variants (landed in M12).
  */
 export type GovernmentSystemAction = GameAction | GovernmentAction;
 
 /**
- * Structural extension of `PlayerState` with the Government fields that
- * cycle D will inline. Used as a runtime predicate target so we can no-op
- * gracefully when those fields are absent from the schema.
+ * Structural extension of `PlayerState` with the Government fields.
+ * Used as a runtime predicate target so we can no-op gracefully when
+ * those fields are absent from the schema.
  */
 interface PlayerWithGovernment extends PlayerState {
   readonly governmentId: GovernmentId | null;
-  readonly slottedPolicies: ReadonlyMap<
-    PolicyCategory,
-    ReadonlyArray<PolicyId | null>
-  >;
+  readonly slottedPolicies: ReadonlyArray<PolicyId | null>;
 }
 
 // ── Helpers (exported for reuse by UI panels / tests) ──
 
 /**
  * Runtime predicate for the optional Government fields on PlayerState.
- * Uses a structural check (not a type cast) to stay strict-TS friendly.
  */
 function hasGovernmentFields(
   player: PlayerState,
@@ -77,7 +51,7 @@ function hasGovernmentFields(
   const p = player as Partial<PlayerWithGovernment>;
   return (
     (typeof p.governmentId === 'string' || p.governmentId === null) &&
-    p.slottedPolicies instanceof Map
+    Array.isArray(p.slottedPolicies)
   );
 }
 
@@ -96,6 +70,7 @@ export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefi
  * - Government must exist.
  * - Player's `researchedCivics` must include the Government's unlockCivic.
  * - Player must not already be on that Government.
+ * - Player must not have `governmentLockedForAge === true`.
  */
 export function canAdoptGovernment(
   state: GameState,
@@ -104,6 +79,9 @@ export function canAdoptGovernment(
 ): boolean {
   const player = state.players.get(playerId);
   if (!player) return false;
+
+  // Per-age lock (W2-03 CT F-07)
+  if (player.governmentLockedForAge === true) return false;
 
   const gov = findGovernment(governmentId, state.config);
   if (!gov) return false;
@@ -121,13 +99,16 @@ export function canAdoptGovernment(
 }
 
 /**
- * Pure validator: can the player slot `policyId` into the given
- * `(category, slotIndex)` slot of their current Government?
+ * Pure validator: can the player slot `policyId` into `slotIndex`?
+ * - Player must have a government.
+ * - `policySwapWindowOpen` must be true (W2-03 GP F-08).
+ * - Policy must exist and be unlocked.
+ * - Slot index must be within bounds (0..total-1).
+ * - All slots are wildcard — no category match required.
  */
 export function canSlotPolicy(
   state: GameState,
   playerId: string,
-  category: PolicyCategory,
   slotIndex: number,
   policyId: PolicyId,
 ): boolean {
@@ -136,24 +117,21 @@ export function canSlotPolicy(
   if (!hasGovernmentFields(player)) return false;
   if (player.governmentId === null) return false;
 
+  // Swap window gate (W2-03 GP F-08)
+  if (!player.policySwapWindowOpen) return false;
+
   const gov = findGovernment(player.governmentId, state.config);
   if (!gov) return false;
 
   const policy = findPolicy(policyId, state.config);
   if (!policy) return false;
 
-  // Policy must be unlocked.
+  // Policy must be unlocked via its prerequisite civic
   if (!player.researchedCivics.includes(policy.unlockCivic)) return false;
 
-  // Category match — wildcard slots accept any policy.
-  if (category !== 'wildcard' && policy.category !== category) {
-    return false;
-  }
-
-  // Slot index must be within the Government's slot count for this
-  // category.
-  const slotCount = gov.policySlots[category];
-  if (slotIndex < 0 || slotIndex >= slotCount) return false;
+  // Slot index bounds check (no category — all wildcard)
+  const total = gov.policySlots.total;
+  if (slotIndex < 0 || slotIndex >= total) return false;
 
   return true;
 }
@@ -161,24 +139,14 @@ export function canSlotPolicy(
 // ── Reducers ──
 
 /**
- * Produce a fresh, empty `slottedPolicies` map shaped to the given
- * Government's slot counts. Filled slots reset on Government change per
- * the design doc.
+ * Produce a fresh, empty flat slot array for the given Government's total
+ * slot count. Slots reset on Government change.
  */
-function emptySlotMap(
+function emptySlotArray(
   government: GovernmentDef | undefined,
-): ReadonlyMap<PolicyCategory, ReadonlyArray<PolicyId | null>> {
-  if (!government) {
-    return new Map();
-  }
-  const map = new Map<PolicyCategory, ReadonlyArray<PolicyId | null>>();
-  (['military', 'economic', 'diplomatic', 'wildcard'] as const).forEach(
-    (cat) => {
-      const count = government.policySlots[cat];
-      map.set(cat, new Array<PolicyId | null>(count).fill(null));
-    },
-  );
-  return map;
+): ReadonlyArray<PolicyId | null> {
+  if (!government) return [];
+  return new Array<PolicyId | null>(government.policySlots.total).fill(null);
 }
 
 function updatePlayer(
@@ -210,7 +178,9 @@ function applyAdoptGovernment(
   const updated: PlayerWithGovernment = {
     ...player,
     governmentId,
-    slottedPolicies: emptySlotMap(gov),
+    slottedPolicies: emptySlotArray(gov),
+    // Lock this player's government for the rest of the age (W2-03 CT F-07)
+    governmentLockedForAge: true,
   };
 
   return updatePlayer(state, playerId, updated);
@@ -220,31 +190,31 @@ function applySlotPolicy(
   state: GameState,
   action: Extract<GovernmentAction, { type: 'SLOT_POLICY' }>,
 ): GameState {
-  const { playerId, category, slotIndex, policyId } = action;
+  const { playerId, slotIndex, policyId } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
   if (!hasGovernmentFields(player)) return state;
 
-  if (!canSlotPolicy(state, playerId, category, slotIndex, policyId)) {
+  if (!canSlotPolicy(state, playerId, slotIndex, policyId)) {
     return state;
   }
 
-  const currentCategory =
-    player.slottedPolicies.get(category) ?? [];
-  const nextCategory: Array<PolicyId | null> = [...currentCategory];
-  // Normalise length to Government's slot count if the map was sparse.
   const gov = findGovernment(player.governmentId!, state.config);
   if (!gov) return state;
-  const expectedLen = gov.policySlots[category];
-  while (nextCategory.length < expectedLen) nextCategory.push(null);
-  nextCategory[slotIndex] = policyId;
 
-  const nextSlotted = new Map(player.slottedPolicies);
-  nextSlotted.set(category, nextCategory);
+  const total = gov.policySlots.total;
+  const current = player.slottedPolicies;
+  const next: Array<PolicyId | null> = new Array<PolicyId | null>(total).fill(null);
+  for (let i = 0; i < total; i++) {
+    next[i] = current[i] ?? null;
+  }
+  next[slotIndex] = policyId;
 
   const updated: PlayerWithGovernment = {
     ...player,
-    slottedPolicies: nextSlotted,
+    slottedPolicies: next,
+    // Consume the swap window (W2-03 GP F-08)
+    policySwapWindowOpen: false,
   };
 
   return updatePlayer(state, playerId, updated);
@@ -254,7 +224,7 @@ function applyUnslotPolicy(
   state: GameState,
   action: Extract<GovernmentAction, { type: 'UNSLOT_POLICY' }>,
 ): GameState {
-  const { playerId, category, slotIndex } = action;
+  const { playerId, slotIndex } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
   if (!hasGovernmentFields(player)) return state;
@@ -263,24 +233,43 @@ function applyUnslotPolicy(
   const gov = findGovernment(player.governmentId, state.config);
   if (!gov) return state;
 
-  const slotCount = gov.policySlots[category];
-  if (slotIndex < 0 || slotIndex >= slotCount) return state;
+  const total = gov.policySlots.total;
+  if (slotIndex < 0 || slotIndex >= total) return state;
 
-  const currentCategory = player.slottedPolicies.get(category) ?? [];
-  const nextCategory: Array<PolicyId | null> = [...currentCategory];
-  while (nextCategory.length < slotCount) nextCategory.push(null);
+  const current = player.slottedPolicies;
+  if ((current[slotIndex] ?? null) === null) return state;
 
-  // Only modify state if there was actually a policy in the slot.
-  if (nextCategory[slotIndex] === null) return state;
-
-  nextCategory[slotIndex] = null;
-
-  const nextSlotted = new Map(player.slottedPolicies);
-  nextSlotted.set(category, nextCategory);
+  const next: Array<PolicyId | null> = new Array<PolicyId | null>(total).fill(null);
+  for (let i = 0; i < total; i++) {
+    next[i] = current[i] ?? null;
+  }
+  next[slotIndex] = null;
 
   const updated: PlayerWithGovernment = {
     ...player,
-    slottedPolicies: nextSlotted,
+    slottedPolicies: next,
+  };
+
+  return updatePlayer(state, playerId, updated);
+}
+
+function applySelectIdeology(
+  state: GameState,
+  action: Extract<GovernmentAction, { type: 'SELECT_IDEOLOGY' }>,
+): GameState {
+  const { playerId, ideology } = action;
+  const player = state.players.get(playerId);
+  if (!player) return state;
+
+  // Requires political_theory civic
+  if (!player.researchedCivics.includes('political_theory')) return state;
+
+  // Once set, ideology cannot be changed
+  if (player.ideology != null) return state;
+
+  const updated: PlayerState = {
+    ...player,
+    ideology,
   };
 
   return updatePlayer(state, playerId, updated);
@@ -290,9 +279,7 @@ function applyUnslotPolicy(
  * governmentSystem — pure function, no mutation, no side effects.
  *
  * Returns state unchanged for any action type it does not handle and
- * for any invalid action (unknown government/policy, missing civic,
- * wrong-category slot, out-of-range index, missing player, or schema
- * without Government fields).
+ * for any invalid action.
  */
 export function governmentSystem(
   state: GameState,
@@ -305,6 +292,8 @@ export function governmentSystem(
       return applySlotPolicy(state, action);
     case 'UNSLOT_POLICY':
       return applyUnslotPolicy(state, action);
+    case 'SELECT_IDEOLOGY':
+      return applySelectIdeology(state, action);
     default:
       return state;
   }

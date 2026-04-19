@@ -219,10 +219,8 @@ describe('A6: gold / science / culture / faith survive the transition (§16.1)',
 describe('A7: government/policy/pantheon wipe + city.assignedResources persist (W1-B)', () => {
   it('governmentId and slottedPolicies are reset to null/empty on TRANSITION_AGE', () => {
     // W1-B: government requires re-selection in new age; legacy policies expire.
-    const slotted: ReadonlyMap<string, ReadonlyArray<string | null>> = new Map([
-      ['military', ['professional_army', null]],
-      ['economic', ['free_market']],
-    ]);
+    // W2-03: slottedPolicies is now a flat ReadonlyArray, not a Map.
+    const slotted: ReadonlyArray<string | null> = ['professional_army', 'free_market'];
     const player = readyToTransitionPlayer({
       governmentId: 'classical_republic',
       slottedPolicies: slotted,
@@ -232,7 +230,7 @@ describe('A7: government/policy/pantheon wipe + city.assignedResources persist (
     const p = next.players.get('p1')!;
     expect(p.governmentId).toBeNull();
     expect(p.slottedPolicies).toBeDefined();
-    expect(p.slottedPolicies!.size).toBe(0);
+    expect(p.slottedPolicies!.length).toBe(0);
   });
 
   it('pantheonId is cleared on Antiquity→Exploration transition (§18 / F-02)', () => {
@@ -344,9 +342,8 @@ describe('A10: previous age research is cleared on transition (§16.1 #9 — tre
 
 describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_AGE (W1-B)', () => {
   it('after Antiquity→Exploration: researchedCivics, masteredCivics, masteredTechs, governmentId, slottedPolicies, pantheonId all cleared', () => {
-    const slotted: ReadonlyMap<string, ReadonlyArray<string | null>> = new Map([
-      ['military', ['professional_army']],
-    ]);
+    // W2-03: slottedPolicies is now a flat ReadonlyArray<string | null>, not a Map.
+    const slotted: ReadonlyArray<string | null> = ['professional_army'];
     const player = readyToTransitionPlayer({
       researchedCivics: ['code_of_laws', 'craftsmanship'],
       currentCivic: 'foreign_trade',
@@ -384,7 +381,7 @@ describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_A
 
     // Government resets
     expect(p.governmentId).toBeNull();
-    expect(p.slottedPolicies!.size).toBe(0);
+    expect(p.slottedPolicies!.length).toBe(0); // W2-03: flat array, not Map
 
     // Pantheon wipes on Antiquity→Exploration
     expect(p.pantheonId).toBeNull();

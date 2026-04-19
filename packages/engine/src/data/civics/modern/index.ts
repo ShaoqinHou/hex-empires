@@ -1,5 +1,12 @@
 import type { CivicDef } from '../types';
 
+// ── Ideology branches (W2-03 CT F-08) ──
+// Branch assignment:
+//   fascism:   IDEOLOGY, TOTALITARIANISM
+//   democracy: SUFFRAGE, ENVIRONMENTALISM, GLOBALIZATION, FUTURE_CIVIC
+//   communism: CLASS_STRUGGLE
+// Gate civics: POLITICAL_THEORY, ENLIGHTENMENT — no branch (available to all)
+
 export const IDEOLOGY: CivicDef = {
   id: 'ideology',
   name: 'Ideology',
@@ -9,6 +16,7 @@ export const IDEOLOGY: CivicDef = {
   unlocks: [],
   description: '+3 culture from broadcast towers',
   treePosition: { row: 0, col: 0 },
+  ideologyBranch: 'fascism',
 };
 
 export const SUFFRAGE: CivicDef = {
@@ -20,6 +28,7 @@ export const SUFFRAGE: CivicDef = {
   unlocks: [],
   description: '+2 happiness per city',
   treePosition: { row: 2, col: 0 },
+  ideologyBranch: 'democracy',
 };
 
 export const TOTALITARIANISM: CivicDef = {
@@ -31,6 +40,7 @@ export const TOTALITARIANISM: CivicDef = {
   unlocks: [],
   description: '+10 combat strength, -2 happiness',
   treePosition: { row: 0, col: 1 },
+  ideologyBranch: 'fascism',
 };
 
 export const ENVIRONMENTALISM: CivicDef = {
@@ -42,6 +52,7 @@ export const ENVIRONMENTALISM: CivicDef = {
   unlocks: [],
   description: '+2 food per farm',
   treePosition: { row: 2, col: 1 },
+  ideologyBranch: 'democracy',
 };
 
 export const GLOBALIZATION: CivicDef = {
@@ -53,6 +64,7 @@ export const GLOBALIZATION: CivicDef = {
   unlocks: [],
   description: '+4 gold from trade routes',
   treePosition: { row: 1, col: 2 },
+  ideologyBranch: 'democracy',
 };
 
 export const FUTURE_CIVIC: CivicDef = {
@@ -64,11 +76,13 @@ export const FUTURE_CIVIC: CivicDef = {
   unlocks: [],
   description: '+10 age progress, repeatable',
   treePosition: { row: 1, col: 3 },
+  ideologyBranch: 'democracy',
 };
 
 /**
  * Rulebook §12 (Military Victory) — Adopting an Ideology requires the
  * Political Theory civic. Foundation piece of the Modern civic tree.
+ * No ideologyBranch — available to all players before ideology selection.
  */
 export const POLITICAL_THEORY: CivicDef = {
   id: 'political_theory',
@@ -76,7 +90,6 @@ export const POLITICAL_THEORY: CivicDef = {
   age: 'modern',
   cost: 350,
   prerequisites: [],
-  // TODO(content): add unlocks: ['adopt_ideology'] when ideology adoption mechanic id is defined
   unlocks: [],
   description:
     'Systematic study of the legitimacy and structure of the state. Required to adopt an Ideology.',
@@ -86,6 +99,7 @@ export const POLITICAL_THEORY: CivicDef = {
 /**
  * Rulebook §14.1.3 — unlocks the Democracy Government for the Modern Age.
  * Intellectual successor to Political Theory.
+ * No ideologyBranch — available to all players (gate civic).
  */
 export const ENLIGHTENMENT: CivicDef = {
   id: 'enlightenment',
@@ -109,11 +123,11 @@ export const CLASS_STRUGGLE: CivicDef = {
   age: 'modern',
   cost: 550,
   prerequisites: ['political_theory'],
-  // TODO(content): add unlocks: ['communism'] when Communism GovernmentDef is defined
   unlocks: [],
   description:
     'Organises society along the axis of productive labour versus capital. Unlocks the Communism government when defined.',
   treePosition: { row: 2, col: 2 },
+  ideologyBranch: 'communism',
 };
 
 export const ALL_MODERN_CIVICS: ReadonlyArray<CivicDef> = [

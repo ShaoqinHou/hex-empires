@@ -3,7 +3,7 @@ import { generateAIActions } from '../aiSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import { ALL_PANTHEONS } from '../../data/religion';
 import { ALL_GOVERNMENTS, ALL_POLICIES } from '../../data/governments';
-import type { GameAction, GameState } from '../../types/GameState';
+import type { GameAction, GameState, PlayerState } from '../../types/GameState';
 
 /**
  * Tests for the Civ VII parity emissions added to generateAIActions:
@@ -121,30 +121,21 @@ describe('aiSystem — Civ VII parity emissions', () => {
 
   it('AI with a government + open slot + researched policy civic emits SLOT_POLICY', () => {
     // Pick a known government with a wildcard slot so we can force an empty
-    // slot and a researched policy civic.
+    // slot and a researched policy civic. W2-03: slottedPolicies is a flat array.
     const gov = ALL_GOVERNMENTS.find(g => g.id === 'classical_republic')!;
-    // Find a policy whose unlockCivic we can safely say is researched AND
-    // whose category has at least one slot on this government. classical_republic has
-    // wildcard:1, and any policy can slot into wildcard.
     const policy = ALL_POLICIES.find(p => p.unlockCivic === 'code_of_laws')!;
     const state = aiStateWith({
       pantheonId: 'already_picked',
       governmentId: gov.id,
       researchedCivics: [gov.unlockCivic, policy.unlockCivic],
-      slottedPolicies: new Map([
-        ['military', []],
-        ['economic', []],
-        ['diplomatic', []],
-        ['wildcard', [null]],
-      ]),
+      slottedPolicies: [null, null] as unknown as PlayerState['slottedPolicies'],
     });
     const actions = generateAIActions(state);
     const slot = findAction(actions, 'SLOT_POLICY');
     expect(slot).toBeDefined();
     expect(slot!.playerId).toBe('p1');
     expect(slot!.slotIndex).toBe(0);
-    // The emission may pick any category with a matching researched policy;
-    // it must reference an actual registered policy.
+    // It must reference an actual registered policy.
     expect(ALL_POLICIES.some(p => p.id === slot!.policyId)).toBe(true);
   });
 
@@ -157,12 +148,7 @@ describe('aiSystem — Civ VII parity emissions', () => {
       pantheonId: null,
       governmentId: null,
       researchedCivics: [gov.unlockCivic],
-      slottedPolicies: new Map([
-        ['military', []],
-        ['economic', []],
-        ['diplomatic', []],
-        ['wildcard', [null]],
-      ]),
+      slottedPolicies: [null, null] as unknown as PlayerState['slottedPolicies'],
     });
     const actions = generateAIActions(state);
     const parityTypes = new Set<GameAction['type']>([
