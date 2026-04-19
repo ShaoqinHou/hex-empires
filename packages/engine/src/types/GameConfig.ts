@@ -20,6 +20,10 @@ import type { CrisisEventDef } from '../data/crises/types';
 import type { IndependentPowerDef } from './IndependentPower';
 import type { NarrativeEventDef, DiscoveryDef } from './NarrativeEvent';
 import type { AttributeNodeDef } from './Attribute';
+import type { FoundationChallengeDef } from '../data/foundation-challenges';
+import type { LeaderChallengeDef } from '../data/leader-challenges';
+import type { MementoDef } from './Memento';
+import type { QuarterDef } from './Quarter';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -72,6 +76,27 @@ export interface GameConfig {
    * Optional so existing GameConfig construction compiles unchanged.
    */
   readonly discoveries?: ReadonlyMap<string, DiscoveryDef>;
+
+  /**
+   * Foundation Challenges registry (W3-06). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * legendsSystem falls back to an empty collection.
+   */
+  readonly foundationChallenges?: ReadonlyMap<string, FoundationChallengeDef>;
+
+  /**
+   * Leader Challenges registry (W3-06). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * legendsSystem falls back to an empty collection.
+   */
+  readonly leaderChallenges?: ReadonlyMap<string, LeaderChallengeDef>;
+
+  /**
+   * Mementos registry (W3-06). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * legendsSystem/MementoApply fall back to an empty collection.
+   */
+  readonly mementos?: ReadonlyMap<string, MementoDef>;
 
   /**
    * Feature flag — when false (default), the Achievements panel is hidden

@@ -43,6 +43,12 @@ import type { AttributeNodeDef } from '../types/Attribute';
 import { ALL_NARRATIVE_EVENTS } from '../data/narrative-events';
 import { ALL_DISCOVERIES } from '../data/discoveries';
 import type { NarrativeEventDef, DiscoveryDef } from '../types/NarrativeEvent';
+import { ALL_FOUNDATION_CHALLENGES } from '../data/foundation-challenges';
+import { ALL_LEADER_CHALLENGES } from '../data/leader-challenges';
+import { ALL_MEMENTOS } from '../data/mementos';
+import type { FoundationChallengeDef } from '../data/foundation-challenges';
+import type { LeaderChallengeDef } from '../data/leader-challenges';
+import type { MementoDef } from '../types/Memento';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -115,5 +121,14 @@ export function createGameConfig(): GameConfig {
   const discoveries = new Map<string, DiscoveryDef>();
   for (const d of ALL_DISCOVERIES) discoveries.set(d.id, d);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, experimentalAchievements: false };
+  const foundationChallenges = new Map<string, FoundationChallengeDef>();
+  for (const c of ALL_FOUNDATION_CHALLENGES) foundationChallenges.set(c.id, c);
+
+  const leaderChallenges = new Map<string, LeaderChallengeDef>();
+  for (const c of ALL_LEADER_CHALLENGES) leaderChallenges.set(c.id, c);
+
+  const mementos = new Map<string, MementoDef>();
+  for (const m of ALL_MEMENTOS) mementos.set(m.id, m);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, experimentalAchievements: false };
 }

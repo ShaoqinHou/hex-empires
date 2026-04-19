@@ -24,6 +24,10 @@ import { evaluateLegends } from '../legendsSystem';
 import { applyEquippedMementos, filterValidMementos } from '../../state/MementoApply';
 import { createInitialState } from '../../state/GameInitializer';
 import type { GameState } from '../../types/GameState';
+import { ALL_MEMENTOS } from '../../data/mementos';
+import type { MementoDef } from '../../types/Memento';
+
+const ALL_MEMENTOS_MAP: ReadonlyMap<string, MementoDef> = new Map(ALL_MEMENTOS.map(m => [m.id, m]));
 
 // ── Helpers ──
 
@@ -271,13 +275,13 @@ describe('filterValidMementos', () => {
       ...createDefaultAccountState(),
       unlockedMementos: ['rosetta-stone'],
     };
-    const result = filterValidMementos(['rosetta-stone', 'fake-id'], account);
+    const result = filterValidMementos(['rosetta-stone', 'fake-id'], account, ALL_MEMENTOS_MAP);
     expect(result).toEqual(['rosetta-stone']);
   });
 
   it('silently drops mementos not in account.unlockedMementos', () => {
     const account = createDefaultAccountState(); // no mementos unlocked
-    const result = filterValidMementos(['rosetta-stone'], account);
+    const result = filterValidMementos(['rosetta-stone'], account, ALL_MEMENTOS_MAP);
     expect(result).toHaveLength(0);
   });
 
@@ -286,7 +290,7 @@ describe('filterValidMementos', () => {
       ...createDefaultAccountState(),
       unlockedMementos: ['rosetta-stone', 'napoleon-hat'],
     };
-    const result = filterValidMementos(['rosetta-stone', 'napoleon-hat'], account);
+    const result = filterValidMementos(['rosetta-stone', 'napoleon-hat'], account, ALL_MEMENTOS_MAP);
     expect(result).toHaveLength(2);
   });
 });

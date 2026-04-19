@@ -3,7 +3,7 @@ import type { YieldType } from '../types/Yields';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
-import { createDefaultIPState } from './independentPowerSystem';
+import { createDefaultIPState } from '../state/IPStateFactory';
 
 /**
  * AgeSystem handles age transitions and legacy milestone tracking.

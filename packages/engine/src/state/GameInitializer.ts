@@ -195,7 +195,7 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
   if (account && config.equippedMementos && config.equippedMementos.length > 0) {
     const maxSlots = foundationMementoSlots(account.foundationLevel);
     const equipped = config.equippedMementos.slice(0, maxSlots);
-    const validEquipped = filterValidMementos(equipped, account);
+    const validEquipped = filterValidMementos(equipped, account, state.config.mementos ?? new Map());
     if (validEquipped.length > 0) {
       return applyEquippedMementos(state, playerId, validEquipped);
     }

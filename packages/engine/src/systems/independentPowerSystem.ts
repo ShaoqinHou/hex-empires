@@ -323,25 +323,5 @@ function handleNPCTurn(state: GameState): GameState {
   };
 }
 
-/**
- * Create a default IndependentPowerState from a config def.
- * Used during age-transition re-seeding.
- */
-export function createDefaultIPState(def: {
-  readonly id: string;
-  readonly type: 'militaristic' | 'cultural' | 'scientific' | 'economic' | 'diplomatic' | 'expansionist';
-  readonly defaultAttitude: 'neutral' | 'friendly' | 'hostile';
-  readonly bonusPool: ReadonlyArray<string>;
-}): IndependentPowerState {
-  return {
-    id: def.id,
-    type: def.type,
-    attitude: def.defaultAttitude,
-    position: { q: 0, r: 0 }, // position assigned by map-gen; placeholder here
-    befriendProgress: 0,
-    suzerainPlayerId: null,
-    isIncorporated: false,
-    isCityState: true,
-    bonusPool: [...def.bonusPool],
-  };
-}
+// Re-export so existing call-sites importing from this module continue to work.
+export { createDefaultIPState } from '../state/IPStateFactory';

@@ -20,9 +20,7 @@ import type { AccountState, AccountStateDelta } from '../types/AccountState';
 import type { AchievementCondition } from '../data/achievements';
 import type { FoundationChallengeDef } from '../data/foundation-challenges';
 import type { LeaderChallengeDef } from '../data/leader-challenges';
-import { ALL_FOUNDATION_CHALLENGES } from '../data/foundation-challenges';
-import { ALL_LEADER_CHALLENGES } from '../data/leader-challenges';
-import { ALL_MEMENTOS } from '../data/mementos';
+import type { MementoDef } from '../types/Memento';
 
 /** Result produced by legendsSystem */
 export interface LegendsResult {
@@ -70,9 +68,10 @@ function evaluateCondition(state: GameState, playerId: string, condition: Achiev
 function findNewlyUnlockedMementos(
   completedChallengeIds: ReadonlyArray<string>,
   alreadyUnlocked: ReadonlyArray<string>,
+  mementos: ReadonlyMap<string, MementoDef>,
 ): ReadonlyArray<string> {
   const newlyUnlocked: string[] = [];
-  for (const memento of ALL_MEMENTOS) {
+  for (const memento of mementos.values()) {
     if (alreadyUnlocked.includes(memento.id)) continue;
     if (!memento.unlockCondition) continue;
     if (memento.unlockCondition.type === 'challenge') {
@@ -112,8 +111,13 @@ export function evaluateLegends(
   const leaderXPGained = new Map<string, number>();
   const newlyCompletedChallenges: string[] = [];
 
+  // Use config-seam collections; fall back to empty if not populated (pre-W3-06 configs).
+  const foundationChallenges = state.config.foundationChallenges ?? new Map<string, FoundationChallengeDef>();
+  const leaderChallenges = state.config.leaderChallenges ?? new Map<string, LeaderChallengeDef>();
+  const mementos = state.config.mementos ?? new Map<string, MementoDef>();
+
   // ── Foundation Challenges ──
-  for (const challenge of ALL_FOUNDATION_CHALLENGES) {
+  for (const challenge of foundationChallenges.values()) {
     if (account.completedChallenges.includes(challenge.id)) continue;
     if (evaluateCondition(state, humanPlayerId, challenge.condition)) {
       newlyCompletedChallenges.push(challenge.id);
@@ -123,7 +127,7 @@ export function evaluateLegends(
 
   // ── Leader Challenges (only those matching the player's current leader) ──
   const playerLeaderId = player.leaderId;
-  for (const challenge of ALL_LEADER_CHALLENGES) {
+  for (const challenge of leaderChallenges.values()) {
     if (challenge.leaderId !== playerLeaderId) continue;
     if (account.completedChallenges.includes(challenge.id)) continue;
     if (evaluateCondition(state, humanPlayerId, challenge.condition)) {
@@ -141,6 +145,7 @@ export function evaluateLegends(
   const newlyUnlockedMementos = findNewlyUnlockedMementos(
     allCompletedAfterDelta,
     account.unlockedMementos,
+    mementos,
   );
 
   const accountDelta: AccountStateDelta = {
