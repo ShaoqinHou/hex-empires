@@ -2,7 +2,7 @@ export type { UnitDef } from './antiquity-units';
 export {
   ALL_ANTIQUITY_UNITS,
   WARRIOR, SLINGER, ARCHER, SCOUT, SPEARMAN,
-  CHARIOT, SETTLER, BUILDER, BATTERING_RAM, GALLEY, MERCHANT,
+  CHARIOT, SETTLER, BATTERING_RAM, GALLEY, MERCHANT,
 } from './antiquity-units';
 export {
   ALL_EXPLORATION_UNITS,

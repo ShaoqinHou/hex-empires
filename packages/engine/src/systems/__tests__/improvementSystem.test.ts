@@ -1,21 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { improvementSystem } from '../improvementSystem';
-import { createTestState, createTestPlayer, createTestUnit } from './helpers';
+import { createTestState, createTestPlayer, createTestCity } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
 import type { HexCoord } from '../../types/HexCoord';
-
-// Helper: place a resource on a tile
-function setTileResource(
-  tiles: Map<string, any>,
-  coord: HexCoord,
-  resource: string,
-): void {
-  const key = coordToKey(coord);
-  const existing = tiles.get(key);
-  if (existing) {
-    tiles.set(key, { ...existing, resource });
-  }
-}
 
 // Helper: mark a tile as already improved
 function setTileImprovement(
@@ -44,359 +31,148 @@ function setTileTerrain(
 }
 
 describe('improvementSystem', () => {
-  describe('BUILD_IMPROVEMENT — valid farm', () => {
-    it('places a farm on a grassland tile, removes builder, and logs', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
+  describe('PLACE_IMPROVEMENT (W2-01)', () => {
+    it('places a farm on a grassland tile and logs', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
 
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
+      const player = createTestPlayer({ id: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: cityPos });
+
+      const state = createTestState({
+        players: new Map([['p1', {
+          ...player,
+          pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+        }]]),
+        cities: new Map([['c1', city]]),
       });
 
-      // Builder is consumed
-      expect(next.units.has('b1')).toBe(false);
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
+      });
 
-      // Tile now has the farm improvement
-      const tileKey = coordToKey(builderPos);
+      // Tile now has an improvement (farm on grassland)
+      const tileKey = coordToKey(targetTile);
       const tile = next.map.tiles.get(tileKey);
       expect(tile?.improvement).toBe('farm');
 
       // A log entry was added
       expect(next.log.length).toBe(1);
       expect(next.log[0].type).toBe('production');
-      expect(next.log[0].message).toContain('Farm');
-      expect(next.log[0].message).toContain('2');
+
+      // pendingGrowthChoice for c1 is cleared
+      const updatedPlayer = next.players.get('p1');
+      expect(updatedPlayer?.pendingGrowthChoices?.some(c => c.cityId === 'c1')).toBe(false);
     });
 
-    it('logs the tile coordinates', () => {
-      const builderPos: HexCoord = { q: 3, r: 1 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
-      });
-
-      expect(next.log[0].message).toContain('3');
-      expect(next.log[0].message).toContain('1');
-    });
-
-    it('preserves all other tiles unchanged', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const otherPos: HexCoord = { q: 3, r: 3 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
-      });
-
-      const otherKey = coordToKey(otherPos);
-      const otherTile = next.map.tiles.get(otherKey);
-      expect(otherTile?.improvement ?? null).toBeNull();
-    });
-  });
-
-  describe('BUILD_IMPROVEMENT — tech-required mine', () => {
-    it('builds a mine when player has mining tech, resource, and correct terrain', () => {
-      const builderPos: HexCoord = { q: 1, r: 1 };
-      const tiles = new Map(createTestState().map.tiles);
-      setTileTerrain(tiles, builderPos, 'hills');
-      setTileResource(tiles, builderPos, 'iron');
-
-      const playerWithMining = createTestPlayer({
-        id: 'p1',
-        researchedTechs: ['mining'],
-      });
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({
-        units,
-        players: new Map([['p1', playerWithMining]]),
-        map: { width: 10, height: 10, tiles, wrapX: false },
-      });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'mine',
-      });
-
-      expect(next.units.has('b1')).toBe(false);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement).toBe('mine');
-    });
-
-    it('rejects mine when player lacks mining tech', () => {
-      const builderPos: HexCoord = { q: 1, r: 1 };
-      const tiles = new Map(createTestState().map.tiles);
-      setTileTerrain(tiles, builderPos, 'hills');
-      setTileResource(tiles, builderPos, 'iron');
-
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({
-        units,
-        map: { width: 10, height: 10, tiles, wrapX: false },
-      });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'mine',
-      });
-
-      // Action rejected — builder survives, no improvement
-      expect(next.units.has('b1')).toBe(true);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
-    });
-  });
-
-  describe('BUILD_IMPROVEMENT — invalid cases', () => {
-    it('rejects when unit does not exist', () => {
+    it('rejects when city does not exist', () => {
       const state = createTestState();
       const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'nonexistent',
-        tile: { q: 0, r: 0 },
-        improvementId: 'farm',
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'nonexistent',
+        tile: { q: 2, r: 2 },
       });
       expect(next).toBe(state);
-    });
-
-    it('rejects when improvement id is unknown', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'unknown_improvement',
-      });
-
-      expect(next).toBe(state);
-    });
-
-    it('rejects when unit is not a builder (lacks build_improvement ability)', () => {
-      const warriorPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['w1', createTestUnit({ id: 'w1', typeId: 'warrior', position: warriorPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'w1',
-        tile: warriorPos,
-        improvementId: 'farm',
-      });
-
-      // Warrior cannot build — state unchanged
-      expect(next.units.has('w1')).toBe(true);
-      const tileKey = coordToKey(warriorPos);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
-    });
-
-    it('rejects when unit is not on the target tile', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const targetTile: HexCoord = { q: 4, r: 4 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: targetTile,
-        improvementId: 'farm',
-      });
-
-      // Builder must be on the tile — action rejected
-      expect(next.units.has('b1')).toBe(true);
-      const tileKey = coordToKey(targetTile);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
     });
 
     it('rejects when tile already has an improvement', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
       const tiles = new Map(createTestState().map.tiles);
-      setTileImprovement(tiles, builderPos, 'farm');
+      setTileImprovement(tiles, targetTile, 'farm');
 
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
+      const player = createTestPlayer({ id: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: cityPos });
+
       const state = createTestState({
-        units,
+        players: new Map([['p1', {
+          ...player,
+          pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+        }]]),
+        cities: new Map([['c1', city]]),
         map: { width: 10, height: 10, tiles, wrapX: false },
       });
 
       const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
       });
 
-      // Tile already improved — builder survives
-      expect(next.units.has('b1')).toBe(true);
+      // Already improved — no-op
+      expect(next).toBe(state);
     });
 
-    it('rejects farm on ocean terrain (wrong terrain prerequisite)', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
+    it('rejects when tile is ocean (no derivable improvement)', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
       const tiles = new Map(createTestState().map.tiles);
-      setTileTerrain(tiles, builderPos, 'ocean');
+      setTileTerrain(tiles, targetTile, 'ocean');
 
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
+      const player = createTestPlayer({ id: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: cityPos });
+
       const state = createTestState({
-        units,
+        players: new Map([['p1', {
+          ...player,
+          pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+        }]]),
+        cities: new Map([['c1', city]]),
         map: { width: 10, height: 10, tiles, wrapX: false },
       });
 
       const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
       });
 
-      // Ocean doesn't match farm's allowed terrains
-      expect(next.units.has('b1')).toBe(true);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
+      // Ocean has no derivable improvement — state unchanged
+      expect(next).toBe(state);
     });
 
-    it('rejects pasture when tile has no valid resource', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const playerWithTech = createTestPlayer({
-        id: 'p1',
-        researchedTechs: ['animal_husbandry'],
-      });
-      // Grassland but no cattle/horses/sheep resource
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
+    it('does not mutate original state', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
+
+      const player = createTestPlayer({ id: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: cityPos });
+
       const state = createTestState({
-        units,
-        players: new Map([['p1', playerWithTech]]),
+        players: new Map([['p1', {
+          ...player,
+          pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+        }]]),
+        cities: new Map([['c1', city]]),
       });
 
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'pasture',
+      const tileKey = coordToKey(targetTile);
+      const originalTile = state.map.tiles.get(tileKey);
+
+      improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
       });
 
-      expect(next.units.has('b1')).toBe(true);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
-    });
-
-    it('rejects road when player lacks wheel tech', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'road',
-      });
-
-      expect(next.units.has('b1')).toBe(true);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement ?? null).toBeNull();
+      // Original state not mutated
+      expect(state.map.tiles.get(tileKey)).toBe(originalTile);
     });
   });
 
   describe('pass-through', () => {
-    it('returns state unchanged for non-BUILD_IMPROVEMENT actions', () => {
+    it('returns state unchanged for END_TURN', () => {
       const state = createTestState();
       const next = improvementSystem(state, { type: 'END_TURN' });
       expect(next).toBe(state);
     });
 
-    it('returns state unchanged for START_TURN action', () => {
+    it('returns state unchanged for START_TURN', () => {
       const state = createTestState();
       const next = improvementSystem(state, { type: 'START_TURN' });
       expect(next).toBe(state);
-    });
-
-    it('does not mutate state on valid build', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units });
-      const originalUnitCount = state.units.size;
-      const originalTileKey = coordToKey(builderPos);
-      const originalTile = state.map.tiles.get(originalTileKey);
-
-      improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
-      });
-
-      // Original state is not mutated
-      expect(state.units.size).toBe(originalUnitCount);
-      expect(state.map.tiles.get(originalTileKey)).toBe(originalTile);
-    });
-  });
-
-  describe('seeded RNG invariance', () => {
-    it('produces the same result for the same input (determinism)', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({ units, rng: { seed: 42, counter: 0 } });
-      const action = {
-        type: 'BUILD_IMPROVEMENT' as const,
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'farm',
-      };
-
-      const result1 = improvementSystem(state, action);
-      const result2 = improvementSystem(state, action);
-
-      expect(result1.map.tiles.get(coordToKey(builderPos))?.improvement).toBe(
-        result2.map.tiles.get(coordToKey(builderPos))?.improvement,
-      );
-      expect(result1.units.has('b1')).toBe(result2.units.has('b1'));
     });
   });
 });

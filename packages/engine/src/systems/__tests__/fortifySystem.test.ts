@@ -31,12 +31,12 @@ describe('fortifySystem', () => {
     expect(next).toBe(state);
   });
 
-  it('rejects fortifying builder', () => {
+  it('rejects fortifying civilian (merchant)', () => {
     const units = new Map([
-      ['b1', createTestUnit({ id: 'b1', typeId: 'builder', movementLeft: 2 })],
+      ['m1', createTestUnit({ id: 'm1', typeId: 'merchant', movementLeft: 2 })],
     ]);
     const state = createTestState({ units });
-    const next = fortifySystem(state, { type: 'FORTIFY_UNIT', unitId: 'b1' });
+    const next = fortifySystem(state, { type: 'FORTIFY_UNIT', unitId: 'm1' });
     expect(next).toBe(state);
   });
 

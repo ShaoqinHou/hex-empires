@@ -163,22 +163,6 @@ export const SETTLER: UnitDef = {
   abilities: ['found_city'],
 } as const;
 
-export const BUILDER: UnitDef = {
-  id: 'builder',
-  name: 'Builder',
-  age: 'antiquity',
-  category: 'civilian',
-  cost: 50,
-  combat: 0,
-  rangedCombat: 0,
-  range: 0,
-  movement: 2,
-  sightRange: 2,
-  requiredTech: null,
-  upgradesTo: null,
-  abilities: ['build_improvement'],
-} as const;
-
 export const BATTERING_RAM: UnitDef = {
   id: 'battering_ram',
   name: 'Battering Ram',
@@ -276,7 +260,6 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   SPEARMAN,
   CHARIOT,
   SETTLER,
-  BUILDER,
   BATTERING_RAM,
   GALLEY,
   MERCHANT,

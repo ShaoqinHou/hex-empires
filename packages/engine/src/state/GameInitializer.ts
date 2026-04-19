@@ -145,9 +145,8 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
   const nearbyPlayer = findNearbyLandTiles(startCoord, 3);
   const unitsEntries: [string, ReturnType<typeof makeUnit>][] = [
     ['settler1', makeUnit('settler1', 'settler', playerId, startCoord, 2)],
-    ['builder1', makeUnit('builder1', 'builder', playerId, nearbyPlayer[0] ?? startCoord, 2)],
-    ['warrior1', makeUnit('warrior1', 'warrior', playerId, nearbyPlayer[1] ?? startCoord, 2)],
-    ['scout1', makeUnit('scout1', 'scout', playerId, nearbyPlayer[2] ?? startCoord, 3)],
+    ['warrior1', makeUnit('warrior1', 'warrior', playerId, nearbyPlayer[0] ?? startCoord, 2)],
+    ['scout1', makeUnit('scout1', 'scout', playerId, nearbyPlayer[1] ?? startCoord, 3)],
   ];
 
   for (let i = 0; i < aiCount; i++) {
@@ -158,8 +157,7 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     const nearbyAI = findNearbyLandTiles(aiStart, 2);
     unitsEntries.push(
       [`ai${i + 1}_settler1`, makeUnit(`ai${i + 1}_settler1`, 'settler', aiId, aiStart, 2)],
-      [`ai${i + 1}_builder1`, makeUnit(`ai${i + 1}_builder1`, 'builder', aiId, nearbyAI[0] ?? aiStart, 2)],
-      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, nearbyAI[1] ?? aiStart, 2)],
+      [`ai${i + 1}_warrior1`, makeUnit(`ai${i + 1}_warrior1`, 'warrior', aiId, nearbyAI[0] ?? aiStart, 2)],
     );
   }
 

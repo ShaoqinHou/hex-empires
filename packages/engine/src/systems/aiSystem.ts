@@ -1,4 +1,4 @@
-import type { GameState, GameAction, UnitState, CityState, HexTile, PlayerState, TownSpecialization } from '../types/GameState';
+import type { GameState, GameAction, UnitState, CityState, PlayerState, TownSpecialization } from '../types/GameState';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { HexCoord } from '../types/HexCoord';
@@ -107,7 +107,6 @@ export function assessThreats(
 function isScout(unitDef: { category: string; movement: number; abilities: ReadonlyArray<string> }): boolean {
   // Settlers are not scouts even though they're fast civilians
   if (unitDef.abilities.includes('found_city')) return false;
-  if (unitDef.abilities.includes('build_improvement')) return false;
   return unitDef.abilities.includes('scout') ||
     (unitDef.category === 'civilian' && unitDef.movement >= 3);
 }
@@ -314,14 +313,6 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
         if (!founded) {
           // Move toward a good city location
           moveTowardGoodCitySpot(state, unit, ourCities, actions, player.explored);
-        }
-      }
-      // Builders: build improvements on nearby tiles
-      else if (unitDef.abilities.includes('build_improvement')) {
-        const built = tryBuildImprovement(state, unit, player, ourCities, actions);
-        if (!built) {
-          // Move toward tiles that need improvements
-          moveTowardImprovementSpot(state, unit, player, ourCities, actions);
         }
       }
     } else {
@@ -590,7 +581,7 @@ function pickBestTech(state: GameState, personality: AIPersonality): string | nu
   // Analyze current situation
   const cityCount = [...state.cities.values()].filter(c => c.owner === player.id).length;
   const militaryCount = [...state.units.values()].filter(
-    u => u.owner === player.id && u.typeId !== 'settler' && u.typeId !== 'builder'
+    u => u.owner === player.id && u.typeId !== 'settler'
   ).length;
   const atWar = checkAtWar(state, player.id);
 
@@ -737,15 +728,6 @@ function pickProduction(
   if (cityCount < maxCitiesBeforeSettle && !hasUnitAbility(state, 'found_city') && militaryCount >= cityCount) {
     const settler = findCheapestUnitByAbility(state, 'found_city');
     if (settler) return settler;
-  }
-
-  // Priority 4b: Builder — produce one if we don't have any and have at least 1 city
-  const hasBuilder = [...state.units.values()].some(
-    u => u.owner === player?.id && state.config.units.get(u.typeId)?.abilities.includes('build_improvement')
-  );
-  if (!hasBuilder && cityCount > 0) {
-    const builder = findCheapestUnitByAbility(state, 'build_improvement');
-    if (builder) return builder;
   }
 
   // Priority 5: Production building, then science building (one of each)
@@ -1406,141 +1388,6 @@ function getOneStepToward(from: HexCoord, target: HexCoord, state: GameState): H
   return bestHex;
 }
 
-/** Try to build an improvement on current or adjacent tile */
-function tryBuildImprovement(state: GameState, builder: UnitState, player: PlayerState, ourCities: CityState[], actions: GameAction[]): boolean {
-  // Check current tile first
-  const currentTile = state.map.tiles.get(coordToKey(builder.position));
-  if (!currentTile || currentTile.improvement) {
-    // Current tile already has improvement or is invalid, try adjacent tiles
-    const adjacentTiles = neighbors(builder.position);
-    for (const adj of adjacentTiles) {
-      const tile = state.map.tiles.get(coordToKey(adj));
-      if (!tile || tile.improvement) continue;
-
-      const improvement = pickBestImprovement(state, tile, player);
-      if (improvement) {
-        // Move to this tile first — BUILD will happen next turn when builder is on the tile
-        actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [adj] });
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Try to build on current tile
-  const improvement = pickBestImprovement(state, currentTile, player);
-  if (improvement) {
-    actions.push({ type: 'BUILD_IMPROVEMENT', unitId: builder.id, tile: builder.position, improvementId: improvement });
-    return true;
-  }
-
-  return false;
-}
-
-/** Pick the best improvement for a tile based on its features/resources */
-function pickBestImprovement(state: GameState, tile: HexTile, player: PlayerState): string | null {
-  let bestImprovement: string | null = null;
-  let bestPriority = 0;
-
-  for (const imp of state.config.improvements.values()) {
-    // Check tech prerequisite
-    if (imp.requiredTech && !player.researchedTechs.includes(imp.requiredTech)) {
-      continue;
-    }
-
-    // Check terrain prerequisite
-    if (imp.prerequisites.terrain && !imp.prerequisites.terrain.includes(tile.terrain)) {
-      continue;
-    }
-
-    // Check feature prerequisite
-    if (imp.prerequisites.feature) {
-      if (!tile.feature || !imp.prerequisites.feature.includes(tile.feature)) {
-        continue;
-      }
-    }
-
-    // Check resource prerequisite
-    if (imp.prerequisites.resource) {
-      if (!tile.resource || !imp.prerequisites.resource.includes(tile.resource)) {
-        continue;
-      }
-    }
-
-    // Calculate priority based on yields
-    let priority = 0;
-    if (imp.yields.food) priority += imp.yields.food * 3;
-    if (imp.yields.production) priority += imp.yields.production * 2;
-    if (imp.yields.gold) priority += imp.yields.gold * 2;
-    if (imp.yields.science) priority += imp.yields.science * 4;
-
-    // Resource improvements have highest priority
-    if (imp.prerequisites.resource) {
-      priority += 20;
-    }
-
-    if (priority > bestPriority) {
-      bestPriority = priority;
-      bestImprovement = imp.id;
-    }
-  }
-
-  return bestImprovement;
-}
-
-/** Move builder toward tiles that need improvements */
-function moveTowardImprovementSpot(state: GameState, builder: UnitState, player: PlayerState, ourCities: CityState[], actions: GameAction[]): void {
-  let bestTarget: HexCoord | null = null;
-  let bestScore = -Infinity;
-
-  // Look at tiles within 2 hex range
-  const range = 2;
-  const nearbyHexes = [builder.position];
-  for (let i = 0; i < range; i++) {
-    const currentLength = nearbyHexes.length;
-    for (let j = 0; j < currentLength; j++) {
-      const ns = neighbors(nearbyHexes[j]);
-      for (const n of ns) {
-        if (!nearbyHexes.some(h => h.q === n.q && h.r === n.r)) {
-          nearbyHexes.push(n);
-        }
-      }
-    }
-  }
-
-  // Score each tile
-  for (const hex of nearbyHexes) {
-    const tile = state.map.tiles.get(coordToKey(hex));
-    if (!tile || tile.improvement) continue;
-
-    const improvement = pickBestImprovement(state, tile, player);
-    if (!improvement) continue;
-
-    // Score: prioritize by distance and improvement value
-    const dist = distance(builder.position, hex);
-    let score = 100 - dist * 10;
-
-    // Bonus for tiles near cities
-    for (const city of ourCities) {
-      if (distance(hex, city.position) <= 3) {
-        score += 20;
-      }
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestTarget = hex;
-    }
-  }
-
-  if (bestTarget) {
-    const step = getOneStepToward(builder.position, bestTarget, state);
-    if (step) {
-      actions.push({ type: 'MOVE_UNIT', unitId: builder.id, path: [step] });
-    }
-  }
-}
-
 /** Pick the best town specialization based on tile yields and strategic needs */
 function pickTownSpecialization(state: GameState, city: CityState, player: PlayerState): TownSpecialization | null {
   // Analyze territory tiles
@@ -1583,7 +1430,7 @@ function pickTownSpecialization(state: GameState, city: CityState, player: Playe
 
   // Calculate resource needs based on game state
   const cityCount = [...state.cities.values()].filter(c => c.owner === player.id).length;
-  const militaryCount = [...state.units.values()].filter(u => u.owner === player.id && u.typeId !== 'settler' && u.typeId !== 'builder').length;
+  const militaryCount = [...state.units.values()].filter(u => u.owner === player.id && u.typeId !== 'settler').length;
 
   // Priority: food if growing, production if need military, gold if wealthy
   let bestSpecialization: TownSpecialization | null = null;

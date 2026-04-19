@@ -61,16 +61,16 @@ describe('getTileContents', () => {
     const units = new Map([
       ['s1', createTestUnit({ id: 's1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'settler' })],
       ['w1', createTestUnit({ id: 'w1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
-      ['b1', createTestUnit({ id: 'b1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'builder' })],
+      ['m1', createTestUnit({ id: 'm1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'merchant' })],
     ]);
     const state = createTestState({ units });
     const c = getTileContents(state, { q: 3, r: 3 }, 'p1');
     expect(c.ownUnits.length).toBe(3);
     // Military (warrior) should be first
     expect(c.ownUnits[0].typeId).toBe('warrior');
-    // Civilians (settler, builder) follow
-    expect(c.ownUnits[1].typeId === 'settler' || c.ownUnits[1].typeId === 'builder').toBe(true);
-    expect(c.ownUnits[2].typeId === 'settler' || c.ownUnits[2].typeId === 'builder').toBe(true);
+    // Civilians (settler, merchant) follow
+    expect(c.ownUnits[1].typeId === 'settler' || c.ownUnits[1].typeId === 'merchant').toBe(true);
+    expect(c.ownUnits[2].typeId === 'settler' || c.ownUnits[2].typeId === 'merchant').toBe(true);
   });
 
   it('separates own vs enemy units', () => {

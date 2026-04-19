@@ -750,7 +750,6 @@ export type GameAction =
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type']; readonly tile?: HexCoord }
   | { readonly type: 'CANCEL_BUILDING_PLACEMENT'; readonly cityId: CityId }
   | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }
-  | { readonly type: 'PLACE_DISTRICT'; readonly cityId: CityId; readonly districtId: DistrictId; readonly tile: HexCoord }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }
   | { readonly type: 'PROPOSE_DIPLOMACY'; readonly targetId: PlayerId; readonly proposal: DiplomacyProposal }
   | { readonly type: 'TRANSITION_AGE'; readonly newCivId: CivilizationId }
@@ -787,7 +786,6 @@ export type GameAction =
       readonly tileId?: string;
     }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
-  | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
   | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId }
   | { readonly type: 'RECRUIT_GOVERNOR'; readonly governorId: GovernorId }
   | { readonly type: 'ASSIGN_GOVERNOR'; readonly governorId: GovernorId; readonly cityId: CityId }
