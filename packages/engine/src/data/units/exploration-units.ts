@@ -245,6 +245,22 @@ export const CARAVEL: UnitDef = {
   abilities: [],
 } as const;
 
+export const EXPLORER: UnitDef = {
+  id: 'explorer',
+  name: 'Explorer',
+  age: 'exploration',
+  category: 'civilian',
+  cost: 80,
+  combat: 10,
+  rangedCombat: 0,
+  range: 0,
+  movement: 3,
+  sightRange: 3,
+  requiredTech: 'cartography',
+  upgradesTo: null,
+  abilities: ['excavate'],
+} as const;
+
 export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   SWORDSMAN,
   CROSSBOWMAN,
@@ -261,4 +277,5 @@ export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   TREBUCHET,
   LANCER,
   CUIRASSIER,
+  EXPLORER,
 ] as const;

@@ -24,6 +24,8 @@ import type { FoundationChallengeDef } from '../data/foundation-challenges';
 import type { LeaderChallengeDef } from '../data/leader-challenges';
 import type { MementoDef } from './Memento';
 import type { QuarterDef } from './Quarter';
+import type { ProjectDef } from './Project';
+import type { NaturalWonderDef } from './NaturalWonder';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -111,4 +113,17 @@ export interface GameConfig {
    * the panel while it is still under active development.
    */
   readonly experimentalAchievements: boolean;
+
+  /**
+   * Projects registry (W5-01). Optional so existing GameConfig construction
+   * (tests, save files) compiles unchanged. When absent, projectsSystem is a no-op.
+   */
+  readonly projects?: ReadonlyMap<string, ProjectDef>;
+
+  /**
+   * Natural Wonders registry (W5-02). Optional so existing GameConfig construction
+   * (tests, save files) compiles unchanged. When absent, natural wonder first-settle
+   * bonuses are skipped gracefully.
+   */
+  readonly naturalWonders?: ReadonlyMap<string, NaturalWonderDef>;
 }

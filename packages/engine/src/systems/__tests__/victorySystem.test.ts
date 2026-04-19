@@ -190,17 +190,14 @@ describe('victorySystem', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('detects military victory with kills >= 20 and cities >= 5', () => {
+  // W5-01: Military victory now requires Operation Ivy project chain, NOT kills+cities scaffold
+  it('detects military victory when operation_ivy project is completed (W5-01)', () => {
     const cities = new Map([
       ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
-      ['c2', makeCity('c2', 'p1', { q: 1, r: 0 })],
-      ['c3', makeCity('c3', 'p1', { q: 2, r: 0 })],
-      ['c4', makeCity('c4', 'p1', { q: 3, r: 0 })],
-      ['c5', makeCity('c5', 'p1', { q: 4, r: 0 })],
-      ['c6', makeCity('c6', 'p2', { q: 8, r: 8 })], // p2 has a city so domination doesn't trigger
+      ['c2', makeCity('c2', 'p2', { q: 8, r: 8 })], // p2 has a city so domination doesn't trigger
     ]);
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', totalKills: 20 })],
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'] })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -209,18 +206,38 @@ describe('victorySystem', () => {
     expect(next.victory.winType).toBe('military');
   });
 
-  it('does not trigger military victory without enough cities', () => {
+  it('does not trigger military victory with kills >= 20 and cities >= 5 (W5-01: project chain required)', () => {
+    // Scaffold proxy no longer fires military victory — only operation_ivy does.
     const cities = new Map([
-      ['c1', makeCity('c1', 'p1')],
+      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+      ['c2', makeCity('c2', 'p1', { q: 1, r: 0 })],
+      ['c3', makeCity('c3', 'p1', { q: 2, r: 0 })],
+      ['c4', makeCity('c4', 'p1', { q: 3, r: 0 })],
+      ['c5', makeCity('c5', 'p1', { q: 4, r: 0 })],
+      ['c6', makeCity('c6', 'p2', { q: 8, r: 8 })],
     ]);
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', totalKills: 20 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
-    const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
-    // Should not be military victory (only 1 city)
-    expect(next.victory.winType).not.toBe('military');
+    // kills+cities alone do NOT fire military victory in W5-01; only operation_ivy does
+    expect(next.victory.winner).toBeNull();
+  });
+
+  it('does not trigger military victory with operation_ivy but outside modern age', () => {
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1')],
+      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'] })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } } });
+    const next = victorySystem(state, { type: 'END_TURN' });
+    expect(next.victory.winner).toBeNull();
   });
 
   it('tracks progress for all victory types', () => {

@@ -1,0 +1,7 @@
+export type { NaturalWonderDef } from '../../types/NaturalWonder';
+export {
+  ALL_NATURAL_WONDERS,
+  MOUNT_EVEREST, GRAND_CANYON, VICTORIA_FALLS, MOUNT_KILIMANJARO,
+  GULLFOSS, IGUAZU_FALLS, TORRES_DEL_PAINE, THERA,
+  GALAPAGOS, ULURU, GREAT_BARRIER_REEF, LAKE_VICTORIA,
+} from './natural-wonders';

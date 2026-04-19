@@ -37,6 +37,12 @@ export interface HexTile {
   readonly naturalWonderId?: string | null;
   /** Discovery site id if an ancient discovery is present on this tile */
   readonly discoveryId?: string | null;
+  /**
+   * W5-02: True if this tile contains an excavatable artifact site.
+   * Explorers can EXCAVATE_ARTIFACT on tiles where this is true.
+   * Cleared (set to false) after excavation.
+   */
+  readonly hasArtifactSite?: boolean;
 }
 
 export interface HexMap {
@@ -421,6 +427,28 @@ export interface PlayerState {
    * files) keeps compiling unchanged. Systems gracefully no-op when absent.
    */
   readonly ownedResources?: ReadonlyArray<ResourceId>;
+
+  // ── W5-01: Modern Victory Projects ──
+  /**
+   * IDs of projects this player has completed via COMPLETE_PROJECT.
+   * Used by victorySystem to check project-chain terminal conditions
+   * (e.g. 'operation_ivy' → Military Victory, 'first_staffed_spaceflight' is
+   * the 3rd space milestone → Science Victory).
+   *
+   * Optional so existing PlayerState construction (engine, web, tests, save
+   * files) keeps compiling unchanged.
+   */
+  readonly completedProjects?: ReadonlyArray<string>;
+  /**
+   * Number of rival capitals that still need a World Bank Office established.
+   * Initialized to (number of rivals) when the first World Bank Office project
+   * is completed. Decremented by each COMPLETE_PROJECT with id 'world_bank_office'.
+   * When it reaches 0 → Economic Victory.
+   *
+   * Null/undefined = player has not started the World Bank chain yet.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly worldBankOfficesRemaining?: number | null;
 }
 
 /**
@@ -889,7 +917,37 @@ export type GameAction =
    * Unpack the commander's army: place each packed unit on an adjacent tile.
    * Clears packedInCommanderId on each unit.
    */
-  | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string };
+  | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string }
+  // ── W5-01: Modern Victory Projects ──
+  /**
+   * Complete a project in a city (or, for 0-cost projects like World Bank Office,
+   * dispatch directly). Validates:
+   * - projectId exists in config.projects
+   * - player has researched requiredTech (if any)
+   * - player.completedProjects includes requiredProject (if any)
+   * - city has requiredBuilding (if any; for production-based projects)
+   * - player.ideologyPoints >= requiredIdeologyPoints
+   *
+   * On success: appends projectId to player.completedProjects, awards effects,
+   * increments spaceMilestonesComplete when isSpaceMilestone, and decrements
+   * worldBankOfficesRemaining when id === 'world_bank_office'.
+   */
+  | { readonly type: 'COMPLETE_PROJECT'; readonly playerId: string; readonly projectId: string; readonly cityId?: string }
+  // ── W5-02: Explorer Artifact Excavation ──
+  /**
+   * Explorer unit excavates an artifact site on an adjacent or occupied tile.
+   * Validates:
+   * - unitId exists and is an Explorer (typeId === 'explorer')
+   * - unit owner is the current player
+   * - tile at the given coord has hasArtifactSite === true
+   * - unit has movementLeft > 0 (costs 1 movement / ends turn)
+   *
+   * On success:
+   * - player.artifactsCollected incremented by 1
+   * - tile.hasArtifactSite cleared (set to false)
+   * - unit movement consumed (movementLeft = 0)
+   */
+  | { readonly type: 'EXCAVATE_ARTIFACT'; readonly unitId: UnitId; readonly tile: HexCoord };
 
 // ── Events ──
 

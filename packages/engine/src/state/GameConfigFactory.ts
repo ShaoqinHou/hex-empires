@@ -51,6 +51,10 @@ import type { LeaderChallengeDef } from '../data/leader-challenges';
 import type { MementoDef } from '../types/Memento';
 import { ALL_QUARTERS } from '../data/quarters';
 import type { QuarterDef } from '../types/Quarter';
+import { ALL_PROJECTS } from '../data/projects';
+import type { ProjectDef } from '../types/Project';
+import { ALL_NATURAL_WONDERS } from '../data/natural-wonders';
+import type { NaturalWonderDef } from '../types/NaturalWonder';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -135,5 +139,11 @@ export function createGameConfig(): GameConfig {
   const quarters = new Map<string, QuarterDef>();
   for (const q of ALL_QUARTERS) quarters.set(q.id, q);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, experimentalAchievements: false };
+  const projects = new Map<string, ProjectDef>();
+  for (const p of ALL_PROJECTS) projects.set(p.id, p);
+
+  const naturalWonders = new Map<string, NaturalWonderDef>();
+  for (const nw of ALL_NATURAL_WONDERS) naturalWonders.set(nw.id, nw);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, experimentalAchievements: false };
 }

@@ -443,9 +443,32 @@ export const TENEMENT: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+export const WORLDS_FAIR: BuildingDef = {
+  id: 'worlds_fair',
+  name: "World's Fair",
+  age: 'modern',
+  cost: 900,
+  maintenance: 0,
+  yields: { culture: 10, gold: 3 },
+  effects: [
+    'Terminal Cultural Victory wonder — requires 15 Artifacts collected',
+    '+4 Culture to all cities',
+    '+1 Great Artist point per turn',
+    'Unlocks Cultural Victory when 15 Artifacts have been excavated by Explorer units',
+  ],
+  requiredCivic: 'natural_history',
+  requiredTech: null,
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
   MILITARY_ACADEMY, AERODROME, CITY_PARK, DEPARTMENT_STORE, RADIO_STATION, MUSEUM, OPERA_HOUSE, SCHOOLHOUSE, RAIL_STATION, TENEMENT,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
   BRANDENBURG_GATE, SYDNEY_OPERA_HOUSE, PANAMA_CANAL, BROADWAY, CRISTO_REDENTOR,
+  WORLDS_FAIR,
 ] as const;

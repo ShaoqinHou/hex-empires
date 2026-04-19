@@ -24,3 +24,4 @@ export { specialistSystem } from './specialistSystem';
 export { improvementSystem } from './improvementSystem';
 export { buildingPlacementSystem } from './buildingPlacementSystem';
 export { districtSystem } from './districtSystem';
+export { artifactsSystem } from './artifactsSystem';

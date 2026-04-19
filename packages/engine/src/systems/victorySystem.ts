@@ -5,17 +5,19 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
 /**
  * VictorySystem checks win conditions at the end of each turn.
  *
- * Victory types — CURRENT SCAFFOLD PROXIES (not full Civ VII parity):
+ * Victory types:
  * - Domination: eliminate all rival players (they lose all cities — units alone do not keep a player alive)
- * - Science: research all modern techs  [TODO(W5-01): replace with Space Race project per GDD]
- * - Culture: culture >= 300 + at least 5 civics researched  [TODO(W5-02): add Artifacts / World's Fair per GDD]
- * - Economic: gold >= 500 + totalGoldEarned >= 1000  [TODO(W5-01): replace with World Bank project per GDD]
- * - Military: totalKills >= 20 + at least 5 cities  [TODO(W5-01): replace with Operation Ivy project per GDD]
+ * - Science: complete 3 Space Race projects (spaceMilestonesComplete >= 3) [W5-01]
+ *   Scaffold fallback: all 10 modern techs researched (if no project data available)
+ * - Culture: culture >= 300 + at least 5 civics researched [TODO(W5-02): Artifacts / World's Fair]
+ * - Economic: World Bank offices in all rival capitals (worldBankOfficesRemaining === 0) [W5-01]
+ *   Scaffold fallback: gold >= 500 + totalGoldEarned >= 1000 (if no project chain started)
+ * - Military: complete Operation Ivy project (completedProjects.includes('operation_ivy')) [W5-01]
+ *   Scaffold fallback: totalKills >= 20 + at least 5 cities (if Operation Ivy not completed)
  * - Score: highest score at turn limit (300 turns) using legacy-based scoring
  *
  * Note: 'diplomacy' victory type was removed (no GDD basis — W1-C / W2-08).
- * Detailed per-proxy rewrites are tracked in workpack W5-01 (Science/Economic/Military)
- * and W5-02 (Culture/Artifacts/World's Fair).
+ * W5-02 (Culture/Artifacts/World's Fair) is a separate workpack.
  */
 export function victorySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -106,9 +108,21 @@ function checkScience(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'science', progress: 0, achieved: false };
 
-  // Scaffold proxy: research all modern techs (10 techs).
+  // W5-01: Space Race project milestones (3 required).
+  // Use spaceMilestonesComplete when the player has started the project chain.
+  const MILESTONES_REQUIRED = 3;
+  const spaceMilestones = player.spaceMilestonesComplete ?? 0;
+  if (spaceMilestones > 0) {
+    const progress = Math.min(1, spaceMilestones / MILESTONES_REQUIRED);
+    return {
+      type: 'science',
+      progress,
+      achieved: spaceMilestones >= MILESTONES_REQUIRED && state.age.currentAge === 'modern',
+    };
+  }
+
+  // Scaffold fallback (no project chain started): research all modern techs (10 techs).
   // The invented culture >= 100 gate has been removed (no GDD basis — W2-08 / F-04).
-  // TODO(W5-01): replace with Space Race project milestones per GDD.
   const modernTechs = [
     'industrialization', 'scientific_theory', 'rifling',
     'steam_power', 'electricity', 'replaceable_parts',
@@ -129,7 +143,27 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'culture', progress: 0, achieved: false };
 
-  // Culture >= 300 AND at least 5 civics researched
+  // W5-02: GDD-parity cultural victory — 15 Artifacts via Explorer + World's Fair built.
+  // Activate GDD path when any player has collected at least 1 artifact (signals artifact
+  // gameplay is live in this session).
+  const anyArtifactCollected = [...state.players.values()].some(p => (p.artifactsCollected ?? 0) > 0);
+
+  if (anyArtifactCollected) {
+    const ARTIFACTS_REQUIRED = 15;
+    const artifactsCollected = player.artifactsCollected ?? 0;
+    const worldsFairOwnedByPlayer = worldsFairBuiltByPlayer(state, playerId);
+
+    // Progress: 70% from artifacts, 30% from World's Fair
+    const artifactProgress = Math.min(1, artifactsCollected / ARTIFACTS_REQUIRED);
+    const wonderProgress = worldsFairOwnedByPlayer ? 1 : 0;
+    const progress = artifactProgress * 0.7 + wonderProgress * 0.3;
+
+    const achieved = artifactsCollected >= ARTIFACTS_REQUIRED && worldsFairOwnedByPlayer && state.age.currentAge === 'modern';
+    return { type: 'culture', progress, achieved };
+  }
+
+  // Scaffold proxy (backwards compat when no artifact gameplay has occurred):
+  // culture >= 300 AND at least 5 civics researched
   const cultureThreshold = 300;
   const civicsRequired = 5;
   const civicsCount = player.researchedCivics.length;
@@ -149,13 +183,42 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
   };
 }
 
+/**
+ * Returns true if the given player owns a city that has the World's Fair wonder.
+ * Checks the global builtWonders list first (fast bail-out), then checks
+ * player-owned city buildings for 'worlds_fair'.
+ */
+function worldsFairBuiltByPlayer(state: GameState, playerId: string): boolean {
+  if (!state.builtWonders.includes('worlds_fair')) return false;
+  for (const city of state.cities.values()) {
+    if (city.owner === playerId && city.buildings.includes('worlds_fair')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function checkEconomic(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'economic', progress: 0, achieved: false };
 
-  // Scaffold proxy: gold >= 500 AND totalGoldEarned >= 1000.
+  // W5-01: World Bank offices — all rival capitals visited.
+  // worldBankOfficesRemaining is null/undefined until the player starts the chain,
+  // then counts down to 0 (victory).
+  const officesRemaining = player.worldBankOfficesRemaining;
+  if (officesRemaining !== null && officesRemaining !== undefined) {
+    const totalRivals = state.players.size - 1;
+    const establishedCount = Math.max(0, totalRivals - officesRemaining);
+    const progress = totalRivals > 0 ? establishedCount / totalRivals : 0;
+    return {
+      type: 'economic',
+      progress,
+      achieved: officesRemaining === 0 && state.age.currentAge === 'modern',
+    };
+  }
+
+  // Scaffold fallback (World Bank chain not yet started): gold thresholds.
   // The invented alliance >= 1 gate has been removed (no GDD basis — W2-08 / F-01).
-  // TODO(W5-01): replace with World Bank project milestones per GDD.
   const goldReq = 500;
   const totalGoldReq = 1000;
   const hasGold = player.gold >= goldReq;
@@ -178,23 +241,47 @@ function checkMilitary(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'military', progress: 0, achieved: false };
 
-  // totalKills >= 20 AND at least 5 cities
+  // W5-01: Operation Ivy terminal check — project chain victory.
+  // completedProjects.includes('operation_ivy') → Military Victory.
+  const completedProjects = player.completedProjects ?? [];
+  if (completedProjects.includes('operation_ivy')) {
+    return {
+      type: 'military',
+      progress: 1,
+      achieved: state.age.currentAge === 'modern',
+    };
+  }
+
+  // Progress indicator for the project chain:
+  // Step 0 = 0 pts, step 1 (ideology >= 20) = 0.33, step 2 (manhattan complete) = 0.66, step 3 (ivy) = 1.0
+  const ideologyPts = player.ideologyPoints ?? 0;
+  const IDEOLOGY_THRESHOLD = 20;
+  let chainProgress = 0;
+  if (completedProjects.includes('manhattan_project')) {
+    chainProgress = 0.66;
+  } else if (ideologyPts >= IDEOLOGY_THRESHOLD) {
+    chainProgress = 0.33;
+  } else {
+    chainProgress = Math.min(0.33, (ideologyPts / IDEOLOGY_THRESHOLD) * 0.33);
+  }
+
+  // Scaffold fallback: if the project system has never been triggered,
+  // also show kills + cities progress as a baseline signal.
   const killsReq = 20;
   const citiesReq = 5;
   const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
-
-  // Progress: 60% from kills, 40% from cities
   const killsProgress = Math.min(1, player.totalKills / killsReq);
   const citiesProgress = Math.min(1, ownedCities / citiesReq);
-  const progress = killsProgress * 0.6 + citiesProgress * 0.4;
+  const scaffoldProgress = killsProgress * 0.6 + citiesProgress * 0.4;
 
-  // Military victory can only be achieved in the modern age
-  const meetsRequirements = player.totalKills >= killsReq && ownedCities >= citiesReq;
+  // Show whichever is higher so players see meaningful progress either way
+  const progress = Math.max(chainProgress, scaffoldProgress);
 
+  // Military victory can only be achieved in the modern age via Operation Ivy
   return {
     type: 'military',
     progress,
-    achieved: meetsRequirements && state.age.currentAge === 'modern',
+    achieved: false, // only achieved via completedProjects.includes('operation_ivy') above
   };
 }
 
