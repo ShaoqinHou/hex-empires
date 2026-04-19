@@ -329,7 +329,9 @@ describe('turnSystem — END_TURN blocksTurn guard', () => {
       const next = turnSystem(state, { type: 'END_TURN' });
       expect(next.lastValidation).not.toBeNull();
       expect(next.lastValidation!.valid).toBe(false);
-      expect(next.lastValidation!.reason).toContain('crisis policy');
+      if (next.lastValidation!.valid === false) {
+        expect(next.lastValidation!.reason).toContain('crisis policy');
+      }
     });
 
     it('allows END_TURN when all crisis policy slots are filled', () => {

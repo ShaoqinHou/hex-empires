@@ -673,11 +673,10 @@ export interface GameState {
   /**
    * ── Independent Powers (city-states, outposts) ──
    *
-   * Optional so pre-independent-powers saves migrate as `undefined`.
-   * Populated by `independentPowerSystem` at game-init or on first
-   * relevant action. Maps each independent power id to its state.
+   * Required with empty-Map default in createInitialState. Maps each
+   * independent power id to its state.
    */
-  readonly independentPowers?: ReadonlyMap<string, IndependentPowerState>;
+  readonly independentPowers: ReadonlyMap<string, IndependentPowerState>;
 
   /**
    * ── Narrative Events ──

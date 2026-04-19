@@ -60,7 +60,7 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     const tile = state.map.tiles.get(tileKey);
     if (tile && tile.resource) {
       const resDef = state.config.resources.get(tile.resource);
-      if (resDef && resDef.type === 'luxury') {
+      if (resDef && resDef.type === 'city') {
         luxuryBonus += resDef.happinessBonus;
       }
     }

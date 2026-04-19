@@ -69,22 +69,27 @@ function isResourceUnlocked(
 
 // ─── Type badge helpers ───────────────────────────────────────────────────
 
-type ResourceType = 'bonus' | 'strategic' | 'luxury';
+import type { ResourceType } from '@hex/engine';
 
 /** Color token per resource type — from the established hud-tokens palette. */
 function typeBadgeStyle(type: ResourceType): { color: string; backgroundColor: string } {
   switch (type) {
-    case 'luxury':
+    case 'city':
+      // City resources (happiness / yield) — formerly called 'luxury'
       return {
         color: 'var(--hud-tooltip-heading-strong)',
         backgroundColor: 'rgba(251, 191, 36, 0.15)',
       };
-    case 'strategic':
+    case 'empire':
+      // Empire resources (combat mods) — formerly called 'strategic'
       return {
         color: 'var(--hud-tooltip-improvement)',
         backgroundColor: 'rgba(147, 197, 253, 0.12)',
       };
     case 'bonus':
+    case 'treasureFleet':
+    case 'factory':
+    default:
       return {
         color: 'var(--hud-tooltip-own-civilian)',
         backgroundColor: 'rgba(187, 247, 208, 0.10)',

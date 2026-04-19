@@ -147,7 +147,7 @@ function handleBefriend(state: GameState, ipId: string, influenceSpent: number):
   const newProgress = ip.befriendProgress + progressGain;
 
   const ips = updateIP(stateAfterDeduct, ipId, i => ({ ...i, befriendProgress: newProgress }));
-  let next = { ...stateAfterDeduct, independentPowers: ips };
+  let next: GameState = { ...stateAfterDeduct, independentPowers: ips };
 
   // Check for suzerainty threshold
   if (newProgress >= SUZERAINTY_THRESHOLD && ip.suzerainPlayerId === null) {

@@ -35,6 +35,7 @@ export function createTestState(overrides: Partial<GameState> = {}): GameState {
     rng: { seed: 42, counter: 0 },
     config: createGameConfig(),
     lastValidation: null,
+    independentPowers: new Map(),
     ...overrides,
   };
 }

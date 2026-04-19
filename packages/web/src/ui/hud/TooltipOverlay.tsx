@@ -515,9 +515,9 @@ function DetailedTooltipBody({
               className="w-3 h-3 rounded-full flex-shrink-0"
               style={{
                 backgroundColor:
-                  resource.type === 'luxury'
+                  resource.type === 'city'
                     ? 'var(--hud-resource-luxury)'
-                    : resource.type === 'strategic'
+                    : resource.type === 'empire'
                     ? 'var(--hud-resource-strategic)'
                     : 'var(--hud-resource-bonus)',
               }}

@@ -255,6 +255,7 @@ export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, NATURAL_DISASTER } from './data
 
 // Resource data
 export type { ResourceDef } from './data/resources';
+export type { ResourceType } from './types/Resource';
 export { ALL_RESOURCES, WHEAT, CATTLE, STONE, IRON, HORSES, NITER, SILK, GEMS, SPICES, WINE } from './data/resources';
 
 // Leader data

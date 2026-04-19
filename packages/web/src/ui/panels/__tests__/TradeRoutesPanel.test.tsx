@@ -43,8 +43,9 @@ function makeRoute(overrides: Partial<TradeRoute> = {}): TradeRoute {
     from: 'city1',
     to: 'city2',
     owner: 'p1',
-    turnsRemaining: 15,
-    goldPerTurn: 3,
+    resources: [],
+    isSea: false,
+    caravanUnitId: 'caravan1',
     ...overrides,
   };
 }
@@ -107,23 +108,25 @@ describe('TradeRoutesPanel (PanelShell pattern)', () => {
     expect(getByText(/No active trade routes/i)).toBeTruthy();
   });
 
-  it('shows gold per turn for each route', () => {
-    const route = makeRoute({ goldPerTurn: 5 });
+  it('shows gold per turn for a land route (antiquity base rate × 1 slot)', () => {
+    // Land route, 1 resource, antiquity age → 2 gold/turn
+    const route = makeRoute({ isSea: false, resources: ['wheat'] });
     mockRef.state = makeState({
       tradeRoutes: new Map([['route1', route]]),
     });
     const { getByText } = render(<TradeRoutesPanel onClose={() => {}} />);
-    // The gold column shows "+5💰"
-    expect(getByText('+5💰')).toBeTruthy();
+    // estimateGoldPerTurn: 2 (antiquity) × 1 (land) × 1 (slot) = 2
+    expect(getByText('+2💰')).toBeTruthy();
   });
 
-  it('shows turns remaining for each route', () => {
-    const route = makeRoute({ turnsRemaining: 12 });
+  it('shows sea type indicator for sea routes', () => {
+    const route = makeRoute({ isSea: true, resources: [] });
     mockRef.state = makeState({
       tradeRoutes: new Map([['route1', route]]),
     });
     const { getByText } = render(<TradeRoutesPanel onClose={() => {}} />);
-    expect(getByText('12t')).toBeTruthy();
+    // Sea routes show ⛵ indicator
+    expect(getByText('⛵')).toBeTruthy();
   });
 
   it('fires onClose when the PanelShell close button is clicked', () => {

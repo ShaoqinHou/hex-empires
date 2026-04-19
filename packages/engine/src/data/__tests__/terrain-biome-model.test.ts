@@ -250,7 +250,9 @@ describe('W4-02 Deep Ocean (F-05)', () => {
     // Should fail — no cartography
     expect(next.lastValidation).not.toBeNull();
     expect(next.lastValidation?.valid).toBe(false);
-    expect(next.lastValidation?.reason).toContain('Deep Ocean');
+    if (next.lastValidation?.valid === false) {
+      expect(next.lastValidation.reason).toContain('Deep Ocean');
+    }
   });
 
   it('allows movement with Cartography tech and applies 15HP attrition', () => {

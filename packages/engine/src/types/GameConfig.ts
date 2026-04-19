@@ -54,17 +54,15 @@ export interface GameConfig {
   readonly achievements: ReadonlyMap<string, AchievementDef>;
   readonly crises: ReadonlyArray<CrisisEventDef>;
   /**
-   * Independent Powers registry (W3-04). Optional so existing GameConfig
-   * construction (tests, save files) compiles unchanged. When absent,
-   * independentPowerSystem skips IP actions gracefully.
+   * Independent Powers registry (W3-04). Required with empty-Map default in
+   * GameConfigFactory. Systems that don't need IPs pass new Map() explicitly.
    */
-  readonly independentPowers?: ReadonlyMap<string, IndependentPowerDef>;
+  readonly independentPowers: ReadonlyMap<string, IndependentPowerDef>;
   /**
-   * Attribute tree node definitions (W3-07). Optional so existing GameConfig
-   * construction (tests, save files) compiles unchanged. When absent,
-   * attributeSystem skips attribute actions gracefully.
+   * Attribute tree node definitions (W3-07). Required with empty-Map default in
+   * GameConfigFactory. Systems that don't need attribute nodes pass new Map() explicitly.
    */
-  readonly attributeNodes?: ReadonlyMap<string, AttributeNodeDef>;
+  readonly attributeNodes: ReadonlyMap<string, AttributeNodeDef>;
 
   /**
    * Narrative Events registry (W3-05). Optional so existing GameConfig
@@ -121,9 +119,8 @@ export interface GameConfig {
   readonly projects?: ReadonlyMap<string, ProjectDef>;
 
   /**
-   * Natural Wonders registry (W5-02). Optional so existing GameConfig construction
-   * (tests, save files) compiles unchanged. When absent, natural wonder first-settle
-   * bonuses are skipped gracefully.
+   * Natural Wonders registry (W5-02). Required with empty-Map default in
+   * GameConfigFactory. Systems that don't need natural wonders pass new Map() explicitly.
    */
-  readonly naturalWonders?: ReadonlyMap<string, NaturalWonderDef>;
+  readonly naturalWonders: ReadonlyMap<string, NaturalWonderDef>;
 }
