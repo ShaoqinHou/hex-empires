@@ -1,4 +1,5 @@
 import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age } from '../types/GameState';
+import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 /**
  * DiplomacySystem handles diplomatic proposals between players.
@@ -272,26 +273,9 @@ export function getStatusFromRelationship(relationship: number): DiplomaticStatu
   return 'hostile';
 }
 
-export function getRelationKey(a: string, b: string): string {
-  return a < b ? `${a}:${b}` : `${b}:${a}`;
-}
-
-export function defaultRelation(): DiplomacyRelation {
-  return {
-    status: 'neutral',
-    relationship: 0,
-    warSupport: 0,
-    turnsAtPeace: 0,
-    turnsAtWar: 0,
-    hasAlliance: false,
-    hasFriendship: false,
-    hasDenounced: false,
-    warDeclarer: null,
-    isSurpriseWar: false,
-    activeEndeavors: [],
-    activeSanctions: [],
-  };
-}
+// getRelationKey and defaultRelation live in ../state/DiplomacyUtils — re-exported
+// for backwards-compat with any consumer that imported them from here.
+export { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 function clampRelationship(value: number): number {
   return Math.max(-100, Math.min(100, value));

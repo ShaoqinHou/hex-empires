@@ -1,7 +1,7 @@
 import type { GameState, GameAction, TradeRoute, PlayerState } from '../types/GameState';
 import type { CityId, PlayerId } from '../types/Ids';
 import { distance } from '../hex/HexMath';
-import { getRelationKey, defaultRelation } from './diplomacySystem';
+import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 // ── Age-scaled constants ──
 

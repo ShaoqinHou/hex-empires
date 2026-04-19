@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { tradeSystem } from '../tradeSystem';
 import type { CityState, GameState, DiplomacyRelation } from '../../types/GameState';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
-import { getRelationKey } from '../diplomacySystem';
+import { getRelationKey } from '../../state/DiplomacyUtils';
 
 // ── Helpers ──
 
