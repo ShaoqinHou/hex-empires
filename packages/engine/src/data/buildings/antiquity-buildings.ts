@@ -65,6 +65,7 @@ export const LIBRARY: BuildingDef = {
   requiredTech: 'writing',
   category: 'science',
   happinessCost: 2,
+  codexSlots: 2,
 } as const;
 
 export const MARKET: BuildingDef = {
@@ -131,6 +132,7 @@ export const PALACE: BuildingDef = {
   requiredTech: null,
   category: 'happiness',
   happinessCost: 0,
+  codexSlots: 1,
 } as const;
 
 // ── World Wonders (Antiquity) ──

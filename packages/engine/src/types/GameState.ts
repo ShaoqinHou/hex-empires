@@ -92,7 +92,16 @@ export interface CityState {
   readonly isCapital: boolean;
   readonly defenseHP: number;      // city defense hit points (100 base, +100 with walls)
   readonly specialization: TownSpecialization | null; // towns only, requires pop >= 7
-  readonly specialists: number;    // population assigned as specialists (each: +2 sci, +2 culture, -1 happiness)
+  readonly specialists: number;    // population assigned as specialists (sum of per-tile counts; each: +2 sci, +2 culture, -1 happiness)
+  /**
+   * ── W3-02: Per-tile specialist map ──
+   *
+   * Maps urban tileId (HexKey) → number of specialists assigned to that tile.
+   * `specialists` above is always the sum of all values in this map.
+   * Optional so existing CityState construction (engine, web, tests, save files)
+   * keeps compiling; systems that don't use spatial model rely on `specialists` alone.
+   */
+  readonly specialistsByTile?: ReadonlyMap<string, number>;
   readonly districts: ReadonlyArray<DistrictId>; // IDs of districts this city has constructed
 
   /**
@@ -240,10 +249,22 @@ export interface PlayerState {
   readonly narrativeTags?: ReadonlyArray<string>;
 
   // ── Happiness / Celebrations → Social Policies ──
-  /** Global empire happiness score (net positive = celebration-eligible) */
+  /** Accumulated global empire happiness (sum of per-turn excess); checked against age-specific thresholds */
   readonly globalHappiness?: number;
   /** Number of policy card slots available from celebration bonuses */
   readonly socialPolicySlots?: number;
+  /**
+   * Set when a celebration threshold is crossed: player must pick one of the government's
+   * two `celebrationBonuses` before END_TURN is allowed. Contains the governmentId at the
+   * time of the trigger (so the bonus menu can be resolved even if government changes).
+   * Null / undefined = no pending choice.
+   */
+  readonly pendingCelebrationChoice?: { readonly governmentId: string } | null;
+  /**
+   * The bonus id chosen in the most-recent PICK_CELEBRATION_BONUS action.
+   * Null when no celebration is active. Used by effectSystem to apply the chosen bonus.
+   */
+  readonly activeCelebrationBonus?: string | null;
 
   // ── Civic Tree ──
   /** Civic tradition bonus ids adopted by this player */
@@ -334,6 +355,24 @@ export interface PlayerState {
    * files) keeps compiling unchanged.
    */
   readonly pendingGrowthChoices?: ReadonlyArray<PendingGrowthChoice>;
+
+  // ── Codex System (W3-08) ──
+  /**
+   * IDs of codices this player currently owns (earned by mastering techs).
+   * Each codex id encodes tech + index + turn earned.
+   */
+  readonly ownedCodices?: ReadonlyArray<string>;
+  /**
+   * Codex placement assignments: which codex is displayed in which building + city.
+   * Contributes +2 science per codex placed in a building with codexSlots > 0.
+   */
+  readonly codexPlacements?: ReadonlyArray<{ readonly codexId: string; readonly buildingId: string; readonly cityId: string }>;
+  /**
+   * Preserved research progress per tech id. When a player switches research
+   * mid-progress, the old tech's progress is saved here. Restored when the
+   * player switches back to that tech. Cleared on TRANSITION_AGE.
+   */
+  readonly techProgressMap?: ReadonlyMap<TechnologyId, number>;
 }
 
 /**
@@ -631,8 +670,26 @@ export type GameAction =
   | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
   | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
   | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization }
-  | { readonly type: 'ASSIGN_SPECIALIST'; readonly cityId: CityId }
-  | { readonly type: 'UNASSIGN_SPECIALIST'; readonly cityId: CityId }
+  | {
+      readonly type: 'ASSIGN_SPECIALIST';
+      readonly cityId: CityId;
+      /**
+       * W3-02: target urban tile for per-tile spatial assignment.
+       * When present, specialist is assigned to this specific tile and
+       * specialistsByTile is updated. When absent, city-level increment only
+       * (backward-compat path for legacy callers).
+       */
+      readonly tileId?: string;
+    }
+  | {
+      readonly type: 'UNASSIGN_SPECIALIST';
+      readonly cityId: CityId;
+      /**
+       * W3-02: target urban tile for per-tile unassignment.
+       * When present, specialist count on the tile is decremented.
+       */
+      readonly tileId?: string;
+    }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
   | { readonly type: 'BUILD_IMPROVEMENT'; readonly unitId: UnitId; readonly tile: HexCoord; readonly improvementId: string }
   | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId }
@@ -737,7 +794,21 @@ export type GameAction =
    * prerequisites are unlocked. Prefers spending non-wildcard points first.
    * On success, the node effect is appended to player.legacyBonuses.
    */
-  | { readonly type: 'SPEND_ATTRIBUTE_POINT'; readonly playerId: PlayerId; readonly nodeId: string };
+  | { readonly type: 'SPEND_ATTRIBUTE_POINT'; readonly playerId: PlayerId; readonly nodeId: string }
+  // ── Celebrations (W3-03) ──
+  /**
+   * Player resolves a pending celebration choice by picking one of the two
+   * bonus options from their current government. Blocked if the player has no
+   * pendingCelebrationChoice. Unblocks END_TURN once applied.
+   */
+  | { readonly type: 'PICK_CELEBRATION_BONUS'; readonly playerId: PlayerId; readonly bonusId: string }
+  // ── Codex System (W3-08) ──
+  /**
+   * Display a codex in a building's codex slot. Contributes +2 science per
+   * turn. Blocked if: building has no codexSlots, city doesn't own building,
+   * or slot count is already full.
+   */
+  | { readonly type: 'PLACE_CODEX'; readonly codexId: string; readonly buildingId: BuildingId; readonly cityId: CityId };
 
 // ── Events ──
 

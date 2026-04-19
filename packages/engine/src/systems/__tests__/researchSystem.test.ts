@@ -278,4 +278,281 @@ describe('researchSystem', () => {
       expect(next.players.get('p1')!.masteredTechs).toEqual([]);
     });
   });
+
+  describe('W3-08: per-tech mastery effects', () => {
+    it('applies per-tech masteryEffect instead of generic +1 science when defined', () => {
+      // Writing has masteryEffect: MODIFY_YIELD empire science +2, masteryCodexCount: 1
+      // Mastery cost = ceil(50 * 0.8) = 40. Start at 39, pop=1 city => science=2, 39+2=41>=40 => complete.
+      const player = createTestPlayer({
+        researchedTechs: ['writing'],
+        masteredTechs: [],
+        currentMastery: 'writing',
+        masteryProgress: 39,
+        legacyBonuses: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const bonuses = next.players.get('p1')!.legacyBonuses;
+      const masteryBonus = bonuses.find(b => b.source === 'mastery:writing');
+      expect(masteryBonus).toBeDefined();
+      expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
+      if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
+        expect(masteryBonus!.effect.yield).toBe('science');
+        expect(masteryBonus!.effect.value).toBe(2); // per-tech value, not generic 1
+        expect(masteryBonus!.effect.target).toBe('empire');
+      }
+    });
+
+    it('awards codices equal to masteryCodexCount on mastery completion', () => {
+      // Writing masteryCodexCount: 1, cost 50, mastery = 40. Start at 39, pop=1, +2 science => done.
+      const player = createTestPlayer({
+        researchedTechs: ['writing'],
+        masteredTechs: [],
+        currentMastery: 'writing',
+        masteryProgress: 39,
+        ownedCodices: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const codices = next.players.get('p1')!.ownedCodices ?? [];
+      expect(codices).toHaveLength(1);
+      expect(codices[0]).toMatch(/^codex-writing-0-/);
+    });
+
+    it('awards multiple codices when masteryCodexCount > 1', () => {
+      // Mathematics masteryCodexCount: 2, cost 150, mastery = ceil(120) = 120.
+      const player = createTestPlayer({
+        researchedTechs: ['mathematics'],
+        masteredTechs: [],
+        currentMastery: 'mathematics',
+        masteryProgress: 119,
+        ownedCodices: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const codices = next.players.get('p1')!.ownedCodices ?? [];
+      expect(codices).toHaveLength(2);
+    });
+
+    it('awards zero codices for techs with masteryCodexCount: 0', () => {
+      // Archery masteryCodexCount: 0. cost 50, mastery = 40. Start at 39, +2 => done.
+      const player = createTestPlayer({
+        researchedTechs: ['archery'],
+        masteredTechs: [],
+        currentMastery: 'archery',
+        masteryProgress: 39,
+        ownedCodices: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const codices = next.players.get('p1')!.ownedCodices ?? [];
+      expect(codices).toHaveLength(0);
+    });
+
+    it('falls back to generic +1 science when tech has no masteryEffect', () => {
+      // Pottery has no masteryEffect — should get fallback MODIFY_YIELD science +1
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        masteredTechs: [],
+        currentMastery: 'pottery',
+        masteryProgress: 19,
+        legacyBonuses: [],
+      });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const bonuses = next.players.get('p1')!.legacyBonuses;
+      const masteryBonus = bonuses.find(b => b.source === 'mastery:pottery');
+      expect(masteryBonus).toBeDefined();
+      if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
+        expect(masteryBonus!.effect.yield).toBe('science');
+        expect(masteryBonus!.effect.value).toBe(1);
+      }
+    });
+  });
+
+  describe('W3-08: research progress preservation (F-06)', () => {
+    it('preserves progress when switching research', () => {
+      const player = createTestPlayer({
+        currentResearch: 'pottery',
+        researchProgress: 15,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'writing' });
+      const p = next.players.get('p1')!;
+      expect(p.currentResearch).toBe('writing');
+      // Saved progress for pottery
+      expect(p.techProgressMap?.get('pottery')).toBe(15);
+      // Writing starts fresh (not previously researched)
+      expect(p.researchProgress).toBe(0);
+    });
+
+    it('restores saved progress when switching back to a previous tech', () => {
+      const techMap = new Map<string, number>([['pottery', 15]]);
+      const player = createTestPlayer({
+        currentResearch: 'writing',
+        researchProgress: 10,
+        techProgressMap: techMap,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'pottery' });
+      const p = next.players.get('p1')!;
+      expect(p.currentResearch).toBe('pottery');
+      expect(p.researchProgress).toBe(15); // restored
+      // Writing's progress saved
+      expect(p.techProgressMap?.get('writing')).toBe(10);
+    });
+
+    it('clears techProgressMap on TRANSITION_AGE', () => {
+      const techMap = new Map<string, number>([['pottery', 15], ['writing', 10]]);
+      const player = createTestPlayer({ techProgressMap: techMap });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'TRANSITION_AGE', newCivId: 'rome' });
+      const p = next.players.get('p1')!;
+      expect(p.techProgressMap?.size).toBe(0);
+    });
+
+    it('removes completed tech from techProgressMap', () => {
+      // pottery costs 25. At 20 + 5 science = 25, complete.
+      const techMap = new Map<string, number>([['pottery', 0]]);
+      const player = createTestPlayer({
+        currentResearch: 'pottery',
+        researchProgress: 20,
+        techProgressMap: techMap,
+      });
+      const city = createTestCity({ population: 4 }); // +4+1=5 science
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const p = next.players.get('p1')!;
+      expect(p.researchedTechs).toContain('pottery');
+      expect(p.techProgressMap?.has('pottery')).toBe(false);
+    });
+  });
+
+  describe('W3-08: PLACE_CODEX action', () => {
+    it('places a codex in a building with available slots', () => {
+      const player = createTestPlayer({
+        ownedCodices: ['codex-writing-0-1'],
+        codexPlacements: [],
+      });
+      const city = createTestCity({ buildings: ['library'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId: 'codex-writing-0-1',
+        buildingId: 'library',
+        cityId: 'c1',
+      });
+      const p = next.players.get('p1')!;
+      expect(p.codexPlacements).toHaveLength(1);
+      expect(p.codexPlacements![0].codexId).toBe('codex-writing-0-1');
+      expect(p.codexPlacements![0].buildingId).toBe('library');
+    });
+
+    it('rejects PLACE_CODEX when player does not own the codex', () => {
+      const player = createTestPlayer({
+        ownedCodices: [],
+        codexPlacements: [],
+      });
+      const city = createTestCity({ buildings: ['library'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId: 'codex-writing-0-1',
+        buildingId: 'library',
+        cityId: 'c1',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('rejects PLACE_CODEX when building slot limit is full', () => {
+      // Library has 2 codex slots — filling both then trying a 3rd
+      const player = createTestPlayer({
+        ownedCodices: ['codex-a', 'codex-b', 'codex-c'],
+        codexPlacements: [
+          { codexId: 'codex-a', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'codex-b', buildingId: 'library', cityId: 'c1' },
+        ],
+      });
+      const city = createTestCity({ buildings: ['library'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId: 'codex-c',
+        buildingId: 'library',
+        cityId: 'c1',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('rejects PLACE_CODEX when building has no codex slots', () => {
+      const player = createTestPlayer({
+        ownedCodices: ['codex-a'],
+        codexPlacements: [],
+      });
+      // Granary has no codexSlots
+      const city = createTestCity({ buildings: ['granary'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId: 'codex-a',
+        buildingId: 'granary',
+        cityId: 'c1',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('codex placements contribute +2 science per turn in calculateSciencePerTurn', () => {
+      // One codex in a Library. Science should include +2.
+      const player = createTestPlayer({
+        currentResearch: 'writing',
+        researchProgress: 0,
+        ownedCodices: ['codex-pottery-0-1'],
+        codexPlacements: [{ codexId: 'codex-pottery-0-1', buildingId: 'library', cityId: 'c1' }],
+      });
+      // City with pop=1, Library. Base science = 1(min) + 1(pop) + 3(library yields) + 2(codex) = 7
+      const city = createTestCity({ population: 1, buildings: ['library'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      // researchProgress should be 7
+      expect(next.players.get('p1')!.researchProgress).toBe(7);
+    });
+  });
 });

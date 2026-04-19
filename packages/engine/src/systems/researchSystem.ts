@@ -1,10 +1,12 @@
-import type { GameState, GameAction, ActiveEffect } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, PlayerState } from '../types/GameState';
 
 /**
  * ResearchSystem handles technology research and tech mastery.
- * - SET_RESEARCH: pick a tech to research
- * - SET_MASTERY: begin mastering an already-researched tech (costs 80% of original, grants yield bonus)
+ * - SET_RESEARCH: pick a tech to research; preserves previous tech progress (F-06)
+ * - SET_MASTERY: begin mastering an already-researched tech (costs 80% of original)
  * - END_TURN: accumulate science toward current research/mastery, complete when done
+ * - TRANSITION_AGE: clears techProgressMap (new age, new tree)
+ * - PLACE_CODEX: assigns a codex to a building codex slot
  */
 export function researchSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -14,6 +16,10 @@ export function researchSystem(state: GameState, action: GameAction): GameState 
       return handleSetMastery(state, action.techId);
     case 'END_TURN':
       return processResearch(state);
+    case 'TRANSITION_AGE':
+      return clearTechProgressMap(state);
+    case 'PLACE_CODEX':
+      return handlePlaceCodex(state, action.codexId, action.buildingId, action.cityId);
     default:
       return state;
   }
@@ -27,6 +33,9 @@ const FUTURE_TECH_AGE_PROGRESS = 10;
 /** Mastery costs 80% of the original tech cost */
 const MASTERY_COST_MULTIPLIER = 0.8;
 
+/** Science contribution per displayed codex (VII baseline) */
+const SCIENCE_PER_CODEX = 2;
+
 function handleSetResearch(state: GameState, techId: string): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
@@ -34,11 +43,14 @@ function handleSetResearch(state: GameState, techId: string): GameState {
   // Allow future_tech when all techs for the current age are researched
   if (techId === FUTURE_TECH_ID) {
     if (!allAgeTechsResearched(state, player)) return state;
+    // Save current research progress before switching
+    const prevMap = saveCurrentProgress(player);
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
       currentResearch: FUTURE_TECH_ID,
       researchProgress: 0,
+      techProgressMap: prevMap,
     });
     return { ...state, players: updatedPlayers };
   }
@@ -50,14 +62,32 @@ function handleSetResearch(state: GameState, techId: string): GameState {
   const techDef = state.config.technologies.get(techId);
   if (!techDef || techDef.age !== player.age) return state;
 
+  // Save current research progress, restore saved progress for the new tech
+  const prevMap = saveCurrentProgress(player);
+  const restoredProgress = prevMap.get(techId) ?? 0;
+
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
     currentResearch: techId,
-    researchProgress: 0,
+    researchProgress: restoredProgress,
+    techProgressMap: prevMap,
   });
 
   return { ...state, players: updatedPlayers };
+}
+
+/**
+ * Save the player's current research progress into the techProgressMap.
+ * Returns the updated map (immutable copy).
+ */
+function saveCurrentProgress(player: PlayerState): ReadonlyMap<string, number> {
+  const prevTech = player.currentResearch;
+  const prevMap = new Map(player.techProgressMap ?? new Map<string, number>());
+  if (prevTech && prevTech !== FUTURE_TECH_ID && player.researchProgress > 0) {
+    prevMap.set(prevTech, player.researchProgress);
+  }
+  return prevMap;
 }
 
 /**
@@ -102,6 +132,67 @@ function allAgeTechsResearched(state: GameState, player: { readonly age: string;
     }
   }
   return true;
+}
+
+/** On TRANSITION_AGE: clear techProgressMap — new age, new tech tree */
+function clearTechProgressMap(state: GameState): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+  if (!player.techProgressMap || player.techProgressMap.size === 0) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, {
+    ...player,
+    techProgressMap: new Map<string, number>(),
+  });
+  return { ...state, players: updatedPlayers };
+}
+
+/**
+ * Place a codex into a building's codex slot.
+ * Validates: player owns codex, city has building, building has available slots.
+ */
+function handlePlaceCodex(
+  state: GameState,
+  codexId: string,
+  buildingId: string,
+  cityId: string,
+): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // Player must own the codex
+  const ownedCodices = player.ownedCodices ?? [];
+  if (!ownedCodices.includes(codexId)) return state;
+
+  // Codex must not already be placed
+  const existingPlacements = player.codexPlacements ?? [];
+  if (existingPlacements.some(p => p.codexId === codexId)) return state;
+
+  // City must exist and be owned by the player
+  const city = state.cities.get(cityId);
+  if (!city || city.owner !== player.id) return state;
+
+  // City must have the building
+  if (!city.buildings.includes(buildingId)) return state;
+
+  // Building must have codex slots
+  const buildingDef = state.config.buildings.get(buildingId);
+  if (!buildingDef || !buildingDef.codexSlots || buildingDef.codexSlots <= 0) return state;
+
+  // Count how many codices are already placed in this specific building+city
+  const currentlyPlacedInBuilding = existingPlacements.filter(
+    p => p.buildingId === buildingId && p.cityId === cityId,
+  ).length;
+  if (currentlyPlacedInBuilding >= buildingDef.codexSlots) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, {
+    ...player,
+    codexPlacements: [...existingPlacements, { codexId, buildingId, cityId }],
+  });
+
+  return { ...state, players: updatedPlayers };
 }
 
 function processResearch(state: GameState): GameState {
@@ -154,13 +245,18 @@ function processNormalResearch(state: GameState): GameState {
     }
 
     // Normal tech complete! Carry overflow science to the next research.
+    // Also remove the saved progress entry for this tech (it's done).
     const overflow = newProgress - techCost;
+    const prevMap = new Map(player.techProgressMap ?? new Map<string, number>());
+    prevMap.delete(player.currentResearch);
+
     updatedPlayers.set(player.id, {
       ...player,
       researchedTechs: [...player.researchedTechs, player.currentResearch],
       currentResearch: null,
       researchProgress: overflow, // overflow carries to next tech
       ageProgress: player.ageProgress + 5, // +5 age progress per tech
+      techProgressMap: prevMap,
     });
 
     return {
@@ -199,16 +295,25 @@ function processMasteryResearch(state: GameState): GameState {
   const masteryCost = getMasteryCost(state, player.currentMastery);
 
   if (newProgress >= masteryCost) {
-    // Mastery complete — grant a +1 science empire-wide yield bonus
+    // Mastery complete — use per-tech masteryEffect if defined, otherwise fall back to +1 science
+    const masteryEffect = techDef?.masteryEffect ?? {
+      type: 'MODIFY_YIELD' as const,
+      target: 'empire' as const,
+      yield: 'science' as const,
+      value: 1,
+    };
+
     const masteryBonus: ActiveEffect = {
       source: `mastery:${player.currentMastery}`,
-      effect: {
-        type: 'MODIFY_YIELD',
-        target: 'empire',
-        yield: 'science',
-        value: 1,
-      },
+      effect: masteryEffect,
     };
+
+    // Award codices if the tech specifies a count
+    const codexCount = techDef?.masteryCodexCount ?? 0;
+    const newCodexIds: string[] = [];
+    for (let i = 0; i < codexCount; i++) {
+      newCodexIds.push(`codex-${player.currentMastery}-${i}-${state.turn}`);
+    }
 
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
@@ -217,7 +322,11 @@ function processMasteryResearch(state: GameState): GameState {
       currentMastery: null,
       masteryProgress: 0,
       legacyBonuses: [...player.legacyBonuses, masteryBonus],
+      ownedCodices: [...(player.ownedCodices ?? []), ...newCodexIds],
     });
+
+    const techName = techDef?.name ?? player.currentMastery;
+    const codexMsg = codexCount > 0 ? ` (+${codexCount} codex${codexCount > 1 ? 'es' : ''})` : '';
 
     return {
       ...state,
@@ -225,7 +334,7 @@ function processMasteryResearch(state: GameState): GameState {
       log: [...state.log, {
         turn: state.turn,
         playerId: player.id,
-        message: `Mastered ${techDef?.name ?? player.currentMastery}! (+1 Science per turn)`,
+        message: `Mastered ${techName}!${codexMsg}`,
         type: 'research',
         severity: 'warning' as const,
         category: 'research' as const,
@@ -244,7 +353,7 @@ function processMasteryResearch(state: GameState): GameState {
   return { ...state, players: updatedPlayers };
 }
 
-/** Calculate science per turn for a player from their cities */
+/** Calculate science per turn for a player from their cities (includes codex placements) */
 function calculateSciencePerTurn(state: GameState, playerId: string): number {
   const player = state.players.get(playerId);
   let sciencePerTurn = player && player.science > 0 ? 0 : 1; // minimum 1 science per turn
@@ -256,6 +365,19 @@ function calculateSciencePerTurn(state: GameState, playerId: string): number {
       const buildingDef = state.config.buildings.get(buildingId);
       if (buildingDef?.yields.science) {
         sciencePerTurn += buildingDef.yields.science;
+      }
+    }
+  }
+  // Add codex contributions (+2 science per placed codex in a slot)
+  if (player) {
+    const placements = player.codexPlacements ?? [];
+    for (const placement of placements) {
+      const city = state.cities.get(placement.cityId);
+      if (!city || city.owner !== playerId) continue;
+      if (!city.buildings.includes(placement.buildingId)) continue;
+      const buildingDef = state.config.buildings.get(placement.buildingId);
+      if (buildingDef?.codexSlots && buildingDef.codexSlots > 0) {
+        sciencePerTurn += SCIENCE_PER_CODEX;
       }
     }
   }

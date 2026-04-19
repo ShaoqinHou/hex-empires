@@ -9,6 +9,7 @@ export const POTTERY: TechnologyDef = {
   unlocks: ['granary'],
   description: 'Enables Granary building',
   treePosition: { row: 0, col: 0 },
+  // No masteryEffect — uses generic +1 science fallback
 };
 
 export const ANIMAL_HUSBANDRY: TechnologyDef = {
@@ -20,6 +21,8 @@ export const ANIMAL_HUSBANDRY: TechnologyDef = {
   unlocks: [],
   description: 'Reveals horses on the map',
   treePosition: { row: 1, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 1 },
+  masteryCodexCount: 0,
 };
 
 export const MINING: TechnologyDef = {
@@ -31,6 +34,8 @@ export const MINING: TechnologyDef = {
   unlocks: [],
   description: 'Enables mine improvements',
   treePosition: { row: 2, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 },
+  masteryCodexCount: 0,
 };
 
 export const SAILING: TechnologyDef = {
@@ -42,6 +47,8 @@ export const SAILING: TechnologyDef = {
   unlocks: ['galley'],
   description: 'Enables naval units',
   treePosition: { row: 3, col: 0 },
+  masteryEffect: { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+  masteryCodexCount: 1,
 };
 
 export const ASTROLOGY: TechnologyDef = {
@@ -53,6 +60,8 @@ export const ASTROLOGY: TechnologyDef = {
   unlocks: ['shrine'],
   description: 'Enables Shrine building',
   treePosition: { row: 4, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const ARCHERY: TechnologyDef = {
@@ -64,6 +73,8 @@ export const ARCHERY: TechnologyDef = {
   unlocks: ['archer'],
   description: 'Enables Archer unit',
   treePosition: { row: 1, col: 1 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'ranged', value: 3 },
+  masteryCodexCount: 0,
 };
 
 export const WRITING: TechnologyDef = {
@@ -75,6 +86,8 @@ export const WRITING: TechnologyDef = {
   unlocks: ['library'],
   description: 'Enables Library building',
   treePosition: { row: 0, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const MASONRY: TechnologyDef = {
@@ -86,6 +99,8 @@ export const MASONRY: TechnologyDef = {
   unlocks: ['walls', 'battering_ram'],
   description: 'Enables Ancient Walls and Battering Ram',
   treePosition: { row: 2, col: 1 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const BRONZE_WORKING: TechnologyDef = {
@@ -97,6 +112,8 @@ export const BRONZE_WORKING: TechnologyDef = {
   unlocks: ['spearman', 'barracks'],
   description: 'Enables Spearman and Barracks',
   treePosition: { row: 2, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'melee', value: 5 },
+  masteryCodexCount: 1,
 };
 
 export const WHEEL: TechnologyDef = {
@@ -108,6 +125,8 @@ export const WHEEL: TechnologyDef = {
   unlocks: ['chariot', 'watermill'],
   description: 'Enables War Chariot and Water Mill',
   treePosition: { row: 1, col: 2 },
+  masteryEffect: { type: 'MODIFY_MOVEMENT', target: 'cavalry', value: 1 },
+  masteryCodexCount: 1,
 };
 
 export const IRRIGATION: TechnologyDef = {
@@ -119,6 +138,8 @@ export const IRRIGATION: TechnologyDef = {
   unlocks: [],
   description: 'Enables farm improvements on desert',
   treePosition: { row: 0, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const CURRENCY: TechnologyDef = {
@@ -130,6 +151,8 @@ export const CURRENCY: TechnologyDef = {
   unlocks: ['market'],
   description: 'Enables Market building',
   treePosition: { row: 0, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const CONSTRUCTION: TechnologyDef = {
@@ -141,6 +164,8 @@ export const CONSTRUCTION: TechnologyDef = {
   unlocks: ['workshop'],
   description: 'Enables Workshop building',
   treePosition: { row: 2, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const IRON_WORKING: TechnologyDef = {
@@ -152,6 +177,8 @@ export const IRON_WORKING: TechnologyDef = {
   unlocks: ['swordsman'],
   description: 'Enables Swordsman unit',
   treePosition: { row: 2, col: 4 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'melee', value: 7 },
+  masteryCodexCount: 2,
 };
 
 export const MATHEMATICS: TechnologyDef = {
@@ -163,6 +190,8 @@ export const MATHEMATICS: TechnologyDef = {
   unlocks: [],
   description: 'Improved siege and science',
   treePosition: { row: 0, col: 4 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const AGRICULTURE: TechnologyDef = {
@@ -174,6 +203,8 @@ export const AGRICULTURE: TechnologyDef = {
   unlocks: [],
   description: 'Enables farms and sustainable food production (rulebook §9.4 Depth 1)',
   treePosition: { row: 0, col: -1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 1 },
+  masteryCodexCount: 0,
 };
 
 export const ENGINEERING: TechnologyDef = {
@@ -185,6 +216,8 @@ export const ENGINEERING: TechnologyDef = {
   unlocks: ['amphitheatre'],
   description: 'Enables Amphitheatre and Ancient Bridge (rulebook §9.4 Depth 5)',
   treePosition: { row: 3, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const MILITARY_TRAINING: TechnologyDef = {
@@ -196,6 +229,8 @@ export const MILITARY_TRAINING: TechnologyDef = {
   unlocks: ['arena'],
   description: 'Enables Arena, unlocking Flanking promotions (rulebook §9.4 Depth 5)',
   treePosition: { row: 2, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const NAVIGATION: TechnologyDef = {
@@ -207,6 +242,8 @@ export const NAVIGATION: TechnologyDef = {
   unlocks: [],
   description: 'Advanced seafaring: Lighthouse and Quadrireme (rulebook §9.4 Depth 5)',
   treePosition: { row: 4, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'naval', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const ALL_ANTIQUITY_TECHS: ReadonlyArray<TechnologyDef> = [

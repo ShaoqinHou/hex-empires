@@ -24,6 +24,12 @@ export interface BuildingDef {
    * infrastructure.
    */
   readonly isAgeless?: boolean;
+  /**
+   * Number of codex display slots this building provides.
+   * Each displayed codex contributes +2 science per turn (VII baseline).
+   * Libraries: 2, Academies: 3, Palace: 1.
+   */
+  readonly codexSlots?: number;
   /** True if this building is unique to a specific civilization */
   readonly isCivUnique?: boolean;
   /** CivilizationId of the civ that can build this, when isCivUnique is true */
