@@ -153,7 +153,7 @@ export { governmentSystem, canAdoptGovernment, canSlotPolicy, findGovernment, fi
 export { urbanBuildingSystem } from './systems/urbanBuildingSystem';
 export { resourceAssignmentSystem, getResourceSlotCapacity } from './systems/resourceAssignmentSystem';
 export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRESHOLDS } from './systems/commanderPromotionSystem';
-export { commanderArmySystem, COMMANDER_ARMY_MAX_SIZE } from './systems/commanderArmySystem';
+export { commanderArmySystem } from './systems/commanderArmySystem';
 
 // Governor data
 export { ALL_GOVERNORS } from './data/governors';
