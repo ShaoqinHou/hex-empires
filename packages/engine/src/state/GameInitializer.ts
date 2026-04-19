@@ -71,6 +71,28 @@ export function createInitialState(config: GameSetupConfig, seed?: number): Game
     currentCivicMastery: null as string | null,
     civicMasteryProgress: 0,
     governors: [] as string[],
+    // W1-A: new PlayerState fields — safe defaults
+    narrativeTags: [] as string[],
+    globalHappiness: 0,
+    socialPolicySlots: 0,
+    traditions: [] as string[],
+    ideology: null as null,
+    suzerainties: [] as string[],
+    suzerainBonuses: new Map<string, string>(),
+    equippedMementos: [] as string[],
+    ideologyPoints: 0,
+    railroadTycoonPoints: 0,
+    artifactsCollected: 0,
+    spaceMilestonesComplete: 0,
+    attributePoints: 0,
+    attributeTree: {} as Record<string, string[]>,
+    wildcardAttributePoints: 0,
+    totalCareerLegacyPoints: 0,
+    legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 } as Record<'military' | 'economic' | 'science' | 'culture', number>,
+    nextAgeTechBoost: null as string | null,
+    crisisLegacyUnlocked: false,
+    policySwapWindowOpen: false,
+    governmentLockedForAge: false,
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
@@ -157,6 +179,11 @@ export function createInitialState(config: GameSetupConfig, seed?: number): Game
     config: createGameConfig(),
     lastValidation: null,
     unlockedAchievements: new Map(),
+    // W1-A: new GameState fields — safe defaults
+    independentPowers: new Map(),
+    firedNarrativeEvents: [],
+    pendingNarrativeEvents: [],
+    ageProgressMeter: 0,
   };
 
   return state;

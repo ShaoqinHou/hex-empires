@@ -170,6 +170,7 @@ export const NOTRE_DAME: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 
@@ -185,6 +186,7 @@ export const VENETIAN_ARSENAL: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'engineer', amount: 1 },
 } as const;
 
@@ -200,6 +202,7 @@ export const ALHAMBRA: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'general', amount: 1 },
 } as const;
 
@@ -215,6 +218,7 @@ export const TAJ_MAHAL: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
 } as const;
 
@@ -230,6 +234,7 @@ export const FORBIDDEN_CITY: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'scientist', amount: 1 },
 } as const;
 
@@ -245,6 +250,7 @@ export const ANGKOR_WAT: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 
@@ -260,6 +266,7 @@ export const HAGIA_SOPHIA: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 
@@ -275,6 +282,7 @@ export const GREAT_WALL: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'general', amount: 1 },
 } as const;
 
@@ -290,6 +298,7 @@ export const TERRACOTTA_ARMY: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'general', amount: 1 },
 } as const;
 
@@ -305,6 +314,7 @@ export const ST_BASILS_CATHEDRAL: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 

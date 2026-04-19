@@ -147,6 +147,7 @@ export const PYRAMIDS: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'engineer', amount: 1 },
 } as const;
 
@@ -162,6 +163,7 @@ export const HANGING_GARDENS: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
 } as const;
 
@@ -177,6 +179,7 @@ export const COLOSSUS: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
 } as const;
 
@@ -192,6 +195,7 @@ export const STONEHENGE: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 
@@ -207,6 +211,7 @@ export const ORACLE: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'writer', amount: 1 },
 } as const;
 

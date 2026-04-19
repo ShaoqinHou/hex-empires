@@ -22,4 +22,10 @@ export interface ImprovementDef {
     readonly movement?: number; // Movement cost modifier (for roads)
     readonly defense?: number; // Defense bonus
   };
+  /**
+   * When true, this improvement persists across age transitions. Ageless
+   * improvements are not cleared when the player's civilization changes.
+   * Roads are the canonical ageless improvement.
+   */
+  readonly ageless?: boolean;
 }

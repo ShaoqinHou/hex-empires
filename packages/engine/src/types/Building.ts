@@ -18,4 +18,16 @@ export interface BuildingDef {
   readonly isWonder?: boolean;
   /** Great person points generated per turn */
   readonly greatPersonPoints?: { type: string; amount: number };
+  /**
+   * When true, this building persists across age transitions (not dismantled
+   * when the player's civilization changes). Applies to wonders and select
+   * infrastructure.
+   */
+  readonly isAgeless?: boolean;
+  /** True if this building is unique to a specific civilization */
+  readonly isCivUnique?: boolean;
+  /** CivilizationId of the civ that can build this, when isCivUnique is true */
+  readonly civId?: string;
+  /** Civic research prerequisite (parity with District.requiredCivic) */
+  readonly requiredCivic?: string;
 }

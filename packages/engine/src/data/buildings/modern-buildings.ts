@@ -144,6 +144,7 @@ export const EIFFEL_TOWER: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'artist', amount: 1 },
 } as const;
 
@@ -159,6 +160,7 @@ export const STATUE_OF_LIBERTY: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'artist', amount: 1 },
 } as const;
 
@@ -174,6 +176,7 @@ export const OXFORD_UNIVERSITY: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'scientist', amount: 1 },
 } as const;
 
@@ -189,6 +192,7 @@ export const BIG_BEN: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
 } as const;
 
@@ -204,6 +208,7 @@ export const PENTAGON: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'general', amount: 1 },
 } as const;
 
@@ -219,6 +224,7 @@ export const UN_HEDQUARTERS: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'diplomat', amount: 1 },
 } as const;
 
@@ -234,6 +240,7 @@ export const BRANDENBURG_GATE: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'general', amount: 1 },
 } as const;
 
@@ -249,6 +256,7 @@ export const SYDNEY_OPERA_HOUSE: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'artist', amount: 1 },
 } as const;
 
@@ -264,6 +272,7 @@ export const PANAMA_CANAL: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'engineer', amount: 1 },
 } as const;
 
@@ -279,6 +288,7 @@ export const BROADWAY: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'writer', amount: 1 },
 } as const;
 
@@ -294,6 +304,7 @@ export const CRISTO_REDENTOR: BuildingDef = {
   category: 'wonder',
   happinessCost: 0,
   isWonder: true,
+  isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 

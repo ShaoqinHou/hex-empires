@@ -26,6 +26,16 @@ export interface HexTile {
   readonly river: ReadonlyArray<number>; // edge indices (0-5) that have rivers
   readonly elevation: number; // 0-1 normalized
   readonly continent: number; // continent id
+  /** True if this tile is in the Distant Lands (Exploration/Modern age map extension) */
+  readonly isDistantLands?: boolean;
+  /** True if this tile is adjacent to a river or lake (affects city founding bonuses) */
+  readonly hasFreshWater?: boolean;
+  /** True if this tile contains a natural wonder */
+  readonly isNaturalWonder?: boolean;
+  /** The natural wonder definition id, if isNaturalWonder is true */
+  readonly naturalWonderId?: string | null;
+  /** Discovery site id if an ancient discovery is present on this tile */
+  readonly discoveryId?: string | null;
 }
 
 export interface HexMap {
@@ -111,6 +121,19 @@ export interface CityState {
    * cities where the field is absent.
    */
   readonly assignedResources?: ReadonlyArray<ResourceId>;
+
+  /** True if this city is currently afflicted by plague (plague crisis mechanic) */
+  readonly infected?: boolean;
+  /** Turns remaining on a civil unrest penalty triggered by negative happiness */
+  readonly civilUnrestTimer?: number;
+  /** Countdown to settlement being razed (null = not being razed) */
+  readonly razingCountdown?: number | null;
+  /** PlayerId of the player who originally founded this city */
+  readonly foundedBy?: string;
+  /** PlayerId of the original owner before conquest (null = never conquered) */
+  readonly originalOwner?: string;
+  /** True if this settlement occupies an Urban tile slot in the V2 district model */
+  readonly isUrban?: boolean;
 }
 
 export interface ProductionItem {
@@ -207,6 +230,68 @@ export interface PlayerState {
   readonly pantheonId?: string | null;
   readonly governmentId?: string | null;
   readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string | null>>;
+
+  // ── Narrative Events ──
+  /** Arbitrary tag strings used to gate narrative event conditions */
+  readonly narrativeTags?: ReadonlyArray<string>;
+
+  // ── Happiness / Celebrations → Social Policies ──
+  /** Global empire happiness score (net positive = celebration-eligible) */
+  readonly globalHappiness?: number;
+  /** Number of policy card slots available from celebration bonuses */
+  readonly socialPolicySlots?: number;
+
+  // ── Civic Tree ──
+  /** Civic tradition bonus ids adopted by this player */
+  readonly traditions?: ReadonlyArray<string>;
+  /** Modern-age ideology choice for the civic tree */
+  readonly ideology?: 'democracy' | 'fascism' | 'communism' | null;
+
+  // ── Independent Powers ──
+  /** IDs of city-states / independent powers this player has suzerainty over */
+  readonly suzerainties?: ReadonlyArray<string>;
+  /** Map from independent power id to the bonus id currently granted by suzerainty */
+  readonly suzerainBonuses?: ReadonlyMap<string, string>;
+
+  // ── Mementos ──
+  /** IDs of equipped memento items (leader RPG keepsakes) */
+  readonly equippedMementos?: ReadonlyArray<string>;
+
+  // ── Victory Points ──
+  /** Military ideology victory points (Civ VII military-domination axis) */
+  readonly ideologyPoints?: number;
+  /** Economic railroad-tycoon victory points */
+  readonly railroadTycoonPoints?: number;
+  /** Culture artifacts collected toward cultural victory */
+  readonly artifactsCollected?: number;
+  /** Science space-program milestones complete (0-3) */
+  readonly spaceMilestonesComplete?: number;
+
+  // ── Leader RPG Attributes ──
+  /** Unspent attribute points for the leader RPG tree */
+  readonly attributePoints?: number;
+  /** Unlocked attribute node ids per attribute tree (6 trees) */
+  readonly attributeTree?: Record<string, ReadonlyArray<string>>;
+  /** Extra wildcard attribute points granted by Future Tech research */
+  readonly wildcardAttributePoints?: number;
+
+  // ── Score / Legacy Tracking ──
+  /** Cumulative legacy points across all ages for the score-victory axis */
+  readonly totalCareerLegacyPoints?: number;
+  /** Typed breakdown of legacy points earned per axis */
+  readonly legacyPointsByAxis?: Record<'military' | 'economic' | 'science' | 'culture', number>;
+
+  // ── Future Tech ──
+  /** Tech id that will be boosted in the next age (from Future Tech selection) */
+  readonly nextAgeTechBoost?: string | null;
+
+  // ── Misc Flags ──
+  /** True if this player has unlocked the crisis legacy bonus */
+  readonly crisisLegacyUnlocked?: boolean;
+  /** True if a grace-period policy swap window is currently open */
+  readonly policySwapWindowOpen?: boolean;
+  /** True if the player's government is locked for the current age (one-switch rule) */
+  readonly governmentLockedForAge?: boolean;
 }
 
 // ── Diplomacy ──
@@ -265,7 +350,7 @@ export interface ActiveEffect {
 
 // ── Victory ──
 
-export type VictoryType = 'domination' | 'science' | 'culture' | 'diplomacy' | 'economic' | 'military' | 'score';
+export type VictoryType = 'domination' | 'science' | 'culture' | 'economic' | 'military' | 'score';
 
 export interface VictoryProgress {
   readonly type: VictoryType;
@@ -350,6 +435,24 @@ export interface RngState {
   readonly counter: number;
 }
 
+// ── Independent Powers ──
+
+/**
+ * State for a single independent power (city-state / mercantile republic /
+ * military outpost). Managed by `independentPowerSystem`.
+ */
+export interface IndependentPowerState {
+  readonly id: string;
+  readonly type: 'militaristic' | 'cultural' | 'scientific' | 'economic' | 'diplomatic' | 'expansionist';
+  readonly attitude: 'neutral' | 'friendly' | 'hostile';
+  readonly position: HexCoord;
+  readonly befriendProgress: number;
+  readonly suzerainPlayerId: string | null;
+  readonly isIncorporated: boolean;
+  readonly isCityState: boolean;
+  readonly bonusPool: ReadonlyArray<string>;
+}
+
 // ── Full GameState ──
 
 export interface GameState {
@@ -390,6 +493,34 @@ export interface GameState {
    * slot appears only once a player actually uses the mechanic.
    */
   readonly religion?: ReligionSlotState;
+
+  /**
+   * ── Independent Powers (city-states, outposts) ──
+   *
+   * Optional so pre-independent-powers saves migrate as `undefined`.
+   * Populated by `independentPowerSystem` at game-init or on first
+   * relevant action. Maps each independent power id to its state.
+   */
+  readonly independentPowers?: ReadonlyMap<string, IndependentPowerState>;
+
+  /**
+   * ── Narrative Events ──
+   *
+   * Optional dedup store and queue for the narrative-events system.
+   * `firedNarrativeEvents` prevents the same event firing twice.
+   * `pendingNarrativeEvents` is the ordered queue waiting to surface to UI.
+   */
+  readonly firedNarrativeEvents?: ReadonlyArray<string>;
+  readonly pendingNarrativeEvents?: ReadonlyArray<string>;
+
+  /**
+   * ── Global Age Progress Meter ──
+   *
+   * A single shared counter tracking aggregate age-advance activity across
+   * ALL players. Distinct from per-player `PlayerState.ageProgress`.
+   * Used by the global age-transition UI bar.
+   */
+  readonly ageProgressMeter?: number;
 }
 
 // ── Actions ──
