@@ -33,7 +33,7 @@
 
 ## Detailed findings
 
-### F-01: Growth formula constants diverge from GDD (quadratic constants mismatch) -- HIGH
+### F-01: Growth formula constants diverge from GDD (quadratic constants mismatch) — CLOSE
 **Location:** `packages/engine/src/state/GrowthUtils.ts:17-29`
 **GDD reference:** `systems/population-specialists.md` section Growth food threshold (post-patch 1.1.2)
 **Severity:** HIGH
@@ -45,7 +45,7 @@
 
 ---
 
-### F-02: Specialist food cost absent; only happiness cost tracked -- HIGH
+### F-02: Specialist food cost absent; only happiness cost tracked — MISSING
 **Location:** `packages/engine/src/systems/specialistSystem.ts:1-68`, `packages/engine/src/state/HappinessUtils.ts:89-92`
 **GDD reference:** `systems/population-specialists.md` section Specialist assignment (Cities only)
 **Severity:** HIGH
@@ -57,7 +57,7 @@
 
 ---
 
-### F-03: Specialist adjacency amplification entirely absent -- HIGH
+### F-03: Specialist adjacency amplification entirely absent — MISSING
 **Location:** `packages/engine/src/systems/specialistSystem.ts:1-68` (full file)
 **GDD reference:** `systems/population-specialists.md` section Specialist assignment (Cities only) bullet 4
 **Severity:** HIGH
@@ -69,7 +69,7 @@
 
 ---
 
-### F-04: Specialists tracked city-wide integer, not per-urban-tile map -- HIGH
+### F-04: Specialists tracked city-wide integer, not per-urban-tile map — DIVERGED
 **Location:** `packages/engine/src/systems/specialistSystem.ts:24-44`, `packages/engine/src/state/HappinessUtils.ts:90`
 **GDD reference:** `systems/population-specialists.md` section Entities -- SettlementState.specialists is map of urbanTileId to Specialist
 **Severity:** HIGH
@@ -81,7 +81,7 @@
 
 ---
 
-### F-05: Town soft-cap is 5, GDD specifies no hard town pop cap -- MED
+### F-05: Town soft-cap is 5, GDD specifies no hard town pop cap — CLOSE
 **Location:** `packages/engine/src/systems/growthSystem.ts:87-89`
 **GDD reference:** `systems/population-specialists.md` section Town vs city rules
 **Severity:** MED
@@ -93,7 +93,7 @@
 
 ---
 
-### F-06: Settlement cap increases are age-automatic, not tech/civic-driven -- MED
+### F-06: Settlement cap increases are age-automatic, not tech/civic-driven — DIVERGED
 **Location:** `packages/engine/src/state/HappinessUtils.ts:23-30`
 **GDD reference:** `systems/population-specialists.md` section Settlement cap sources
 **Severity:** MED
