@@ -113,6 +113,7 @@ function makeState(options: MakeStateOptions = {}): GameState {
     crises: [],
     log: [],
     config: createGameConfig(),
+    age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
   } as unknown as GameState;
 }
 
@@ -163,8 +164,8 @@ describe('TooltipOverlay — compact tier', () => {
 
     const compact = container.querySelector('[data-testid="tooltip-yields-compact"]');
     expect(compact).not.toBeNull();
-    // Grassland gives 2 food → "🌾 2" appears.
-    expect(compact?.textContent ?? '').toMatch(/🌾\s*2/);
+    // Grassland gives 3 food → "🌾 3" appears.
+    expect(compact?.textContent ?? '').toMatch(/🌾\s*3/);
     // Compact tier must NOT carry the breakdown panel.
     expect(container.querySelector('[data-testid="tooltip-yields-breakdown"]')).toBeNull();
   });
