@@ -172,7 +172,7 @@ Where:
 - [`content/governments/`](../content/governments/) — 12 government types, each with 2 Celebration bonus options per age; primary content input for the bonus menu
 - [`content/leaders/`](../content/leaders/) — Rizal and Ashoka have abilities keyed to this system; other leaders may have passive synergies
 - [`content/buildings/`](../content/buildings/) — entertainment-type buildings and improvements that generate local happiness; the supply chain for the accumulator
-- [`content/social-policies/`](../content/social-policies/) — permanent Social Policy slot unlocks from each Celebration gate the available policy count
+- [`content/policies/`](../content/policies/) — permanent Social Policy slot unlocks from each Celebration gate the available policy count
 
 ---
 
