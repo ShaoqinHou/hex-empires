@@ -193,11 +193,11 @@ test.describe('Victory-condition pipeline', () => {
     const vs = await getVictoryState(page);
     expect(vs.victory.winner).toBe(null);
     expect(vs.victory.winType).toBe(null);
-    // Every player should have all 7 victory-type progress entries, none achieved.
+    // Every player should have all 6 victory-type progress entries, none achieved.
     for (const entry of vs.victory.progressEntries) {
       const types = entry.items.map((i) => i.type).sort();
       expect(types).toEqual(
-        ['culture', 'diplomacy', 'domination', 'economic', 'military', 'science', 'score'].sort(),
+        ['culture', 'domination', 'economic', 'military', 'science', 'score'].sort(),
       );
       for (const item of entry.items) {
         expect(item.achieved).toBe(false);

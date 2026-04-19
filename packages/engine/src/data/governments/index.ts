@@ -7,14 +7,13 @@
 export type { GovernmentDef, PolicyCategory, PolicySlotCounts } from './governments';
 export {
   ALL_GOVERNMENTS,
-  CHIEFDOM,
   CLASSICAL_REPUBLIC,
   DESPOTISM,
   OLIGARCHY,
-  MONARCHY,
-  MERCHANT_REPUBLIC,
+  FEUDAL_MONARCHY,
+  PLUTOCRACY,
   THEOCRACY,
-  DEMOCRACY,
+  ELECTIVE_REPUBLIC,
 } from './governments';
 
 export type { PolicyDef } from './policies';
