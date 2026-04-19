@@ -45,7 +45,17 @@ export interface UrbanTileV2 {
   readonly cityId: CityId;
   readonly coord: HexCoord;
   readonly buildings: ReadonlyArray<BuildingId>;
-  readonly specialistAssigned: boolean;
+  /**
+   * Number of specialists assigned to this urban tile (W3-02 spatial model).
+   * Replaces the legacy `specialistAssigned: boolean`.
+   * Default 0; max = `specialistCapPerTile`.
+   */
+  readonly specialistCount: number;
+  /**
+   * Maximum specialists this tile can host. Default 1 for regular urban tiles;
+   * higher-tier districts may increase this cap.
+   */
+  readonly specialistCapPerTile: number;
   readonly walled: boolean;
 }
 
@@ -75,17 +85,21 @@ export interface RuralTileV2 {
 
 /**
  * Kind of Quarter formed on an urban tile with 2 buildings.
- *  - `pure_age`   — both buildings share the same Age (the rulebook Quarter).
- *  - `mixed_age`  — buildings span different Ages (no Quarter bonus, legal).
- *  - `walled_only`— one or both buildings are Walls-class ageless; does not form
- *                   a Quarter bonus but is a recognised co-location.
+ *  - `pure_age`      — both buildings share the same Age (the rulebook Quarter).
+ *  - `unique_quarter`— civ-unique building pair matching the named Quarter catalog;
+ *                      grants the QuarterDef.bonusEffect to the tile.
+ *  - `ageless_pair`  — both buildings carry `isAgeless === true`; legal co-location
+ *                      but no age-based Quarter bonus.
  */
-export type QuarterKindV2 = 'pure_age' | 'mixed_age' | 'walled_only';
+export type QuarterKindV2 = 'pure_age' | 'unique_quarter' | 'ageless_pair';
 
 /**
  * Derived descriptor for a 2-building urban tile. Quarters are recomputed at
  * end-of-turn by `urbanClassificationSystem` (Cycle E) rather than being placed
  * explicitly. `age === 'ageless'` means both buildings are ageless-class.
+ *
+ * `quarterId` is non-null only when `kind === 'unique_quarter'`, pointing to the
+ * matching `QuarterDef.id` in `state.config.quarters`.
  */
 export interface QuarterV2 {
   readonly cityId: CityId;
@@ -93,6 +107,7 @@ export interface QuarterV2 {
   readonly age: Age | 'ageless';
   readonly kind: QuarterKindV2;
   readonly buildingIds: ReadonlyArray<BuildingId>;
+  readonly quarterId?: string | null;
 }
 
 // ── City-level spatial container ────────────────────────────────────────────

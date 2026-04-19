@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { urbanBuildingSystem } from '../urbanBuildingSystem';
-import { createTestState, setTile } from './helpers';
-import type { CityState, HexTile } from '../../types/GameState';
+import { createTestState, createTestPlayer, setTile } from './helpers';
+import type { CityState, HexTile, GameState } from '../../types/GameState';
 import type { PlaceUrbanBuildingActionV2 } from '../../types/DistrictOverhaul';
+import type { QuarterDef } from '../../types/Quarter';
+import type { BuildingDef } from '../../types/Building';
 import { coordToKey } from '../../hex/HexMath';
 
 /**
@@ -80,7 +82,7 @@ describe('urbanBuildingSystem', () => {
     expect(urban.buildings).toEqual(['granary']);
     expect(urban.cityId).toBe('c1');
     expect(urban.coord).toEqual(tile);
-    expect(urban.specialistAssigned).toBe(false);
+    expect(urban.specialistCount).toBe(0);
     expect(urban.walled).toBe(false);
   });
 
@@ -152,7 +154,8 @@ describe('urbanBuildingSystem', () => {
             cityId: 'c1' as const,
             coord: tile,
             buildings: ['granary' as const, 'monument' as const],
-            specialistAssigned: false,
+            specialistCount: 0,
+            specialistCapPerTile: 1,
             walled: false,
           },
         ],
@@ -182,7 +185,8 @@ describe('urbanBuildingSystem', () => {
             cityId: 'c1' as const,
             coord: tile,
             buildings: ['granary' as const],
-            specialistAssigned: false,
+            specialistCount: 0,
+            specialistCapPerTile: 1,
             walled: false,
           },
         ],
@@ -213,7 +217,8 @@ describe('urbanBuildingSystem', () => {
             cityId: 'c1' as const,
             coord: tile,
             buildings: ['granary' as const], // antiquity
-            specialistAssigned: false,
+            specialistCount: 0,
+            specialistCapPerTile: 1,
             walled: false,
           },
         ],
@@ -250,7 +255,8 @@ describe('urbanBuildingSystem', () => {
             cityId: 'c1' as const,
             coord: tile,
             buildings: ['granary' as const], // antiquity
-            specialistAssigned: false,
+            specialistCount: 0,
+            specialistCapPerTile: 1,
             walled: false,
           },
         ],
@@ -394,5 +400,325 @@ describe('urbanBuildingSystem', () => {
     });
 
     expect(next).toBe(state);
+  });
+});
+
+// ── W3-01: Quarter detection — unique_quarter, ageless_pair ──────────────────
+
+/**
+ * Build a minimal state configured for quarter-detection tests.
+ * Injects synthetic buildings and a QuarterDef so tests do not depend on
+ * real catalog buildings (parthenon, odeon, etc.) existing in the content data.
+ */
+function buildQuarterTestState(
+  extraBuildings: BuildingDef[],
+  quarterDefs: QuarterDef[],
+  ownerCivId: string = 'greece',
+): GameState {
+  const tile = { q: 4, r: 3 };
+  const tileKey = coordToKey(tile);
+
+  const city: CityState = {
+    id: 'c1',
+    name: 'Athens',
+    owner: 'p1',
+    position: { q: 3, r: 3 },
+    population: 5,
+    food: 0,
+    productionQueue: [],
+    productionProgress: 0,
+    buildings: [],
+    territory: [
+      tileKey,
+      coordToKey({ q: 3, r: 3 }),
+      coordToKey({ q: 3, r: 4 }),
+    ],
+    settlementType: 'city',
+    happiness: 10,
+    isCapital: true,
+    defenseHP: 100,
+    specialization: null,
+    specialists: 0,
+    districts: [],
+  };
+
+  const base = createTestState({
+    players: new Map([['p1', createTestPlayer({ id: 'p1', name: 'P1', civilizationId: ownerCivId as unknown as import('../../types/Ids').CivilizationId })]]),
+    cities: new Map([['c1', city]]),
+  });
+
+  // Extend config with synthetic buildings + quarters.
+  const extendedBuildings = new Map(base.config.buildings);
+  for (const b of extraBuildings) extendedBuildings.set(b.id, b);
+
+  const quartersMap = new Map<string, QuarterDef>(base.config.quarters ?? []);
+  for (const q of quarterDefs) quartersMap.set(q.id, q);
+
+  return {
+    ...base,
+    config: {
+      ...base.config,
+      buildings: extendedBuildings,
+      quarters: quartersMap,
+    },
+  };
+}
+
+describe('urbanBuildingSystem — W3-01 quarter detection', () => {
+  const PARTHENON: BuildingDef = {
+    id: 'parthenon',
+    name: 'Parthenon',
+    age: 'antiquity',
+    cost: 200,
+    maintenance: 1,
+    yields: { culture: 3 },
+    effects: [],
+    requiredTech: null,
+    isCivUnique: true,
+    civId: 'greece',
+  } as const;
+
+  const ODEON: BuildingDef = {
+    id: 'odeon',
+    name: 'Odeon',
+    age: 'antiquity',
+    cost: 180,
+    maintenance: 1,
+    yields: { culture: 2 },
+    effects: [],
+    requiredTech: null,
+    isCivUnique: true,
+    civId: 'greece',
+  } as const;
+
+  const ACROPOLIS_DEF: QuarterDef = {
+    id: 'acropolis',
+    name: 'Acropolis',
+    civId: 'greece',
+    requiredBuildings: ['parthenon', 'odeon'],
+    bonusEffect: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 2 },
+  } as const;
+
+  it('detects unique_quarter when both civ-unique buildings match the catalog (Greece ACROPOLIS)', () => {
+    const tile = { q: 4, r: 3 };
+    const tileKey = coordToKey(tile);
+
+    // First, place parthenon on the tile.
+    const state1 = buildQuarterTestState([PARTHENON, ODEON], [ACROPOLIS_DEF]);
+    const state2 = urbanBuildingSystem(state1, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'parthenon',
+    });
+
+    // Then place odeon — should trigger unique_quarter.
+    const state3 = urbanBuildingSystem(state2, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'odeon',
+    });
+
+    const nextCity = state3.cities.get('c1')!;
+    expect(nextCity.quarters).toBeDefined();
+    expect(nextCity.quarters!.length).toBe(1);
+    const q = nextCity.quarters![0];
+    expect(q.kind).toBe('unique_quarter');
+    expect(q.quarterId).toBe('acropolis');
+    expect(q.coord).toEqual(tile);
+    expect(q.buildingIds).toContain('parthenon');
+    expect(q.buildingIds).toContain('odeon');
+  });
+
+  it('does NOT form unique_quarter when the same buildings are placed by a non-Greece civ (civ-lock)', () => {
+    const tile = { q: 4, r: 3 };
+
+    // Player owns 'rome' civ — not 'greece', so ACROPOLIS civId mismatch.
+    const state1 = buildQuarterTestState([PARTHENON, ODEON], [ACROPOLIS_DEF], 'rome');
+    const state2 = urbanBuildingSystem(state1, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'parthenon',
+    });
+    const state3 = urbanBuildingSystem(state2, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'odeon',
+    });
+
+    const nextCity = state3.cities.get('c1')!;
+    // Neither unique_quarter nor pure_age (same age antiquity) — wait,
+    // these ARE same-age antiquity so pure_age would fire.
+    // But unique_quarter is checked FIRST, so the test is really that
+    // the civ-lock prevented unique_quarter, not pure_age.
+    // The buildings are same age so pure_age will fire instead.
+    expect(nextCity.quarters).toBeDefined();
+    expect(nextCity.quarters!.length).toBe(1);
+    const q = nextCity.quarters![0];
+    expect(q.kind).toBe('pure_age');  // same age, but NOT unique_quarter
+    expect(q.quarterId).toBeNull();   // no named quarter
+  });
+
+  it('detects ageless_pair when both buildings have isAgeless=true', () => {
+    const AGELESS_A: BuildingDef = {
+      id: 'test_ageless_a',
+      name: 'Test Ageless A',
+      age: 'antiquity',
+      cost: 300,
+      maintenance: 0,
+      yields: {},
+      effects: [],
+      requiredTech: null,
+      isAgeless: true,
+    } as const;
+
+    const AGELESS_B: BuildingDef = {
+      id: 'test_ageless_b',
+      name: 'Test Ageless B',
+      age: 'exploration',  // different age — but ageless pair overrides age check
+      cost: 300,
+      maintenance: 0,
+      yields: {},
+      effects: [],
+      requiredTech: null,
+      isAgeless: true,
+    } as const;
+
+    const tile = { q: 4, r: 3 };
+    const state1 = buildQuarterTestState([AGELESS_A, AGELESS_B], []);
+    const state2 = urbanBuildingSystem(state1, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'test_ageless_a',
+    });
+    const state3 = urbanBuildingSystem(state2, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'test_ageless_b',
+    });
+
+    const nextCity = state3.cities.get('c1')!;
+    expect(nextCity.quarters).toBeDefined();
+    expect(nextCity.quarters!.length).toBe(1);
+    const q = nextCity.quarters![0];
+    expect(q.kind).toBe('ageless_pair');
+    expect(q.age).toBe('ageless');
+    expect(q.quarterId).toBeNull();
+  });
+
+  it('detects pure_age when both buildings are same-age non-ageless (existing behavior unchanged)', () => {
+    const tile = { q: 4, r: 3 };
+    const tileKey = coordToKey(tile);
+    const city: CityState = {
+      id: 'c1',
+      name: 'Rome',
+      owner: 'p1',
+      position: { q: 3, r: 3 },
+      population: 5,
+      food: 0,
+      productionQueue: [],
+      productionProgress: 0,
+      buildings: [],
+      territory: [tileKey, coordToKey({ q: 3, r: 3 })],
+      settlementType: 'city',
+      happiness: 10,
+      isCapital: true,
+      defenseHP: 100,
+      specialization: null,
+      specialists: 0,
+      districts: [],
+      urbanTiles: new Map([[
+        tileKey,
+        {
+          cityId: 'c1' as const,
+          coord: tile,
+          buildings: ['granary' as const],
+          specialistCount: 0,
+          specialistCapPerTile: 1,
+          walled: false,
+        },
+      ]]),
+      quarters: [],
+    };
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'monument',  // also antiquity
+    });
+
+    const q = next.cities.get('c1')!.quarters![0];
+    expect(q.kind).toBe('pure_age');
+    expect(q.age).toBe('antiquity');
+    expect(q.quarterId).toBeNull();
+  });
+
+  it('returns null quarter (no entry) for mixed-age non-ageless non-unique pairing', () => {
+    const tile = { q: 4, r: 3 };
+    const tileKey = coordToKey(tile);
+    const city: CityState = {
+      id: 'c1',
+      name: 'Rome',
+      owner: 'p1',
+      position: { q: 3, r: 3 },
+      population: 5,
+      food: 0,
+      productionQueue: [],
+      productionProgress: 0,
+      buildings: [],
+      territory: [tileKey, coordToKey({ q: 3, r: 3 })],
+      settlementType: 'city',
+      happiness: 10,
+      isCapital: true,
+      defenseHP: 100,
+      specialization: null,
+      specialists: 0,
+      districts: [],
+      urbanTiles: new Map([[
+        tileKey,
+        {
+          cityId: 'c1' as const,
+          coord: tile,
+          buildings: ['granary' as const],   // antiquity
+          specialistCount: 0,
+          specialistCapPerTile: 1,
+          walled: false,
+        },
+      ]]),
+      quarters: [],
+    };
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+
+    const next = urbanBuildingSystem(state, {
+      type: 'PLACE_URBAN_BUILDING',
+      cityId: 'c1',
+      tile,
+      buildingId: 'bank',   // exploration
+    });
+
+    // Placement succeeds but no quarter recorded.
+    const nextCity = next.cities.get('c1')!;
+    expect(nextCity.quarters).toEqual([]);
+    expect(nextCity.urbanTiles!.get(tileKey)!.buildings).toContain('bank');
+  });
+
+  it('ACROPOLIS bonusEffect is accessible via state.config.quarters for yield application', () => {
+    // Verify the config pipeline: quarters map is populated and bonusEffect correct.
+    const state = buildQuarterTestState([PARTHENON, ODEON], [ACROPOLIS_DEF]);
+    const acropolisDef = state.config.quarters?.get('acropolis');
+    expect(acropolisDef).toBeDefined();
+    expect(acropolisDef!.bonusEffect).toEqual({
+      type: 'MODIFY_YIELD',
+      target: 'city',
+      yield: 'culture',
+      value: 2,
+    });
   });
 });

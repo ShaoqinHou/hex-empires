@@ -63,6 +63,7 @@ function computeQuarter(
   coord: HexCoord,
   buildings: ReadonlyArray<BuildingId>,
   state: GameState,
+  cityOwnerPlayerId: string,
 ): QuarterV2 | null {
   if (buildings.length !== 2) {
     return null;
@@ -73,18 +74,56 @@ function computeQuarter(
   if (!first || !second) {
     return null;
   }
-  const sameAge = first.age === second.age;
-  const kind: QuarterKindV2 = sameAge ? 'pure_age' : 'mixed_age';
-  const age: Age | 'ageless' = sameAge ? (first.age as Age) : (first.age as Age);
-  // For mixed-age we still store an `age` value per the type (non-null); the
-  // `kind` discriminator is what downstream systems key off for bonuses.
-  return {
-    cityId,
-    coord,
-    age,
-    kind,
-    buildingIds: buildings,
-  };
+
+  // (1) Unique-quarter: civ-unique building pair matching the named Quarter catalog.
+  //     Civ-lock: the city owner's civilizationId must match the QuarterDef.civId.
+  const ownerPlayer = state.players.get(cityOwnerPlayerId);
+  const ownerCivId = ownerPlayer?.civilizationId ?? '';
+  if (state.config.quarters) {
+    for (const quarterDef of state.config.quarters.values()) {
+      const [req1, req2] = quarterDef.requiredBuildings;
+      if (
+        ((firstId === req1 && secondId === req2) || (firstId === req2 && secondId === req1)) &&
+        quarterDef.civId === ownerCivId
+      ) {
+        return {
+          cityId,
+          coord,
+          age: 'ageless',
+          kind: 'unique_quarter',
+          buildingIds: buildings,
+          quarterId: quarterDef.id,
+        };
+      }
+    }
+  }
+
+  // (2) Ageless-pair: both buildings carry isAgeless === true.
+  if (first.isAgeless && second.isAgeless) {
+    return {
+      cityId,
+      coord,
+      age: 'ageless',
+      kind: 'ageless_pair',
+      buildingIds: buildings,
+      quarterId: null,
+    };
+  }
+
+  // (3) Pure-age: both buildings share the same age (neither is ageless).
+  if (first.age === second.age && !first.isAgeless && !second.isAgeless) {
+    return {
+      cityId,
+      coord,
+      age: first.age as Age,
+      kind: 'pure_age',
+      buildingIds: buildings,
+      quarterId: null,
+    };
+  }
+
+  // Mixed-age non-ageless non-unique: no Quarter formed.
+  return null;
 }
 
 export function urbanBuildingSystem(state: GameState, action: UrbanBuildingAction): GameState {
@@ -140,7 +179,8 @@ export function urbanBuildingSystem(state: GameState, action: UrbanBuildingActio
     cityId,
     coord: tile,
     buildings: nextBuildings,
-    specialistAssigned: existingUrban?.specialistAssigned ?? false,
+    specialistCount: existingUrban?.specialistCount ?? 0,
+    specialistCapPerTile: existingUrban?.specialistCapPerTile ?? 1,
     walled: nextBuildings.includes('walls' as BuildingId),
   };
 
@@ -152,12 +192,11 @@ export function urbanBuildingSystem(state: GameState, action: UrbanBuildingActio
   const priorQuartersFiltered = currentQuarters.filter(
     (q) => coordToKey(q.coord) !== tileKey,
   );
-  const newQuarter = computeQuarter(cityId, tile, nextBuildings, state);
-  // Only pure_age quarters are recorded; mixed-age is legal placement but does
-  // not grow the quarters list (per task spec: "same-age → quarters+1; different
-  // age → quarters unchanged"). Walls co-location is handled elsewhere.
+  const newQuarter = computeQuarter(cityId, tile, nextBuildings, state, city.owner);
+  // Record pure_age, unique_quarter, and ageless_pair quarters.
+  // Mixed-age non-ageless non-unique placements return null → quarters unchanged.
   const nextQuarters: ReadonlyArray<QuarterV2> =
-    newQuarter && newQuarter.kind === 'pure_age'
+    newQuarter !== null
       ? [...priorQuartersFiltered, newQuarter]
       : priorQuartersFiltered;
 

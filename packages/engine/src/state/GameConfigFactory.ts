@@ -49,6 +49,8 @@ import { ALL_MEMENTOS } from '../data/mementos';
 import type { FoundationChallengeDef } from '../data/foundation-challenges';
 import type { LeaderChallengeDef } from '../data/leader-challenges';
 import type { MementoDef } from '../types/Memento';
+import { ALL_QUARTERS } from '../data/quarters';
+import type { QuarterDef } from '../types/Quarter';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -130,5 +132,8 @@ export function createGameConfig(): GameConfig {
   const mementos = new Map<string, MementoDef>();
   for (const m of ALL_MEMENTOS) mementos.set(m.id, m);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, experimentalAchievements: false };
+  const quarters = new Map<string, QuarterDef>();
+  for (const q of ALL_QUARTERS) quarters.set(q.id, q);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, experimentalAchievements: false };
 }

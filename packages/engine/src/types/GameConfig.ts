@@ -99,6 +99,13 @@ export interface GameConfig {
   readonly mementos?: ReadonlyMap<string, MementoDef>;
 
   /**
+   * Named Quarter catalog (W3-01). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * `urbanBuildingSystem` skips unique_quarter detection gracefully.
+   */
+  readonly quarters?: ReadonlyMap<string, QuarterDef>;
+
+  /**
    * Feature flag — when false (default), the Achievements panel is hidden
    * from the UI (no button, no keyboard shortcut). Set to true to enable
    * the panel while it is still under active development.
