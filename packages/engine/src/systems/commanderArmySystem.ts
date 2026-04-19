@@ -1,14 +1,15 @@
 import type { GameState, GameAction, UnitState } from '../types/GameState';
 import type { CommanderState } from '../types/Commander';
+import { COMMANDER_BASE_STACK_CAP } from '../types/Commander';
 import { distance } from '../hex/HexMath';
 
 /**
  * Commander Army Pack / Unpack system — W4-04.
  *
  * Handles two actions:
- *   ASSEMBLE_ARMY — commander gathers up to 6 adjacent same-owner units into
- *                   a stack. Sets `packedInCommanderId` on each unit and marks
- *                   `commander.packed = true`.
+ *   ASSEMBLE_ARMY — commander gathers up to COMMANDER_BASE_STACK_CAP adjacent
+ *                   same-owner units into a stack. Sets `packedInCommanderId`
+ *                   on each unit and marks `commander.packed = true`.
  *   DEPLOY_ARMY   — commander disperses its army. Clears `packedInCommanderId`
  *                   on every attached unit and marks `commander.packed = false`.
  *
@@ -17,7 +18,7 @@ import { distance } from '../hex/HexMath';
  *   2. Each unitId must exist in state.units.
  *   3. Each unit must be owned by the same player as the commander unit.
  *   4. Each unit must be adjacent (distance ≤ 1) to the commander's position.
- *   5. Total unitIds count must be ≤ COMMANDER_ARMY_MAX_SIZE (6).
+ *   5. Total unitIds count must be ≤ COMMANDER_BASE_STACK_CAP (4).
  *   6. No unit may already be packed into a different commander.
  *
  * Age persistence (F-08):
@@ -26,8 +27,6 @@ import { distance } from '../hex/HexMath';
  *   default. No special handling is needed here.
  */
 
-/** Maximum number of units that can be packed into a single commander's army. */
-export const COMMANDER_ARMY_MAX_SIZE = 6 as const;
 
 export function commanderArmySystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -58,7 +57,7 @@ function handleAssemble(
 
   // Validate count
   if (unitIds.length === 0) return state;
-  if (unitIds.length > COMMANDER_ARMY_MAX_SIZE) return state;
+  if (unitIds.length > COMMANDER_BASE_STACK_CAP) return state;
 
   // Validate each unit
   const resolvedUnits: UnitState[] = [];
@@ -81,10 +80,9 @@ function handleAssemble(
   }
 
   // Update commander state: record attachedUnits and set packed=true
-  const attachedIds = unitIds as ReadonlyArray<string>;
   const updatedCommander: CommanderState = {
     ...commander,
-    attachedUnits: attachedIds,
+    attachedUnits: unitIds,
     packed: true,
   };
   const nextCommanders = new Map(commanders);

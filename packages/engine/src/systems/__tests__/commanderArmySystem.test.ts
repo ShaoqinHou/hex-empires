@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { commanderArmySystem, COMMANDER_ARMY_MAX_SIZE } from '../commanderArmySystem';
+import { commanderArmySystem } from '../commanderArmySystem';
+import { COMMANDER_BASE_STACK_CAP } from '../../types/Commander';
 import { createTestState, createTestUnit } from './helpers';
 import type { CommanderState } from '../../types/Commander';
 import type { GameState } from '../../types/GameState';
@@ -124,11 +125,10 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     expect(updatedCommander.attachedUnits).toEqual(['u1']);
   });
 
-  it('packs exactly 6 units (at the cap)', () => {
-    // 6 adjacent positions around q=0,r=0 in a flat-top hex grid
+  it('packs exactly 4 units (at the cap)', () => {
+    // 4 adjacent positions around q=0,r=0
     const positions = [
-      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
-      { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 },
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 }, { q: -1, r: 0 },
     ];
     const extraUnits = new Map(
       positions.map((pos, i) => {
@@ -151,10 +151,10 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     }
   });
 
-  it('rejects when unitIds count exceeds COMMANDER_ARMY_MAX_SIZE (6)', () => {
+  it('rejects when unitIds count exceeds COMMANDER_BASE_STACK_CAP (4)', () => {
     const positions = [
       { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
-      { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 }, { q: 2, r: 0 },
+      { q: -1, r: 0 }, { q: 0, r: -1 },
     ];
     const extraUnits = new Map(
       positions.map((pos, i) => {
@@ -163,10 +163,10 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
       }),
     );
     const state = stateWithCommander(makeCommander({ unitId: 'cmd1' }), extraUnits);
-    const unitIds = Array.from(extraUnits.keys()); // 7 units
+    const unitIds = Array.from(extraUnits.keys()); // 5 units
 
-    expect(unitIds.length).toBe(7);
-    expect(unitIds.length).toBeGreaterThan(COMMANDER_ARMY_MAX_SIZE);
+    expect(unitIds.length).toBe(5);
+    expect(unitIds.length).toBeGreaterThan(COMMANDER_BASE_STACK_CAP);
 
     const result = commanderArmySystem(state, {
       type: 'ASSEMBLE_ARMY',
