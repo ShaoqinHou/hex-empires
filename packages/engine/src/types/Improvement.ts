@@ -3,7 +3,7 @@ import type { TerrainId, FeatureId } from './Terrain';
 import type { TechnologyId } from './Ids';
 
 /**
- * Tile improvements built by Builder units
+ * Tile improvements placed by the city growth system (PLACE_IMPROVEMENT)
  * Examples: Farm, Mine, Pasture, Camp, Plantation, Quarry, Road
  */
 export interface ImprovementDef {

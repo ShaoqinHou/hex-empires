@@ -38,7 +38,6 @@ const HelpPanel = lazy(() => import('./ui/panels/HelpPanel').then(m => ({ defaul
 const ReligionPanel = lazy(() => import('./ui/panels/ReligionPanel').then(m => ({ default: m.ReligionPanel })));
 const GovernmentPanel = lazy(() => import('./ui/panels/GovernmentPanel').then(m => ({ default: m.GovernmentPanel })));
 const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m => ({ default: m.CommanderPanel })));
-const ImprovementPanel = lazy(() => import('./ui/panels/ImprovementPanel').then(m => ({ default: m.ImprovementPanel })));
 const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').then(m => ({ default: m.AudioSettingsPanel })));
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
@@ -170,9 +169,7 @@ function GameUI() {
             openPanel('city');
           }}
           onToggleTechTree={() => togglePanel('tech')}
-          onBuilderSelected={() => openPanel('improvement')}
-          onBuilderDeselected={() => { if (isOpen('improvement')) closePanel(); }}
-          onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
+onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
         />
         {/* CombatHoverPreview — mounted here (not inside GameCanvas) so that
             canvas/ never imports from ui/. The preview data flows through
@@ -228,10 +225,7 @@ function GameUI() {
           {activePanel === 'victoryProgress' && (
             <VictoryProgressPanel onClose={closePanel} />
           )}
-          {activePanel === 'improvement' && selectedUnit && (
-            <ImprovementPanel builderUnitId={selectedUnit.id} onClose={closePanel} />
-          )}
-          {activePanel === 'audioSettings' && (
+{activePanel === 'audioSettings' && (
             <AudioSettingsPanel onClose={closePanel} />
           )}
           {activePanel === 'victory' && (

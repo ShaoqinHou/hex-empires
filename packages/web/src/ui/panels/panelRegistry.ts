@@ -28,7 +28,6 @@ export type PanelId =
   | 'commanders'
   | 'victoryProgress'
   | 'crisis'
-  | 'improvement'
   | 'audioSettings'
   | 'victory'
   | 'tradeRoutes'
@@ -84,7 +83,6 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['victoryProgress', { id: 'victoryProgress', title: 'Victory Progress',    icon: '🏆', priority: 'modal'   }],
   ['victory',         { id: 'victory',         title: 'Victory!',            icon: '🏆', priority: 'modal'   }],
   ['crisis',          { id: 'crisis',          title: 'Crisis',              icon: '⚠️',  priority: 'modal'   }],
-  ['improvement',     { id: 'improvement',     title: 'Build Improvement',   icon: '🏗️',  priority: 'overlay' }],
   ['audioSettings',   { id: 'audioSettings',   title: 'Audio',               icon: '🔊', priority: 'overlay' }],
   ['tradeRoutes',     { id: 'tradeRoutes',     title: 'Trade Routes',        icon: '🤝', keyboardShortcut: 'X', priority: 'overlay' }],
   ['achievements',    { id: 'achievements',    title: 'Achievements',        icon: '🏅', keyboardShortcut: 'A', priority: 'overlay' }],
