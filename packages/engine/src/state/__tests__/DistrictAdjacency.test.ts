@@ -46,7 +46,8 @@ function makeUrban(
     cityId,
     coord,
     buildings,
-    specialistAssigned: false,
+    specialistCount: 0,
+    specialistCapPerTile: 1,
     walled: false,
   };
 }
@@ -206,6 +207,49 @@ describe('DistrictAdjacency', () => {
       expect(bonus.culture).toBe(0);
       expect(bonus.gold).toBe(0);
     });
+
+    it('W3-02: specialist amplifies adjacency by +50% per specialist (SPECIALIST_AMPLIFIER = 0.5)', () => {
+      // Tile at (0,0) adjacent to a mountain → base production = 1.
+      // With 1 specialist: 1 * (1 + 0.5 * 1) = 1.5
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      ]);
+      const urbanWithSpecialist: UrbanTileV2 = {
+        ...makeUrban('c1', { q: 0, r: 0 }, []),
+        specialistCount: 1,
+      };
+      const city = makeCity('c1', [urbanWithSpecialist]);
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.production).toBe(1.5); // 1 * (1 + 0.5 * 1)
+    });
+
+    it('W3-02: two specialists double-amplify adjacency', () => {
+      // Base production = 1 (one mountain neighbor).
+      // With 2 specialists: 1 * (1 + 0.5 * 2) = 2.0
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      ]);
+      const urbanWithTwoSpec: UrbanTileV2 = {
+        ...makeUrban('c1', { q: 0, r: 0 }, []),
+        specialistCount: 2,
+        specialistCapPerTile: 2,
+      };
+      const city = makeCity('c1', [urbanWithTwoSpec]);
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.production).toBe(2.0); // 1 * (1 + 0.5 * 2)
+    });
+
+    it('W3-02: tile with zero specialists has no amplification (baseline)', () => {
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      ]);
+      const city = makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, [])]);
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.production).toBe(1); // no amplification
+    });
   });
 
   describe('totalAdjacencyYieldsForCity', () => {
@@ -251,7 +295,28 @@ describe('DistrictAdjacency', () => {
       expect(quarterBonus(city, state)).toEqual(EMPTY_YIELDS);
     });
 
-    it('amplifies each Quarter tile by +50% of its base adjacency', () => {
+    it('returns EMPTY_YIELDS when Quarter has no specialist assigned (W3-02 guard)', () => {
+      // F-05 fix: Quarter amplification requires a specialist on the tile.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      ]);
+      const quarter: QuarterV2 = {
+        cityId: 'c1',
+        coord: { q: 0, r: 0 },
+        age: 'antiquity',
+        kind: 'pure_age',
+        buildingIds: ['library', 'amphitheatre'],
+      };
+      const city: CityState = {
+        ...makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre'])]),
+        quarters: [quarter],
+      };
+      // specialistCount = 0 (makeUrban default) → bonus should be zero
+      expect(quarterBonus(city, state)).toEqual(EMPTY_YIELDS);
+    });
+
+    it('amplifies each Quarter tile by +50% of its base adjacency when specialist present (W3-02)', () => {
       // Quarter at (0,0) with TWO adjacent mountains -> base production = 2,
       // so quarter extra should be 2 * 0.5 = 1.
       const state = stateWithTiles([
@@ -266,15 +331,19 @@ describe('DistrictAdjacency', () => {
         kind: 'pure_age',
         buildingIds: ['library', 'amphitheatre'],
       };
+      const urbanWithSpecialist: UrbanTileV2 = {
+        ...makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre']),
+        specialistCount: 1,
+      };
       const city: CityState = {
-        ...makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre'])]),
+        ...makeCity('c1', [urbanWithSpecialist]),
         quarters: [quarter],
       };
       const extra = quarterBonus(city, state);
       expect(extra.production).toBe(1); // 2 * 0.5
     });
 
-    it('returns half of a single-source adjacency bonus', () => {
+    it('returns half of a single-source adjacency bonus when specialist present', () => {
       // Quarter at (0,0) with ONE mountain neighbour -> base production = 1,
       // so extra should be 0.5.
       const state = stateWithTiles([
@@ -288,8 +357,12 @@ describe('DistrictAdjacency', () => {
         kind: 'pure_age',
         buildingIds: ['library', 'amphitheatre'],
       };
+      const urbanWithSpecialist: UrbanTileV2 = {
+        ...makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre']),
+        specialistCount: 1,
+      };
       const city: CityState = {
-        ...makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre'])]),
+        ...makeCity('c1', [urbanWithSpecialist]),
         quarters: [quarter],
       };
       expect(quarterBonus(city, state).production).toBe(0.5);
@@ -309,8 +382,12 @@ describe('DistrictAdjacency', () => {
         kind: 'pure_age',
         buildingIds: ['library', 'amphitheatre'],
       };
+      const urbanWithSpecialist: UrbanTileV2 = {
+        ...makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre']),
+        specialistCount: 1,
+      };
       const city: CityState = {
-        ...makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre'])]),
+        ...makeCity('c1', [urbanWithSpecialist]),
         quarters: [quarter],
       };
       expect(quarterBonus(city, state).production).toBe(0.5);

@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { specialistSystem } from '../specialistSystem';
+import { specialistSystem, canAssignSpecialist } from '../specialistSystem';
 import { calculateCityYields } from '../../state/YieldCalculator';
 import { calculateCityHappiness } from '../resourceSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState } from '../../types/GameState';
+import type { UrbanTileV2 } from '../../types/DistrictOverhaul';
 import { coordToKey } from '../../hex/HexMath';
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
@@ -173,6 +174,135 @@ describe('specialistSystem', () => {
       const state = createTestState();
       const next = specialistSystem(state, { type: 'END_TURN' });
       expect(next).toBe(state);
+    });
+  });
+
+  describe('W3-02: per-tile spatial model', () => {
+    const TILE_KEY = coordToKey({ q: 3, r: 3 });
+
+    function createCityWithUrbanTile(specialistCount = 0, cap = 1): CityState {
+      const urbanTile: UrbanTileV2 = {
+        cityId: 'c1',
+        coord: { q: 3, r: 3 },
+        buildings: [],
+        specialistCount,
+        specialistCapPerTile: cap,
+        walled: false,
+      };
+      return createTestCity({
+        population: 3,
+        specialists: specialistCount,
+        urbanTiles: new Map([[TILE_KEY, urbanTile]]),
+      });
+    }
+
+    it('ASSIGN_SPECIALIST with tileId increments urbanTile.specialistCount', () => {
+      const city = createCityWithUrbanTile(0, 1);
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'ASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      expect(next.cities.get('c1')!.specialists).toBe(1);
+      expect(next.cities.get('c1')!.urbanTiles!.get(TILE_KEY)!.specialistCount).toBe(1);
+    });
+
+    it('ASSIGN_SPECIALIST with tileId also updates specialistsByTile', () => {
+      const city = createCityWithUrbanTile(0, 1);
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'ASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      expect(next.cities.get('c1')!.specialistsByTile?.get(TILE_KEY)).toBe(1);
+    });
+
+    it('ASSIGN_SPECIALIST is blocked when per-tile cap is reached', () => {
+      const city = createCityWithUrbanTile(1, 1); // already at cap
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'ASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      // Should return unchanged state — cap enforced
+      expect(next).toBe(state);
+    });
+
+    it('ASSIGN_SPECIALIST allows multiple specialists when cap > 1', () => {
+      const city = createCityWithUrbanTile(1, 2); // cap = 2, currently 1
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'ASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      expect(next.cities.get('c1')!.urbanTiles!.get(TILE_KEY)!.specialistCount).toBe(2);
+    });
+
+    it('UNASSIGN_SPECIALIST with tileId decrements urbanTile.specialistCount', () => {
+      const city = createCityWithUrbanTile(1, 1);
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'UNASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      expect(next.cities.get('c1')!.specialists).toBe(0);
+      expect(next.cities.get('c1')!.urbanTiles!.get(TILE_KEY)!.specialistCount).toBe(0);
+    });
+
+    it('UNASSIGN_SPECIALIST with tileId clears entry from specialistsByTile when count reaches 0', () => {
+      const city = {
+        ...createCityWithUrbanTile(1, 1),
+        specialistsByTile: new Map([[TILE_KEY, 1]]),
+      };
+      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const next = specialistSystem(state, {
+        type: 'UNASSIGN_SPECIALIST',
+        cityId: 'c1',
+        tileId: TILE_KEY,
+      });
+      expect(next.cities.get('c1')!.specialistsByTile?.has(TILE_KEY)).toBe(false);
+    });
+
+    it('canAssignSpecialist returns false when total headcount at cap', () => {
+      const city = createTestCity({ population: 2, specialists: 1 });
+      expect(canAssignSpecialist(city)).toBe(false);
+    });
+
+    it('canAssignSpecialist returns false when per-tile cap reached', () => {
+      const city = createCityWithUrbanTile(1, 1);
+      expect(canAssignSpecialist(city, TILE_KEY)).toBe(false);
+    });
+
+    it('canAssignSpecialist returns true when both caps have room', () => {
+      const city = createCityWithUrbanTile(0, 1);
+      expect(canAssignSpecialist(city, TILE_KEY)).toBe(true);
+    });
+
+    it('total specialist count is sum of tile counts', () => {
+      const tile1Key = coordToKey({ q: 3, r: 3 });
+      const tile2Key = coordToKey({ q: 4, r: 3 });
+      const urban1: UrbanTileV2 = {
+        cityId: 'c1', coord: { q: 3, r: 3 }, buildings: [],
+        specialistCount: 1, specialistCapPerTile: 1, walled: false,
+      };
+      const urban2: UrbanTileV2 = {
+        cityId: 'c1', coord: { q: 4, r: 3 }, buildings: [],
+        specialistCount: 1, specialistCapPerTile: 1, walled: false,
+      };
+      const city = createTestCity({
+        population: 5,
+        specialists: 2,
+        specialistsByTile: new Map([[tile1Key, 1], [tile2Key, 1]]),
+        urbanTiles: new Map([[tile1Key, urban1], [tile2Key, urban2]]),
+      });
+      // Verify specialists = sum of tile counts = 2
+      const total = [...(city.specialistsByTile?.values() ?? [])].reduce((a, b) => a + b, 0);
+      expect(total).toBe(city.specialists);
     });
   });
 });

@@ -73,7 +73,8 @@ describe('Districts Overhaul Cycle B — CityState optional spatial fields', () 
       cityId: 'c1',
       coord: { q: 0, r: 0 },
       buildings: ['granary'],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     };
 

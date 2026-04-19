@@ -69,6 +69,11 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const age: Age = player?.age ?? state.age.currentAge;
 
     const yields = calculateCityYields(city, state);
+    // W3-02: specialists cost 2 food each per turn (Civ VII §spec).
+    // Note: YieldCalculator already deducts -(specialists * 2) from yields.food,
+    // so the net food surplus already accounts for specialist food cost.
+    // The foodConsumed line below tracks only population baseline consumption
+    // for starvation detection; specialist cost flows through yields.food.
     const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
     const newFood = city.food + foodSurplus;

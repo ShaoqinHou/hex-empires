@@ -43,7 +43,8 @@ function makeUrban(
     cityId,
     coord,
     buildings,
-    specialistAssigned: false,
+    specialistCount: 0,
+    specialistCapPerTile: 1,
     walled: false,
   };
 }
@@ -133,11 +134,48 @@ describe('calculateCityYieldsWithAdjacency', () => {
     expect(stacked.science).toBe(base.science);
   });
 
-  it('includes both base adjacency and quarter amplification for a Quarter tile', () => {
+  it('includes both base adjacency and quarter amplification for a Quarter tile WITH specialist (W3-02)', () => {
     // Quarter at (0,0) with TWO mountain neighbours:
     //   base adjacency  = +2 production (from totalAdjacencyYieldsForCity)
-    //   quarter extra   = +2 * 0.5 = +1 production
-    //   total delta     = +3 production over base YieldCalculator output.
+    //   specialist multiplier on tile: 1 + 0.5*1 = 1.5 → adjacency = 2 * 1.5 = 3
+    //   quarter extra on BASE (no specialist factor): 2 * 0.5 = +1 production
+    //   total delta     = +3 (specialist-amplified adjacency) + 1 (quarter) = +4 production.
+    // Wait — the specialist amplification is already in computeAdjacencyBonus, which
+    // is called by totalAdjacencyYieldsForCity. quarterBonus uses computeBaseAdjacencyWithoutSpecialist,
+    // so quarter extra = 2 * 0.5 = 1.
+    // Total stacked = base + (2 * 1.5) + 1 = base + 4.
+    const state = stateWithTiles([
+      makeTile({ coord: { q: 0, r: 0 } }),
+      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: -1, r: 0 }, terrain: 'mountains' }),
+    ]);
+    const quarter: QuarterV2 = {
+      cityId: 'c1',
+      coord: { q: 0, r: 0 },
+      age: 'antiquity',
+      kind: 'pure_age',
+      buildingIds: ['library', 'amphitheatre'],
+    };
+    const urbanWithSpecialist: UrbanTileV2 = {
+      ...makeUrban('c1', { q: 0, r: 0 }, ['library', 'amphitheatre']),
+      specialistCount: 1,
+    };
+    const city: CityState = {
+      ...makeCity(
+        'c1',
+        [],
+        [urbanWithSpecialist],
+      ),
+      quarters: [quarter],
+    };
+    const base = calculateCityYields(city, state);
+    const stacked = calculateCityYieldsWithAdjacency(city, state);
+    // adjacency with specialist = 2 * 1.5 = 3; quarter extra = 2 * 0.5 = 1 → total +4
+    expect(stacked.production).toBe(base.production + 4);
+  });
+
+  it('Quarter tile WITHOUT specialist gives no quarter bonus (W3-02 guard)', () => {
+    // Same setup but specialistCount = 0 → quarter extra = 0.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
       makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
@@ -160,7 +198,8 @@ describe('calculateCityYieldsWithAdjacency', () => {
     };
     const base = calculateCityYields(city, state);
     const stacked = calculateCityYieldsWithAdjacency(city, state);
-    expect(stacked.production).toBe(base.production + 3);
+    // adjacency = 2 (no specialist multiplier); quarter = 0 (no specialist)
+    expect(stacked.production).toBe(base.production + 2);
   });
 
   it('result is >= base yields in every yield field (adjacency is additive-only)', () => {

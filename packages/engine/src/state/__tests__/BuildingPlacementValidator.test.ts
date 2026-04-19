@@ -125,7 +125,8 @@ describe('validateBuildingPlacement — territory / tile cap', () => {
       cityId: 'c1',
       coord: tile,
       buildings: ['granary', 'barracks'],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     });
     const city = makeCity({ urbanTiles });
@@ -155,7 +156,8 @@ describe('validateBuildingPlacement — territory / tile cap', () => {
       cityId: 'c1',
       coord: tile,
       buildings: ['granary'],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     });
     const city = makeCity({ urbanTiles });
@@ -234,7 +236,8 @@ describe('listValidBuildingsForTile', () => {
       cityId: 'c1',
       coord: tile,
       buildings: ['granary', 'barracks'],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     });
     const city = makeCity({ urbanTiles });
@@ -302,7 +305,8 @@ describe('listValidTilesForBuilding', () => {
       cityId: 'c1',
       coord: tile,
       buildings: ['granary', 'barracks'],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     });
     const cityCapped = makeCity({ urbanTiles });

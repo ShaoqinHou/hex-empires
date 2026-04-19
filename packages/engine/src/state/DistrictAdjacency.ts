@@ -5,6 +5,7 @@ import type { BuildingId } from '../types/Ids';
 import type { UrbanTileV2 } from '../types/DistrictOverhaul';
 import { EMPTY_YIELDS, addYields } from '../types/Yields';
 import { neighbors, coordToKey } from '../hex/HexMath';
+import { SPECIALIST_AMPLIFIER } from './AdjacencyConstants';
 
 /**
  * Pure adjacency + Quarter yield helpers for the Districts Overhaul (Cycle D).
@@ -102,6 +103,9 @@ function urbanTileAt(city: CityState, coord: HexCoord): UrbanTileV2 | undefined 
  * earn from its six neighbouring hexes. Does NOT include the base yields of
  * the building itself, and does NOT apply the Quarter amplification.
  *
+ * W3-02: If the urban tile at `tile` has one or more specialists assigned,
+ * the adjacency bonus is amplified by `(1 + SPECIALIST_AMPLIFIER * specialistCount)`.
+ *
  * If `tile` is outside the map, all six rules simply yield zero contributions
  * because their predicate lookups return undefined.
  */
@@ -141,6 +145,26 @@ export function computeAdjacencyBonus(
     }
   }
 
+  // W3-02: Specialist amplification — if specialists are assigned to this
+  // urban tile, multiply the base adjacency by (1 + SPECIALIST_AMPLIFIER * count).
+  const tileKey = coordToKey(tile);
+  const urbanTile = city.urbanTiles?.get(tileKey as HexKey);
+  const specialistCount = urbanTile?.specialistCount ?? 0;
+  if (specialistCount > 0) {
+    const multiplier = 1 + SPECIALIST_AMPLIFIER * specialistCount;
+    bonus = {
+      food: bonus.food * multiplier,
+      production: bonus.production * multiplier,
+      gold: bonus.gold * multiplier,
+      science: bonus.science * multiplier,
+      culture: bonus.culture * multiplier,
+      faith: bonus.faith * multiplier,
+      influence: bonus.influence * multiplier,
+      housing: bonus.housing * multiplier,
+      diplomacy: bonus.diplomacy * multiplier,
+    };
+  }
+
   return bonus;
 }
 
@@ -172,6 +196,11 @@ export function totalAdjacencyYieldsForCity(
  * Concretely: for every QuarterV2 in the city, add `base × 0.5` where `base`
  * is the adjacency computed for that Quarter's tile.
  *
+ * W3-02 (F-05 fix): Quarter amplification fires ONLY when the tile has at
+ * least one specialist assigned. A Quarter without a specialist earns zero
+ * bonus beyond base adjacency. This matches the Civ VII rulebook requirement
+ * that the specialist is the "activator" of the Quarter bonus.
+ *
  * Returns `EMPTY_YIELDS` when the city has no quarters.
  */
 export function quarterBonus(city: CityState, state: GameState): YieldSet {
@@ -180,18 +209,76 @@ export function quarterBonus(city: CityState, state: GameState): YieldSet {
 
   let extra: YieldSet = EMPTY_YIELDS;
   for (const quarter of quarters) {
-    const base = computeAdjacencyBonus(city, quarter.coord, state);
+    // W3-02 guard: no specialist on this tile → no Quarter amplification.
+    const tileKey = coordToKey(quarter.coord);
+    const urbanTile = city.urbanTiles?.get(tileKey as HexKey);
+    const specialistCount = urbanTile?.specialistCount ?? 0;
+    if (specialistCount === 0) continue;
+
+    // NOTE: `computeAdjacencyBonus` already applies the specialist multiplier
+    // for the tile. Quarter bonus is an ADDITIONAL +50% on top of BASE adjacency,
+    // so we compute base without the specialist factor by temporarily checking
+    // the raw neighbor yields. To avoid double-amplification, we compute the
+    // base adjacency at specialistCount = 0 and then apply the quarter +0.5x.
+    // Implementation: call computeAdjacencyBonus on a synthetic city where this
+    // tile has specialistCount = 0 — but that is complex. Per the brief's spec,
+    // the quarter extra is simply `baseAdjacency * 0.5` where baseAdjacency
+    // EXCLUDES specialist amplification. We compute it directly from neighbors.
+    const baseNoSpecialist = computeBaseAdjacencyWithoutSpecialist(city, quarter.coord, state);
     extra = addYields(extra, {
-      food: base.food * 0.5,
-      production: base.production * 0.5,
-      gold: base.gold * 0.5,
-      science: base.science * 0.5,
-      culture: base.culture * 0.5,
-      faith: base.faith * 0.5,
-      influence: base.influence * 0.5,
-      housing: base.housing * 0.5,
-      diplomacy: base.diplomacy * 0.5,
+      food: baseNoSpecialist.food * 0.5,
+      production: baseNoSpecialist.production * 0.5,
+      gold: baseNoSpecialist.gold * 0.5,
+      science: baseNoSpecialist.science * 0.5,
+      culture: baseNoSpecialist.culture * 0.5,
+      faith: baseNoSpecialist.faith * 0.5,
+      influence: baseNoSpecialist.influence * 0.5,
+      housing: baseNoSpecialist.housing * 0.5,
+      diplomacy: baseNoSpecialist.diplomacy * 0.5,
     });
   }
   return extra;
+}
+
+/**
+ * Compute raw adjacency bonus for a tile WITHOUT the specialist amplification.
+ * Used by `quarterBonus` to avoid double-amplification: the Quarter +50%
+ * should apply to the terrain/building neighbor score, not to the already-
+ * specialist-amplified score.
+ *
+ * This is identical to the neighbor-scanning loop in `computeAdjacencyBonus`
+ * minus the final specialist multiplication step.
+ */
+function computeBaseAdjacencyWithoutSpecialist(
+  city: CityState,
+  tile: HexCoord,
+  state: GameState,
+): YieldSet {
+  let bonus: YieldSet = EMPTY_YIELDS;
+
+  for (const neighbourCoord of neighbors(tile)) {
+    const terrainTile = tileAt(state, neighbourCoord);
+
+    if (terrainTile !== undefined && terrainTile.terrain === 'mountains') {
+      bonus = addYields(bonus, { production: 1 });
+    }
+    if (terrainTile !== undefined && terrainTile.river.length > 0) {
+      bonus = addYields(bonus, { food: 1 });
+    }
+
+    const neighbourUrban = urbanTileAt(city, neighbourCoord);
+    if (neighbourUrban !== undefined) {
+      if (tileHasBuilding(neighbourUrban, (id) => isCampusBuilding(state, id))) {
+        bonus = addYields(bonus, { science: 1 });
+      }
+      if (tileHasBuilding(neighbourUrban, (id) => isTheaterBuilding(state, id))) {
+        bonus = addYields(bonus, { culture: 1 });
+      }
+      if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id))) {
+        bonus = addYields(bonus, { gold: 1 });
+      }
+    }
+  }
+
+  return bonus;
 }

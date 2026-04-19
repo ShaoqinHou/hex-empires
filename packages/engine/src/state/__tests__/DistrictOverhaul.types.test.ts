@@ -33,18 +33,20 @@ describe('DistrictOverhaul types (Cycle A — compile-time shape guards)', () =>
     expect(urban).toBe('urban');
   });
 
-  it('UrbanTileV2 constructs with buildings, specialist flag, and walled flag', () => {
+  it('UrbanTileV2 constructs with buildings, specialistCount, specialistCapPerTile, and walled flag (W3-02)', () => {
     const tile: UrbanTileV2 = {
       cityId: 'c1',
       coord: { q: 2, r: 3 },
       buildings: ['granary', 'library'],
-      specialistAssigned: true,
+      specialistCount: 1,
+      specialistCapPerTile: 1,
       walled: false,
     };
     expect(tile.cityId).toBe('c1');
     expect(tile.coord).toEqual({ q: 2, r: 3 });
     expect(tile.buildings.length).toBe(2);
-    expect(tile.specialistAssigned).toBe(true);
+    expect(tile.specialistCount).toBe(1);
+    expect(tile.specialistCapPerTile).toBe(1);
     expect(tile.walled).toBe(false);
   });
 
@@ -67,11 +69,11 @@ describe('DistrictOverhaul types (Cycle A — compile-time shape guards)', () =>
     expect(unworked.improvement).toBeNull();
   });
 
-  it('QuarterKindV2 accepts pure_age, mixed_age, walled_only', () => {
+  it('QuarterKindV2 accepts pure_age, unique_quarter, ageless_pair (W3-02)', () => {
     const pure: QuarterKindV2 = 'pure_age';
-    const mixed: QuarterKindV2 = 'mixed_age';
-    const walled: QuarterKindV2 = 'walled_only';
-    expect([pure, mixed, walled]).toEqual(['pure_age', 'mixed_age', 'walled_only']);
+    const unique: QuarterKindV2 = 'unique_quarter';
+    const ageless: QuarterKindV2 = 'ageless_pair';
+    expect([pure, unique, ageless]).toEqual(['pure_age', 'unique_quarter', 'ageless_pair']);
   });
 
   it('QuarterV2 constructs with age, kind, and building ids', () => {
@@ -90,7 +92,7 @@ describe('DistrictOverhaul types (Cycle A — compile-time shape guards)', () =>
       cityId: 'c1',
       coord: { q: 3, r: 3 },
       age: 'ageless',
-      kind: 'walled_only',
+      kind: 'ageless_pair',
       buildingIds: ['walls'],
     };
     expect(agelessQuarter.age).toBe('ageless');
@@ -101,7 +103,8 @@ describe('DistrictOverhaul types (Cycle A — compile-time shape guards)', () =>
       cityId: 'c1',
       coord: { q: 0, r: 0 },
       buildings: [],
-      specialistAssigned: false,
+      specialistCount: 0,
+      specialistCapPerTile: 1,
       walled: false,
     };
     const ruralTile: RuralTileV2 = {
