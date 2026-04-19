@@ -69,6 +69,21 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     faith: getYieldBonus(state, city.owner, 'faith'),
   });
 
+  // F-06: Per-age yield bonuses from assigned resources (W4-05).
+  // Each resource assigned to this city contributes yields from its bonusTable
+  // row for the current age.
+  const currentAge = state.age.currentAge;
+  const assignedResources = (city as CityState & { readonly assignedResources?: ReadonlyArray<string> }).assignedResources;
+  if (assignedResources && assignedResources.length > 0) {
+    for (const resId of assignedResources) {
+      const resDef = state.config.resources.get(resId);
+      const row = resDef?.bonusTable?.[currentAge];
+      if (row?.yields) {
+        total = addYields(total, row.yields);
+      }
+    }
+  }
+
   return total;
 }
 

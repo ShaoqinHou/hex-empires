@@ -1,4 +1,5 @@
 import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice } from '../types/GameState';
+import type { ResourceId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
@@ -59,6 +60,8 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   const updatedCities = new Map(state.cities);
   // Track new pending growth choices accumulated this turn, keyed by playerId.
   const newGrowthChoices = new Map<string, PendingGrowthChoice[]>();
+  // F-07 (W4-05): Track newly acquired resources from border expansion, keyed by playerId.
+  const newResourceAcquisitions = new Map<string, ResourceId[]>();
   let changed = false;
 
   for (const [cityId, city] of state.cities) {
@@ -96,16 +99,34 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
       const canGrow = city.happiness >= 0 && city.population < townCap;
       if (clampedFood >= growthThreshold && canGrow) {
         // Population grows + territory expands
-        const expandedTerritory = expandBorders(city, state, updatedCities);
+        const { territory: expandedTerritory, newTileKey } = expandBorders(city, state, updatedCities);
         updatedCities.set(cityId, {
           ...city,
           population: city.population + 1,
           food: clampedFood - growthThreshold,
           territory: expandedTerritory,
         });
+        // F-07 (W4-05): If the newly claimed tile has a resource, add it to the player's ownedResources.
+        const playerId = city.owner;
+        if (newTileKey !== null) {
+          const newTile = state.map.tiles.get(newTileKey);
+          if (newTile?.resource) {
+            const resourceId = newTile.resource as ResourceId;
+            const owningPlayer = state.players.get(playerId);
+            if (owningPlayer) {
+              const currentOwned = (owningPlayer as typeof owningPlayer & { readonly ownedResources?: ReadonlyArray<ResourceId> }).ownedResources ?? [];
+              if (!currentOwned.includes(resourceId)) {
+                // Queue for player update — will be merged below with pendingGrowthChoices
+                newResourceAcquisitions.set(playerId, [
+                  ...(newResourceAcquisitions.get(playerId) ?? []),
+                  resourceId,
+                ]);
+              }
+            }
+          }
+        }
         // Emit a pending growth choice so the player can place an improvement
         // or assign a specialist (Civ VII W2-01 mechanic).
-        const playerId = city.owner;
         if (!newGrowthChoices.has(playerId)) {
           newGrowthChoices.set(playerId, []);
         }
@@ -130,18 +151,30 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
 
   if (!changed) return state;
 
-  // Apply new pending growth choices to the relevant players.
+  // Apply new pending growth choices + newly acquired resources to the relevant players.
   let updatedPlayers = state.players;
-  if (newGrowthChoices.size > 0) {
+  if (newGrowthChoices.size > 0 || newResourceAcquisitions.size > 0) {
     const playersMap = new Map(state.players);
-    for (const [playerId, newChoices] of newGrowthChoices) {
+    // Collect all playerIds that need updating
+    const playerIds = new Set([...newGrowthChoices.keys(), ...newResourceAcquisitions.keys()]);
+    for (const playerId of playerIds) {
       const p = playersMap.get(playerId);
       if (!p) continue;
+      const newChoices = newGrowthChoices.get(playerId) ?? [];
       const merged: ReadonlyArray<PendingGrowthChoice> = [
         ...(p.pendingGrowthChoices ?? []),
         ...newChoices,
       ];
-      const updatedPlayer: PlayerState = { ...p, pendingGrowthChoices: merged };
+      const newResources = newResourceAcquisitions.get(playerId) ?? [];
+      const existingOwned = (p as typeof p & { readonly ownedResources?: ReadonlyArray<ResourceId> }).ownedResources ?? [];
+      const mergedOwned: ReadonlyArray<ResourceId> = newResources.length > 0
+        ? [...existingOwned, ...newResources.filter((r) => !existingOwned.includes(r))]
+        : existingOwned;
+      const updatedPlayer: PlayerState = {
+        ...p,
+        pendingGrowthChoices: merged,
+        ...(newResources.length > 0 ? { ownedResources: mergedOwned } : {}),
+      };
       playersMap.set(playerId, updatedPlayer);
     }
     updatedPlayers = playersMap;
@@ -166,12 +199,13 @@ export function calculateTotalGrowthRate(city: CityState, state: GameState): num
   return total;
 }
 
-/** Expand city borders by claiming one adjacent unclaimed tile */
+/** Expand city borders by claiming one adjacent unclaimed tile.
+ * Returns the updated territory array and the key of the newly claimed tile (null if none). */
 function expandBorders(
   city: CityState,
   state: GameState,
   updatedCities: Map<string, CityState>,
-): ReadonlyArray<string> {
+): { readonly territory: ReadonlyArray<string>; readonly newTileKey: string | null } {
   const territory = [...city.territory];
 
   // Find all hexes adjacent to current territory that aren't claimed
@@ -211,7 +245,7 @@ function expandBorders(
     territory.push(bestTile);
   }
 
-  return territory;
+  return { territory, newTileKey: bestTile };
 }
 
 // Re-export calculateCityYields from shared utility for backward compatibility
