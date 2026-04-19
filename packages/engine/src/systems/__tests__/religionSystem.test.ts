@@ -69,12 +69,13 @@ describe('religionSystem', () => {
       expect(a.log.length).toBe(b.log.length);
     });
 
-    it('passes through non-ADOPT_PANTHEON religion actions (e.g. FOUND_RELIGION)', () => {
+    it('passes through FOUND_RELIGION when no city matches (invalid state, pass-through)', () => {
       const state = createTestState();
+      // No city c1 in state → system returns unchanged state.
       const action: ReligionAction = {
         type: 'FOUND_RELIGION',
         playerId: 'p1',
-        cityId: 'c1',
+        cityId: 'c1_nonexistent',
         religionName: 'Zen',
         founderBelief: 'b1',
         followerBelief: 'b2',
@@ -183,7 +184,10 @@ describe('religionSystem', () => {
   });
 
   describe('FOUND_RELIGION — invalid (state unchanged)', () => {
-    it('returns state unchanged when player has no pantheon', () => {
+    // F-03 (W2-04): pantheon is NO LONGER a prerequisite. This test was
+    // renamed from "returns state unchanged when player has no pantheon" —
+    // that scenario now SUCCEEDS per Civ VII §18.
+    it('religion can be founded without a pantheon (F-03 — Civ VII §18)', () => {
       const city = createTestCity({ id: 'c1', owner: 'p1' });
       const state = createTestState({
         players: new Map([
@@ -200,8 +204,12 @@ describe('religionSystem', () => {
         followerBelief: 'jesuit_education',
       };
       const next = religionSystem(state, action);
-      expect(next).toBe(state);
-      expect(next.players.get('p1')!.faith).toBe(500);
+      // Must SUCCEED — pantheon is not required in VII.
+      expect(next).not.toBe(state);
+      expect(next.players.get('p1')!.faith).toBe(300); // 500 - 200 faith cost
+      expect(next.religion).toBeDefined();
+      expect(next.religion!.religions.length).toBe(1);
+      expect(next.religion!.religions[0].name).toBe('Zen');
     });
 
     it('returns state unchanged when founder belief is not in catalog', () => {

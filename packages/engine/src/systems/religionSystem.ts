@@ -199,10 +199,10 @@ function handleFoundReligion(
   if (!player) return state;
   if (!playerHasFaithField(player)) return state;
 
-  // Pantheon prerequisite: `pantheonId` is an optional PlayerState field
-  // written by ADOPT_PANTHEON. Some historical test states set neither,
-  // which is legitimate — FOUND_RELIGION simply fails in that case.
-  if (!player.pantheonId) return state;
+  // Civ VII §18: pantheon is NOT a prerequisite for founding a religion.
+  // Removed the `if (!player.pantheonId) return state` gate that was
+  // carried over from Civ VI's pantheon→religion pipeline. Players can now
+  // found a religion regardless of whether they previously adopted a pantheon.
 
   // Faith cost (rulebook §18, fallback 200 when unspecified).
   if (player.faith < FOUND_RELIGION_FAITH_COST) return state;
