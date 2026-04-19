@@ -170,7 +170,7 @@ describe('ResourceTooltip', () => {
       />,
     );
 
-    expect(getByTestId('resource-tooltip-type').textContent?.toLowerCase()).toContain('strategic');
+    expect(getByTestId('resource-tooltip-type').textContent?.toLowerCase()).toContain('empire');
   });
 
   it('renders yield contributions for iron (production +1)', () => {
@@ -268,7 +268,7 @@ describe('ResourceTooltip', () => {
       />,
     );
 
-    expect(getByTestId('resource-tooltip-type').textContent?.toLowerCase()).toContain('luxury');
+    expect(getByTestId('resource-tooltip-type').textContent?.toLowerCase()).toContain('city');
   });
 
   it('renders happiness bonus for gems (luxury with +2 happiness)', () => {
