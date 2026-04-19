@@ -313,4 +313,81 @@ describe('turnSystem — END_TURN blocksTurn guard', () => {
 
     expect(next.phase).toBe('start');
   });
+
+  describe('END_TURN crisis policy gate (W2-05 F-03)', () => {
+    it('blocks END_TURN when crisis policy slots are unfilled', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: true,
+        crisisPhase: 'stage1',
+        crisisPolicySlots: 2,
+        crisisPolicies: ['one'], // only 1 of 2 filled
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.lastValidation).not.toBeNull();
+      expect(next.lastValidation!.valid).toBe(false);
+      expect(next.lastValidation!.reason).toContain('crisis policy');
+    });
+
+    it('allows END_TURN when all crisis policy slots are filled', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: true,
+        crisisPhase: 'stage1',
+        crisisPolicySlots: 2,
+        crisisPolicies: ['one', 'two'], // exactly 2 of 2 filled
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('allows END_TURN when crisisPhase is resolved (no gate)', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: true,
+        crisisPhase: 'resolved',
+        crisisPolicySlots: 4,
+        crisisPolicies: [], // empty, but resolved
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('allows END_TURN when crisisPhase is none', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: true,
+        crisisPhase: 'none',
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('AI player bypasses crisis gate even if slots unfilled', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: false,
+        crisisPhase: 'stage2',
+        crisisPolicySlots: 3,
+        crisisPolicies: [], // unfilled but AI
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+  });
 });

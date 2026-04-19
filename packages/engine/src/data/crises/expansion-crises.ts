@@ -18,6 +18,8 @@ export const SUCCESSION_CRISIS: CrisisEventDef = {
     'Your monarch has passed without a clear heir, and rival claimants are gathering retainers. The court demands resolution before the realm fractures along noble lines.',
   triggerCondition: 'turn_reached',
   triggerValue: 40,
+  age: 'exploration',
+  crisisType: 'revolt',
   choices: [
     {
       id: 'rally_loyalists',
@@ -53,6 +55,8 @@ export const RELIGIOUS_REFORMATION: CrisisEventDef = {
     'Pamphlets and preachers denounce the old orthodoxy, calling on the faithful to break from entrenched religious authority. The empire trembles at the coming reordering.',
   triggerCondition: 'turn_reached',
   triggerValue: 50,
+  age: 'exploration',
+  crisisType: 'wars_of_religion',
   choices: [
     {
       id: 'embrace_reform',
@@ -88,6 +92,8 @@ export const ECONOMIC_DEPRESSION: CrisisEventDef = {
     'Bankruptcies ripple through the counting houses, granaries empty, and workshops lie idle. Your treasury is bleeding and the guilds demand intervention.',
   triggerCondition: 'turn_reached',
   triggerValue: 60,
+  age: 'modern',
+  crisisType: 'revolution',
   choices: [
     {
       id: 'public_works',
@@ -115,6 +121,8 @@ export const CIVIL_UNREST: CrisisEventDef = {
     'Unrest boils through the streets as citizens gather to protest taxes, scarcity, and perceived injustices. Garrisons stand ready; so do the agitators.',
   triggerCondition: 'turn_reached',
   triggerValue: 35,
+  age: 'antiquity',
+  crisisType: 'revolt',
   choices: [
     {
       id: 'concessions',
@@ -150,6 +158,8 @@ export const DIPLOMATIC_INCIDENT: CrisisEventDef = {
     'A foreign envoy has been insulted, perhaps deliberately, and the wounded pride of another court now hangs over your borders. Chanceries on both sides await your next word.',
   triggerCondition: 'turn_reached',
   triggerValue: 28,
+  age: 'exploration',
+  crisisType: 'invasion',
   choices: [
     {
       id: 'formal_apology',
@@ -177,6 +187,8 @@ export const TECHNOLOGICAL_REVOLUTION: CrisisEventDef = {
     'Inventors demonstrate astonishing engines that threaten to remake every workshop and field. Guilds fear ruin, scholars smell opportunity, and your ministers want a policy.',
   triggerCondition: 'turn_reached',
   triggerValue: 70,
+  age: 'modern',
+  crisisType: 'revolution',
   choices: [
     {
       id: 'subsidize_invention',

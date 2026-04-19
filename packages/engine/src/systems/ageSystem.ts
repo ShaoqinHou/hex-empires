@@ -1,5 +1,6 @@
 import type { GameState, GameAction, ActiveEffect, LegacyPaths, GameEvent } from '../types/GameState';
 import type { YieldType } from '../types/Yields';
+import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 
 /**
@@ -124,13 +125,43 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     })),
   ];
 
+  // Seed one crisis type from the new age's pool via seeded RNG
+  const { activeCrisisType, rng: rngAfterCrisisSeed } = seedAgeCrisis(state.config.crises, nextAge, rng);
+
   return {
     ...state,
     players: updatedPlayers,
-    age: { ...state.age, currentAge: nextAge },
-    rng,
+    age: { ...state.age, currentAge: nextAge, activeCrisisType },
+    rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
   };
+}
+
+/**
+ * Pick one crisis type from the pool of crises defined for `age` via seeded RNG.
+ * Returns the selected crisis type string (or null if the age has no typed crises).
+ */
+function seedAgeCrisis(
+  crises: ReadonlyArray<{ readonly id: string; readonly age?: string; readonly crisisType?: string }>,
+  age: string,
+  rng: import('../types/GameState').RngState,
+): { activeCrisisType: string | null; rng: import('../types/GameState').RngState } {
+  // Build a deduplicated pool of crisis types for this age
+  const typeSet = new Set<string>();
+  for (const def of crises) {
+    if (def.age === age && def.crisisType) {
+      typeSet.add(def.crisisType);
+    }
+  }
+  const pool = [...typeSet] as CrisisType[];
+
+  if (pool.length === 0) {
+    return { activeCrisisType: null, rng };
+  }
+
+  const { value, rng: nextRng } = nextRandom(rng);
+  const idx = Math.floor(value * pool.length);
+  return { activeCrisisType: pool[idx], rng: nextRng };
 }
 
 interface GoldenDarkResult {

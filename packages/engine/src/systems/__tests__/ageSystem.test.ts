@@ -400,4 +400,77 @@ describe('ageSystem', () => {
       expect(bonuses.filter(b => b.source.includes('golden-age') || b.source.includes('dark-age')).length).toBe(0);
     });
   });
+
+  describe('per-age crisis pool seeding (W2-05 F-04)', () => {
+    it('seeds activeCrisisType from the new age pool on TRANSITION_AGE', () => {
+      const player = createTestPlayer({ age: 'antiquity', ageProgress: 50 });
+      // Config has crises tagged for antiquity and exploration
+      const baseConfig = createTestState().config;
+      const explorationCrisis = {
+        id: 'test_crisis',
+        name: 'Test Crisis',
+        description: 'A test crisis.',
+        triggerCondition: 'turn_reached' as const,
+        triggerValue: 10,
+        age: 'exploration' as const,
+        crisisType: 'revolt' as const,
+        choices: [],
+      };
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+        config: { ...baseConfig, crises: [...baseConfig.crises, explorationCrisis] },
+      });
+      const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      // activeCrisisType should be set from exploration pool ('revolt' from explorationCrisis)
+      expect(next.age.activeCrisisType).toBeDefined();
+      expect(next.age.activeCrisisType).not.toBeNull();
+    });
+
+    it('same seed produces same crisis type selection (deterministic)', () => {
+      const player = createTestPlayer({ age: 'antiquity', ageProgress: 50 });
+      const baseConfig = createTestState().config;
+      const explorationCrisis1 = {
+        id: 'ec1', name: 'EC1', description: '', triggerCondition: 'turn_reached' as const,
+        triggerValue: 10, age: 'exploration' as const, crisisType: 'revolt' as const, choices: [],
+      };
+      const explorationCrisis2 = {
+        id: 'ec2', name: 'EC2', description: '', triggerCondition: 'turn_reached' as const,
+        triggerValue: 20, age: 'exploration' as const, crisisType: 'invasion' as const, choices: [],
+      };
+      const config = { ...baseConfig, crises: [...baseConfig.crises, explorationCrisis1, explorationCrisis2] };
+
+      // Run twice with the same RNG seed
+      const stateA = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+        rng: { seed: 42, counter: 0 },
+        config,
+      });
+      const stateB = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+        rng: { seed: 42, counter: 0 },
+        config,
+      });
+
+      const nextA = ageSystem(stateA, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const nextB = ageSystem(stateB, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+
+      expect(nextA.age.activeCrisisType).toBe(nextB.age.activeCrisisType);
+    });
+
+    it('activeCrisisType is null when no crises match the new age', () => {
+      const player = createTestPlayer({ age: 'antiquity', ageProgress: 50 });
+      const baseConfig = createTestState().config;
+      // No crises tagged for 'exploration'
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+        config: { ...baseConfig, crises: [] },
+      });
+      const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      expect(next.age.activeCrisisType).toBeNull();
+    });
+  });
 });

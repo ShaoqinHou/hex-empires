@@ -214,6 +214,23 @@ function handleEndTurn(state: GameState): GameState {
         },
       };
     }
+
+    // Block END_TURN if the player has an active crisis phase with unfilled policy slots.
+    const crisisPhase = currentPlayer?.crisisPhase;
+    if (crisisPhase && crisisPhase !== 'none' && crisisPhase !== 'resolved') {
+      const filled = (currentPlayer.crisisPolicies ?? []).length;
+      const required = currentPlayer.crisisPolicySlots ?? 0;
+      if (filled < required) {
+        return {
+          ...state,
+          lastValidation: {
+            valid: false,
+            reason: `Must fill all crisis policy slots before ending turn (${filled}/${required} filled).`,
+            category: 'general',
+          },
+        };
+      }
+    }
   }
 
   const playerIds = [...state.players.keys()];

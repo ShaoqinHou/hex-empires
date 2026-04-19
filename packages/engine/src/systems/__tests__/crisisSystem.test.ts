@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { crisisSystem } from '../crisisSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState, CrisisState } from '../../types/GameState';
+import type { CrisisEventDef } from '../../data/crises/types';
 import { coordToKey } from '../../hex/HexMath';
 
 function makeCity(id: string, owner: string, population: number = 5): CityState {
@@ -151,6 +152,167 @@ describe('crisisSystem', () => {
     it('returns state unchanged for unrelated actions', () => {
       const state = createTestState();
       const next = crisisSystem(state, { type: 'START_TURN' });
+      expect(next).toBe(state);
+    });
+  });
+
+  describe('age_progress trigger (W2-05 F-02)', () => {
+    function makeAgeProgressCrisis(threshold: number): CrisisEventDef {
+      return {
+        id: 'age_crisis',
+        name: 'Age Crisis',
+        description: 'A crisis driven by age progress.',
+        triggerCondition: 'age_progress',
+        triggerValue: threshold,
+        age: 'antiquity',
+        crisisType: 'revolt',
+        choices: [
+          {
+            id: 'act',
+            text: 'Take action',
+            effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: -10 }],
+          },
+        ],
+      };
+    }
+
+    it('fires at age_progress threshold 0.70 when ratio is exactly met', () => {
+      // ageThresholds.exploration = 100, ageProgress = 70 → ratio 0.70
+      const player = createTestPlayer({ id: 'p1', ageProgress: 70 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+        config: {
+          ...createTestState().config,
+          crises: [makeAgeProgressCrisis(0.70)],
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const crisis = next.crises.find(c => c.id === 'age_crisis');
+      expect(crisis).toBeDefined();
+      expect(crisis!.active).toBe(true);
+    });
+
+    it('does NOT fire when ratio is below threshold', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 69 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+        config: {
+          ...createTestState().config,
+          crises: [makeAgeProgressCrisis(0.70)],
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      expect(next.crises.find(c => c.id === 'age_crisis')).toBeUndefined();
+    });
+
+    it('does NOT fire for modern age (no next threshold)', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 999 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'modern', ageThresholds: { exploration: 100, modern: 200 } },
+        config: {
+          ...createTestState().config,
+          crises: [makeAgeProgressCrisis(0.70)],
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      expect(next.crises.find(c => c.id === 'age_crisis')).toBeUndefined();
+    });
+  });
+
+  describe('crisis stage advancement (W2-05 F-03)', () => {
+    it('advances from none to stage1 at 0.70', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 70, crisisPhase: 'none' });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage1');
+      expect(updatedPlayer.crisisPolicySlots).toBe(2);
+    });
+
+    it('advances from stage1 to stage2 at 0.80', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 80, crisisPhase: 'stage1', crisisPolicySlots: 2, crisisPolicies: ['p1', 'p2'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage2');
+      expect(updatedPlayer.crisisPolicySlots).toBe(3);
+    });
+
+    it('advances from stage2 to stage3 at 0.90', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 90, crisisPhase: 'stage2', crisisPolicySlots: 3, crisisPolicies: ['p1', 'p2', 'p3'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage3');
+      expect(updatedPlayer.crisisPolicySlots).toBe(4);
+    });
+
+    it('does NOT advance resolved phase', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 90, crisisPhase: 'resolved' });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.crisisPhase).toBe('resolved');
+    });
+
+    it('does NOT advance when ratio is below next threshold', () => {
+      const player = createTestPlayer({ id: 'p1', ageProgress: 79, crisisPhase: 'stage1', crisisPolicySlots: 2 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.crisisPhase).toBe('stage1');
+    });
+  });
+
+  describe('FORCE_CRISIS_POLICY (W2-05 F-03)', () => {
+    it('appends a policy when player is in active crisis phase', () => {
+      const player = createTestPlayer({ id: 'p1', crisisPhase: 'stage1', crisisPolicySlots: 2, crisisPolicies: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'isolation' });
+      expect(next.players.get('p1')!.crisisPolicies).toEqual(['isolation']);
+    });
+
+    it('does not add duplicate policy', () => {
+      const player = createTestPlayer({ id: 'p1', crisisPhase: 'stage1', crisisPolicySlots: 2, crisisPolicies: ['isolation'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'isolation' });
+      expect(next.players.get('p1')!.crisisPolicies).toEqual(['isolation']);
+    });
+
+    it('respects max slot count', () => {
+      const player = createTestPlayer({ id: 'p1', crisisPhase: 'stage1', crisisPolicySlots: 2, crisisPolicies: ['p1', 'p2'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'extra' });
+      expect(next.players.get('p1')!.crisisPolicies).toEqual(['p1', 'p2']);
+    });
+
+    it('no-ops when phase is none', () => {
+      const player = createTestPlayer({ id: 'p1', crisisPhase: 'none', crisisPolicies: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'test' });
+      expect(next).toBe(state);
+    });
+
+    it('no-ops when phase is resolved', () => {
+      const player = createTestPlayer({ id: 'p1', crisisPhase: 'resolved', crisisPolicies: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'test' });
       expect(next).toBe(state);
     });
   });

@@ -7,6 +7,8 @@ export const PLAGUE: CrisisEventDef = {
   description: 'A devastating plague sweeps across your empire, threatening the lives of your citizens. Your advisors urge immediate action.',
   triggerCondition: 'turn_reached',
   triggerValue: 20,
+  age: 'antiquity',
+  crisisType: 'plague',
   choices: [
     {
       id: 'quarantine',
@@ -27,6 +29,8 @@ export const BARBARIAN_INVASION: CrisisEventDef = {
   description: 'Barbarian hordes have been spotted near your borders. They demand tribute or they will attack!',
   triggerCondition: 'turn_reached',
   triggerValue: 10,
+  age: 'antiquity',
+  crisisType: 'invasion',
   choices: [
     {
       id: 'pay_tribute',
@@ -47,6 +51,8 @@ export const NATURAL_DISASTER: CrisisEventDef = {
   description: 'Earthquakes and floods threaten your empire! Your people look to you for guidance in this time of crisis.',
   triggerCondition: 'turn_reached',
   triggerValue: 25,
+  age: 'antiquity',
+  crisisType: 'revolt',
   choices: [
     {
       id: 'evacuate',
@@ -67,6 +73,8 @@ export const RELIGIOUS_SCHISM: CrisisEventDef = {
   description: 'Theological disputes have split your population. Competing factions demand that you take a side or risk cultural collapse.',
   triggerCondition: 'turn_reached',
   triggerValue: 30,
+  age: 'exploration',
+  crisisType: 'wars_of_religion',
   choices: [
     {
       id: 'tolerance',
@@ -93,6 +101,8 @@ export const TRADE_DISRUPTION: CrisisEventDef = {
   description: 'Bandit raids and hostile neighbors have cut off your trade routes. Your merchants are demanding action to restore commerce.',
   triggerCondition: 'turn_reached',
   triggerValue: 18,
+  age: 'exploration',
+  crisisType: 'revolt',
   choices: [
     {
       id: 'new_routes',
@@ -124,6 +134,8 @@ export const SOLAR_ECLIPSE: CrisisEventDef = {
     minCityPopulation: 3,
     minResearchedTechs: 1,
   },
+  age: 'antiquity',
+  crisisType: 'revolt',
   choices: [
     {
       id: 'divine_favor',

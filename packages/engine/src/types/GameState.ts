@@ -296,6 +296,50 @@ export interface PlayerState {
   readonly policySwapWindowOpen?: boolean;
   /** True if the player's government is locked for the current age (one-switch rule) */
   readonly governmentLockedForAge?: boolean;
+
+  // ── Crisis Phase (W2-05) ──
+  /**
+   * Current crisis resolution phase for this player.
+   * - 'none' / undefined: no active crisis phase
+   * - 'stage1' → requires crisisPolicySlots = 2 filled policies
+   * - 'stage2' → requires crisisPolicySlots = 3 filled policies
+   * - 'stage3' → requires crisisPolicySlots = 4 filled policies
+   * - 'resolved': crisis fully resolved, gate lifted
+   */
+  readonly crisisPhase?: 'none' | 'stage1' | 'stage2' | 'stage3' | 'resolved';
+  /**
+   * Policy ids the player has committed to this crisis.
+   * Max length === crisisPolicySlots.
+   */
+  readonly crisisPolicies?: ReadonlyArray<string>;
+  /**
+   * Number of crisis policy slots required for the current stage (2/3/4).
+   * Gate: END_TURN is blocked until crisisPolicies.length >= crisisPolicySlots.
+   */
+  readonly crisisPolicySlots?: number;
+
+  // ── Growth Choices (W2-01) ──
+  /**
+   * Pending growth-choice prompts for this player. Each entry represents a
+   * population-growth event in one of the player's cities that is waiting for
+   * the player to either PLACE_IMPROVEMENT on a city tile or
+   * ASSIGN_SPECIALIST_FROM_GROWTH. Civ VII: growth → player picks tile → game
+   * derives improvement type from terrain + resource (not player-chosen).
+   *
+   * Optional so existing PlayerState construction (engine, web, tests, save
+   * files) keeps compiling unchanged.
+   */
+  readonly pendingGrowthChoices?: ReadonlyArray<PendingGrowthChoice>;
+}
+
+/**
+ * Represents a pending growth-choice prompt produced when a city's population
+ * grows. The player must either place an improvement (PLACE_IMPROVEMENT) or
+ * assign a specialist (ASSIGN_SPECIALIST_FROM_GROWTH) to resolve it.
+ */
+export interface PendingGrowthChoice {
+  readonly cityId: string;
+  readonly triggeredOnTurn: number;
 }
 
 // ── Diplomacy ──
@@ -434,6 +478,11 @@ export interface CrisisChoice {
 export interface AgeState {
   readonly currentAge: Age;
   readonly ageThresholds: { readonly exploration: number; readonly modern: number };
+  /**
+   * The crisis type selected for the current age via seeded RNG at age init.
+   * Null until the first age init or TRANSITION_AGE has run.
+   */
+  readonly activeCrisisType?: string | null;
 }
 
 // ── RNG ──
@@ -597,7 +646,27 @@ export type GameAction =
   /** Marks a specific log event as dismissed so blocksTurn events no longer block END_TURN. */
   | { readonly type: 'DISMISS_EVENT'; readonly eventMessage: string; readonly eventTurn: number }
   // ── Trade route lifecycle ──
-  | { readonly type: 'PLUNDER_TRADE_ROUTE'; readonly caravanUnitId: UnitId; readonly plundererId: UnitId };
+  | { readonly type: 'PLUNDER_TRADE_ROUTE'; readonly caravanUnitId: UnitId; readonly plundererId: UnitId }
+  // ── Growth choice resolution (W2-01) ──
+  /**
+   * Player picks a tile in the named city; game derives improvement type from
+   * terrain + resource combination (Civ VII: player picks tile, game picks type).
+   * Clears the pendingGrowthChoice for the city.
+   */
+  | { readonly type: 'PLACE_IMPROVEMENT'; readonly cityId: string; readonly tile: HexCoord }
+  /**
+   * Player resolves a growth event by assigning a specialist instead of placing
+   * an improvement. Increments city.specialists and clears the pending choice.
+   * Full per-tile spatial model deferred to W3-02; for now city-level.
+   */
+  | { readonly type: 'ASSIGN_SPECIALIST_FROM_GROWTH'; readonly cityId: string }
+  // ── Crisis phase (W2-05) ──
+  /**
+   * Append a policy to the current player's crisis policy slot list.
+   * Blocked if: player has no active crisisPhase, if policyId already present,
+   * or if crisisPolicies.length >= crisisPolicySlots.
+   */
+  | { readonly type: 'FORCE_CRISIS_POLICY'; readonly policyId: string };
 
 // ── Events ──
 

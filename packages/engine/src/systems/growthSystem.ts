@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice } from '../types/GameState';
 import { calculateCityYields } from '../state/YieldCalculator';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
@@ -57,6 +57,8 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
 
   const updatedCities = new Map(state.cities);
+  // Track new pending growth choices accumulated this turn, keyed by playerId.
+  const newGrowthChoices = new Map<string, PendingGrowthChoice[]>();
   let changed = false;
 
   for (const [cityId, city] of state.cities) {
@@ -96,6 +98,16 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
           food: clampedFood - growthThreshold,
           territory: expandedTerritory,
         });
+        // Emit a pending growth choice so the player can place an improvement
+        // or assign a specialist (Civ VII W2-01 mechanic).
+        const playerId = city.owner;
+        if (!newGrowthChoices.has(playerId)) {
+          newGrowthChoices.set(playerId, []);
+        }
+        newGrowthChoices.get(playerId)!.push({
+          cityId,
+          triggeredOnTurn: state.turn,
+        });
         changed = true;
       } else if (!canGrow) {
         // At population cap — stop accumulating food (reset to threshold to avoid runaway)
@@ -112,7 +124,25 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   }
 
   if (!changed) return state;
-  return { ...state, cities: updatedCities };
+
+  // Apply new pending growth choices to the relevant players.
+  let updatedPlayers = state.players;
+  if (newGrowthChoices.size > 0) {
+    const playersMap = new Map(state.players);
+    for (const [playerId, newChoices] of newGrowthChoices) {
+      const p = playersMap.get(playerId);
+      if (!p) continue;
+      const merged: ReadonlyArray<PendingGrowthChoice> = [
+        ...(p.pendingGrowthChoices ?? []),
+        ...newChoices,
+      ];
+      const updatedPlayer: PlayerState = { ...p, pendingGrowthChoices: merged };
+      playersMap.set(playerId, updatedPlayer);
+    }
+    updatedPlayers = playersMap;
+  }
+
+  return { ...state, cities: updatedCities, players: updatedPlayers };
 }
 
 /**
