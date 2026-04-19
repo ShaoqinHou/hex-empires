@@ -2,6 +2,7 @@
 
 **Generated:** 2026-04-19 (Phase 4)
 **Scope:** One-page planning artifact — what's the gap between hex-empires (as implemented) and Civ VII (as documented in `.claude/gdd/`)?
+**Fidelity commitment:** FULL CLONE of Civ VII — see [`commitment.md`](commitment.md). Every divergence is a bug. No "LOW priority" rows under clone semantics; LOW means "deferred by complexity/cost, not by importance."
 **Method:** Cross-reference `.claude/gdd/systems/*.md` against `packages/engine/src/systems/*.ts` and `packages/engine/src/data/**`. Classification is parent-written based on file survey; deep code review deferred to per-system implementation passes.
 
 ## Legend
