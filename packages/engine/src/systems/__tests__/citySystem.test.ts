@@ -333,7 +333,9 @@ describe('citySystem', () => {
   });
 
   describe('UPGRADE_SETTLEMENT', () => {
-    it('upgrades a town to a city for 100 gold', () => {
+    it('upgrades a town to a city for dynamic cost (200 base, no existing cities, pop 1)', () => {
+      // Dynamic cost = max(200, min(1000, 200 + cityCount*100 - pop*20))
+      // With 0 existing cities and pop=1: max(200, 200 + 0 - 20) = max(200, 180) = 200
       const town: CityState = {
         id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
@@ -343,11 +345,12 @@ describe('citySystem', () => {
       };
       const state = createTestState({
         cities: new Map([['c1', town]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 200 })]]),
       });
       const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
       expect(next.cities.get('c1')!.settlementType).toBe('city');
       expect(next.cities.get('c1')!.happiness).toBe(10);
-      expect(next.players.get('p1')!.gold).toBe(0); // 100 - 100
+      expect(next.players.get('p1')!.gold).toBe(0); // 200 - 200
     });
 
     it('rejects upgrade if not enough gold', () => {
@@ -386,5 +389,103 @@ describe('citySystem', () => {
     const state = createTestState();
     const next = citySystem(state, { type: 'END_TURN' });
     expect(next).toBe(state);
+  });
+});
+
+describe('W2-02 settlement VII-parity', () => {
+  it('F-03: conversion cost scales with cityCount (3 cities = cost 500)', () => {
+    // 3 existing cities + 1 town being upgraded: cost = 200 + 3*100 - 1*20 = 480, clamped [200,1000] = 480
+    const town: CityState = {
+      id: 't1', name: 'Town', owner: 'p1', position: { q: 20, r: 0 },
+      population: 1, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'town', happiness: 5,
+      isCapital: false, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+    };
+    const city1: CityState = {
+      id: 'c1', name: 'City1', owner: 'p1', position: { q: 0, r: 0 },
+      population: 3, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'city', happiness: 10,
+      isCapital: true, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+    };
+    const city2: CityState = { ...city1, id: 'c2', name: 'City2', position: { q: 6, r: 0 }, isCapital: false };
+    const city3: CityState = { ...city1, id: 'c3', name: 'City3', position: { q: 12, r: 0 }, isCapital: false };
+    // cost = 200 + 3*100 - 1*20 = 480
+    const state = createTestState({
+      cities: new Map([['t1', town], ['c1', city1], ['c2', city2], ['c3', city3]]),
+      players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 480 })]]),
+    });
+    const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 't1' });
+    expect(next.cities.get('t1')!.settlementType).toBe('city');
+    expect(next.players.get('p1')!.gold).toBe(0); // 480 - 480
+  });
+
+  it('F-03: conversion cost scales inversely with town pop (high pop = lower cost, floor 200)', () => {
+    // pop=7, 0 cities: cost = max(200, 200 + 0 - 7*20) = max(200, 60) = 200
+    const town: CityState = {
+      id: 't1', name: 'BigTown', owner: 'p1', position: { q: 0, r: 0 },
+      population: 7, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'town', happiness: 5,
+      isCapital: false, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+    };
+    const state = createTestState({
+      cities: new Map([['t1', town]]),
+      players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 200 })]]),
+    });
+    const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 't1' });
+    expect(next.cities.get('t1')!.settlementType).toBe('city');
+    expect(next.players.get('p1')!.gold).toBe(0); // cost floored at 200
+  });
+
+  it('F-03: conversion cost capped at 1000 (many cities)', () => {
+    // 9 cities: cost = 200 + 9*100 - 1*20 = 1080, clamped to 1000
+    const makeCityEntry = (id: string, pos: { q: number; r: number }): CityState => ({
+      id, name: id, owner: 'p1', position: pos,
+      population: 3, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'city', happiness: 10,
+      isCapital: id === 'c1', defenseHP: 100, specialization: null, specialists: 0, districts: [],
+    });
+    const town: CityState = {
+      id: 't1', name: 'Town', owner: 'p1', position: { q: 60, r: 0 },
+      population: 1, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'town', happiness: 5,
+      isCapital: false, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+    };
+    const cities = new Map<string, CityState>();
+    for (let i = 1; i <= 9; i++) {
+      const c = makeCityEntry(`c${i}`, { q: (i - 1) * 6, r: 0 });
+      cities.set(`c${i}`, c);
+    }
+    cities.set('t1', town);
+    const state = createTestState({
+      cities,
+      players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 1000 })]]),
+    });
+    const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 't1' });
+    expect(next.cities.get('t1')!.settlementType).toBe('city');
+    expect(next.players.get('p1')!.gold).toBe(0); // 1000 - 1000
+  });
+
+  it('F-01: explicit foundingType=founder creates capital (city)', () => {
+    const settler = createTestUnit({ id: 'u1', typeId: 'settler', position: { q: 0, r: 0 } });
+    const state = createTestState({
+      units: new Map([['u1', settler]]),
+    });
+    const next = citySystem(state, { type: 'FOUND_CITY', unitId: 'u1', name: 'Rome', foundingType: 'founder' });
+    expect(next.cities.size).toBe(1);
+    const city = [...next.cities.values()][0];
+    expect(city.settlementType).toBe('city');
+    expect(city.isCapital).toBe(true);
+  });
+
+  it('F-01: explicit foundingType=settler creates town even as first city', () => {
+    const settler = createTestUnit({ id: 'u1', typeId: 'settler', position: { q: 0, r: 0 } });
+    const state = createTestState({
+      units: new Map([['u1', settler]]),
+    });
+    const next = citySystem(state, { type: 'FOUND_CITY', unitId: 'u1', name: 'Outpost', foundingType: 'settler' });
+    expect(next.cities.size).toBe(1);
+    const city = [...next.cities.values()][0];
+    expect(city.settlementType).toBe('town');
+    expect(city.isCapital).toBe(false);
   });
 });

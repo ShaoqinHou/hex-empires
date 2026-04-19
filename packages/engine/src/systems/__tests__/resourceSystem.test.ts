@@ -450,19 +450,19 @@ describe('B5: settlement cap penalty applied per-settlement (not flat total)', (
     expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(4);
   });
 
-  it('exploration age increases cap to 5', () => {
+  it('exploration age increases cap to 8 (VII parity: +4)', () => {
     const player = createTestPlayer({ age: 'exploration' });
     const state = createTestState({ players: new Map([['p1', player]]) });
-    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(5);
+    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(8);
   });
 
-  it('modern age increases cap to 6', () => {
+  it('modern age increases cap to 12 (VII parity: +8)', () => {
     const player = createTestPlayer({ age: 'modern' });
     const state = createTestState({ players: new Map([['p1', player]]) });
-    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(6);
+    expect(calculateEffectiveSettlementCap(state, 'p1')).toBe(12);
   });
 
-  it('exploration player has no penalty at 5 settlements (cap is 5)', () => {
+  it('exploration player has no penalty at 5 settlements (cap is 8, well within limit)', () => {
     const player = createTestPlayer({ age: 'exploration' });
     const cities = new Map([
       ['c1', makeCity('c1', 'p1')],

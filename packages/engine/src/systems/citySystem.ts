@@ -21,7 +21,7 @@ function playerHasCity(state: GameState, playerId: string): boolean {
 export function citySystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'FOUND_CITY':
-      return handleFoundCity(state, action.unitId, action.name);
+      return handleFoundCity(state, action.unitId, action.name, action.foundingType);
     case 'PURCHASE_TILE':
       return handlePurchaseTile(state, action.cityId, action.tile);
     case 'UPGRADE_SETTLEMENT':
@@ -31,7 +31,12 @@ export function citySystem(state: GameState, action: GameAction): GameState {
   }
 }
 
-function handleFoundCity(state: GameState, unitId: string, cityName: string): GameState {
+function handleFoundCity(
+  state: GameState,
+  unitId: string,
+  cityName: string,
+  foundingType?: 'founder' | 'settler',
+): GameState {
   const unit = state.units.get(unitId);
   if (!unit) return state;
   if (unit.owner !== state.currentPlayerId) return state;
@@ -75,7 +80,10 @@ function handleFoundCity(state: GameState, unitId: string, cityName: string): Ga
   }
 
   const cityId = nextCityId(state);
-  const isFirstCity = !playerHasCity(state, unit.owner);
+  // F-01: use explicit foundingType when provided; fall back to isFirstCity detection
+  const isFirstCity = foundingType !== undefined
+    ? foundingType === 'founder'
+    : !playerHasCity(state, unit.owner);
   const settlementType: SettlementType = isFirstCity ? 'city' : 'town';
 
   // Create city_center district automatically
@@ -157,7 +165,12 @@ function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
   if (city.owner !== state.currentPlayerId) return state;
   if (city.settlementType !== 'town') return state;
 
-  const upgradeCost = 100;
+  // Dynamic conversion cost: 200 + cityCount*100 - townPop*20, clamped [200, 1000]
+  const playerId = state.currentPlayerId;
+  const cityCount = [...state.cities.values()].filter(
+    c => c.owner === playerId && c.settlementType === 'city'
+  ).length;
+  const upgradeCost = Math.max(200, Math.min(1000, 200 + cityCount * 100 - city.population * 20));
   const player = state.players.get(state.currentPlayerId);
   if (!player || player.gold < upgradeCost) return state;
 

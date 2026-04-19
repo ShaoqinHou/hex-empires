@@ -8,9 +8,9 @@ const SETTLEMENT_CAP_PENALTY = 5;
 
 /**
  * Calculate the effective settlement cap for a player.
- * Base cap is 4. Ages grant additional capacity:
- *   - Exploration age: +1 (total 5)
- *   - Modern age: +2 (total 6)
+ * Base cap is 4 (Antiquity). Ages grant additional capacity per VII parity:
+ *   - Exploration age: +4 (total 8)
+ *   - Modern age: +8 (total 12)
  * Additional cap increases can come from tech effects in the future.
  */
 export function calculateEffectiveSettlementCap(state: GameState, playerId: string): number {
@@ -19,11 +19,11 @@ export function calculateEffectiveSettlementCap(state: GameState, playerId: stri
 
   let cap = FREE_SETTLEMENT_CAP;
 
-  // Age-based bonuses: each age transition expands the cap
+  // Age-based bonuses: each age transition substantially expands the cap (VII parity)
   if (player.age === 'exploration') {
-    cap += 1;
+    cap += 4; // Antiquity 4 → Exploration 8
   } else if (player.age === 'modern') {
-    cap += 2;
+    cap += 8; // Antiquity 4 → Modern 12
   }
 
   return cap;

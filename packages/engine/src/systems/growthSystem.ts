@@ -86,8 +86,8 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
       changed = true;
     } else {
       const clampedFood = Math.max(0, newFood);
-      // Towns soft-cap at 5 pop; cities grow as long as happiness >= 0
-      const townCap = city.settlementType === 'town' ? 5 : Infinity;
+      // Towns soft-cap at 7 pop (Civ VII parity — unblocks full town specialization focus); cities grow as long as happiness >= 0
+      const townCap = city.settlementType === 'town' ? 7 : Infinity;
       const canGrow = city.happiness >= 0 && city.population < townCap;
       if (clampedFood >= growthThreshold && canGrow) {
         // Population grows + territory expands
