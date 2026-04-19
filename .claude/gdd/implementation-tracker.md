@@ -83,20 +83,18 @@
 **Started:** 2026-04-19
 **Current wave:** W1 (Wave 1 — foundation types + quick wins)
 
-### Wave 1 progress (10 packs)
+### Wave 1 progress (10 packs consolidated into 4 implementer agents)
 
 | Pack | Status | Agent | Commit | Notes |
 |---|---|---|---|---|
-| W1-01 ageless flag | pending | | | |
-| W1-02 PlayerState fields | pending | | | |
-| W1-03 GameState fields | pending | | | |
-| W1-04 CityState fields | pending | | | |
-| W1-05 HexTile fields | pending | | | |
-| W1-06 age transition wipes | pending | | | |
-| W1-07 data cleanup | pending | | | |
-| W1-08 constants | pending | | | |
-| W1-09 farm/road fixes | pending | | | |
-| W1-10 import-boundary | pending | | | |
+| W1-A (01+02+03+04+05 state fields + ageless flags) | ✅ done | a7fa5043 | 4da7fd8 | state-layer type additions landed |
+| W1-B (06 age transition wipes) | ✅ done | a9468695 | e01afa4 | 1556 tests PASS; A7 rewritten |
+| W1-C (07+09 data cleanup — BUILDER/CHIEFDOM retire, yields fix) | ✅ done | a48f4250 | 11bded3 | 1551 tests PASS; 2 late-caught chiefdom refs; YieldCalculator has parallel yield table gotcha |
+| W1-D (08+10 constants + import-boundary) | ✅ done | a1625155 | 590e5e8 | 1551/1556 tests (5 pre-existing fails from other agents' incomplete refactors) |
+
+Wave-1 progress: 2/4 done (W1-B, W1-D). W1-A (state fields) + W1-C (data cleanup) still running — both are longer-scope packs touching many files.
+
+Memory note: agent flagged `git stash` reverted its edits once — future workpacks should avoid stash during baseline checks. Vitest also discovers tests from `.claude/worktrees/agent-*/`, inflating run counts.
 
 ---
 
