@@ -1,0 +1,213 @@
+import type { GameState, GameAction, PlayerState, EffectDef } from '../types/GameState';
+import type { NarrativeEventDef, NarrativeRequirements } from '../types/NarrativeEvent';
+
+/**
+ * NarrativeEventSystem handles Goody-Hut-replacement story moments.
+ *
+ * On END_TURN:
+ *   - Evaluates all END_TURN-triggered events against the current player.
+ *   - Fires at most ONE new event per turn (first match that has not yet fired).
+ *   - Enqueues the event id in pendingNarrativeEvents and marks it fired in
+ *     firedNarrativeEvents (dedup guard).
+ *
+ * On RESOLVE_NARRATIVE_EVENT:
+ *   - Looks up the event def by id.
+ *   - Applies all EffectDef entries for the chosen choice.
+ *   - Writes tagOutput strings to PlayerState.narrativeTags.
+ *   - Removes the event from the pending queue.
+ *
+ * Discovery-tile events are enqueued by movementSystem (F-06); this system
+ * handles their resolution via RESOLVE_NARRATIVE_EVENT.
+ */
+export function narrativeEventSystem(state: GameState, action: GameAction): GameState {
+  switch (action.type) {
+    case 'END_TURN':
+      return evaluateAndEnqueue(state);
+    case 'RESOLVE_NARRATIVE_EVENT':
+      return resolveNarrativeEvent(state, action.eventId, action.choiceIndex);
+    default:
+      return state;
+  }
+}
+
+// ── Evaluation ──
+
+function evaluateAndEnqueue(state: GameState): GameState {
+  if (!state.config.narrativeEvents) return state;
+  const allEvents = [...state.config.narrativeEvents.values()];
+  const fired = state.firedNarrativeEvents ?? [];
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  const candidates = allEvents.filter(e => {
+    if (fired.includes(e.id)) return false;
+    if ((e.requirements.triggerType ?? 'END_TURN') !== 'END_TURN') return false;
+    return matchesRequirements(e.requirements, player, state);
+  });
+
+  if (candidates.length === 0) return state;
+
+  // Fire ONE per turn (first match wins; rest remain eligible next turn)
+  const picked = candidates[0];
+
+  return {
+    ...state,
+    pendingNarrativeEvents: [...(state.pendingNarrativeEvents ?? []), picked.id],
+    firedNarrativeEvents: [...fired, picked.id],
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `Narrative event: ${picked.title}`,
+      type: 'crisis' as const, // reuse 'crisis' log type as the closest semantic fit
+      severity: 'warning' as const,
+      category: 'crisis' as const,
+      panelTarget: 'narrativeEvent' as const,
+    }],
+  };
+}
+
+// ── Requirements check ──
+
+function matchesRequirements(
+  req: NarrativeRequirements,
+  player: PlayerState,
+  state: GameState,
+): boolean {
+  const tags = player.narrativeTags ?? [];
+
+  if (req.requiresTags) {
+    for (const t of req.requiresTags) {
+      if (!tags.includes(t)) return false;
+    }
+  }
+
+  if (req.excludesTags) {
+    for (const t of req.excludesTags) {
+      if (tags.includes(t)) return false;
+    }
+  }
+
+  if (req.leaderId && player.leaderId !== req.leaderId) return false;
+  if (req.civId && player.civilizationId !== req.civId) return false;
+
+  // Age gate is on the def, not requirements — handled at call site (evaluateAndEnqueue)
+  // This function only validates the requirements struct.
+  return true;
+}
+
+// ── Resolution ──
+
+function resolveNarrativeEvent(state: GameState, eventId: string, choiceIndex: number): GameState {
+  const def = state.config.narrativeEvents?.get(eventId);
+  if (!def) return state;
+
+  const choice = def.choices[choiceIndex];
+  if (!choice) return state;
+
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // Apply each effect in the chosen choice
+  let newState = state;
+  for (const effect of choice.effects) {
+    newState = applyNarrativeEffect(newState, effect, state.currentPlayerId);
+  }
+
+  // Write tagOutput to PlayerState.narrativeTags
+  if (choice.tagOutput && choice.tagOutput.length > 0) {
+    const currentPlayer = newState.players.get(state.currentPlayerId);
+    if (currentPlayer) {
+      const existing = currentPlayer.narrativeTags ?? [];
+      const merged = [...existing, ...choice.tagOutput.filter(t => !existing.includes(t))];
+      const updatedPlayers = new Map(newState.players);
+      updatedPlayers.set(state.currentPlayerId, { ...currentPlayer, narrativeTags: merged });
+      newState = { ...newState, players: updatedPlayers };
+    }
+  }
+
+  // Remove from pending queue
+  const queue = (newState.pendingNarrativeEvents ?? []).filter(id => id !== eventId);
+
+  return {
+    ...newState,
+    pendingNarrativeEvents: queue,
+    log: [...newState.log, {
+      turn: newState.turn,
+      playerId: state.currentPlayerId,
+      message: `Resolved "${def.title}" — ${choice.label}`,
+      type: 'crisis' as const,
+      category: 'crisis' as const,
+    }],
+  };
+}
+
+// ── Effect application ──
+
+/**
+ * Apply a single EffectDef from a narrative choice.
+ * MODIFY_YIELD with empire target → adds directly to player resource pools.
+ * Other effect types are no-op stubs (full hookup is future work).
+ */
+function applyNarrativeEffect(state: GameState, effect: EffectDef, playerId: string): GameState {
+  const player = state.players.get(playerId);
+  if (!player) return state;
+
+  if (effect.type === 'MODIFY_YIELD' && effect.target === 'empire') {
+    const yieldKey = effect.yield as keyof PlayerState;
+    const currentValue = player[yieldKey];
+    if (typeof currentValue !== 'number') return state;
+    const newValue = Math.max(0, currentValue + effect.value);
+    const updatedPlayers = new Map(state.players);
+    updatedPlayers.set(playerId, { ...player, [yieldKey]: newValue });
+    return { ...state, players: updatedPlayers };
+  }
+
+  // GRANT_UNIT, FREE_TECH, etc. are no-op stubs — wired via full effect system in later phases
+  return state;
+}
+
+// ── Age gate helper (used by movementSystem for discovery events) ──
+
+/**
+ * Check whether a narrative event's age gate allows it to fire in the current age.
+ * Returns true if there is no age gate OR the current age matches.
+ */
+export function isAgeGateOpen(def: NarrativeEventDef, state: GameState): boolean {
+  if (!def.ageGate) return true;
+  return state.age.currentAge === def.ageGate;
+}
+
+/**
+ * Enqueue a discovery-triggered narrative event.
+ * Called by movementSystem when a unit steps on a discoveryId tile.
+ * Respects the dedup guard; safe to call even if the event was already fired.
+ */
+export function enqueueDiscoveryEvent(state: GameState, narrativeEventId: string): GameState {
+  const fired = state.firedNarrativeEvents ?? [];
+  if (fired.includes(narrativeEventId)) return state;
+
+  const def = state.config.narrativeEvents?.get(narrativeEventId);
+  if (!def) return state;
+
+  if (!isAgeGateOpen(def, state)) return state;
+
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  if (!matchesRequirements(def.requirements, player, state)) return state;
+
+  return {
+    ...state,
+    pendingNarrativeEvents: [...(state.pendingNarrativeEvents ?? []), narrativeEventId],
+    firedNarrativeEvents: [...fired, narrativeEventId],
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `Discovery: ${def.title}`,
+      type: 'crisis' as const,
+      severity: 'warning' as const,
+      category: 'crisis' as const,
+      panelTarget: 'narrativeEvent' as const,
+    }],
+  };
+}

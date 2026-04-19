@@ -52,3 +52,4 @@ export type {
   ValidationResult,
 } from './GameState';
 export type { NotificationCategory, NotificationPanelTargetHint } from './Notification';
+export type { NarrativeEventDef, NarrativeChoice, NarrativeRequirements, DiscoveryDef } from './NarrativeEvent';

@@ -45,4 +45,5 @@ export type NotificationPanelTargetHint =
   | 'diplomacy'
   | 'crisis'
   | 'age'
-  | 'log';
+  | 'log'
+  | 'narrativeEvent';

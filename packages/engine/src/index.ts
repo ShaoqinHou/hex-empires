@@ -325,3 +325,9 @@ export type { AttributeType, AttributeNodeDef } from './types/Attribute';
 export { ALL_ATTRIBUTE_NODES } from './data/attribute-trees';
 export { ECONOMIC_NODES, MILITARISTIC_NODES, DIPLOMATIC_NODES, EXPANSIONIST_NODES, CULTURAL_NODES, SCIENTIFIC_NODES } from './data/attribute-trees';
 export { attributeSystem } from './systems/attributeSystem';
+
+// Narrative Events + Discoveries (W3-05)
+export type { NarrativeEventDef, NarrativeChoice, NarrativeRequirements, DiscoveryDef } from './types/NarrativeEvent';
+export { ALL_NARRATIVE_EVENTS } from './data/narrative-events';
+export { ALL_DISCOVERIES } from './data/discoveries';
+export { narrativeEventSystem, enqueueDiscoveryEvent, isAgeGateOpen } from './systems/narrativeEventSystem';

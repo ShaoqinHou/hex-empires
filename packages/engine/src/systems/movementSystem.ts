@@ -2,6 +2,7 @@ import type { GameState, GameAction, UnitState } from '../types/GameState';
 import { coordToKey, distance, neighbors } from '../hex/HexMath';
 import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
+import { enqueueDiscoveryEvent } from './narrativeEventSystem';
 
 /**
  * MovementSystem handles unit movement actions.
@@ -188,7 +189,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     fortified: false, // moving breaks fortification
   });
 
-  return {
+  let nextState: GameState = {
     ...state,
     units: updatedUnits,
     log: [...state.log, {
@@ -199,6 +200,20 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     }],
     lastValidation: null, // Clear validation after successful action
   };
+
+  // F-06: Discovery tile trigger — if the destination tile has a discoveryId,
+  // look up the DiscoveryDef and enqueue its narrativeEventId.
+  // The tile's discoveryId is NOT cleared here (read-only map); the UI marks
+  // it explored via a separate mechanism. Discovery events dedup via firedNarrativeEvents.
+  const destTile = state.map.tiles.get(coordToKey(currentPos));
+  if (destTile?.discoveryId && nextState.config.discoveries) {
+    const discoveryDef = nextState.config.discoveries.get(destTile.discoveryId);
+    if (discoveryDef) {
+      nextState = enqueueDiscoveryEvent(nextState, discoveryDef.narrativeEventId);
+    }
+  }
+
+  return nextState;
 }
 
 /**
