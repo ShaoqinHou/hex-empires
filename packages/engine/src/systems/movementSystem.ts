@@ -2,7 +2,7 @@ import type { GameState, GameAction, UnitState } from '../types/GameState';
 import { coordToKey, distance, neighbors } from '../hex/HexMath';
 import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
-import { enqueueDiscoveryEvent } from './narrativeEventSystem';
+import { enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
 
 /**
  * MovementSystem handles unit movement actions.

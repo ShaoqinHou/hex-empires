@@ -1,5 +1,6 @@
 import type { GameState, GameAction, PlayerState, EffectDef } from '../types/GameState';
-import type { NarrativeEventDef, NarrativeRequirements } from '../types/NarrativeEvent';
+import type { NarrativeRequirements } from '../types/NarrativeEvent';
+import { isAgeGateOpen, enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
 
 /**
  * NarrativeEventSystem handles Goody-Hut-replacement story moments.
@@ -42,6 +43,7 @@ function evaluateAndEnqueue(state: GameState): GameState {
   const candidates = allEvents.filter(e => {
     if (fired.includes(e.id)) return false;
     if ((e.requirements.triggerType ?? 'END_TURN') !== 'END_TURN') return false;
+    if (!isAgeGateOpen(e, state)) return false;
     return matchesRequirements(e.requirements, player, state);
   });
 
@@ -166,48 +168,5 @@ function applyNarrativeEffect(state: GameState, effect: EffectDef, playerId: str
   return state;
 }
 
-// ── Age gate helper (used by movementSystem for discovery events) ──
-
-/**
- * Check whether a narrative event's age gate allows it to fire in the current age.
- * Returns true if there is no age gate OR the current age matches.
- */
-export function isAgeGateOpen(def: NarrativeEventDef, state: GameState): boolean {
-  if (!def.ageGate) return true;
-  return state.age.currentAge === def.ageGate;
-}
-
-/**
- * Enqueue a discovery-triggered narrative event.
- * Called by movementSystem when a unit steps on a discoveryId tile.
- * Respects the dedup guard; safe to call even if the event was already fired.
- */
-export function enqueueDiscoveryEvent(state: GameState, narrativeEventId: string): GameState {
-  const fired = state.firedNarrativeEvents ?? [];
-  if (fired.includes(narrativeEventId)) return state;
-
-  const def = state.config.narrativeEvents?.get(narrativeEventId);
-  if (!def) return state;
-
-  if (!isAgeGateOpen(def, state)) return state;
-
-  const player = state.players.get(state.currentPlayerId);
-  if (!player) return state;
-
-  if (!matchesRequirements(def.requirements, player, state)) return state;
-
-  return {
-    ...state,
-    pendingNarrativeEvents: [...(state.pendingNarrativeEvents ?? []), narrativeEventId],
-    firedNarrativeEvents: [...fired, narrativeEventId],
-    log: [...state.log, {
-      turn: state.turn,
-      playerId: state.currentPlayerId,
-      message: `Discovery: ${def.title}`,
-      type: 'crisis' as const,
-      severity: 'warning' as const,
-      category: 'crisis' as const,
-      panelTarget: 'narrativeEvent' as const,
-    }],
-  };
-}
+// ── Age gate helper + discovery enqueue (re-exported from shared utility) ──
+export { isAgeGateOpen, enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
