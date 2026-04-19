@@ -71,10 +71,12 @@ function recalcFullVisibility(state: GameState, playerId: string): GameState {
     const sightRange = getSightRange(state, unit.typeId);
     for (const hex of range(unit.position, sightRange)) {
       const key = coordToKey(hex);
-      if (state.map.tiles.has(key)) {
-        visible.add(key);
-        explored.add(key);
-      }
+      const tile = state.map.tiles.get(key);
+      if (!tile) continue;
+      // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
+      if (tile.isDistantLands && !player.distantLandsReachable) continue;
+      visible.add(key);
+      explored.add(key);
     }
   }
 
@@ -82,10 +84,12 @@ function recalcFullVisibility(state: GameState, playerId: string): GameState {
     if (city.owner !== playerId) continue;
     for (const hex of range(city.position, 3)) {
       const key = coordToKey(hex);
-      if (state.map.tiles.has(key)) {
-        visible.add(key);
-        explored.add(key);
-      }
+      const tile = state.map.tiles.get(key);
+      if (!tile) continue;
+      // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
+      if (tile.isDistantLands && !player.distantLandsReachable) continue;
+      visible.add(key);
+      explored.add(key);
     }
   }
 

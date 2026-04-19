@@ -93,6 +93,14 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   if (action.path.length === 0) return createInvalidResult(state, 'Empty movement path', 'movement');
   if (unit.movementLeft <= 0) return createInvalidResult(state, 'Unit has no movement left', 'movement');
 
+  // Resolve player for tech checks (deep ocean, distant lands)
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // W4-02 (F-05): Deep Ocean tech flags
+  const hasCartography = player.researchedTechs.includes('cartography');
+  const hasShipbuildingMastery = player.masteredTechs?.includes('shipbuilding') ?? false;
+
   // First pass: validate entire path for adjacency and passability
   let totalCost = 0;
   let prevCoord = unit.position;
@@ -106,6 +114,19 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     // Check target tile exists and is passable
     const tile = state.map.tiles.get(coordToKey(nextCoord));
     if (!tile) return createInvalidResult(state, 'Target tile does not exist', 'movement');
+
+    // W4-02 (F-05): Deep Ocean override — normally isPassable:false, but can be
+    // entered with Cartography (with HP attrition) or Shipbuilding mastery (no attrition).
+    const terrainDef = state.config.terrains.get(tile.terrain);
+    if (terrainDef?.isDeepOcean) {
+      if (!hasCartography && !hasShipbuildingMastery) {
+        return createInvalidResult(state, 'Deep Ocean requires Cartography tech to traverse', 'movement');
+      }
+      // Allow passage — cost is 1 MP for ocean-capable units
+      totalCost += 1;
+      prevCoord = nextCoord;
+      continue;
+    }
 
     const cost = getMovementCost(tile);
     if (cost === null) return createInvalidResult(state, 'Terrain is impassable', 'movement');
@@ -151,7 +172,9 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
 
   for (const nextCoord of action.path) {
     const tile = state.map.tiles.get(coordToKey(nextCoord));
-    const cost = getMovementCost(tile!);
+    const terrainDefStep = tile ? state.config.terrains.get(tile.terrain) : undefined;
+    // W4-02 (F-05): Deep ocean costs 1 MP regardless (blocked path validated above)
+    const cost = terrainDefStep?.isDeepOcean ? 1 : getMovementCost(tile!);
     movementSpent += cost!;
     currentPos = nextCoord;
 
@@ -180,24 +203,44 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     }
   }
 
+  // W4-02 (F-05): Check if destination is deep ocean — apply HP attrition unless mastery
+  const destTileForAttrition = state.map.tiles.get(coordToKey(currentPos));
+  const destTerrainDef = destTileForAttrition ? state.config.terrains.get(destTileForAttrition.terrain) : undefined;
+  const isDeepOceanDest = destTerrainDef?.isDeepOcean === true;
+  const deepOceanAttrition = isDeepOceanDest && !hasShipbuildingMastery ? 15 : 0;
+
   // Apply movement
   const updatedUnits = new Map(state.units);
   updatedUnits.set(unit.id, {
     ...unit,
     position: currentPos,
     movementLeft: stoppedByZoC ? 0 : unit.movementLeft - movementSpent,
+    health: Math.max(1, unit.health - deepOceanAttrition), // attrition cannot kill outright
     fortified: false, // moving breaks fortification
   });
+
+  const attritionLog = deepOceanAttrition > 0
+    ? [`${unit.typeId} took ${deepOceanAttrition} HP attrition from Deep Ocean`]
+    : [];
 
   let nextState: GameState = {
     ...state,
     units: updatedUnits,
-    log: [...state.log, {
-      turn: state.turn,
-      playerId: state.currentPlayerId,
-      message: `${unit.typeId} moved to (${currentPos.q}, ${currentPos.r})`,
-      type: 'move',
-    }],
+    log: [
+      ...state.log,
+      {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${unit.typeId} moved to (${currentPos.q}, ${currentPos.r})`,
+        type: 'move' as const,
+      },
+      ...attritionLog.map(msg => ({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: msg,
+        type: 'move' as const,
+      })),
+    ],
     lastValidation: null, // Clear validation after successful action
   };
 

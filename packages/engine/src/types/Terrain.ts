@@ -2,6 +2,22 @@ import type { YieldSet } from './Yields';
 
 export type TerrainId = string;
 
+/**
+ * W4-02: Biome classification for compound terrain model.
+ * Replaces the Civ VI per-tile type approach with a biome × modifier
+ * compound that matches the Civ VII design direction.
+ */
+export type Biome = 'desert' | 'grassland' | 'plains' | 'tropical' | 'tundra' | 'marine';
+
+/**
+ * W4-02: Terrain modifier indicating the texture/property overlay on a biome.
+ * - flat: open, unobstructed
+ * - rough: hills or rocky ground
+ * - vegetated: forest, jungle, or rainforest cover
+ * - wet: marsh, swamp, or wetland
+ */
+export type TerrainModifier = 'flat' | 'rough' | 'vegetated' | 'wet';
+
 /** Base terrain type (the underlying land/water type) */
 export interface TerrainDef {
   readonly id: TerrainId;
@@ -12,6 +28,22 @@ export interface TerrainDef {
   readonly isPassable: boolean;  // can land units enter?
   readonly isWater: boolean;     // ocean/coast
   readonly color: string;        // hex color for rendering
+  /**
+   * W4-02: Biome classification for the compound terrain model.
+   * Optional so existing terrain data files continue to work unchanged.
+   */
+  readonly biome?: Biome;
+  /**
+   * W4-02: Modifier indicating the terrain texture/property overlay.
+   * Optional so existing terrain data files continue to work unchanged.
+   */
+  readonly modifier?: TerrainModifier;
+  /**
+   * W4-05 (Deep Ocean): When true, entering this terrain requires Cartography
+   * tech or Shipbuilding mastery. Without the tech, movement is blocked entirely;
+   * with Cartography but without mastery, HP attrition applies each turn.
+   */
+  readonly isDeepOcean?: boolean;
 }
 
 export type FeatureId = string;
@@ -26,4 +58,9 @@ export interface TerrainFeatureDef {
   readonly yieldModifiers: Partial<YieldSet>;
   readonly blocksMovement: boolean;        // e.g., mountains
   readonly color: string;                  // rendering overlay color
+  /**
+   * W4-02: Biome modifier for compound terrain model annotation.
+   * Optional so existing feature data files continue to work unchanged.
+   */
+  readonly modifier?: TerrainModifier;
 }

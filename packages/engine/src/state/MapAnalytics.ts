@@ -11,8 +11,10 @@ import type { GameState, HexMap, HexTile } from '../types/GameState';
 /**
  * Terrain ids that represent water (non-land) tiles. Used by `landRatio` and
  * `passableLandTiles` to distinguish land from water.
+ *
+ * W4-02: Added 'navigable_river' (F-02 water tile) and 'deep_ocean' (F-05).
  */
-const WATER_TERRAINS: ReadonlySet<string> = new Set<string>(['ocean', 'coast', 'reef']);
+const WATER_TERRAINS: ReadonlySet<string> = new Set<string>(['ocean', 'coast', 'reef', 'navigable_river', 'deep_ocean']);
 
 /**
  * Return a read-only view of the map's tiles. Separate helper so callers that

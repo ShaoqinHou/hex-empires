@@ -9,6 +9,7 @@ export const HILLS: TerrainFeatureDef = {
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#8a7a55',
+  modifier: 'rough',   // W4-02: biome modifier annotation
 } as const;
 
 export const MOUNTAINS: TerrainFeatureDef = {
@@ -19,6 +20,7 @@ export const MOUNTAINS: TerrainFeatureDef = {
   yieldModifiers: {},
   blocksMovement: true, // impassable
   color: '#a0a0a0',
+  modifier: 'rough',   // W4-02: biome modifier annotation
 } as const;
 
 export const FOREST: TerrainFeatureDef = {
@@ -30,6 +32,7 @@ export const FOREST: TerrainFeatureDef = {
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#2d5a1e',
+  modifier: 'vegetated', // W4-02: biome modifier annotation
 } as const;
 
 export const JUNGLE: TerrainFeatureDef = {
@@ -40,6 +43,7 @@ export const JUNGLE: TerrainFeatureDef = {
   yieldModifiers: { production: 2, science: 1 },
   blocksMovement: false,
   color: '#1a4a0f',
+  modifier: 'vegetated', // W4-02: biome modifier annotation
 } as const;
 
 export const MARSH: TerrainFeatureDef = {
@@ -50,6 +54,7 @@ export const MARSH: TerrainFeatureDef = {
   yieldModifiers: { food: 1 },
   blocksMovement: false,
   color: '#5a6b3a',
+  modifier: 'wet',       // W4-02: biome modifier annotation
 } as const;
 
 export const FLOODPLAINS: TerrainFeatureDef = {

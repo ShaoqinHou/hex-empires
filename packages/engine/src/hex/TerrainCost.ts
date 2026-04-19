@@ -38,6 +38,12 @@ function getMovementCostHardcoded(tile: HexTile): number | null {
     snow: 1,
     coast: null, // impassable for land units
     ocean: null,
+    // W4-02 terrain types
+    tropical: 1,
+    rainforest: 2,
+    mangrove: 2,
+    navigable_river: null, // impassable for land units; naval units use isWater=true
+    deep_ocean: null,      // blocked for all by default; tech check in movementSystem
   };
 
   const featureCosts: Record<string, number | null> = {
