@@ -37,7 +37,7 @@ export const JUNGLE: TerrainFeatureDef = {
   name: 'Jungle',
   movementCostModifier: 1,
   defenseBonusModifier: 0.25,
-  yieldModifiers: { food: 1 },
+  yieldModifiers: { production: 2, science: 1 },
   blocksMovement: false,
   color: '#1a4a0f',
 } as const;

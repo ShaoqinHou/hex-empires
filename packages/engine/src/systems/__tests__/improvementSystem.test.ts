@@ -340,34 +340,6 @@ describe('improvementSystem', () => {
     });
   });
 
-  describe('BUILD_IMPROVEMENT — road with tech', () => {
-    it('builds a road when player has wheel tech and terrain is valid', () => {
-      const builderPos: HexCoord = { q: 2, r: 2 };
-      const playerWithWheel = createTestPlayer({
-        id: 'p1',
-        researchedTechs: ['wheel'],
-      });
-      const units = new Map([
-        ['b1', createTestUnit({ id: 'b1', typeId: 'builder', position: builderPos })],
-      ]);
-      const state = createTestState({
-        units,
-        players: new Map([['p1', playerWithWheel]]),
-      });
-
-      const next = improvementSystem(state, {
-        type: 'BUILD_IMPROVEMENT',
-        unitId: 'b1',
-        tile: builderPos,
-        improvementId: 'road',
-      });
-
-      expect(next.units.has('b1')).toBe(false);
-      const tileKey = coordToKey(builderPos);
-      expect(next.map.tiles.get(tileKey)?.improvement).toBe('road');
-    });
-  });
-
   describe('pass-through', () => {
     it('returns state unchanged for non-BUILD_IMPROVEMENT actions', () => {
       const state = createTestState();

@@ -6,7 +6,6 @@ const VICTORY_CONFIG: Record<VictoryType, { name: string; icon: string; descript
   domination: { name: 'Domination', icon: '⚔️', description: 'Conquer all enemy capitals', color: 'var(--color-danger)' },
   science: { name: 'Science', icon: '🔬', description: 'Complete all technology trees', color: 'var(--color-science)' },
   culture: { name: 'Culture', icon: '🎭', description: 'Accumulate culture and build wonders', color: 'var(--color-culture)' },
-  diplomacy: { name: 'Diplomacy', icon: '🤝', description: 'Form alliances and win world congress', color: 'var(--color-success)' },
   economic: { name: 'Economic', icon: '💰', description: 'Accumulate gold and trade routes', color: 'var(--color-gold)' },
   military: { name: 'Military', icon: '🛡️', description: 'Have the strongest military', color: 'var(--color-production)' },
   score: { name: 'Score', icon: '📊', description: 'Have the highest score when max turns reached', color: 'var(--panel-muted-color)' },

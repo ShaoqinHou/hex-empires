@@ -122,9 +122,9 @@ describe('aiSystem — Civ VII parity emissions', () => {
   it('AI with a government + open slot + researched policy civic emits SLOT_POLICY', () => {
     // Pick a known government with a wildcard slot so we can force an empty
     // slot and a researched policy civic.
-    const gov = ALL_GOVERNMENTS.find(g => g.id === 'chiefdom')!;
+    const gov = ALL_GOVERNMENTS.find(g => g.id === 'classical_republic')!;
     // Find a policy whose unlockCivic we can safely say is researched AND
-    // whose category has at least one slot on this government. Chiefdom has
+    // whose category has at least one slot on this government. classical_republic has
     // wildcard:1, and any policy can slot into wildcard.
     const policy = ALL_POLICIES.find(p => p.unlockCivic === 'code_of_laws')!;
     const state = aiStateWith({
@@ -151,7 +151,7 @@ describe('aiSystem — Civ VII parity emissions', () => {
   it('AI emits at most one parity action per turn', () => {
     // All three conditions would be independently eligible, but we want to
     // confirm only the highest-priority (pantheon) fires.
-    const gov = ALL_GOVERNMENTS.find(g => g.id === 'chiefdom')!;
+    const gov = ALL_GOVERNMENTS.find(g => g.id === 'classical_republic')!;
     const state = aiStateWith({
       faith: 100,
       pantheonId: null,

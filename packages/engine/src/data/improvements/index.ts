@@ -7,7 +7,7 @@ export const FARM: ImprovementDef = {
   cost: 1, // 1 Builder charge
   requiredTech: null,
   prerequisites: {
-    terrain: ['plains', 'grassland', 'desert', 'tundra'],
+    terrain: ['plains', 'grassland'],
   },
   yields: { food: 1 },
   modifier: {},
@@ -83,19 +83,6 @@ export const CAMP: ImprovementDef = {
   modifier: {},
 } as const;
 
-export const ROAD: ImprovementDef = {
-  id: 'road',
-  name: 'Road',
-  category: 'infrastructure',
-  cost: 1,
-  requiredTech: 'wheel',
-  prerequisites: {
-    terrain: ['plains', 'grassland', 'desert', 'tundra', 'hills'],
-  },
-  yields: { gold: 1 },
-  modifier: { movement: -0.5 }, // Reduces movement cost
-} as const;
-
 export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   FARM,
   MINE,
@@ -103,5 +90,4 @@ export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   PLANTATION,
   QUARRY,
   CAMP,
-  ROAD,
 ] as const;

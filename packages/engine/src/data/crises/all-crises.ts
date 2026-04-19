@@ -41,46 +41,6 @@ export const BARBARIAN_INVASION: CrisisEventDef = {
   ],
 } as const;
 
-export const GOLDEN_AGE: CrisisEventDef = {
-  id: 'golden_age',
-  name: 'A Golden Age Dawns',
-  description: 'Your civilization has achieved great intellectual progress! Scholars and artists flock to your cities. How will you harness this momentum?',
-  triggerCondition: 'tech_researched',
-  triggerValue: 5,
-  choices: [
-    {
-      id: 'celebrate',
-      text: 'Hold grand celebrations (+3 culture for 5 turns)',
-      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 }],
-    },
-    {
-      id: 'expand',
-      text: 'Invest in industry (+1 production for 5 turns)',
-      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
-    },
-  ],
-} as const;
-
-export const TRADE_OPPORTUNITY: CrisisEventDef = {
-  id: 'trade_opportunity',
-  name: 'Foreign Trade Caravan',
-  description: 'A wealthy foreign trade caravan has arrived at your borders, offering valuable goods in exchange for passage and hospitality.',
-  triggerCondition: 'turn_reached',
-  triggerValue: 15,
-  choices: [
-    {
-      id: 'accept_trade',
-      text: 'Welcome the traders and open trade (+100 gold)',
-      effects: [{ type: 'MODIFY_GOLD', target: 'player', value: 100 }],
-    },
-    {
-      id: 'reject_trade',
-      text: 'Turn them away (no effect)',
-      effects: [{ type: 'MODIFY_GOLD', target: 'player', value: 0 }],
-    },
-  ],
-} as const;
-
 export const NATURAL_DISASTER: CrisisEventDef = {
   id: 'natural_disaster',
   name: 'Natural Disaster',
@@ -194,8 +154,6 @@ export const SOLAR_ECLIPSE: CrisisEventDef = {
 export const ALL_CRISES: ReadonlyArray<CrisisEventDef> = [
   PLAGUE,
   BARBARIAN_INVASION,
-  GOLDEN_AGE,
-  TRADE_OPPORTUNITY,
   NATURAL_DISASTER,
   RELIGIOUS_SCHISM,
   TRADE_DISRUPTION,

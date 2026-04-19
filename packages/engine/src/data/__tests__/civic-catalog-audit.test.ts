@@ -186,9 +186,9 @@ describe('Civic catalog audit — rulebook §9.3 / §14 / §12', () => {
     const byId = new Map(ALL_CIVICS.map((c) => [c.id, c]));
     const governmentUnlocks: ReadonlyArray<readonly [string, string]> = [
       ['state_service', 'oligarchy'],
-      ['feudalism', 'monarchy'],
+      ['feudalism', 'feudal_monarchy'],
       ['scholasticism', 'theocracy'],
-      ['enlightenment', 'democracy'],
+      ['enlightenment', 'elective_republic'],
     ];
     for (const [civicId, unlockId] of governmentUnlocks) {
       const c = byId.get(civicId);

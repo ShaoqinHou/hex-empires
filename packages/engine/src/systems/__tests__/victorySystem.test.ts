@@ -222,7 +222,7 @@ describe('victorySystem', () => {
     const next = victorySystem(state, { type: 'END_TURN' });
     const p1Progress = next.victory.progress.get('p1');
     expect(p1Progress).toBeDefined();
-    expect(p1Progress!.length).toBe(7); // 7 victory types now
+    expect(p1Progress!.length).toBe(6); // 6 victory types (diplomacy removed)
   });
 
   it('uses legacy-based score calculation', () => {

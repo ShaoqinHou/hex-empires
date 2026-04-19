@@ -35,10 +35,10 @@ describe('growthSystem', () => {
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
-    // territory: 3 grassland tiles × 2 food = 6; city center bonus +2 = 8 total
-    // consumed: population(1) * 2 = 2; surplus = 6; newFood = 0 + 6 = 6
+    // territory: 3 grassland tiles × 3 food = 9; city center bonus +2 = 11 total
+    // consumed: population(1) * 2 = 2; surplus = 9; newFood = 0 + 9 = 9
     const updatedCity = next.cities.get('c1')!;
-    expect(updatedCity.food).toBe(6);
+    expect(updatedCity.food).toBe(9);
   });
 
   it('grows population when food reaches threshold', () => {
@@ -129,8 +129,8 @@ describe('calculateCityYields', () => {
       cities: new Map([['c1', city]]),
     });
     const yields = calculateCityYields(city, state);
-    // 3 grassland tiles (2 food each) + city center (2+1) = 8 food, 1 prod
-    expect(yields.food).toBeGreaterThanOrEqual(6);
+    // 3 grassland tiles (3 food each) + city center (2+1) = 11 food, 1 prod
+    expect(yields.food).toBeGreaterThanOrEqual(9);
   });
 });
 
@@ -184,9 +184,9 @@ describe('growthSystem — growth rate modifiers', () => {
     // enough that food surplus = 0 (population * 2 == food yield), so the
     // surplus added this turn is 0. That way the comparison is clean.
     //
-    // createTestState gives a flat grassland map: 3 territory tiles × 2 food
-    // + city center 2 = 8 food yield; consumption = pop * 2.
-    // At pop=4: consumption=8, surplus=0.
+    // createTestState gives a flat grassland map: 3 territory tiles × 3 food
+    // + city center 2 = 11 food yield; consumption = pop * 2.
+    // At pop=4: consumption=8, surplus=3. food += 3 each turn.
     const baseThreshold = getGrowthThreshold(4, 'antiquity');           // 30 + 3*3 + 33*9 = 336
     const reducedThreshold = Math.round(baseThreshold * (1 - 0.1));     // 302
     // food set to reducedThreshold: city WITH granary is exactly at its threshold → grows.

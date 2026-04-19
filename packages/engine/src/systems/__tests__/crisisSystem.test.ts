@@ -26,19 +26,6 @@ describe('crisisSystem', () => {
       expect(crisis!.choices.length).toBe(2);
     });
 
-    it('triggers trade_opportunity crisis at turn 15', () => {
-      // Include barbarian_invasion as already triggered to avoid duplicates
-      const alreadyTriggered: CrisisState = {
-        id: 'barbarian_invasion', name: 'Barbarian Invasion', active: false,
-        turn: 10, choices: [], resolvedBy: 'p1', choiceMade: 'pay_tribute',
-      };
-      const state = createTestState({ turn: 15, crises: [alreadyTriggered] });
-      const next = crisisSystem(state, { type: 'END_TURN' });
-      const crisis = next.crises.find(c => c.id === 'trade_opportunity');
-      expect(crisis).toBeDefined();
-      expect(crisis!.active).toBe(true);
-    });
-
     it('does not trigger crisis before its turn', () => {
       const state = createTestState({ turn: 5 });
       const next = crisisSystem(state, { type: 'END_TURN' });
@@ -57,55 +44,9 @@ describe('crisisSystem', () => {
       expect(invasionCrises.length).toBe(1);
     });
 
-    it('triggers golden_age when player has researched 5+ techs', () => {
-      const players = new Map([
-        ['p1', createTestPlayer({
-          id: 'p1',
-          researchedTechs: ['tech1', 'tech2', 'tech3', 'tech4', 'tech5'],
-        })],
-      ]);
-      const state = createTestState({ turn: 5, players });
-      const next = crisisSystem(state, { type: 'END_TURN' });
-      const crisis = next.crises.find(c => c.id === 'golden_age');
-      expect(crisis).toBeDefined();
-      expect(crisis!.active).toBe(true);
-    });
-
-    it('does not trigger golden_age with fewer than 5 techs', () => {
-      const players = new Map([
-        ['p1', createTestPlayer({
-          id: 'p1',
-          researchedTechs: ['tech1', 'tech2', 'tech3'],
-        })],
-      ]);
-      const state = createTestState({ turn: 5, players });
-      const next = crisisSystem(state, { type: 'END_TURN' });
-      const crisis = next.crises.find(c => c.id === 'golden_age');
-      expect(crisis).toBeUndefined();
-    });
   });
 
   describe('RESOLVE_CRISIS', () => {
-    it('applies gold effect when resolving trade_opportunity with accept', () => {
-      const crisis: CrisisState = {
-        id: 'trade_opportunity', name: 'Foreign Trade Caravan', active: true,
-        turn: 15,
-        choices: [
-          { id: 'accept_trade', text: 'Accept', effects: [] },
-          { id: 'reject_trade', text: 'Reject', effects: [] },
-        ],
-        resolvedBy: null, choiceMade: null,
-      };
-      const players = new Map([
-        ['p1', createTestPlayer({ id: 'p1', gold: 100 })],
-      ]);
-      const state = createTestState({ crises: [crisis], players });
-      const next = crisisSystem(state, { type: 'RESOLVE_CRISIS', crisisId: 'trade_opportunity', choice: 'accept_trade' });
-
-      const player = next.players.get('p1')!;
-      expect(player.gold).toBe(200); // 100 + 100
-    });
-
     it('applies negative gold effect when resolving barbarian_invasion with pay_tribute', () => {
       const crisis: CrisisState = {
         id: 'barbarian_invasion', name: 'Barbarian Invasion', active: true,
@@ -128,21 +69,21 @@ describe('crisisSystem', () => {
 
     it('marks crisis as resolved after choice', () => {
       const crisis: CrisisState = {
-        id: 'trade_opportunity', name: 'Foreign Trade Caravan', active: true,
-        turn: 15,
+        id: 'barbarian_invasion', name: 'Barbarian Invasion', active: true,
+        turn: 10,
         choices: [
-          { id: 'accept_trade', text: 'Accept', effects: [] },
-          { id: 'reject_trade', text: 'Reject', effects: [] },
+          { id: 'pay_tribute', text: 'Pay tribute', effects: [] },
+          { id: 'fight', text: 'Fight', effects: [] },
         ],
         resolvedBy: null, choiceMade: null,
       };
       const state = createTestState({ crises: [crisis] });
-      const next = crisisSystem(state, { type: 'RESOLVE_CRISIS', crisisId: 'trade_opportunity', choice: 'accept_trade' });
+      const next = crisisSystem(state, { type: 'RESOLVE_CRISIS', crisisId: 'barbarian_invasion', choice: 'pay_tribute' });
 
-      const resolved = next.crises.find(c => c.id === 'trade_opportunity')!;
+      const resolved = next.crises.find(c => c.id === 'barbarian_invasion')!;
       expect(resolved.active).toBe(false);
       expect(resolved.resolvedBy).toBe('p1');
-      expect(resolved.choiceMade).toBe('accept_trade');
+      expect(resolved.choiceMade).toBe('pay_tribute');
     });
 
     it('applies population loss effect for plague ignore choice', () => {
@@ -175,13 +116,13 @@ describe('crisisSystem', () => {
 
     it('does not resolve an already resolved crisis', () => {
       const crisis: CrisisState = {
-        id: 'trade_opportunity', name: 'Foreign Trade Caravan', active: false,
-        turn: 15,
+        id: 'barbarian_invasion', name: 'Barbarian Invasion', active: false,
+        turn: 10,
         choices: [],
-        resolvedBy: 'p1', choiceMade: 'accept_trade',
+        resolvedBy: 'p1', choiceMade: 'pay_tribute',
       };
       const state = createTestState({ crises: [crisis] });
-      const next = crisisSystem(state, { type: 'RESOLVE_CRISIS', crisisId: 'trade_opportunity', choice: 'accept_trade' });
+      const next = crisisSystem(state, { type: 'RESOLVE_CRISIS', crisisId: 'barbarian_invasion', choice: 'pay_tribute' });
       expect(next).toBe(state);
     });
 

@@ -37,17 +37,6 @@ export interface GovernmentDef {
 
 // ── Antiquity ──
 
-export const CHIEFDOM: GovernmentDef = {
-  id: 'chiefdom',
-  name: 'Chiefdom',
-  age: 'antiquity',
-  unlockCivic: 'code_of_laws',
-  policySlots: { military: 0, economic: 0, diplomatic: 0, wildcard: 1 },
-  legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 1 },
-  description:
-    'Starter government. A single wildcard slot and a modest production bonus per city.',
-};
-
 export const CLASSICAL_REPUBLIC: GovernmentDef = {
   id: 'classical_republic',
   name: 'Classical Republic',
@@ -83,9 +72,9 @@ export const OLIGARCHY: GovernmentDef = {
 
 // ── Exploration ──
 
-export const MONARCHY: GovernmentDef = {
-  id: 'monarchy',
-  name: 'Monarchy',
+export const FEUDAL_MONARCHY: GovernmentDef = {
+  id: 'feudal_monarchy',
+  name: 'Feudal Monarchy',
   age: 'exploration',
   unlockCivic: 'divine_right',
   policySlots: { military: 2, economic: 1, diplomatic: 0, wildcard: 0 },
@@ -94,9 +83,9 @@ export const MONARCHY: GovernmentDef = {
     'Hereditary royal rule. +2 Food per City-Center while active.',
 };
 
-export const MERCHANT_REPUBLIC: GovernmentDef = {
-  id: 'merchant_republic',
-  name: 'Merchant Republic',
+export const PLUTOCRACY: GovernmentDef = {
+  id: 'plutocracy',
+  name: 'Plutocracy',
   age: 'exploration',
   unlockCivic: 'mercantilism',
   policySlots: { military: 0, economic: 2, diplomatic: 0, wildcard: 1 },
@@ -118,26 +107,25 @@ export const THEOCRACY: GovernmentDef = {
 
 // ── Modern ──
 
-export const DEMOCRACY: GovernmentDef = {
-  id: 'democracy',
-  name: 'Democracy',
+export const ELECTIVE_REPUBLIC: GovernmentDef = {
+  id: 'elective_republic',
+  name: 'Elective Republic',
   age: 'modern',
   unlockCivic: 'suffrage',
   policySlots: { military: 1, economic: 2, diplomatic: 1, wildcard: 0 },
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
   description:
-    'Government by the people. +3 Culture per turn to the empire while active.',
+    'Government by elected representatives. +3 Culture per turn to the empire while active.',
 };
 
 // ── Barrel ──
 
 export const ALL_GOVERNMENTS: ReadonlyArray<GovernmentDef> = [
-  CHIEFDOM,
   CLASSICAL_REPUBLIC,
   DESPOTISM,
   OLIGARCHY,
-  MONARCHY,
-  MERCHANT_REPUBLIC,
+  FEUDAL_MONARCHY,
+  PLUTOCRACY,
   THEOCRACY,
-  DEMOCRACY,
+  ELECTIVE_REPUBLIC,
 ];

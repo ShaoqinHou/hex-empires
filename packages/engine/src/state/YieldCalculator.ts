@@ -93,10 +93,10 @@ export function getSpecializationYields(specialization: TownSpecialization): Par
 
 function getTerrainYields(terrain: string): Partial<YieldSet> {
   const table: Record<string, Partial<YieldSet>> = {
-    grassland: { food: 2 },
-    plains: { food: 1, production: 1 },
-    desert: {},
-    tundra: { food: 1 },
+    grassland: { food: 3 },
+    plains: { food: 2, production: 1 },
+    desert: { food: 2, production: 1 },
+    tundra: { food: 3 },
     snow: {},
     coast: { food: 1, gold: 1 },
     ocean: { food: 1 },
@@ -108,7 +108,7 @@ function getFeatureYieldModifiers(feature: string): Partial<YieldSet> {
   const table: Record<string, Partial<YieldSet>> = {
     hills: { production: 1 },
     forest: { production: 1 },
-    jungle: { food: 1 },
+    jungle: { production: 2, science: 1 },
     marsh: { food: 1 },
     floodplains: { food: 3 },
     oasis: { food: 3, gold: 1 },

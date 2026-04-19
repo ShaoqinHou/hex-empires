@@ -24,8 +24,8 @@ import { coordToKey } from '../../hex/HexMath';
  *                         non-wonders). Bonuses stack additively.
  *
  * Reference map (from helpers.createFlatMap): all tiles are grassland
- * (food: 2, prod: 0). Default `createTestCity` territory is 5 grassland
- * tiles → base yields: food 12, production 1/turn (+1 from city center).
+ * (food: 3, prod: 0). Default `createTestCity` territory is 5 grassland
+ * tiles → base yields: food 17, production 1/turn (+1 from city center).
  */
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {

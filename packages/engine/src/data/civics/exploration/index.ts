@@ -99,9 +99,9 @@ export const FEUDALISM: CivicDef = {
   age: 'exploration',
   cost: 140,
   prerequisites: ['humanism'],
-  unlocks: ['monarchy'],
+  unlocks: ['feudal_monarchy'],
   description:
-    'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Monarchy government.',
+    'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Feudal Monarchy government.',
   treePosition: { row: 1, col: 1 },
 };
 

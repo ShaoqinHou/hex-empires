@@ -93,9 +93,9 @@ export const ENLIGHTENMENT: CivicDef = {
   age: 'modern',
   cost: 450,
   prerequisites: ['political_theory'],
-  unlocks: ['democracy'],
+  unlocks: ['elective_republic'],
   description:
-    'Liberty, reason, and the consent of the governed. Unlocks the Democracy government.',
+    'Liberty, reason, and the consent of the governed. Unlocks the Elective Republic government.',
   treePosition: { row: 1, col: 1 },
 };
 

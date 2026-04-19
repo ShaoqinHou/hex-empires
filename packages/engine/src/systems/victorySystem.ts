@@ -8,7 +8,6 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
  * - Domination: eliminate all rival players (no cities/units remaining)
  * - Science: research all modern techs + culture >= 100
  * - Culture: culture >= 300 + at least 5 civics researched
- * - Diplomacy: alliances with 60% of other players
  * - Economic: gold >= 500, totalGoldEarned >= 1000, has alliance with at least 1 player
  * - Military: totalKills >= 20 + at least 5 cities
  * - Score: highest score at turn limit (300 turns) using legacy-based scoring
@@ -41,7 +40,6 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
       checkDomination(state, playerId),
       checkScience(state, playerId),
       checkCulture(state, playerId),
-      checkDiplomacy(state, playerId),
       checkEconomic(state, playerId),
       checkMilitary(state, playerId),
       checkScore(state, playerId),
@@ -146,26 +144,6 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
 
   return {
     type: 'culture',
-    progress,
-    achieved: meetsRequirements && state.age.currentAge === 'modern',
-  };
-}
-
-function checkDiplomacy(state: GameState, playerId: string): VictoryProgress {
-  // Count alliances
-  const alliances = [...state.diplomacy.relations.entries()].filter(
-    ([key, rel]) => rel.hasAlliance && key.includes(playerId)
-  ).length;
-
-  const otherPlayers = state.players.size - 1;
-  const needed = Math.max(1, Math.ceil(otherPlayers * 0.6));
-  const progress = otherPlayers > 0 ? Math.min(1, alliances / needed) : 0;
-
-  // Diplomacy victory can only be achieved in the modern age
-  const meetsRequirements = alliances >= needed && otherPlayers > 0;
-
-  return {
-    type: 'diplomacy',
     progress,
     achieved: meetsRequirements && state.age.currentAge === 'modern',
   };

@@ -59,8 +59,8 @@ describe('crises expansion catalog', () => {
     }
   });
 
-  it('ALL_CRISES length grew to at least 13 (7 original + 6 expansion)', () => {
-    expect(ALL_CRISES.length).toBeGreaterThanOrEqual(13);
+  it('ALL_CRISES length grew to at least 12 (6 original + 6 expansion)', () => {
+    expect(ALL_CRISES.length).toBeGreaterThanOrEqual(12);
   });
 
   it('each expansion crisis has at least two choices', () => {

@@ -70,7 +70,7 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SET_GOVERNMENT',
       playerId: 'p1',
-      governmentId: 'chiefdom',
+      governmentId: 'classical_republic',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -88,7 +88,7 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SET_GOVERNMENT',
       playerId: 'p1',
-      governmentId: 'chiefdom',
+      governmentId: 'classical_republic',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -139,7 +139,7 @@ describe('governmentSystem', () => {
         id: 'p1',
         researchedCivics: ['code_of_laws'],
       }),
-      { governmentId: 'chiefdom' },
+      { governmentId: 'classical_republic' },
     );
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -148,7 +148,7 @@ describe('governmentSystem', () => {
     const action: GovernmentAction = {
       type: 'SET_GOVERNMENT',
       playerId: 'p1',
-      governmentId: 'chiefdom',
+      governmentId: 'classical_republic',
     };
     const next = governmentSystem(state, action);
     expect(next).toBe(state);
@@ -406,7 +406,7 @@ describe('governmentSystem', () => {
     const state = createTestState({
       players: new Map([['p1', player]]),
     });
-    expect(canAdoptGovernment(state, 'p1', 'chiefdom')).toBe(true);
+    expect(canAdoptGovernment(state, 'p1', 'classical_republic')).toBe(true);
   });
 
   it('canAdoptGovernment returns false when unlockCivic not researched', () => {
@@ -416,7 +416,7 @@ describe('governmentSystem', () => {
     const state = createTestState({
       players: new Map([['p1', player]]),
     });
-    expect(canAdoptGovernment(state, 'p1', 'chiefdom')).toBe(false);
+    expect(canAdoptGovernment(state, 'p1', 'classical_republic')).toBe(false);
   });
 
   it('canSlotPolicy rejects wrong category and accepts wildcard', () => {
