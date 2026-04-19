@@ -13,6 +13,17 @@ export type AchievementId =
   | 'age_explorer'
   | 'age_modernist';
 
+export type AchievementCategory =
+  | 'tutorial'
+  | 'wonder'
+  | 'milestone'
+  | 'civ_victory'
+  | 'exploration'
+  | 'domination'
+  | 'diplomacy'
+  | 'economy'
+  | 'culture';
+
 export interface AchievementDef {
   readonly id: AchievementId;
   readonly name: string;
@@ -23,6 +34,17 @@ export interface AchievementDef {
    * Read by `achievementSystem` when evaluating unlock eligibility.
    */
   readonly condition: AchievementCondition;
+  /**
+   * Category used for Legends cross-session bucketing (Foundation Challenges,
+   * Leader Challenges) and for UI display grouping.
+   * Optional so pre-existing AchievementDef constructions keep compiling.
+   */
+  readonly category?: AchievementCategory;
+  /**
+   * Foundation XP awarded when this achievement is used as a Foundation Challenge.
+   * Absent for standard in-game achievements that do not map to a challenge.
+   */
+  readonly xp?: number;
 }
 
 export type AchievementCondition =

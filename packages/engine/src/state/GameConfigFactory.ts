@@ -36,6 +36,13 @@ import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
 import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
 import { ALL_ACHIEVEMENTS } from '../data/achievements';
 import { ALL_CRISES } from '../data/crises/all-crises';
+import { ALL_INDEPENDENT_POWERS } from '../data/independent-powers';
+import type { IndependentPowerDef } from '../types/IndependentPower';
+import { ALL_ATTRIBUTE_NODES } from '../data/attribute-trees';
+import type { AttributeNodeDef } from '../types/Attribute';
+import { ALL_NARRATIVE_EVENTS } from '../data/narrative-events';
+import { ALL_DISCOVERIES } from '../data/discoveries';
+import type { NarrativeEventDef, DiscoveryDef } from '../types/NarrativeEvent';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -96,5 +103,17 @@ export function createGameConfig(): GameConfig {
   const achievements = new Map<string, AchievementDef>();
   for (const a of ALL_ACHIEVEMENTS) achievements.set(a.id, a);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, experimentalAchievements: false };
+  const independentPowers = new Map<string, IndependentPowerDef>();
+  for (const ip of ALL_INDEPENDENT_POWERS) independentPowers.set(ip.id, ip);
+
+  const attributeNodes = new Map<string, AttributeNodeDef>();
+  for (const n of ALL_ATTRIBUTE_NODES) attributeNodes.set(n.id, n);
+
+  const narrativeEvents = new Map<string, NarrativeEventDef>();
+  for (const e of ALL_NARRATIVE_EVENTS) narrativeEvents.set(e.id, e);
+
+  const discoveries = new Map<string, DiscoveryDef>();
+  for (const d of ALL_DISCOVERIES) discoveries.set(d.id, d);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, experimentalAchievements: false };
 }

@@ -1,4 +1,7 @@
 import type { GameState, GameAction, System } from './types/GameState';
+import type { AccountState } from './types/AccountState';
+import { evaluateLegends } from './systems/legendsSystem';
+import type { LegendsResult } from './systems/legendsSystem';
 
 // ── M12 Integration: new systems wired in via DEFAULT_SYSTEMS ──
 
@@ -29,7 +32,10 @@ import { specialistSystem } from './systems/specialistSystem';
 import { tradeSystem } from './systems/tradeSystem';
 import { governorSystem } from './systems/governorSystem';
 import { crisisSystem } from './systems/crisisSystem';
+import { narrativeEventSystem } from './systems/narrativeEventSystem';
 import { victorySystem } from './systems/victorySystem';
+import { independentPowerSystem } from './systems/independentPowerSystem';
+import { attributeSystem } from './systems/attributeSystem';
 
 /**
  * Default engine pipeline. Ordered to match the documented system
@@ -89,10 +95,13 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   ageSystem,
   diplomacySystem,
   updateDiplomacyCounters,
+  independentPowerSystem,
   specialistSystem,
   tradeSystem,
   governorSystem,
   crisisSystem,
+  narrativeEventSystem,
+  attributeSystem,
   victorySystem,
 ];
 
@@ -125,5 +134,20 @@ export class GameEngine {
       next = this.applyAction(next, action);
     }
     return next;
+  }
+
+  /**
+   * Apply the legends meta-progression layer on END_TURN.
+   *
+   * Call this AFTER applyAction(state, { type: 'END_TURN' }) from the web layer.
+   * Returns the (unchanged) state plus an AccountStateDelta that the web layer
+   * should merge into its stored AccountState via applyAccountDelta().
+   *
+   * @param state - post-END_TURN GameState
+   * @param account - the player's current persisted AccountState
+   * @param humanPlayerId - which player to evaluate challenges for
+   */
+  applyLegends(state: GameState, account: AccountState, humanPlayerId: string): LegendsResult {
+    return evaluateLegends(state, account, humanPlayerId);
   }
 }

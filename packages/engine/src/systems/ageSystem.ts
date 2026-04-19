@@ -1,8 +1,9 @@
-import type { GameState, GameAction, ActiveEffect, LegacyPaths, GameEvent } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
 import type { YieldType } from '../types/Yields';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
+import { createDefaultIPState } from './independentPowerSystem';
 
 /**
  * AgeSystem handles age transitions and legacy milestone tracking.
@@ -132,6 +133,35 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   // Seed one crisis type from the new age's pool via seeded RNG
   const { activeCrisisType, rng: rngAfterCrisisSeed } = seedAgeCrisis(state.config.crises, nextAge, rng);
 
+  // ── F-03: Independent Powers age-transition reset ──
+  // Remove all non-incorporated IPs; clear suzerainties from all players; re-seed for new age.
+  let updatedIPMap: ReadonlyMap<string, IndependentPowerState> | undefined;
+  if (state.independentPowers !== undefined) {
+    const nextIPs = new Map<string, IndependentPowerState>();
+    // Keep incorporated IPs (they become towns — survived the transition)
+    for (const [id, ip] of state.independentPowers) {
+      if (ip.isIncorporated) nextIPs.set(id, ip);
+    }
+    // Re-seed IPs for the new age from config (if independentPowers config present)
+    if (state.config.independentPowers) {
+      for (const [, ipDef] of state.config.independentPowers) {
+        if (ipDef.age === nextAge && !nextIPs.has(ipDef.id)) {
+          nextIPs.set(ipDef.id, createDefaultIPState(ipDef));
+        }
+      }
+    }
+    updatedIPMap = nextIPs;
+  }
+
+  // Clear suzerainties from all players on age transition
+  for (const [pid, p] of updatedPlayers) {
+    updatedPlayers.set(pid, {
+      ...p,
+      suzerainties: [],
+      suzerainBonuses: new Map<string, string>(),
+    });
+  }
+
   // F-07: Age-transition city downgrade — all non-capital cities revert to towns,
   // productionQueue/productionProgress cleared, specialization reset.
   // Exemption: Economic Golden Age (legacyPaths.economic === 3) skips downgrade.
@@ -173,6 +203,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     age: { ...state.age, currentAge: nextAge, activeCrisisType },
     rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
+    ...(updatedIPMap !== undefined ? { independentPowers: updatedIPMap } : {}),
   };
 }
 

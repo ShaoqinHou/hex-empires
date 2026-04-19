@@ -272,6 +272,50 @@ export type { CommanderRole, CommanderUnitDef, CommanderPromotionEntry } from '.
 
 // Achievement data + system
 export { ALL_ACHIEVEMENTS } from './data/achievements';
-export type { AchievementId, AchievementDef, AchievementCondition } from './data/achievements';
+export type { AchievementId, AchievementDef, AchievementCondition, AchievementCategory } from './data/achievements';
 export { achievementSystem, getAchievementsForPlayer } from './systems/achievementSystem';
 export type { AchievementsByPlayer } from './systems/achievementSystem';
+
+// Independent Powers data + system (W3-04)
+export type { IndependentPowerDef } from './types/IndependentPower';
+export { ALL_INDEPENDENT_POWERS, KUMBI_SALEH, CARANTANIA, TILANTONGO, ETELKOZ, SAMARKAND, ZANZIBAR } from './data/independent-powers';
+export { independentPowerSystem, createDefaultIPState } from './systems/independentPowerSystem';
+
+// ── Legends + Mementos cross-session meta-progression (W3-06) ──
+// AccountState types + utilities
+export type { AccountState, AccountStateDelta } from './types/AccountState';
+export {
+  createDefaultAccountState,
+  foundationXPForLevel,
+  foundationLevelForXP,
+  foundationMementoSlots,
+  leaderXPForLevel,
+  leaderLevelForXP,
+  applyAccountDelta,
+} from './types/AccountState';
+// Memento types + data
+export type { MementoDef, MementoUnlockCondition } from './types/Memento';
+export {
+  ALL_MEMENTOS,
+  COMPLAINT_TO_EA_NASIR,
+  ROSETTA_STONE,
+  GUTENBERG_BIBLE,
+  MARCO_POLO_JOURNAL,
+  MAGNA_CARTA,
+  DECLARATION_OF_INDEPENDENCE,
+  ENIGMA_MACHINE,
+  NAPOLEON_HAT,
+  NEWTON_APPLE,
+  HOLY_GRAIL,
+} from './data/mementos';
+// Foundation challenges
+export type { FoundationChallengeDef, ChallengeCategoryFoundation } from './data/foundation-challenges';
+export { ALL_FOUNDATION_CHALLENGES } from './data/foundation-challenges';
+// Leader challenges
+export type { LeaderChallengeDef } from './data/leader-challenges';
+export { ALL_LEADER_CHALLENGES } from './data/leader-challenges';
+// Legends system
+export { legendsSystem, evaluateLegends } from './systems/legendsSystem';
+export type { LegendsResult } from './systems/legendsSystem';
+// Memento apply utilities
+export { applyEquippedMementos, filterValidMementos } from './state/MementoApply';

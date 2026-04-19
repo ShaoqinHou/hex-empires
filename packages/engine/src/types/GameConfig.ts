@@ -17,6 +17,9 @@ import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 import type { AchievementDef } from '../data/achievements';
 import type { CrisisEventDef } from '../data/crises/types';
+import type { IndependentPowerDef } from './IndependentPower';
+import type { NarrativeEventDef, DiscoveryDef } from './NarrativeEvent';
+import type { AttributeNodeDef } from './Attribute';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -44,6 +47,31 @@ export interface GameConfig {
   readonly followerBeliefs: ReadonlyMap<string, FollowerBeliefDef>;
   readonly achievements: ReadonlyMap<string, AchievementDef>;
   readonly crises: ReadonlyArray<CrisisEventDef>;
+  /**
+   * Independent Powers registry (W3-04). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * independentPowerSystem skips IP actions gracefully.
+   */
+  readonly independentPowers?: ReadonlyMap<string, IndependentPowerDef>;
+  /**
+   * Attribute tree node definitions (W3-07). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * attributeSystem skips attribute actions gracefully.
+   */
+  readonly attributeNodes?: ReadonlyMap<string, AttributeNodeDef>;
+
+  /**
+   * Narrative Events registry (W3-05). Optional so existing GameConfig
+   * construction (tests, save files) compiles unchanged. When absent,
+   * narrativeEventSystem is a no-op.
+   */
+  readonly narrativeEvents?: ReadonlyMap<string, NarrativeEventDef>;
+
+  /**
+   * Discoveries registry (W3-05) — map discovery tiles (Goody Hut replacement).
+   * Optional so existing GameConfig construction compiles unchanged.
+   */
+  readonly discoveries?: ReadonlyMap<string, DiscoveryDef>;
 
   /**
    * Feature flag — when false (default), the Achievements panel is hidden

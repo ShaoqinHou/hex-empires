@@ -2,6 +2,9 @@ import type { GameState, HexCoord, ActiveEffect } from '../types';
 import { coordToKey, neighbors, generateMap, createTerrainRegistries } from '../hex';
 import { ALL_BASE_TERRAINS, ALL_FEATURES } from '../data/terrains';
 import { createGameConfig } from './GameConfigFactory';
+import type { AccountState } from '../types/AccountState';
+import { foundationMementoSlots } from '../types/AccountState';
+import { applyEquippedMementos, filterValidMementos } from './MementoApply';
 
 export interface GameSetupConfig {
   civId: string;
@@ -9,13 +12,15 @@ export interface GameSetupConfig {
   mapWidth: number;
   mapHeight: number;
   numAI: number;
+  /** Memento IDs to equip for this game run (validated against account). */
+  equippedMementos?: ReadonlyArray<string>;
 }
 
 // AI civilization/leader pool (different from player defaults)
 const AI_CIVS = ['greece', 'egypt', 'persia', 'india', 'china', 'rome'];
 const AI_LEADERS = ['pericles', 'cleopatra', 'cyrus', 'gandhi', 'qin_shi_huang', 'alexander', 'hatshepsut', 'genghis_khan', 'augustus'];
 
-export function createInitialState(config: GameSetupConfig, seed?: number): GameState {
+export function createInitialState(config: GameSetupConfig, seed?: number, account?: AccountState): GameState {
   const gameSeed = seed ?? Date.now();
   const { terrainRegistry } = createTerrainRegistries(ALL_BASE_TERRAINS, ALL_FEATURES);
 
@@ -185,6 +190,16 @@ export function createInitialState(config: GameSetupConfig, seed?: number): Game
     pendingNarrativeEvents: [],
     ageProgressMeter: 0,
   };
+
+  // ── W3-06: Apply equipped mementos at game start ──
+  if (account && config.equippedMementos && config.equippedMementos.length > 0) {
+    const maxSlots = foundationMementoSlots(account.foundationLevel);
+    const equipped = config.equippedMementos.slice(0, maxSlots);
+    const validEquipped = filterValidMementos(equipped, account);
+    if (validEquipped.length > 0) {
+      return applyEquippedMementos(state, playerId, validEquipped);
+    }
+  }
 
   return state;
 }

@@ -10,6 +10,7 @@ export const AUGUSTUS: LeaderDef = {
   },
   agendas: ['expansionist', 'builder'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['economic', 'militaristic'],
 };
 
 export const CLEOPATRA: LeaderDef = {
@@ -22,6 +23,7 @@ export const CLEOPATRA: LeaderDef = {
   },
   agendas: ['diplomat', 'trader'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['diplomatic', 'economic'],
 };
 
 export const PERICLES: LeaderDef = {
@@ -30,10 +32,12 @@ export const PERICLES: LeaderDef = {
   ability: {
     name: 'Surrounded by Glory',
     description: '+5% culture per city-state you are suzerain of.',
+    // TODO(W3-04 F-08): dynamic multiplier pending attribute system (W3-07). Currently flat +2 culture.
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
   },
   agendas: ['culturalist', 'diplomat'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['cultural', 'diplomatic'],
 };
 
 export const CYRUS: LeaderDef = {
@@ -46,6 +50,7 @@ export const CYRUS: LeaderDef = {
   },
   agendas: ['conqueror', 'opportunist'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['militaristic', 'diplomatic'],
 };
 
 export const GANDHI: LeaderDef = {
@@ -58,6 +63,7 @@ export const GANDHI: LeaderDef = {
   },
   agendas: ['peacemaker', 'religious'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['cultural', 'scientific'],
 };
 
 export const QIN_SHI_HUANG: LeaderDef = {
@@ -70,6 +76,7 @@ export const QIN_SHI_HUANG: LeaderDef = {
   },
   agendas: ['builder', 'wonder_obsessed'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['militaristic', 'economic'],
 };
 
 export const ALEXANDER: LeaderDef = {
@@ -82,6 +89,7 @@ export const ALEXANDER: LeaderDef = {
   },
   agendas: ['conqueror', 'expansionist'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['militaristic', 'expansionist'],
 };
 
 export const HATSHEPSUT: LeaderDef = {
@@ -94,6 +102,7 @@ export const HATSHEPSUT: LeaderDef = {
   },
   agendas: ['trader', 'builder'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['cultural', 'economic'],
 };
 
 export const GENGHIS_KHAN: LeaderDef = {
@@ -106,6 +115,7 @@ export const GENGHIS_KHAN: LeaderDef = {
   },
   agendas: ['conqueror', 'expansionist'],
   compatibleAges: ['antiquity', 'exploration', 'modern'],
+  primaryAttributes: ['militaristic', 'expansionist'],
 };
 
 export const ALL_LEADERS: ReadonlyArray<LeaderDef> = [

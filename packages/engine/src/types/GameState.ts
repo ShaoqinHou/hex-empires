@@ -682,7 +682,62 @@ export type GameAction =
    * Blocked if: player has no active crisisPhase, if policyId already present,
    * or if crisisPolicies.length >= crisisPolicySlots.
    */
-  | { readonly type: 'FORCE_CRISIS_POLICY'; readonly policyId: string };
+  | { readonly type: 'FORCE_CRISIS_POLICY'; readonly policyId: string }
+  // ── Independent Powers (W3-04) ──
+  /** Spend influence to make progress toward suzerainty over an IP. */
+  | { readonly type: 'BEFRIEND_INDEPENDENT'; readonly ipId: string; readonly influenceSpent: number }
+  /** Add additional befriend acceleration (e.g. policy bonus). */
+  | { readonly type: 'ADD_SUPPORT'; readonly ipId: string; readonly influenceSpent: number }
+  /** Direct a hostile/neutral IP to raid a rival player for 1 turn (costs 30 Influence). */
+  | { readonly type: 'INCITE_RAID'; readonly targetIpId: string; readonly againstPlayerId: string; readonly influenceSpent: number }
+  /** Suzerain only: spend influence to reinforce an IP's military. */
+  | { readonly type: 'BOLSTER_MILITARY'; readonly ipId: string; readonly influenceSpent: number }
+  /** Suzerain only: spend influence to grow an IP's economy. */
+  | { readonly type: 'PROMOTE_GROWTH'; readonly ipId: string; readonly influenceSpent: number }
+  /** Suzerain only: conscript a unit from an IP (removes from IP pool). */
+  | { readonly type: 'LEVY_UNIT'; readonly ipId: string }
+  /** Convert an IP to a player-owned town (costs 240/480/720 influence by age). */
+  | { readonly type: 'INCORPORATE'; readonly ipId: string; readonly influenceSpent: number }
+  /** Permanently disband an IP without incorporating it. */
+  | { readonly type: 'DISPERSE'; readonly ipId: string; readonly influenceSpent: number }
+  /** Player selects a suzerain bonus from the IP bonus pool after gaining suzerainty. */
+  | { readonly type: 'SUZERAIN_BONUS_SELECTED'; readonly ipId: string; readonly bonusId: string }
+  // ── Legends / cross-session meta-progression (W3-06) ──
+  /**
+   * Internal action emitted by the web layer when a Foundation or Leader
+   * challenge is completed. NOT dispatched through the engine pipeline —
+   * the engine pipeline passes it through unchanged. Used by the web layer
+   * to update AccountState after legendsSystem evaluation.
+   */
+  | {
+      readonly type: 'CHALLENGE_COMPLETED';
+      readonly challengeId: string;
+      readonly playerId: string;
+      readonly xpGained: number;
+      /** 'foundation' = Foundation Challenge; a leaderId = Leader Challenge */
+      readonly challengeKind: 'foundation' | string;
+    }
+  // ── Narrative Events (W3-05) ──
+  /**
+   * Resolve a pending narrative event by choosing one of its options.
+   * eventId: the NarrativeEventDef id from pendingNarrativeEvents queue.
+   * choiceIndex: 0-based index into NarrativeEventDef.choices.
+   */
+  | { readonly type: 'RESOLVE_NARRATIVE_EVENT'; readonly eventId: string; readonly choiceIndex: number }
+  // ── Leader Attribute Tree (W3-07) ──
+  /**
+   * Award an attribute point to a player.
+   * When isWildcard is true, awards a wildcard attribute point instead.
+   * Attribute points (and spent node unlocks) persist across age transitions.
+   */
+  | { readonly type: 'EARN_ATTRIBUTE_POINT'; readonly playerId: PlayerId; readonly isWildcard: boolean }
+  /**
+   * Spend attribute point(s) to unlock a node in a leader's attribute tree.
+   * Validates: node exists in config, player has sufficient points, all
+   * prerequisites are unlocked. Prefers spending non-wildcard points first.
+   * On success, the node effect is appended to player.legacyBonuses.
+   */
+  | { readonly type: 'SPEND_ATTRIBUTE_POINT'; readonly playerId: PlayerId; readonly nodeId: string };
 
 // ── Events ──
 
