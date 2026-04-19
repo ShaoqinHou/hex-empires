@@ -1,4 +1,4 @@
-export type YieldType = 'food' | 'production' | 'gold' | 'science' | 'culture' | 'faith' | 'influence' | 'housing' | 'diplomacy';
+export type YieldType = 'food' | 'production' | 'gold' | 'science' | 'culture' | 'faith' | 'influence' | 'happiness';
 
 /** A set of yields — all values default to 0 if omitted */
 export interface YieldSet {
@@ -9,8 +9,7 @@ export interface YieldSet {
   readonly culture: number;
   readonly faith: number;
   readonly influence: number;
-  readonly housing: number;
-  readonly diplomacy: number;
+  readonly happiness: number;
 }
 
 export const EMPTY_YIELDS: YieldSet = {
@@ -21,8 +20,7 @@ export const EMPTY_YIELDS: YieldSet = {
   culture: 0,
   faith: 0,
   influence: 0,
-  housing: 0,
-  diplomacy: 0,
+  happiness: 0,
 } as const;
 
 export function addYields(a: YieldSet, b: Partial<YieldSet>): YieldSet {
@@ -34,7 +32,6 @@ export function addYields(a: YieldSet, b: Partial<YieldSet>): YieldSet {
     culture: a.culture + (b.culture ?? 0),
     faith: a.faith + (b.faith ?? 0),
     influence: a.influence + (b.influence ?? 0),
-    housing: a.housing + (b.housing ?? 0),
-    diplomacy: a.diplomacy + (b.diplomacy ?? 0),
+    happiness: a.happiness + (b.happiness ?? 0),
   };
 }

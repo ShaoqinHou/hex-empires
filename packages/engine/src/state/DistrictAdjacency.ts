@@ -160,8 +160,7 @@ export function computeAdjacencyBonus(
       culture: bonus.culture * multiplier,
       faith: bonus.faith * multiplier,
       influence: bonus.influence * multiplier,
-      housing: bonus.housing * multiplier,
-      diplomacy: bonus.diplomacy * multiplier,
+      happiness: bonus.happiness * multiplier,
     };
   }
 
@@ -233,8 +232,7 @@ export function quarterBonus(city: CityState, state: GameState): YieldSet {
       culture: baseNoSpecialist.culture * 0.5,
       faith: baseNoSpecialist.faith * 0.5,
       influence: baseNoSpecialist.influence * 0.5,
-      housing: baseNoSpecialist.housing * 0.5,
-      diplomacy: baseNoSpecialist.diplomacy * 0.5,
+      happiness: baseNoSpecialist.happiness * 0.5,
     });
   }
   return extra;

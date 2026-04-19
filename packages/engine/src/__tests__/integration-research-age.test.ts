@@ -42,7 +42,7 @@ describe('integration-research-age: researching techs drives age-progress thresh
     };
   }
 
-  it('completing a tech via END_TURN grants +5 ageProgress to the player', () => {
+  it('completing a tech via END_TURN does NOT grant +5 ageProgress (F-11 retired)', () => {
     // pottery costs 25. Place player at 24 progress + pop-10 city → completes on END_TURN.
     const player = createTestPlayer({
       id: 'p1',
@@ -62,8 +62,8 @@ describe('integration-research-age: researching techs drives age-progress thresh
     expect(p1).toBeDefined();
     expect(p1!.researchedTechs).toContain('pottery');
     expect(p1!.currentResearch).toBeNull();
-    // 10 (initial) + 5 (tech completion) + 1 (ageSystem natural +1/turn) = 16
-    expect(p1!.ageProgress).toBe(16);
+    // 10 (initial) + 1 (ageSystem natural +1/turn) = 11; +5 per tech is retired (F-11)
+    expect(p1!.ageProgress).toBe(11);
   });
 
   it('player can transition age once ageProgress reaches the threshold', () => {
@@ -143,7 +143,7 @@ describe('integration-research-age: researching techs drives age-progress thresh
       age: 'antiquity',
       currentResearch: 'pottery',
       researchProgress: 24, // will complete with pop-10 city (+11 science/turn)
-      ageProgress: 44, // 44 + 1 (natural) + 5 (tech) = 50, exactly at threshold
+      ageProgress: 49, // 49 + 1 (natural) = 50, exactly at threshold; +5 per tech retired (F-11)
       researchedTechs: [],
       legacyPaths: { military: 1, economic: 0, science: 0, culture: 0 },
     });
@@ -158,7 +158,7 @@ describe('integration-research-age: researching techs drives age-progress thresh
     const p1AfterResearch = afterResearch.players.get('p1');
     expect(p1AfterResearch).toBeDefined();
     expect(p1AfterResearch!.researchedTechs).toContain('pottery');
-    expect(p1AfterResearch!.ageProgress).toBe(50); // 44 + 1 + 5 = 50
+    expect(p1AfterResearch!.ageProgress).toBe(50); // 49 + 1 = 50
 
     // Step 2: TRANSITION_AGE is now valid.
     const afterTransition = engine.applyAction(afterResearch, {

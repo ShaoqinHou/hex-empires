@@ -193,8 +193,7 @@ describe('Government types — compile-time shape tests', () => {
         culture: 0,
         faith: 0,
         influence: 0,
-        housing: 0,
-        diplomacy: 0,
+        happiness: 0,
       },
       description: 'Grants +1 Science per turn when slotted.',
     };

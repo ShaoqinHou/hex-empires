@@ -255,7 +255,6 @@ function processNormalResearch(state: GameState): GameState {
       researchedTechs: [...player.researchedTechs, player.currentResearch],
       currentResearch: null,
       researchProgress: overflow, // overflow carries to next tech
-      ageProgress: player.ageProgress + 5, // +5 age progress per tech
       techProgressMap: prevMap,
     });
 

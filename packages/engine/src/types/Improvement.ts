@@ -10,7 +10,6 @@ export interface ImprovementDef {
   readonly id: string;
   readonly name: string;
   readonly category: 'basic' | 'resource' | 'infrastructure';
-  readonly cost: number; // Builder charges to build
   readonly requiredTech: TechnologyId | null;
   readonly prerequisites: {
     readonly terrain?: TerrainId[];

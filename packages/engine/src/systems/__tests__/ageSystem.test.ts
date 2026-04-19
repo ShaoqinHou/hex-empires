@@ -322,7 +322,7 @@ describe('ageSystem', () => {
       expect(productionBonus!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 });
     });
 
-    it('applies science dark age: loses a random tech and +5 science', () => {
+    it('applies science dark age: -2 science penalty and +5 science (tech-loss retired F-12)', () => {
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -338,9 +338,14 @@ describe('ageSystem', () => {
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const updatedPlayer = next.players.get('p1')!;
-      // Should have lost exactly 1 tech
-      expect(updatedPlayer.researchedTechs.length).toBe(2);
-      const scienceBonus = updatedPlayer.legacyBonuses.find(b => b.source.includes('dark-age:science'));
+      // Tech-loss retired: all 3 techs must still be present
+      expect(updatedPlayer.researchedTechs.length).toBe(3);
+      // Science penalty bonus should exist
+      const sciencePenalty = updatedPlayer.legacyBonuses.find(b => b.source.includes('dark-age:science:antiquity:penalty'));
+      expect(sciencePenalty).toBeDefined();
+      expect(sciencePenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: -2 });
+      // Science buff bonus should also exist
+      const scienceBonus = updatedPlayer.legacyBonuses.find(b => b.source === 'dark-age:science:antiquity');
       expect(scienceBonus).toBeDefined();
       expect(scienceBonus!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 5 });
       expect(next.log.some(e => e.message.includes('Science Dark Age'))).toBe(true);
@@ -694,5 +699,69 @@ describe('W2-07 legacy-paths findings', () => {
     expect(byAxis.military).toBe(0);
     expect(byAxis.economic).toBe(0);
     expect(byAxis.science).toBe(0);
+  });
+});
+
+// ── W3-03 F-06: Celebration reset on age transition ──
+
+describe('ageSystem — celebration reset on TRANSITION_AGE (W3-03 F-06)', () => {
+  function makeReadyPlayer(overrides: Partial<Parameters<typeof createTestPlayer>[0]> = {}) {
+    return createTestPlayer({
+      age: 'antiquity',
+      ageProgress: 50,
+      civilizationId: 'rome',
+      globalHappiness: 350,
+      celebrationCount: 2,
+      celebrationBonus: 10,
+      celebrationTurnsLeft: 5,
+      // socialPolicySlots intentionally preserved across ages
+      socialPolicySlots: 3,
+      ...overrides,
+    } as Parameters<typeof createTestPlayer>[0]);
+  }
+
+  it('resets globalHappiness to 0 on age transition (F-06)', () => {
+    const player = makeReadyPlayer();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    expect((updated as typeof updated & { globalHappiness: number }).globalHappiness).toBe(0);
+  });
+
+  it('resets celebrationCount to 0 on age transition (F-06)', () => {
+    const player = makeReadyPlayer();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.celebrationCount).toBe(0);
+  });
+
+  it('resets celebrationTurnsLeft and celebrationBonus to 0 on age transition (F-06)', () => {
+    const player = makeReadyPlayer();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    expect(updated.celebrationTurnsLeft).toBe(0);
+    expect(updated.celebrationBonus).toBe(0);
+  });
+
+  it('preserves socialPolicySlots across age transition (GDD: slots carry across ages)', () => {
+    const player = makeReadyPlayer({ socialPolicySlots: 3 } as Parameters<typeof createTestPlayer>[0]);
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    // socialPolicySlots NOT in the reset list — carries over
+    expect((updated as typeof updated & { socialPolicySlots: number }).socialPolicySlots).toBe(3);
   });
 });

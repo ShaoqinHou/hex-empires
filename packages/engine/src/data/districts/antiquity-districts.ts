@@ -8,12 +8,12 @@ import type { DistrictDef } from '../../types/District';
 import type { YieldSet } from '../../types/Yields';
 
 // Helper to create yield sets
-const Y = (food: number, production: number, gold: number, science: number, culture: number, faith: number, influence: number, housing: number, diplomacy: number): YieldSet => ({
-  food, production, gold, science, culture, faith, influence, housing, diplomacy
+const Y = (food: number, production: number, gold: number, science: number, culture: number, faith: number, influence: number, happiness: number): YieldSet => ({
+  food, production, gold, science, culture, faith, influence, happiness
 });
 
 // Helper to create empty yield set
-const EMPTY_YIELDS: YieldSet = Y(0, 0, 0, 0, 0, 0, 0, 0, 0);
+const EMPTY_YIELDS: YieldSet = Y(0, 0, 0, 0, 0, 0, 0, 0);
 
 /**
  * CITY_CENTER - The central district where the city is founded
@@ -26,7 +26,7 @@ export const CITY_CENTER_DISTRICT: DistrictDef = {
   age: 'antiquity',
   cost: 0,
   populationCost: 0,
-  yields: Y(2, 2, 1, 0, 0, 0, 0, 1, 0),
+  yields: Y(2, 2, 1, 0, 0, 0, 0, 1),
   adjacencyYields: EMPTY_YIELDS,
   maxLevel: 3,
   allowedBuildings: ['monument', 'granary', 'shrine', 'warehouse'],
@@ -49,8 +49,8 @@ export const ENCAMPMENT_DISTRICT: DistrictDef = {
   cost: 80,
   requiredTech: 'bronze_working',
   populationCost: 1,
-  yields: Y(0, 2, 0, 0, 0, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 0, 0, 0, 0, 0), // +1 production per adjacent district
+  yields: Y(0, 2, 0, 0, 0, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 0, 0, 0, 0, 0, 0), // +1 production per adjacent district
   maxLevel: 2,
   allowedBuildings: ['barracks', 'stable', 'armory'],
   placementConstraint: {
@@ -76,8 +76,8 @@ export const CAMPUS_DISTRICT: DistrictDef = {
   cost: 100,
   requiredTech: 'writing',
   populationCost: 1,
-  yields: Y(0, 1, 0, 2, 0, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 0, 1, 0, 0, 0, 0, 0), // +1 science per adjacency
+  yields: Y(0, 1, 0, 2, 0, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 0, 1, 0, 0, 0, 0), // +1 science per adjacency
   maxLevel: 2,
   allowedBuildings: ['library', 'university'],
   placementConstraint: {
@@ -103,8 +103,8 @@ export const THEATER_DISTRICT: DistrictDef = {
   cost: 100,
   // TODO(content): add requiredCivic: 'drama_poetry' when civic is defined
   populationCost: 1,
-  yields: Y(0, 1, 0, 0, 2, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0, 0), // +1 culture per adjacency
+  yields: Y(0, 1, 0, 0, 2, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0), // +1 culture per adjacency
   maxLevel: 2,
   allowedBuildings: ['monument', 'amphitheater', 'museum'],
   placementConstraint: {
@@ -130,8 +130,8 @@ export const COMMERCIAL_DISTRICT: DistrictDef = {
   cost: 80,
   requiredCivic: 'state_workforce',
   populationCost: 1,
-  yields: Y(0, 1, 2, 0, 0, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 1, 0, 0, 0, 0, 0, 0), // +1 gold per adjacency
+  yields: Y(0, 1, 2, 0, 0, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 1, 0, 0, 0, 0, 0), // +1 gold per adjacency
   maxLevel: 2,
   allowedBuildings: ['market', 'bank'],
   placementConstraint: {
@@ -157,8 +157,8 @@ export const INDUSTRIAL_DISTRICT: DistrictDef = {
   cost: 100,
   // TODO(content): add requiredTech: 'apprenticeship' when age-coherent tech is confirmed
   populationCost: 1,
-  yields: Y(0, 3, 0, 0, 0, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 1, 0, 0, 0, 0, 0, 0, 0), // +1 production per adjacency
+  yields: Y(0, 3, 0, 0, 0, 0, 0, 1),
+  adjacencyYields: Y(0, 1, 0, 0, 0, 0, 0, 0), // +1 production per adjacency
   maxLevel: 2,
   allowedBuildings: ['workshop', 'factory'],
   placementConstraint: {
@@ -184,8 +184,8 @@ export const HOLY_SITE_DISTRICT: DistrictDef = {
   cost: 100,
   // TODO(content): add requiredCivic: 'theology' when civic is defined
   populationCost: 1,
-  yields: Y(0, 0, 0, 0, 0, 2, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 0, 1, 0, 0, 0), // +1 faith per adjacency
+  yields: Y(0, 0, 0, 0, 0, 2, 0, 1),
+  adjacencyYields: Y(0, 0, 0, 0, 0, 1, 0, 0), // +1 faith per adjacency
   maxLevel: 2,
   allowedBuildings: ['shrine', 'temple', 'religious_building'],
   placementConstraint: {
@@ -211,7 +211,7 @@ export const GOVERNMENT_DISTRICT: DistrictDef = {
   cost: 120,
   requiredCivic: 'code_of_laws',
   populationCost: 1,
-  yields: Y(0, 1, 1, 0, 1, 0, 0, 1, 0),
+  yields: Y(0, 1, 1, 0, 1, 0, 0, 1),
   adjacencyYields: EMPTY_YIELDS,
   maxLevel: 2,
   allowedBuildings: ['monument', 'palace', 'government_building'],
@@ -238,8 +238,8 @@ export const ENTERTAINMENT_DISTRICT: DistrictDef = {
   cost: 100,
   // TODO(content): add requiredCivic: 'games_recreation' when civic is defined
   populationCost: 1,
-  yields: Y(0, 1, 1, 0, 1, 0, 0, 2, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0, 0), // +1 culture per adjacency
+  yields: Y(0, 1, 1, 0, 1, 0, 0, 2),
+  adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0), // +1 culture per adjacency
   maxLevel: 2,
   allowedBuildings: ['arena', 'zoo', 'stadium'],
   placementConstraint: {
@@ -265,8 +265,8 @@ export const WATERFRONT_DISTRICT: DistrictDef = {
   cost: 80,
   requiredTech: 'sailing',
   populationCost: 1,
-  yields: Y(1, 1, 2, 0, 0, 0, 0, 1, 0),
-  adjacencyYields: Y(0, 0, 1, 0, 0, 0, 0, 0, 0), // +1 gold per adjacent water
+  yields: Y(1, 1, 2, 0, 0, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 1, 0, 0, 0, 0, 0), // +1 gold per adjacent water
   maxLevel: 2,
   allowedBuildings: ['lighthouse', 'shipyard', 'seaport'],
   placementConstraint: {

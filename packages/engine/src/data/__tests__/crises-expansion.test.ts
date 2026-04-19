@@ -30,8 +30,7 @@ const VALID_YIELDS = new Set<string>([
   'culture',
   'faith',
   'influence',
-  'housing',
-  'diplomacy',
+  'happiness',
 ]);
 
 describe('crises expansion catalog', () => {

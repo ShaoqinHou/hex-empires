@@ -10,7 +10,6 @@ export interface LeaderDef {
     readonly effects: ReadonlyArray<EffectDef>;
   };
   readonly agendas: ReadonlyArray<string>;
-  readonly compatibleAges: ReadonlyArray<'antiquity' | 'exploration' | 'modern'>;
   /**
    * The two attribute trees this leader has an affinity for.
    * Primary attributes represent this leader's historical strengths and

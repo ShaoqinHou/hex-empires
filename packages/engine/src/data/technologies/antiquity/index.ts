@@ -51,19 +51,6 @@ export const SAILING: TechnologyDef = {
   masteryCodexCount: 1,
 };
 
-export const ASTROLOGY: TechnologyDef = {
-  id: 'astrology',
-  name: 'Astrology',
-  age: 'antiquity',
-  cost: 50,
-  prerequisites: [],
-  unlocks: ['shrine'],
-  description: 'Enables Shrine building',
-  treePosition: { row: 4, col: 0 },
-  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 },
-  masteryCodexCount: 1,
-};
-
 export const ARCHERY: TechnologyDef = {
   id: 'archery',
   name: 'Archery',
@@ -247,7 +234,7 @@ export const NAVIGATION: TechnologyDef = {
 };
 
 export const ALL_ANTIQUITY_TECHS: ReadonlyArray<TechnologyDef> = [
-  POTTERY, ANIMAL_HUSBANDRY, MINING, SAILING, ASTROLOGY,
+  POTTERY, ANIMAL_HUSBANDRY, MINING, SAILING,
   ARCHERY, WRITING, MASONRY, BRONZE_WORKING, WHEEL,
   IRRIGATION, CURRENCY, CONSTRUCTION, IRON_WORKING, MATHEMATICS,
   AGRICULTURE, ENGINEERING, MILITARY_TRAINING, NAVIGATION,

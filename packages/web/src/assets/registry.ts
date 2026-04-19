@@ -93,8 +93,7 @@ export const YIELD_ICONS: AssetCategoryRef = {
     ['culture',    { path: '/assets/images/icons/yields/culture.svg',    source: 'placeholder' }],
     ['faith',      { path: '/assets/images/icons/yields/faith.svg',      source: 'placeholder' }],
     ['influence',  { path: '/assets/images/icons/yields/influence.svg',  source: 'placeholder' }],
-    ['housing',    { path: '/assets/images/icons/yields/housing.svg',    source: 'placeholder' }],
-    ['diplomacy',  { path: '/assets/images/icons/yields/diplomacy.svg',  source: 'placeholder' }],
+    ['happiness',  { path: '/assets/images/icons/yields/happiness.svg',  source: 'placeholder' }],
   ]),
   fallback: { path: '/assets/images/icons/yields/_fallback-circle.svg', source: 'placeholder' },
 };

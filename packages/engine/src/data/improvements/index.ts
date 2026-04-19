@@ -4,7 +4,6 @@ export const FARM: ImprovementDef = {
   id: 'farm',
   name: 'Farm',
   category: 'basic',
-  cost: 1, // 1 Builder charge
   requiredTech: null,
   prerequisites: {
     terrain: ['plains', 'grassland'],
@@ -17,7 +16,6 @@ export const MINE: ImprovementDef = {
   id: 'mine',
   name: 'Mine',
   category: 'resource',
-  cost: 2,
   requiredTech: 'mining',
   prerequisites: {
     terrain: ['plains', 'hills', 'mountains', 'desert', 'tundra'],
@@ -31,7 +29,6 @@ export const PASTURE: ImprovementDef = {
   id: 'pasture',
   name: 'Pasture',
   category: 'resource',
-  cost: 2,
   requiredTech: 'animal_husbandry',
   prerequisites: {
     resource: ['cattle', 'horses', 'sheep'],
@@ -44,7 +41,6 @@ export const PLANTATION: ImprovementDef = {
   id: 'plantation',
   name: 'Plantation',
   category: 'resource',
-  cost: 2,
   requiredTech: null,
   prerequisites: {
     terrain: ['plains', 'grassland'],
@@ -59,7 +55,6 @@ export const QUARRY: ImprovementDef = {
   id: 'quarry',
   name: 'Quarry',
   category: 'resource',
-  cost: 2,
   requiredTech: null,
   prerequisites: {
     terrain: ['plains', 'desert', 'tundra'],
@@ -73,7 +68,6 @@ export const CAMP: ImprovementDef = {
   id: 'camp',
   name: 'Camp',
   category: 'resource',
-  cost: 1,
   requiredTech: null,
   prerequisites: {
     feature: ['forest', 'rainforest'],

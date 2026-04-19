@@ -20,7 +20,7 @@ interface ImprovementPanelProps {
 }
 
 export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelProps) {
-  const { state, dispatch, selectedHex } = useGameState();
+  const { state, selectedHex } = useGameState();
 
   const builder = state.units.get(builderUnitId);
   const currentTile = selectedHex ? state.map.tiles.get(coordToKey(selectedHex)) : null;
@@ -54,14 +54,10 @@ export function ImprovementPanel({ builderUnitId, onClose }: ImprovementPanelPro
     });
   }, [currentTile, builder, selectedHex, state]);
 
-  const handleBuildImprovement = (improvementId: string) => {
-    if (!selectedHex) return;
-    dispatch({
-      type: 'BUILD_IMPROVEMENT',
-      unitId: builderUnitId,
-      tile: selectedHex,
-      improvementId,
-    });
+  const handleBuildImprovement = (_improvementId: string) => {
+    // BUILD_IMPROVEMENT retired (W1-C): improvements are now placed via
+    // productionSystem queue, not by builder units. This panel is
+    // pending redesign for the production-queue flow.
     onClose();
   };
 
@@ -159,16 +155,6 @@ function ImprovementCard({ improvement, onBuild }: ImprovementCardProps) {
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm" style={{ color: 'var(--panel-text-color)' }}>
               {improvement.name}
-            </span>
-            <span
-              className="text-xs px-2 py-0.5 rounded"
-              style={{
-                backgroundColor: 'rgba(88, 166, 255, 0.1)',
-                color: 'var(--color-accent)',
-                border: '1px solid rgba(88, 166, 255, 0.3)',
-              }}
-            >
-              {improvement.cost} charge{improvement.cost !== 1 ? 's' : ''}
             </span>
           </div>
 

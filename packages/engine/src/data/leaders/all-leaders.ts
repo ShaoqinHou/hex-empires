@@ -9,7 +9,7 @@ export const AUGUSTUS: LeaderDef = {
     effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 5 }],
   },
   agendas: ['expansionist', 'builder'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['economic', 'militaristic'],
 };
 
@@ -22,7 +22,7 @@ export const CLEOPATRA: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
   },
   agendas: ['diplomat', 'trader'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['diplomatic', 'economic'],
 };
 
@@ -36,7 +36,7 @@ export const PERICLES: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
   },
   agendas: ['culturalist', 'diplomat'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['cultural', 'diplomatic'],
 };
 
@@ -49,7 +49,7 @@ export const CYRUS: LeaderDef = {
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'all', value: 2 }],
   },
   agendas: ['conqueror', 'opportunist'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['militaristic', 'diplomatic'],
 };
 
@@ -62,7 +62,7 @@ export const GANDHI: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 }],
   },
   agendas: ['peacemaker', 'religious'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['cultural', 'scientific'],
 };
 
@@ -75,7 +75,7 @@ export const QIN_SHI_HUANG: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
   },
   agendas: ['builder', 'wonder_obsessed'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['militaristic', 'economic'],
 };
 
@@ -88,7 +88,7 @@ export const ALEXANDER: LeaderDef = {
     effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 3 }],
   },
   agendas: ['conqueror', 'expansionist'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['militaristic', 'expansionist'],
 };
 
@@ -101,7 +101,7 @@ export const HATSHEPSUT: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },
   agendas: ['trader', 'builder'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['cultural', 'economic'],
 };
 
@@ -114,7 +114,7 @@ export const GENGHIS_KHAN: LeaderDef = {
     effects: [{ type: 'MODIFY_COMBAT', target: 'cavalry', value: 10 }],
   },
   agendas: ['conqueror', 'expansionist'],
-  compatibleAges: ['antiquity', 'exploration', 'modern'],
+
   primaryAttributes: ['militaristic', 'expansionist'],
 };
 

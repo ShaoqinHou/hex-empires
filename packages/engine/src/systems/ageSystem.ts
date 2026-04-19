@@ -52,7 +52,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   }
 
   // Determine golden/dark age effects based on legacy path milestones (max 1 golden age per transition)
-  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.researchedTechs, player.goldenAgeChosen ?? null);
+  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.goldenAgeChosen ?? null);
   bonuses = [...bonuses, ...goldenDarkResult.effects];
   rng = goldenDarkResult.rng;
 
@@ -69,12 +69,6 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     }
   }
 
-  // Apply tech loss from science dark age
-  let researchedTechs = player.researchedTechs;
-  if (goldenDarkResult.lostTech) {
-    researchedTechs = researchedTechs.filter(t => t !== goldenDarkResult.lostTech);
-  }
-
   updatedPlayers.set(player.id, {
     ...player,
     civilizationId: newCivId,
@@ -87,7 +81,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     killsThisAge: 0,
     goldenAgeChosen: null,
     // ── Tech tree reset (§16.1 #9) ──
-    researchedTechs,
+    researchedTechs: player.researchedTechs,
     currentResearch: null,
     researchProgress: 0,
     masteredTechs: [],
@@ -255,7 +249,6 @@ interface GoldenDarkResult {
   readonly effects: ReadonlyArray<ActiveEffect>;
   readonly logEntries: ReadonlyArray<string>;
   readonly rng: import('../types/GameState').RngState;
-  readonly lostTech: string | null;
 }
 
 /**
@@ -273,13 +266,11 @@ function getGoldenDarkAgeEffects(
   paths: LegacyPaths,
   age: string,
   rng: import('../types/GameState').RngState,
-  researchedTechs: ReadonlyArray<string>,
   goldenAgeChosen: 'military' | 'economic' | 'science' | 'culture' | null,
 ): GoldenDarkResult {
   const effects: ActiveEffect[] = [];
   const logEntries: string[] = [];
   let currentRng = rng;
-  let lostTech: string | null = null;
 
   // F-05: Determine the single allowed golden age axis.
   const axes: ReadonlyArray<'military' | 'economic' | 'science' | 'culture'> = ['military', 'economic', 'science', 'culture'];
@@ -341,20 +332,16 @@ function getGoldenDarkAgeEffects(
     });
     logEntries.push('Science Golden Age! +3 science in all cities permanently.');
   } else if (paths.science === 0) {
-    // Lose 1 random researched tech
-    if (researchedTechs.length > 0) {
-      const result = nextRandom(currentRng);
-      currentRng = result.rng;
-      const techIndex = Math.floor(result.value * researchedTechs.length);
-      lostTech = researchedTechs[techIndex];
-      logEntries.push(`Science Dark Age! Lost technology: ${lostTech}. +5 science permanently.`);
-    } else {
-      logEntries.push('Science Dark Age! No techs to lose. +5 science permanently.');
-    }
+    // Science Dark Age: -2 science per city for the next age (yield penalty via legacy bonus)
+    effects.push({
+      source: `dark-age:science:${age}:penalty`,
+      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: -2 },
+    });
     effects.push({
       source: `dark-age:science:${age}`,
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 5 },
     });
+    logEntries.push('Science Dark Age! -2 science per city but +5 science permanently.');
   }
 
   // Culture path
@@ -376,7 +363,7 @@ function getGoldenDarkAgeEffects(
     logEntries.push('Culture Dark Age! -2 happiness but +4 culture permanently.');
   }
 
-  return { effects, logEntries, rng: currentRng, lostTech };
+  return { effects, logEntries, rng: currentRng };
 }
 
 /**

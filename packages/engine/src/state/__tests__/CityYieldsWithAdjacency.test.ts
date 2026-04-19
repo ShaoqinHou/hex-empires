@@ -94,8 +94,7 @@ const YIELD_KEYS: ReadonlyArray<keyof YieldSet> = [
   'culture',
   'faith',
   'influence',
-  'housing',
-  'diplomacy',
+  'happiness',
 ] as const;
 
 describe('calculateCityYieldsWithAdjacency', () => {

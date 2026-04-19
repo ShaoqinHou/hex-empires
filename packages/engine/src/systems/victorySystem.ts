@@ -16,7 +16,7 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
  *   Scaffold fallback: totalKills >= 20 + at least 5 cities (if Operation Ivy not completed)
  * - Score: highest score at turn limit (300 turns) using legacy-based scoring
  *
- * Note: 'diplomacy' victory type was removed (no GDD basis — W1-C / W2-08).
+ * Note: diplomacy victory type was removed (no GDD basis — W1-C / W2-08).
  * W5-02 (Culture/Artifacts/World's Fair) is a separate workpack.
  */
 export function victorySystem(state: GameState, action: GameAction): GameState {

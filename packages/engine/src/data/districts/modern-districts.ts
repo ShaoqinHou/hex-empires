@@ -7,11 +7,11 @@
 import type { DistrictDef } from '../../types/District';
 import type { YieldSet } from '../../types/Yields';
 
-const Y = (food: number, production: number, gold: number, science: number, culture: number, faith: number, influence: number, housing: number, diplomacy: number): YieldSet => ({
-  food, production, gold, science, culture, faith, influence, housing, diplomacy
+const Y = (food: number, production: number, gold: number, science: number, culture: number, faith: number, influence: number, happiness: number): YieldSet => ({
+  food, production, gold, science, culture, faith, influence, happiness
 });
 
-const EMPTY_YIELDS: YieldSet = Y(0, 0, 0, 0, 0, 0, 0, 0, 0);
+const EMPTY_YIELDS: YieldSet = Y(0, 0, 0, 0, 0, 0, 0, 0);
 
 /**
  * METROPOLIS - Ultimate city center district
@@ -25,8 +25,8 @@ export const METROPOLIS_DISTRICT: DistrictDef = {
   cost: 500,
   requiredTech: 'urbanization',
   populationCost: 0,
-  yields: Y(5, 5, 3, 2, 2, 0, 2, 5, 1),
-  adjacencyYields: Y(1, 1, 1, 1, 1, 0, 0, 0, 0),
+  yields: Y(5, 5, 3, 2, 2, 0, 2, 5),
+  adjacencyYields: Y(1, 1, 1, 1, 1, 0, 0, 0),
   maxLevel: 5,
   allowedBuildings: ['monument', 'granary', 'shrine', 'warehouse', 'palace', 'government_building', 'courthouse'],
   effects: [
@@ -50,8 +50,8 @@ export const SPACE_CENTER_DISTRICT: DistrictDef = {
   cost: 600,
   requiredTech: 'rocketry',
   populationCost: 3,
-  yields: Y(0, 5, 2, 8, 1, 0, 0, 1, 1),
-  adjacencyYields: Y(0, 0, 0, 2, 0, 0, 0, 0, 0),
+  yields: Y(0, 5, 2, 8, 1, 0, 0, 1),
+  adjacencyYields: Y(0, 0, 0, 2, 0, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['laboratory', 'research_lab', 'spaceport_module', 'satellite_facility'],
   placementConstraint: {
@@ -78,8 +78,8 @@ export const MEDIA_CENTER_DISTRICT: DistrictDef = {
   cost: 400,
   requiredTech: 'mass_media',
   populationCost: 2,
-  yields: Y(0, 2, 2, 0, 6, 0, 3, 2, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 2, 0, 0, 0, 0),
+  yields: Y(0, 2, 2, 0, 6, 0, 3, 2),
+  adjacencyYields: Y(0, 0, 0, 0, 2, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['museum', 'art_museum', 'archaeology_museum', 'broadcast_center', 'film_studio'],
   placementConstraint: {
@@ -105,8 +105,8 @@ export const FINANCIAL_HUB_DISTRICT: DistrictDef = {
   cost: 450,
   // TODO(content): requiredCivic: 'globalization' (field-type was wrong: globalization is a CivicId not TechId)
   populationCost: 2,
-  yields: Y(0, 3, 6, 1, 1, 0, 2, 3, 0),
-  adjacencyYields: Y(0, 0, 2, 0, 0, 0, 0, 0, 0),
+  yields: Y(0, 3, 6, 1, 1, 0, 2, 3),
+  adjacencyYields: Y(0, 0, 2, 0, 0, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['bank', 'stock_exchange', 'stock_market', 'world_bank', 'trade_center'],
   placementConstraint: {
@@ -133,8 +133,8 @@ export const MILITARY_BASE_DISTRICT: DistrictDef = {
   cost: 400,
   requiredTech: 'combined_arms',
   populationCost: 3,
-  yields: Y(0, 5, 0, 1, 0, 0, 0, 3, 0),
-  adjacencyYields: Y(0, 2, 0, 0, 0, 0, 0, 0, 0),
+  yields: Y(0, 5, 0, 1, 0, 0, 0, 3),
+  adjacencyYields: Y(0, 2, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['barracks_exp', 'stable', 'armory', 'military_academy', 'war_college', 'missile_silo'],
   placementConstraint: {
@@ -163,8 +163,8 @@ export const ECO_DISTRICT_DISTRICT: DistrictDef = {
   // TODO(content): requiredCivic: 'environmentalism' (field was named requiredTech but environmentalism is a CivicId)
   requiredCivic: 'environmentalism',
   populationCost: 2,
-  yields: Y(3, 1, 1, 1, 3, 0, 1, 2, 2),
-  adjacencyYields: Y(1, 0, 0, 0, 1, 0, 0, 0, 0),
+  yields: Y(3, 1, 1, 1, 3, 0, 1, 2),
+  adjacencyYields: Y(1, 0, 0, 0, 1, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['park', 'sanctuary', 'national_park', 'recycling_center', 'solar_farm'],
   placementConstraint: {
@@ -191,8 +191,8 @@ export const DIPLOMATIC_QUARTER_DISTRICT: DistrictDef = {
   cost: 400,
   // TODO(content): add requiredCivic: 'diplomacy' when civic is defined
   populationCost: 2,
-  yields: Y(0, 2, 2, 1, 2, 0, 4, 2, 3),
-  adjacencyYields: Y(0, 0, 0, 0, 0, 0, 1, 0, 1),
+  yields: Y(0, 2, 2, 1, 2, 0, 4, 2),
+  adjacencyYields: Y(0, 0, 0, 0, 0, 0, 1, 0),
   maxLevel: 3,
   allowedBuildings: ['palace', 'government_building', 'embassy', 'diplomatic_hall', 'world_congress'],
   placementConstraint: {
@@ -219,8 +219,8 @@ export const MEDICAL_CENTER_DISTRICT: DistrictDef = {
   cost: 350,
   // TODO(content): add requiredTech: 'pharmaceuticals' when tech is defined
   populationCost: 2,
-  yields: Y(3, 1, 1, 1, 1, 0, 0, 3, 0),
-  adjacencyYields: Y(1, 0, 0, 0, 0, 0, 0, 0, 0),
+  yields: Y(3, 1, 1, 1, 1, 0, 0, 3),
+  adjacencyYields: Y(1, 0, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['arena', 'zoo', 'stadium', 'hospital', 'medical_laboratory'],
   placementConstraint: {
@@ -247,8 +247,8 @@ export const POWER_GRID_DISTRICT: DistrictDef = {
   cost: 500,
   requiredTech: 'electricity',
   populationCost: 3,
-  yields: Y(0, 8, 2, 1, 0, 0, 0, 2, 0),
-  adjacencyYields: Y(0, 2, 0, 0, 0, 0, 0, 0, 0),
+  yields: Y(0, 8, 2, 1, 0, 0, 0, 2),
+  adjacencyYields: Y(0, 2, 0, 0, 0, 0, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['factory', 'power_plant', 'steel_mill', 'nuclear_plant', 'hydroelectric_dam'],
   placementConstraint: {
@@ -275,8 +275,8 @@ export const SACRED_GROUNDS_DISTRICT: DistrictDef = {
   cost: 400,
   // TODO(content): add requiredCivic: 'religious_tolerance' when civic is defined
   populationCost: 2,
-  yields: Y(0, 1, 1, 0, 1, 6, 0, 3, 0),
-  adjacencyYields: Y(0, 0, 0, 0, 0, 2, 0, 0, 0),
+  yields: Y(0, 1, 1, 0, 1, 6, 0, 3),
+  adjacencyYields: Y(0, 0, 0, 0, 0, 2, 0, 0),
   maxLevel: 3,
   allowedBuildings: ['temple', 'religious_building', 'cathedral', 'mosque', 'pagoda', 'religious_center'],
   placementConstraint: {

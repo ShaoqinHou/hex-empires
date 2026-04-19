@@ -73,7 +73,7 @@ describe('researchSystem', () => {
       expect(next.players.get('p1')!.currentResearch).toBeNull();
     });
 
-    it('grants age progress on tech completion', () => {
+    it('does NOT grant age progress on tech completion (F-11: +5 ageProgress retired)', () => {
       const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 24, ageProgress: 0 });
       const city = createTestCity({ population: 5 });
       const state = createTestState({
@@ -82,7 +82,8 @@ describe('researchSystem', () => {
       });
       const next = researchSystem(state, { type: 'END_TURN' });
       if (next.players.get('p1')!.researchedTechs.includes('pottery')) {
-        expect(next.players.get('p1')!.ageProgress).toBe(5);
+        // ageProgress must stay 0 — tech completion no longer grants +5
+        expect(next.players.get('p1')!.ageProgress).toBe(0);
       }
     });
 
