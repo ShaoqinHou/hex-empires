@@ -2,7 +2,7 @@ import type { GameState, GameAction, CityState, UnitState, HexTile, ProductionIt
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import { coordToKey } from '../hex/HexMath';
-import { calculateCityYields } from '../state/YieldCalculator';
+import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
 
 /** Generate deterministic unit ID from state */
@@ -58,7 +58,7 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
  * verification via behavioural assertions. Pure — reads state, returns number.
  */
 function computeCancelThreshold(state: GameState, city: CityState): number {
-  const yields = calculateCityYields(city, state);
+  const yields = calculateCityYieldsWithAdjacency(city, state);
   const prod = yields.production;
   return Math.max(10, Math.floor(0.5 * prod));
 }
@@ -325,7 +325,7 @@ function processProduction(state: GameState): GameState {
     // Read the freshest city snapshot (an earlier iteration may have updated it).
     const currentCity = updatedCities.get(cityId) ?? city;
     const currentItem = currentCity.productionQueue[0];
-    const yields = calculateCityYields(currentCity, state);
+    const yields = calculateCityYieldsWithAdjacency(currentCity, state);
     let productionPerTurn = yields.production;
 
     // Barracks: +10% production toward military land units

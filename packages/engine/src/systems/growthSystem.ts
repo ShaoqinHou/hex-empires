@@ -1,5 +1,5 @@
 import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice } from '../types/GameState';
-import { calculateCityYields } from '../state/YieldCalculator';
+import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
 
@@ -68,7 +68,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const player = state.players.get(city.owner);
     const age: Age = player?.age ?? state.age.currentAge;
 
-    const yields = calculateCityYields(city, state);
+    const yields = calculateCityYieldsWithAdjacency(city, state);
     // W3-02: specialists cost 2 food each per turn (Civ VII §spec).
     // Note: YieldCalculator already deducts -(specialists * 2) from yields.food,
     // so the net food surplus already accounts for specialist food cost.

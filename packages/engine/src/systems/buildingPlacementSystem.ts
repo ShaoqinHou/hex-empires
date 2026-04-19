@@ -2,7 +2,14 @@ import type { GameState, GameAction, HexCoord, CityId, BuildingId, ValidationRes
 import { coordToKey } from '../hex/HexMath';
 
 /**
- * Building Placement System
+ * @deprecated Cycle F (W4-01) — buildingPlacementSystem has been retired from the
+ * GameEngine DEFAULT_SYSTEMS pipeline. The V2 spatial model uses PLACE_URBAN_BUILDING
+ * dispatched to `urbanBuildingSystem` (already wired via `adaptUrbanBuilding` since M12).
+ * This file is kept for backward compatibility: existing tests that exercise legacy
+ * PLACE_BUILDING validation logic still import the function directly.
+ * Do not add new callers. New building placement goes through urbanBuildingSystem.
+ *
+ * Building Placement System (LEGACY)
  *
  * Handles placing buildings on specific tiles within city territory.
  * This is a key Civ 7 mechanic where buildings must be placed on tiles,

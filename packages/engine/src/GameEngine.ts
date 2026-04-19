@@ -19,7 +19,8 @@ import { commanderPromotionSystem } from './systems/commanderPromotionSystem';
 import { promotionSystem } from './systems/promotionSystem';
 import { fortifySystem } from './systems/fortifySystem';
 import { improvementSystem } from './systems/improvementSystem';
-import { buildingPlacementSystem } from './systems/buildingPlacementSystem';
+// buildingPlacementSystem retired in Cycle F (W4-01): PLACE_BUILDING superseded by PLACE_URBAN_BUILDING.
+// File kept at ./systems/buildingPlacementSystem.ts with @deprecated comment for backward compat.
 import { districtSystem } from './systems/districtSystem';
 import { growthSystem } from './systems/growthSystem';
 import { productionSystem } from './systems/productionSystem';
@@ -85,7 +86,8 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   promotionSystem,
   fortifySystem,
   improvementSystem,
-  buildingPlacementSystem,
+  // buildingPlacementSystem removed in Cycle F (W4-01) — retired in favour of
+  // adaptUrbanBuilding (PLACE_URBAN_BUILDING). See ./systems/buildingPlacementSystem.ts.
   districtSystem,
   growthSystem,
   productionSystem,
