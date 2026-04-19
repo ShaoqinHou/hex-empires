@@ -229,7 +229,11 @@ export interface PlayerState {
    */
   readonly pantheonId?: string | null;
   readonly governmentId?: string | null;
-  readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string | null>>;
+  /**
+   * Flat wildcard policy slot array, length = GovernmentDef.policySlots.total.
+   * Null entries are empty slots. (W2-03: was ReadonlyMap<category, array>.)
+   */
+  readonly slottedPolicies?: ReadonlyArray<string | null>;
 
   // ── Narrative Events ──
   /** Arbitrary tag strings used to gate narrative event conditions */
@@ -399,8 +403,12 @@ export interface TradeRoute {
   readonly from: CityId;         // home city of the route owner
   readonly to: CityId;           // foreign target city
   readonly owner: PlayerId;      // player who created the route
-  readonly turnsRemaining: number;
-  readonly goldPerTurn: number;
+  /** Resources copied from the destination city to the origin owner each turn */
+  readonly resources: ReadonlyArray<ResourceId>;
+  /** True if this is a sea trade route (Trade Ship caravan); sea routes pay 2× gold */
+  readonly isSea: boolean;
+  /** UnitId of the stationary caravan/trade-ship unit at the destination */
+  readonly caravanUnitId: string;
 }
 
 // ── Crisis ──
@@ -573,8 +581,12 @@ export type GameAction =
   // ── M12 Integration: religion / government / urban building / commander ──
   | { readonly type: 'ADOPT_PANTHEON'; readonly playerId: PlayerId; readonly pantheonId: string }
   | { readonly type: 'SET_GOVERNMENT'; readonly playerId: PlayerId; readonly governmentId: string }
-  | { readonly type: 'SLOT_POLICY'; readonly playerId: PlayerId; readonly category: 'military' | 'economic' | 'diplomatic' | 'wildcard'; readonly slotIndex: number; readonly policyId: string }
-  | { readonly type: 'UNSLOT_POLICY'; readonly playerId: PlayerId; readonly category: 'military' | 'economic' | 'diplomatic' | 'wildcard'; readonly slotIndex: number }
+  /** Slot a policy into a flat wildcard slot by index (VII §14.2 — no per-category slots). */
+  | { readonly type: 'SLOT_POLICY'; readonly playerId: PlayerId; readonly slotIndex: number; readonly policyId: string }
+  /** Clear a flat wildcard slot by index (VII §14.2 — no per-category slots). */
+  | { readonly type: 'UNSLOT_POLICY'; readonly playerId: PlayerId; readonly slotIndex: number }
+  /** Select an ideology branch for the Modern age (requires political_theory civic). */
+  | { readonly type: 'SELECT_IDEOLOGY'; readonly playerId: PlayerId; readonly ideology: 'democracy' | 'fascism' | 'communism' }
   | { readonly type: 'PLACE_URBAN_BUILDING'; readonly cityId: CityId; readonly tile: HexCoord; readonly buildingId: string }
   | { readonly type: 'GAIN_COMMANDER_XP'; readonly commanderId: UnitId; readonly amount: number }
   | { readonly type: 'PROMOTE_COMMANDER'; readonly commanderId: UnitId; readonly promotionId: string }
@@ -583,7 +595,9 @@ export type GameAction =
   | { readonly type: 'UNASSIGN_RESOURCE'; readonly resourceId: ResourceId; readonly cityId: CityId; readonly playerId: PlayerId }
   // ── Notification / event dismissal ──
   /** Marks a specific log event as dismissed so blocksTurn events no longer block END_TURN. */
-  | { readonly type: 'DISMISS_EVENT'; readonly eventMessage: string; readonly eventTurn: number };
+  | { readonly type: 'DISMISS_EVENT'; readonly eventMessage: string; readonly eventTurn: number }
+  // ── Trade route lifecycle ──
+  | { readonly type: 'PLUNDER_TRADE_ROUTE'; readonly caravanUnitId: UnitId; readonly plundererId: UnitId };
 
 // ── Events ──
 

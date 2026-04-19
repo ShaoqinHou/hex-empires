@@ -227,6 +227,47 @@ export const MERCHANT: UnitDef = {
   abilities: ['create_trade_route'],
 } as const;
 
+/**
+ * Caravan — stationary land trade unit spawned when a Merchant arrives at its
+ * destination city (F-03). Plunder-targetable. Cannot move or attack.
+ * Linked to a TradeRoute via the route's caravanUnitId field.
+ */
+export const CARAVAN: UnitDef = {
+  id: 'caravan',
+  name: 'Caravan',
+  age: 'antiquity',
+  category: 'civilian',
+  cost: 0,        // never produced directly — spawned by tradeSystem
+  combat: 0,
+  rangedCombat: 0,
+  range: 0,
+  movement: 0,    // stationary
+  sightRange: 1,
+  requiredTech: null,
+  upgradesTo: null,
+  abilities: ['trade_route_anchor'],
+} as const;
+
+/**
+ * Trade Ship — sea-route variant of Caravan (F-03). Stationary, water-capable,
+ * plunder-targetable. Spawned when a Merchant founds a sea trade route.
+ */
+export const TRADE_SHIP: UnitDef = {
+  id: 'trade_ship',
+  name: 'Trade Ship',
+  age: 'antiquity',
+  category: 'naval',
+  cost: 0,        // never produced directly — spawned by tradeSystem
+  combat: 0,
+  rangedCombat: 0,
+  range: 0,
+  movement: 0,    // stationary
+  sightRange: 1,
+  requiredTech: null,
+  upgradesTo: null,
+  abilities: ['trade_route_anchor'],
+} as const;
+
 export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   WARRIOR,
   SLINGER,
@@ -242,4 +283,6 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   BALLISTA,
   PHALANX,
   ANTIQUITY_HORSEMAN,
+  CARAVAN,
+  TRADE_SHIP,
 ] as const;

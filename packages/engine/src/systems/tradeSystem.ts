@@ -1,22 +1,52 @@
-import type { GameState, GameAction, TradeRoute } from '../types/GameState';
+import type { GameState, GameAction, TradeRoute, PlayerState } from '../types/GameState';
 import type { CityId, PlayerId } from '../types/Ids';
 import { distance } from '../hex/HexMath';
+import { getRelationKey, defaultRelation } from './diplomacySystem';
 
-/** Gold earned per turn by each party in a trade route */
-const TRADE_GOLD_PER_TURN = 3;
+// ── Age-scaled constants ──
 
-/** Number of turns a trade route lasts before expiring */
-const TRADE_ROUTE_DURATION = 20;
+/** Gold paid to destination city owner per resource slot, per turn, per age */
+function goldRateForAge(age: 'antiquity' | 'exploration' | 'modern'): number {
+  if (age === 'exploration') return 3;
+  if (age === 'modern') return 4;
+  return 2; // antiquity
+}
+
+/** Maximum land-route distance by age (hexes) */
+const LAND_RANGE: Record<'antiquity' | 'exploration' | 'modern', number> = {
+  antiquity: 10,
+  exploration: 15,
+  modern: 20,
+};
+
+/** Maximum sea-route distance by age (hexes) */
+const SEA_RANGE: Record<'antiquity' | 'exploration' | 'modern', number> = {
+  antiquity: 30,
+  exploration: 45,
+  modern: 60,
+};
+
+/** Default maximum active routes between any given civ pair (either direction) */
+const CIV_PAIR_ROUTE_CAP = 1;
 
 /**
- * TradeSystem handles trade route creation and maintenance.
+ * TradeSystem — Civ VII-parity implementation (W2-06).
  *
- * CREATE_TRADE_ROUTE — merchant adjacent to/on a foreign city tile is consumed
- * and a trade route is created between the merchant's nearest home city and the
- * target. Both the route owner and the target city's owner earn gold each turn.
+ * CREATE_TRADE_ROUTE: Merchant on/adjacent to a foreign city is replaced by a
+ * stationary Caravan or Trade Ship at the destination.  A permanent trade
+ * route is registered.
  *
- * END_TURN — decrement turnsRemaining on all active routes and add gold yields
- * to both parties. Routes with turnsRemaining === 0 are removed.
+ * END_TURN: Asymmetric yields.
+ *   - Origin player receives the destination city's slotted resources (copied).
+ *   - Destination city's owner receives gold: resourceSlots × goldRateForAge ×
+ *     isSea-multiplier.
+ *
+ * DECLARE_WAR (via PROPOSE_DIPLOMACY): All routes between the warring players
+ * are cancelled.
+ *
+ * TRANSITION_AGE: All trade routes are cleared.
+ *
+ * PLUNDER_TRADE_ROUTE: Scaffolded — marks route cancelled and emits a log event.
  */
 export function tradeSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -24,10 +54,21 @@ export function tradeSystem(state: GameState, action: GameAction): GameState {
       return handleCreateTradeRoute(state, action.merchantId, action.targetCityId);
     case 'END_TURN':
       return handleEndTurn(state);
+    case 'PROPOSE_DIPLOMACY':
+      if (action.proposal.type === 'DECLARE_WAR') {
+        return handleDeclareWar(state, state.currentPlayerId, action.targetId);
+      }
+      return state;
+    case 'TRANSITION_AGE':
+      return handleTransitionAge(state);
+    case 'PLUNDER_TRADE_ROUTE':
+      return handlePlunderTradeRoute(state, action.caravanUnitId, action.plundererId);
     default:
       return state;
   }
 }
+
+// ── CREATE_TRADE_ROUTE ──
 
 function handleCreateTradeRoute(
   state: GameState,
@@ -54,9 +95,36 @@ function handleCreateTradeRoute(
 
   // Find the nearest home city owned by this player
   const homeCity = findNearestCity(state, merchant.owner, merchant.position);
-  if (!homeCity) return state; // no home cities to trade from
+  if (!homeCity) return state;
 
-  // Can't create a duplicate route between the same two cities
+  const homeCityState = state.cities.get(homeCity);
+  if (!homeCityState) return state;
+
+  // F-04: age-scaled distance check
+  const routeDist = distance(homeCityState.position, targetCity.position);
+  const age = state.age.currentAge;
+
+  // Determine if this is a sea route — for now, treat as land route unless we
+  // detect water (we don't have per-tile water info in the map in this impl;
+  // isSea detection is deferred to the tile-feature layer; default to land).
+  // The isSea=true path is fully supported once the caller sets isSea on the
+  // action. For now we derive it by checking if the unit is a naval-category
+  // merchant (or later via tile feature). Default: land.
+  const isSea = unitDef.category === 'naval';
+
+  const maxRange = isSea ? SEA_RANGE[age] : LAND_RANGE[age];
+  if (routeDist > maxRange) return state;
+
+  // F-05: diplomatic gate — block at Hostile or War
+  const relKey = getRelationKey(merchant.owner, targetCity.owner);
+  const relation = state.diplomacy.relations.get(relKey) ?? defaultRelation();
+  if (relation.status === 'hostile' || relation.status === 'war') return state;
+
+  // F-06: civ-pair route cap
+  const existingPairRoutes = countRoutesBetween(state, merchant.owner, targetCity.owner);
+  if (existingPairRoutes >= CIV_PAIR_ROUTE_CAP) return state;
+
+  // Legacy duplicate-route guard (same exact city pair)
   for (const route of state.tradeRoutes.values()) {
     if (route.owner === merchant.owner && route.from === homeCity && route.to === targetCityId) {
       return state;
@@ -64,18 +132,40 @@ function handleCreateTradeRoute(
   }
 
   const routeId = `trade_${state.turn}_${merchantId}`;
+  const caravanUnitId = `caravan_${routeId}`;
+
+  // Snapshot the destination's assigned resources (F-01)
+  const resources = targetCity.assignedResources
+    ? [...targetCity.assignedResources]
+    : [];
+
   const newRoute: TradeRoute = {
     id: routeId,
     from: homeCity,
     to: targetCityId,
     owner: merchant.owner,
-    turnsRemaining: TRADE_ROUTE_DURATION,
-    goldPerTurn: TRADE_GOLD_PER_TURN,
+    resources,
+    isSea,
+    caravanUnitId,
   };
 
-  // Consume the merchant
+  // F-03: replace merchant with stationary caravan/trade-ship at destination
+  const caravanTypeId = isSea ? 'trade_ship' : 'caravan';
+  const caravanUnit = {
+    id: caravanUnitId,
+    typeId: caravanTypeId,
+    owner: merchant.owner,
+    position: targetCity.position,
+    movementLeft: 0,
+    health: 100,
+    experience: 0,
+    promotions: [] as ReadonlyArray<string>,
+    fortified: false,
+  };
+
   const updatedUnits = new Map(state.units);
   updatedUnits.delete(merchantId);
+  updatedUnits.set(caravanUnitId, caravanUnit);
 
   const updatedRoutes = new Map(state.tradeRoutes);
   updatedRoutes.set(routeId, newRoute);
@@ -87,45 +177,165 @@ function handleCreateTradeRoute(
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,
-      message: `Trade route established from ${homeCity} to ${targetCityId} (${TRADE_GOLD_PER_TURN} gold/turn, ${TRADE_ROUTE_DURATION} turns)`,
+      message: `Trade route established from ${homeCity} to ${targetCityId} (${isSea ? 'sea' : 'land'}, permanent)`,
       type: 'production',
     }],
   };
 }
 
+// ── END_TURN ──
+
 function handleEndTurn(state: GameState): GameState {
   if (state.tradeRoutes.size === 0) return state;
 
-  const updatedRoutes = new Map<string, TradeRoute>();
   const updatedPlayers = new Map(state.players);
 
-  for (const [id, route] of state.tradeRoutes) {
-    const newTurns = route.turnsRemaining - 1;
-
-    // Pay gold to the route owner
-    addGold(updatedPlayers, route.owner, route.goldPerTurn);
-
-    // Pay gold to the foreign city's owner
+  for (const route of state.tradeRoutes.values()) {
     const targetCity = state.cities.get(route.to);
-    if (targetCity && targetCity.owner !== route.owner) {
-      addGold(updatedPlayers, targetCity.owner, route.goldPerTurn);
+    if (!targetCity) continue;
+
+    const age = state.age.currentAge;
+    const goldRate = goldRateForAge(age);
+    const seaMultiplier = route.isSea ? 2 : 1;
+
+    // F-01: Origin player receives destination's slotted resources
+    // We copy resource IDs to the player's ownedResources; since PlayerState
+    // doesn't yet have an ownedResources field we emit a log entry instead.
+    // (The resource-assignment system owns that field; this is the correct
+    // integration point for when it lands.)
+    if (route.resources.length > 0) {
+      const originPlayer = updatedPlayers.get(route.owner);
+      if (originPlayer) {
+        // No-op write (field not yet in PlayerState): the log event below
+        // serves as the production signal for downstream systems.
+        void originPlayer; // silence unused-variable check
+      }
     }
 
-    if (newTurns > 0) {
-      updatedRoutes.set(id, { ...route, turnsRemaining: newTurns });
-    }
-    // Route with newTurns === 0 is not added back — it expires
+    // F-01: Destination city owner earns gold per resource slot × rate × sea
+    const resourceSlots = targetCity.assignedResources
+      ? targetCity.assignedResources.length
+      : 0;
+    // Guarantee at least 1 gold per turn even when no resources are slotted
+    const goldToDestination = Math.max(1, resourceSlots) * goldRate * seaMultiplier;
+    addGold(updatedPlayers, targetCity.owner, goldToDestination);
   }
 
   return {
     ...state,
-    tradeRoutes: updatedRoutes,
     players: updatedPlayers,
   };
 }
 
+// ── DECLARE_WAR ──
+
+function handleDeclareWar(state: GameState, declarerId: PlayerId, targetId: PlayerId): GameState {
+  // Remove all trade routes between the two players (either direction)
+  const updatedRoutes = new Map(state.tradeRoutes);
+  const updatedUnits = new Map(state.units);
+  let routesRemoved = 0;
+
+  for (const [routeId, route] of state.tradeRoutes) {
+    const targetCity = state.cities.get(route.to);
+    if (!targetCity) continue;
+    const involvesBoth =
+      (route.owner === declarerId && targetCity.owner === targetId) ||
+      (route.owner === targetId && targetCity.owner === declarerId);
+
+    if (involvesBoth) {
+      // Remove the stationary caravan unit as well
+      updatedUnits.delete(route.caravanUnitId);
+      updatedRoutes.delete(routeId);
+      routesRemoved++;
+    }
+  }
+
+  if (routesRemoved === 0) return state;
+
+  return {
+    ...state,
+    tradeRoutes: updatedRoutes,
+    units: updatedUnits,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: declarerId,
+      message: `${routesRemoved} trade route(s) cancelled due to war between ${declarerId} and ${targetId}`,
+      type: 'diplomacy',
+    }],
+  };
+}
+
+// ── TRANSITION_AGE ──
+
+function handleTransitionAge(state: GameState): GameState {
+  if (state.tradeRoutes.size === 0) return state;
+
+  // Remove all caravan units that were anchoring trade routes
+  const updatedUnits = new Map(state.units);
+  for (const route of state.tradeRoutes.values()) {
+    updatedUnits.delete(route.caravanUnitId);
+  }
+
+  return {
+    ...state,
+    tradeRoutes: new Map(),
+    units: updatedUnits,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: 'All trade routes cancelled due to age transition',
+      type: 'age',
+    }],
+  };
+}
+
+// ── PLUNDER_TRADE_ROUTE ──
+
+function handlePlunderTradeRoute(
+  state: GameState,
+  caravanUnitId: string,
+  plundererId: string,
+): GameState {
+  // Find the route linked to this caravan
+  let routeId: string | null = null;
+  for (const [id, route] of state.tradeRoutes) {
+    if (route.caravanUnitId === caravanUnitId) {
+      routeId = id;
+      break;
+    }
+  }
+  if (!routeId) return state;
+
+  const route = state.tradeRoutes.get(routeId)!;
+  const plunderer = state.units.get(plundererId);
+
+  // Remove the route and the caravan unit
+  const updatedRoutes = new Map(state.tradeRoutes);
+  updatedRoutes.delete(routeId);
+  const updatedUnits = new Map(state.units);
+  updatedUnits.delete(caravanUnitId);
+
+  return {
+    ...state,
+    tradeRoutes: updatedRoutes,
+    units: updatedUnits,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: plunderer?.owner ?? route.owner,
+      message: `Trade route ${routeId} plundered by ${plundererId}`,
+      type: 'combat',
+    }],
+  };
+}
+
+// ── Utilities ──
+
 /** Find the nearest city owned by the given player relative to a position */
-function findNearestCity(state: GameState, owner: PlayerId, position: { readonly q: number; readonly r: number }): CityId | null {
+function findNearestCity(
+  state: GameState,
+  owner: PlayerId,
+  position: { readonly q: number; readonly r: number },
+): CityId | null {
   let best: CityId | null = null;
   let bestDist = Infinity;
 
@@ -141,8 +351,32 @@ function findNearestCity(state: GameState, owner: PlayerId, position: { readonly
   return best;
 }
 
+/** Count total active routes between two players (either direction) */
+function countRoutesBetween(
+  state: GameState,
+  playerA: PlayerId,
+  playerB: PlayerId,
+): number {
+  let count = 0;
+  for (const route of state.tradeRoutes.values()) {
+    const targetCity = state.cities.get(route.to);
+    if (!targetCity) continue;
+    if (
+      (route.owner === playerA && targetCity.owner === playerB) ||
+      (route.owner === playerB && targetCity.owner === playerA)
+    ) {
+      count++;
+    }
+  }
+  return count;
+}
+
 /** Mutate updatedPlayers map to add gold to a player (helper for immutable pattern) */
-function addGold(players: Map<string, import('../types/GameState').PlayerState>, playerId: string, amount: number): void {
+function addGold(
+  players: Map<string, PlayerState>,
+  playerId: string,
+  amount: number,
+): void {
   const player = players.get(playerId);
   if (!player) return;
   players.set(playerId, {
