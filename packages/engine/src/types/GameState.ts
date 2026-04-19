@@ -284,6 +284,10 @@ export interface PlayerState {
   readonly totalCareerLegacyPoints?: number;
   /** Typed breakdown of legacy points earned per axis */
   readonly legacyPointsByAxis?: Record<'military' | 'economic' | 'science' | 'culture', number>;
+  /** Enemy units killed in the current age only (resets on TRANSITION_AGE) */
+  readonly killsThisAge?: number;
+  /** Which axis triggered a Golden Age this transition (at most one per transition) */
+  readonly goldenAgeChosen?: 'military' | 'economic' | 'science' | 'culture' | null;
 
   // ── Future Tech ──
   /** Tech id that will be boosted in the next age (from Future Tech selection) */
@@ -595,7 +599,19 @@ export type GameAction =
   | { readonly type: 'MOVE_UNIT'; readonly unitId: UnitId; readonly path: ReadonlyArray<HexCoord> }
   | { readonly type: 'ATTACK_UNIT'; readonly attackerId: UnitId; readonly targetId: UnitId }
   | { readonly type: 'ATTACK_CITY'; readonly attackerId: UnitId; readonly cityId: CityId }
-  | { readonly type: 'FOUND_CITY'; readonly unitId: UnitId; readonly name: string }
+  | {
+      readonly type: 'FOUND_CITY';
+      readonly unitId: UnitId;
+      readonly name: string;
+      /**
+       * Explicit founding type discriminant (F-01 VII-parity).
+       * - 'founder': one-time use; creates a capital (city tier). Used when the player has no cities yet.
+       * - 'settler': all subsequent settlements (always creates towns).
+       * Optional for backward compatibility — if absent, the system falls back to
+       * the existing isFirstCity detection (playerHasCity check).
+       */
+      readonly foundingType?: 'founder' | 'settler';
+    }
   | { readonly type: 'SET_PRODUCTION'; readonly cityId: CityId; readonly itemId: string; readonly itemType: ProductionItem['type']; readonly tile?: HexCoord }
   | { readonly type: 'CANCEL_BUILDING_PLACEMENT'; readonly cityId: CityId }
   | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }

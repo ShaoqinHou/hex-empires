@@ -2,6 +2,7 @@ import type { GameState, GameAction, ActiveEffect, LegacyPaths, GameEvent } from
 import type { YieldType } from '../types/Yields';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
+import { scoreLegacyPaths } from '../state/LegacyPaths';
 
 /**
  * AgeSystem handles age transitions and legacy milestone tracking.
@@ -49,8 +50,8 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     });
   }
 
-  // Determine golden/dark age effects based on legacy path milestones
-  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.researchedTechs);
+  // Determine golden/dark age effects based on legacy path milestones (max 1 golden age per transition)
+  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.researchedTechs, player.goldenAgeChosen ?? null);
   bonuses = [...bonuses, ...goldenDarkResult.effects];
   rng = goldenDarkResult.rng;
 
@@ -79,8 +80,11 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     age: nextAge,
     ageProgress: 0,
     legacyBonuses: bonuses,
-    legacyPoints: 0, // spent all legacy points
+    legacyPoints: 0, // spent all legacy points (reset; totalCareerLegacyPoints is not reset)
     gold: player.gold + goldAdjustment,
+    // Reset per-age counters for the new age
+    killsThisAge: 0,
+    goldenAgeChosen: null,
     // ── Tech tree reset (§16.1 #9) ──
     researchedTechs,
     currentResearch: null,
@@ -128,9 +132,44 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   // Seed one crisis type from the new age's pool via seeded RNG
   const { activeCrisisType, rng: rngAfterCrisisSeed } = seedAgeCrisis(state.config.crises, nextAge, rng);
 
+  // F-07: Age-transition city downgrade — all non-capital cities revert to towns,
+  // productionQueue/productionProgress cleared, specialization reset.
+  // Exemption: Economic Golden Age (legacyPaths.economic === 3) skips downgrade.
+  const hasEconomicGoldenAge = (player.legacyPaths?.economic ?? 0) === 3;
+  let updatedCities = state.cities;
+  if (!hasEconomicGoldenAge) {
+    const nextCities = new Map(state.cities);
+    let citiesChanged = false;
+    for (const [cityId, city] of state.cities) {
+      if (city.owner !== player.id) continue;
+      if (city.isCapital) continue; // capital stays as city
+      if (city.settlementType === 'town') continue; // already a town
+      nextCities.set(cityId, {
+        ...city,
+        settlementType: 'town' as const,
+        productionQueue: [],
+        productionProgress: 0,
+        specialization: null,
+      });
+      citiesChanged = true;
+    }
+    if (citiesChanged) {
+      updatedCities = nextCities;
+      logEntries.push({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: 'Non-capital cities reverted to towns on age transition.',
+        type: 'age' as const,
+        category: 'age' as const,
+        panelTarget: 'age' as const,
+      });
+    }
+  }
+
   return {
     ...state,
     players: updatedPlayers,
+    cities: updatedCities,
     age: { ...state.age, currentAge: nextAge, activeCrisisType },
     rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
@@ -174,23 +213,42 @@ interface GoldenDarkResult {
 /**
  * Determine golden/dark age effects based on legacy path milestones.
  * For each path:
- *   milestones === 3 -> Golden Age effect
- *   milestones === 0 -> Dark Age effect
+ *   milestones === 3 -> Golden Age effect (F-05: at most ONE golden age per transition)
+ *   milestones === 0 -> Dark Age effect (all dark ages still apply)
  *   otherwise -> Normal (no special effect)
+ *
+ * Golden age cap: pick the axis named in `goldenAgeChosen` if it has tier 3;
+ * otherwise the first tier-3 axis (military → economic → science → culture).
+ * Dark ages are uncapped — all tier-0 axes apply.
  */
 function getGoldenDarkAgeEffects(
   paths: LegacyPaths,
   age: string,
   rng: import('../types/GameState').RngState,
   researchedTechs: ReadonlyArray<string>,
+  goldenAgeChosen: 'military' | 'economic' | 'science' | 'culture' | null,
 ): GoldenDarkResult {
   const effects: ActiveEffect[] = [];
   const logEntries: string[] = [];
   let currentRng = rng;
   let lostTech: string | null = null;
 
+  // F-05: Determine the single allowed golden age axis.
+  const axes: ReadonlyArray<'military' | 'economic' | 'science' | 'culture'> = ['military', 'economic', 'science', 'culture'];
+  let goldenAxisGranted: 'military' | 'economic' | 'science' | 'culture' | null = null;
+  if (goldenAgeChosen != null && paths[goldenAgeChosen] === 3) {
+    goldenAxisGranted = goldenAgeChosen;
+  } else {
+    for (const ax of axes) {
+      if (paths[ax] === 3) {
+        goldenAxisGranted = ax;
+        break;
+      }
+    }
+  }
+
   // Military path
-  if (paths.military === 3) {
+  if (paths.military === 3 && goldenAxisGranted === 'military') {
     effects.push({
       source: `golden-age:military:${age}`,
       effect: { type: 'MODIFY_COMBAT', target: 'all', value: 5 },
@@ -209,7 +267,7 @@ function getGoldenDarkAgeEffects(
   }
 
   // Economic path
-  if (paths.economic === 3) {
+  if (paths.economic === 3 && goldenAxisGranted === 'economic') {
     effects.push({
       source: `golden-age:economic:${age}`,
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: 3 },
@@ -228,7 +286,7 @@ function getGoldenDarkAgeEffects(
   }
 
   // Science path
-  if (paths.science === 3) {
+  if (paths.science === 3 && goldenAxisGranted === 'science') {
     effects.push({
       source: `golden-age:science:${age}`,
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 3 },
@@ -252,7 +310,7 @@ function getGoldenDarkAgeEffects(
   }
 
   // Culture path
-  if (paths.culture === 3) {
+  if (paths.culture === 3 && goldenAxisGranted === 'culture') {
     effects.push({
       source: `golden-age:culture:${age}`,
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 3 },
@@ -274,36 +332,59 @@ function getGoldenDarkAgeEffects(
 }
 
 /**
- * Check and award legacy milestones on END_TURN.
- * - Military: 1 milestone per 3 kills (max 3)
- * - Economic: 1 milestone per 100 gold earned (max 3)
- * - Science: 1 milestone per 5 techs researched (max 3)
- * - Culture: 1 milestone per 3 civics researched (max 3)
+ * Check and award legacy milestones on END_TURN (F-01 consolidation).
+ *
+ * Single source of truth: calls scoreLegacyPaths() from LegacyPaths.ts to
+ * derive the current tier counts per axis.  The old ad-hoc formulas
+ * (totalKills/3, totalGoldEarned/100, etc.) are removed — the predicate-based
+ * system in LegacyPaths.ts is authoritative.
+ *
+ * Awards:
+ *   - `legacyPoints`          — total (reset at age transition; used for spend-on-transition)
+ *   - `legacyPointsByAxis`    — typed per-axis breakdown (F-10)
+ *   - `totalCareerLegacyPoints` — never reset; used by score victory (F-07)
  */
 function checkLegacyMilestones(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
-  const paths = player.legacyPaths;
+  // F-01: derive path progress from the predicate-driven scoring function
+  const progressList = scoreLegacyPaths(state.currentPlayerId, state);
 
-  const newMilitary = Math.min(3, Math.floor(player.totalKills / 3));
-  const newEconomic = Math.min(3, Math.floor(player.totalGoldEarned / 100));
-  const newScience = Math.min(3, Math.floor(player.researchedTechs.length / 5));
-  const newCulture = Math.min(3, Math.floor(player.researchedCivics.length / 3));
-
-  const militaryGain = newMilitary - paths.military;
-  const economicGain = newEconomic - paths.economic;
-  const scienceGain = newScience - paths.science;
-  const cultureGain = newCulture - paths.culture;
-
-  const totalGain = militaryGain + economicGain + scienceGain + cultureGain;
+  // Build updated LegacyPaths from scored tiers (take max across all ages per axis)
+  const axisTiers: Record<string, number> = { military: 0, economic: 0, science: 0, culture: 0 };
+  for (const entry of progressList) {
+    if (entry.tiersCompleted > axisTiers[entry.axis]) {
+      axisTiers[entry.axis] = entry.tiersCompleted;
+    }
+  }
 
   const newPaths: LegacyPaths = {
-    military: newMilitary,
-    economic: newEconomic,
-    science: newScience,
-    culture: newCulture,
+    military: Math.min(3, axisTiers['military']) as 0 | 1 | 2 | 3,
+    economic: Math.min(3, axisTiers['economic']) as 0 | 1 | 2 | 3,
+    science:  Math.min(3, axisTiers['science'])  as 0 | 1 | 2 | 3,
+    culture:  Math.min(3, axisTiers['culture'])  as 0 | 1 | 2 | 3,
   };
+
+  const oldPaths = player.legacyPaths;
+  const oldByAxis = player.legacyPointsByAxis ?? { military: 0, economic: 0, science: 0, culture: 0 };
+
+  // Per-axis gains (typed points — F-10)
+  const militaryGain = newPaths.military - oldPaths.military;
+  const economicGain = newPaths.economic - oldPaths.economic;
+  const scienceGain  = newPaths.science  - oldPaths.science;
+  const cultureGain  = newPaths.culture  - oldPaths.culture;
+  const totalGain = militaryGain + economicGain + scienceGain + cultureGain;
+
+  const newByAxis: Record<'military' | 'economic' | 'science' | 'culture', number> = {
+    military: oldByAxis.military + militaryGain,
+    economic: oldByAxis.economic + economicGain,
+    science:  oldByAxis.science  + scienceGain,
+    culture:  oldByAxis.culture  + cultureGain,
+  };
+
+  // F-07: career total never resets
+  const newCareerTotal = (player.totalCareerLegacyPoints ?? 0) + totalGain;
 
   // Always increment ageProgress by +1 per turn (natural age advancement)
   const updatedPlayers = new Map(state.players);
@@ -311,6 +392,8 @@ function checkLegacyMilestones(state: GameState): GameState {
     ...player,
     legacyPaths: newPaths,
     legacyPoints: player.legacyPoints + totalGain,
+    legacyPointsByAxis: newByAxis,
+    totalCareerLegacyPoints: newCareerTotal,
     ageProgress: player.ageProgress + 1,
   });
 

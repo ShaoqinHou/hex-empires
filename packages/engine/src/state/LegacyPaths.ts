@@ -52,6 +52,23 @@ export interface LegacyProgress {
 
 // ── Small predicate helpers (pure, no mutation) ─────────────────────────────
 
+/**
+ * Settlement points for the military legacy path.
+ * Conquered cities (originalOwner !== undefined/null) count as 2 pts;
+ * self-founded cities count as 1 pt.  Matches GDD §12.2 conquest multiplier.
+ */
+function settlementPoints(state: GameState, playerId: PlayerId): number {
+  let pts = 0;
+  for (const city of state.cities.values()) {
+    if (city.owner !== playerId) continue;
+    // If originalOwner is set and differs from the city's foundedBy owner,
+    // the city was conquered → 2 points; otherwise self-founded → 1 point.
+    const wasConquered = city.originalOwner != null && city.originalOwner !== playerId;
+    pts += wasConquered ? 2 : 1;
+  }
+  return pts;
+}
+
 function ownedCities(state: GameState, playerId: PlayerId): number {
   let n = 0;
   for (const city of state.cities.values()) {
@@ -167,20 +184,20 @@ const ANTIQUITY_MILITARY: LegacyPath = {
     {
       id: 'antiquity_military_t1',
       tier: 1,
-      description: 'Defeat 3 enemy units (totalKills proxy)', // PROXY: no conquest provenance
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 3,
+      description: 'Defeat 3 enemy units this age (killsThisAge)',
+      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 3,
     },
     {
       id: 'antiquity_military_t2',
       tier: 2,
-      description: 'Control 6 settlements',
-      check: (pid, s) => ownedCities(s, pid) >= 6,
+      description: 'Accumulate 6 settlement points (conquered=2, founded=1)',
+      check: (pid, s) => settlementPoints(s, pid) >= 6,
     },
     {
       id: 'antiquity_military_t3',
       tier: 3,
-      description: 'Pax Imperatoria: Control 12 settlements (proxy — no conquest multiplier)',
-      check: (pid, s) => ownedCities(s, pid) >= 12,
+      description: 'Pax Imperatoria: Accumulate 12 settlement points',
+      check: (pid, s) => settlementPoints(s, pid) >= 12,
     },
   ],
 };
@@ -267,20 +284,20 @@ const EXPLORATION_MILITARY: LegacyPath = {
     {
       id: 'exploration_military_t1',
       tier: 1,
-      description: 'Defeat 6 enemy units (totalKills proxy for Distant-Lands points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 6,
+      description: 'Defeat 6 enemy units this age (killsThisAge proxy for Distant-Lands points)', // PROXY
+      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 6,
     },
     {
       id: 'exploration_military_t2',
       tier: 2,
-      description: 'Defeat 10 enemy units (proxy)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 10,
+      description: 'Defeat 10 enemy units this age (proxy)', // PROXY
+      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 10,
     },
     {
       id: 'exploration_military_t3',
       tier: 3,
-      description: 'Non Sufficit Orbis: Defeat 15 enemy units (proxy for 12 Distant-Lands points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 15,
+      description: 'Non Sufficit Orbis: Defeat 15 enemy units this age (proxy for 12 Distant-Lands points)', // PROXY
+      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 15,
     },
   ],
 };

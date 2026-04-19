@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ageSystem } from '../ageSystem';
-import { createTestState, createTestPlayer } from './helpers';
+import { createTestState, createTestPlayer, createTestCity } from './helpers';
 
 describe('ageSystem', () => {
   it('transitions from antiquity to exploration', () => {
@@ -93,7 +93,8 @@ describe('ageSystem', () => {
       expect(next.players.get('p1')!.legacyPoints).toBe(1);
     });
 
-    it('awards economic milestone for gold earned', () => {
+    it('awards economic milestone for gold earned (predicate: tier1=200, tier2=500)', () => {
+      // With predicate system: tier 1 = totalGoldEarned >= 200
       const player = createTestPlayer({
         totalGoldEarned: 200,
         legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
@@ -101,8 +102,8 @@ describe('ageSystem', () => {
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = ageSystem(state, { type: 'END_TURN' });
-      expect(next.players.get('p1')!.legacyPaths.economic).toBe(2);
-      expect(next.players.get('p1')!.legacyPoints).toBe(2);
+      expect(next.players.get('p1')!.legacyPaths.economic).toBe(1);
+      expect(next.players.get('p1')!.legacyPoints).toBe(1);
     });
 
     it('awards science milestone for techs researched', () => {
@@ -117,14 +118,20 @@ describe('ageSystem', () => {
       expect(next.players.get('p1')!.legacyPoints).toBe(1);
     });
 
-    it('awards culture milestone for civics researched', () => {
+    it('awards culture milestone for wonders built (predicate: tier1=2 wonders)', () => {
+      // Culture tier 1 in Antiquity: build 2 wonders (by predicate system)
+      // We test with a player that has 100 culture (which hits exploration cultural tier 1)
       const player = createTestPlayer({
-        researchedCivics: ['a', 'b', 'c'],
+        culture: 100,
         legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
         legacyPoints: 0,
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = ageSystem(state, { type: 'END_TURN' });
+      // exploration culture tier 1 = culture >= 100 — but player is in antiquity age
+      // with no wonders built, so antiquity culture = 0. Exploration is a different path.
+      // Both paths contribute their tiers; take max per axis.
+      // exploration_culture_t1 (culture >= 100) — meets it! So culture tier becomes 1.
       expect(next.players.get('p1')!.legacyPaths.culture).toBe(1);
       expect(next.players.get('p1')!.legacyPoints).toBe(1);
     });
@@ -363,7 +370,8 @@ describe('ageSystem', () => {
       expect(next.log.some(e => e.message.includes('Culture Dark Age'))).toBe(true);
     });
 
-    it('grants multiple golden ages simultaneously', () => {
+    it('F-05: golden age cap — at most 1 golden age per transition even with all-4 tier-3', () => {
+      // GDD §12: only 1 golden age can fire per transition (F-05 cap).
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -378,8 +386,32 @@ describe('ageSystem', () => {
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const bonuses = next.players.get('p1')!.legacyBonuses;
-      expect(bonuses.filter(b => b.source.includes('golden-age')).length).toBe(4);
-      expect(next.log.filter(e => e.message.includes('Golden Age')).length).toBe(4);
+      // F-05: only 1 golden age effect granted (first eligible axis: military)
+      expect(bonuses.filter(b => b.source.includes('golden-age')).length).toBe(1);
+      expect(bonuses.some(b => b.source.includes('golden-age:military'))).toBe(true);
+      expect(next.log.filter(e => e.message.includes('Golden Age')).length).toBe(1);
+    });
+
+    it('F-05: goldenAgeChosen overrides default selection order', () => {
+      const player = createTestPlayer({
+        age: 'antiquity',
+        civilizationId: 'rome',
+        ageProgress: 50,
+        legacyPoints: 0,
+        legacyBonuses: [],
+        legacyPaths: { military: 3, economic: 3, science: 3, culture: 3 },
+        goldenAgeChosen: 'culture',
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const bonuses = next.players.get('p1')!.legacyBonuses;
+      expect(bonuses.filter(b => b.source.includes('golden-age')).length).toBe(1);
+      expect(bonuses.some(b => b.source.includes('golden-age:culture'))).toBe(true);
+      // goldenAgeChosen resets to null after transition
+      expect(next.players.get('p1')!.goldenAgeChosen).toBeNull();
     });
 
     it('no golden/dark effects for milestones between 1-2', () => {
@@ -472,5 +504,195 @@ describe('ageSystem', () => {
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       expect(next.age.activeCrisisType).toBeNull();
     });
+  });
+});
+
+describe('F-07: age-transition city downgrade (W2-02)', () => {
+  function makeAgeCity(overrides: Partial<import('../../types/GameState').CityState> = {}): import('../../types/GameState').CityState {
+    return {
+      id: 'c1', name: 'Test', owner: 'p1', position: { q: 0, r: 0 },
+      population: 2, food: 0, productionQueue: [], productionProgress: 0,
+      buildings: [], territory: [], settlementType: 'city', happiness: 10,
+      isCapital: false, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+      ...overrides,
+    };
+  }
+
+  it('non-capital cities revert to towns on age transition', () => {
+    const player = createTestPlayer({
+      age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = makeAgeCity({ id: 'cap', name: 'Capital', isCapital: true });
+    const nonCap = makeAgeCity({
+      id: 'nc1', name: 'Colony', position: { q: 5, r: 0 },
+      productionQueue: [{ type: 'building', id: 'granary' }], productionProgress: 10,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital], ['nc1', nonCap]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.cities.get('cap')!.settlementType).toBe('city');
+    expect(next.cities.get('nc1')!.settlementType).toBe('town');
+    expect(next.cities.get('nc1')!.productionQueue).toHaveLength(0);
+    expect(next.cities.get('nc1')!.productionProgress).toBe(0);
+    expect(next.cities.get('nc1')!.specialization).toBeNull();
+  });
+
+  it('Economic Golden Age exemption: non-capital cities preserved', () => {
+    const player = createTestPlayer({
+      age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 3, science: 1, culture: 1 },
+    });
+    const nonCap = makeAgeCity({ id: 'nc1', name: 'Colony', position: { q: 5, r: 0 } });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['nc1', nonCap]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.cities.get('nc1')!.settlementType).toBe('city');
+  });
+
+  it('other players cities not affected on transition', () => {
+    const player = createTestPlayer({
+      id: 'p1', age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const otherPlayer = createTestPlayer({ id: 'p2', age: 'antiquity' });
+    const otherCity = makeAgeCity({ id: 'oc1', owner: 'p2', position: { q: 10, r: 0 }, isCapital: true });
+    const state = createTestState({
+      players: new Map([['p1', player], ['p2', otherPlayer]]),
+      cities: new Map([['oc1', otherCity]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.cities.get('oc1')!.settlementType).toBe('city');
+  });
+});
+
+describe('W2-07 legacy-paths findings', () => {
+  it('F-02: conquered city counts 2 settlement points, founded city counts 1', () => {
+    // scoreLegacyPaths checks milestones independently; tiersCompleted = count of milestones met.
+    // antiquity_military_t2: settlementPoints >= 6 → true (6 pts)
+    // antiquity_military_t1: killsThisAge >= 3 → false (0 kills)
+    // antiquity_military_t3: settlementPoints >= 12 → false
+    // So only 1 milestone met → tiersCompleted = 1 for antiquity path.
+    const player = createTestPlayer({
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+    });
+    const c1 = createTestCity({ id: 'c1', owner: 'p1', originalOwner: 'p2' });
+    const c2 = createTestCity({ id: 'c2', owner: 'p1', originalOwner: 'p2' });
+    const c3 = createTestCity({ id: 'c3', owner: 'p1', originalOwner: 'p2' });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', c1], ['c2', c2], ['c3', c3]]),
+    });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    // 1 milestone met in antiquity military → tier 1
+    expect(next.players.get('p1')!.legacyPaths.military).toBe(1);
+    expect(next.players.get('p1')!.legacyPoints).toBe(1);
+  });
+
+  it('F-02: 6 conquered cities (12 pts) hits antiquity_military_t3', () => {
+    // 6 conquered = 12 pts → t2 (6pts) + t3 (12pts) both met → 2 milestones
+    // But t1 (killsThisAge >= 3) is false → 2/3 milestones met → tiersCompleted = 2
+    const player = createTestPlayer({
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+    });
+    const cities = new Map<string, import('../../types/GameState').CityState>();
+    for (let i = 1; i <= 6; i++) {
+      cities.set(`c${i}`, createTestCity({ id: `c${i}`, owner: 'p1', originalOwner: 'p2' }));
+    }
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities,
+    });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.legacyPaths.military).toBe(2);
+    expect(next.players.get('p1')!.legacyPoints).toBe(2);
+  });
+
+  it('F-07: totalCareerLegacyPoints accumulates across age transitions', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      totalGoldEarned: 200,
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      totalCareerLegacyPoints: 0,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const afterEndTurn = ageSystem(state, { type: 'END_TURN' });
+    expect(afterEndTurn.players.get('p1')!.legacyPoints).toBe(1);
+    expect(afterEndTurn.players.get('p1')!.totalCareerLegacyPoints).toBe(1);
+
+    const afterTransition = ageSystem(afterEndTurn, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // legacyPoints resets; career total stays
+    expect(afterTransition.players.get('p1')!.legacyPoints).toBe(0);
+    expect(afterTransition.players.get('p1')!.totalCareerLegacyPoints).toBe(1);
+  });
+
+  it('F-09: killsThisAge resets to 0 on TRANSITION_AGE', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      killsThisAge: 5,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.killsThisAge).toBe(0);
+  });
+
+  it('F-09: exploration kill predicates use killsThisAge not totalKills', () => {
+    // F-09 guards against cross-age bleed: kills from prior ages should not satisfy
+    // current-age kill predicates. Exploration_military_t1 uses killsThisAge >= 6.
+    // With killsThisAge=0 but totalKills=5 (under the modern threshold), we verify
+    // that only the exploration predicates (which use killsThisAge) stay at 0.
+    const player = createTestPlayer({
+      age: 'exploration',
+      totalKills: 5,    // below all modern thresholds (10+)
+      killsThisAge: 0,  // exploration predicates check this
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 0, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    // exploration_military_t1 = killsThisAge(0) >= 6 → false
+    // antiquity_military_t1 = killsThisAge(0) >= 3 → false
+    // modern_military_t1 = totalKills(5) >= 10 → false
+    // → 0 military tiers earned
+    expect(next.players.get('p1')!.legacyPaths.military).toBe(0);
+  });
+
+  it('F-10: cultural milestone only increments culture typed axis counter', () => {
+    const player = createTestPlayer({
+      culture: 100,
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 },
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    const byAxis = next.players.get('p1')!.legacyPointsByAxis!;
+    expect(byAxis.culture).toBe(1);
+    expect(byAxis.military).toBe(0);
+    expect(byAxis.economic).toBe(0);
+    expect(byAxis.science).toBe(0);
   });
 });

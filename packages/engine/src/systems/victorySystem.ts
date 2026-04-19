@@ -221,7 +221,11 @@ function checkScore(state: GameState, playerId: string): VictoryProgress {
 
 /**
  * Legacy-based score calculation:
- * milestones * 100 + legacyPoints * 50 + cities * 100 + techs * 20 + culture
+ * milestones * 100 + totalCareerLegacyPoints * 50 + cities * 100 + techs * 20 + culture
+ *
+ * F-07: uses totalCareerLegacyPoints (never reset) instead of legacyPoints
+ * (which resets to 0 at each age transition).  This ensures players who
+ * earned points in earlier ages retain their score contribution.
  */
 function calculateScore(state: GameState, playerId: string): number {
   const player = state.players.get(playerId);
@@ -230,9 +234,12 @@ function calculateScore(state: GameState, playerId: string): number {
   const paths = player.legacyPaths;
   const totalMilestones = paths.military + paths.economic + paths.science + paths.culture;
 
+  // F-07: career total (accumulates across ages, never reset)
+  const careerPoints = player.totalCareerLegacyPoints ?? player.legacyPoints;
+
   let score = 0;
   score += totalMilestones * 100;
-  score += player.legacyPoints * 50;
+  score += careerPoints * 50;
   score += [...state.cities.values()].filter(c => c.owner === playerId).length * 100;
   score += player.researchedTechs.length * 20;
   score += player.culture;
