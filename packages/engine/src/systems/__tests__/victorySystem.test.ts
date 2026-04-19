@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { victorySystem } from '../victorySystem';
 import { createTestState, createTestPlayer } from './helpers';
-import type { CityState, DiplomacyRelation } from '../../types/GameState';
+import type { CityState, UnitState } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
 
 function makeCity(id: string, owner: string, position = { q: 0, r: 0 }): CityState {
@@ -15,21 +15,12 @@ function makeCity(id: string, owner: string, position = { q: 0, r: 0 }): CitySta
   };
 }
 
-function makeAlliance(p1: string, p2: string): [string, DiplomacyRelation] {
-  return [`${p1}:${p2}`, {
-    status: 'helpful',
-    relationship: 80,
-    warSupport: 0,
-    turnsAtPeace: 10,
-    turnsAtWar: 0,
-    hasAlliance: true,
-    hasFriendship: true,
-    hasDenounced: false,
-    warDeclarer: null,
-    isSurpriseWar: false,
-    activeEndeavors: [],
-    activeSanctions: [],
-  }];
+function makeUnit(id: string, owner: string, position = { q: 0, r: 0 }): UnitState {
+  return {
+    id, typeId: 'warrior', owner, position,
+    movementLeft: 2, health: 100, experience: 0,
+    promotions: [], fortified: false,
+  };
 }
 
 describe('victorySystem', () => {
@@ -62,14 +53,33 @@ describe('victorySystem', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('detects science victory when all modern techs researched AND culture >= 100', () => {
+  it('triggers domination when opponent has only units (no cities) — W2-08 F-05', () => {
+    // A player stripped of all cities is eliminated even if stray units remain.
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1')], // p1 has a city; p2 has none
+    ]);
+    const units = new Map([
+      ['u1', makeUnit('u1', 'p2', { q: 3, r: 3 })], // p2 only has units — not alive
+    ]);
+    const state = createTestState({ players, cities, units, currentPlayerId: 'p2' });
+    const next = victorySystem(state, { type: 'END_TURN' });
+    expect(next.victory.winner).toBe('p1');
+    expect(next.victory.winType).toBe('domination');
+  });
+
+  it('detects science victory when all modern techs researched (culture gate removed — W2-08 F-04)', () => {
+    // The invented culture >= 100 gate is removed; techs alone are sufficient.
     const modernTechs = [
       'industrialization', 'scientific_theory', 'rifling',
       'steam_power', 'electricity', 'replaceable_parts',
       'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
     ];
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 100 })],
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 0 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -97,17 +107,22 @@ describe('victorySystem', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('does not trigger science victory without culture >= 100', () => {
+  it('does not trigger science victory outside modern age (culture is irrelevant — W2-08 F-04)', () => {
+    // culture gate is removed; the only guards are: techs complete + modern age
     const modernTechs = [
       'industrialization', 'scientific_theory', 'rifling',
       'steam_power', 'electricity', 'replaceable_parts',
       'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
     ];
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 50 })],
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: modernTechs, culture: 0 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
-    const state = createTestState({ players, currentPlayerId: 'p2' });
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+    ]);
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBeNull();
   });
@@ -141,24 +156,19 @@ describe('victorySystem', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('detects economic victory with gold, total gold, and alliance', () => {
-    const [allianceKey, allianceRel] = makeAlliance('p1', 'p2');
-    // Use 3 players so 1 alliance doesn't satisfy diplomacy (needs ceil(2*0.6) = 2 alliances)
+  it('detects economic victory with gold and totalGoldEarned (alliance gate removed — W2-08 F-01)', () => {
+    // The invented alliance >= 1 gate is removed; gold thresholds alone are sufficient.
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', gold: 500, totalGoldEarned: 1000 })],
       ['p2', createTestPlayer({ id: 'p2' })],
-      ['p3', createTestPlayer({ id: 'p3' })],
     ]);
-    // Give p2 and p3 cities so domination doesn't trigger
     const cities = new Map([
-      ['c1', makeCity('c1', 'p2', { q: 5, r: 5 })],
-      ['c2', makeCity('c2', 'p3', { q: 6, r: 6 })],
+      ['c1', makeCity('c1', 'p2', { q: 5, r: 5 })], // p2 has city so domination doesn't trigger
     ]);
     const state = createTestState({
       players,
       cities,
-      currentPlayerId: 'p3',
-      diplomacy: { relations: new Map([[allianceKey, allianceRel]]) },
+      currentPlayerId: 'p2',
       age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = victorySystem(state, { type: 'END_TURN' });
@@ -166,16 +176,16 @@ describe('victorySystem', () => {
     expect(next.victory.winType).toBe('economic');
   });
 
-  it('does not trigger economic victory without alliance', () => {
+  it('does not trigger economic victory without enough gold', () => {
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', gold: 500, totalGoldEarned: 1000 })],
+      ['p1', createTestPlayer({ id: 'p1', gold: 100, totalGoldEarned: 200 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const cities = new Map([
-      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })], // p1 has city
-      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })], // p2 has city — neither triggers domination
+      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
     ]);
-    const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+    const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
     const next = victorySystem(state, { type: 'END_TURN' });
     expect(next.victory.winner).toBeNull();
   });

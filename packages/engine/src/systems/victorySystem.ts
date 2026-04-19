@@ -4,13 +4,18 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
 
 /**
  * VictorySystem checks win conditions at the end of each turn.
- * Victory types:
- * - Domination: eliminate all rival players (no cities/units remaining)
- * - Science: research all modern techs + culture >= 100
- * - Culture: culture >= 300 + at least 5 civics researched
- * - Economic: gold >= 500, totalGoldEarned >= 1000, has alliance with at least 1 player
- * - Military: totalKills >= 20 + at least 5 cities
+ *
+ * Victory types — CURRENT SCAFFOLD PROXIES (not full Civ VII parity):
+ * - Domination: eliminate all rival players (they lose all cities — units alone do not keep a player alive)
+ * - Science: research all modern techs  [TODO(W5-01): replace with Space Race project per GDD]
+ * - Culture: culture >= 300 + at least 5 civics researched  [TODO(W5-02): add Artifacts / World's Fair per GDD]
+ * - Economic: gold >= 500 + totalGoldEarned >= 1000  [TODO(W5-01): replace with World Bank project per GDD]
+ * - Military: totalKills >= 20 + at least 5 cities  [TODO(W5-01): replace with Operation Ivy project per GDD]
  * - Score: highest score at turn limit (300 turns) using legacy-based scoring
+ *
+ * Note: 'diplomacy' victory type was removed (no GDD basis — W1-C / W2-08).
+ * Detailed per-proxy rewrites are tracked in workpack W5-01 (Science/Economic/Military)
+ * and W5-02 (Culture/Artifacts/World's Fair).
  */
 export function victorySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -73,16 +78,17 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
 
 function checkDomination(state: GameState, playerId: string): VictoryProgress {
   // Domination: must have at least one city AND all other players must have
-  // lost all their units and cities (eliminated)
+  // lost all their cities (eliminated). A player stripped of all cities is
+  // eliminated even if stray units survive — units alone do not constitute
+  // a living empire (Civ VII rulebook §7.2 — W2-08).
   const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
   const otherPlayersTotal = state.players.size - 1;
 
-  // Count players that still have cities OR military units
+  // Count players that still have at least one city
   const otherPlayersAlive = [...state.players.keys()].filter(pid => {
     if (pid === playerId) return false;
     const hasCities = [...state.cities.values()].some(c => c.owner === pid);
-    const hasUnits = [...state.units.values()].some(u => u.owner === pid);
-    return hasCities || hasUnits;
+    return hasCities;
   }).length;
 
   const progress = otherPlayersTotal > 0
@@ -100,28 +106,22 @@ function checkScience(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'science', progress: 0, achieved: false };
 
-  // Need to research all modern techs (10 techs) AND have culture >= 100
+  // Scaffold proxy: research all modern techs (10 techs).
+  // The invented culture >= 100 gate has been removed (no GDD basis — W2-08 / F-04).
+  // TODO(W5-01): replace with Space Race project milestones per GDD.
   const modernTechs = [
     'industrialization', 'scientific_theory', 'rifling',
     'steam_power', 'electricity', 'replaceable_parts',
     'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
   ];
   const researched = modernTechs.filter(t => player.researchedTechs.includes(t)).length;
-  const cultureReq = 100;
-  const hasCulture = player.culture >= cultureReq;
-
-  // Progress: 80% from techs, 20% from culture requirement
-  const techProgress = researched / modernTechs.length;
-  const cultureProgress = Math.min(1, player.culture / cultureReq);
-  const progress = techProgress * 0.8 + cultureProgress * 0.2;
+  const progress = researched / modernTechs.length;
 
   // Science victory can only be achieved in the modern age
-  const meetsRequirements = researched === modernTechs.length && hasCulture;
-
   return {
     type: 'science',
     progress,
-    achieved: meetsRequirements && state.age.currentAge === 'modern',
+    achieved: researched === modernTechs.length && state.age.currentAge === 'modern',
   };
 }
 
@@ -153,30 +153,24 @@ function checkEconomic(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'economic', progress: 0, achieved: false };
 
-  // Gold >= 500 AND totalGoldEarned >= 1000 AND has alliance with at least 1 player
+  // Scaffold proxy: gold >= 500 AND totalGoldEarned >= 1000.
+  // The invented alliance >= 1 gate has been removed (no GDD basis — W2-08 / F-01).
+  // TODO(W5-01): replace with World Bank project milestones per GDD.
   const goldReq = 500;
   const totalGoldReq = 1000;
   const hasGold = player.gold >= goldReq;
   const hasTotalGold = player.totalGoldEarned >= totalGoldReq;
 
-  const alliances = [...state.diplomacy.relations.entries()].filter(
-    ([key, rel]) => rel.hasAlliance && key.includes(playerId)
-  ).length;
-  const hasAlliance = alliances >= 1;
-
-  // Progress: 40% gold, 40% total gold, 20% alliance
+  // Progress: 50% gold, 50% total gold
   const goldProgress = Math.min(1, player.gold / goldReq);
   const totalGoldProgress = Math.min(1, player.totalGoldEarned / totalGoldReq);
-  const allianceProgress = hasAlliance ? 1 : 0;
-  const progress = goldProgress * 0.4 + totalGoldProgress * 0.4 + allianceProgress * 0.2;
+  const progress = goldProgress * 0.5 + totalGoldProgress * 0.5;
 
   // Economic victory can only be achieved in the modern age
-  const meetsRequirements = hasGold && hasTotalGold && hasAlliance;
-
   return {
     type: 'economic',
     progress,
-    achieved: meetsRequirements && state.age.currentAge === 'modern',
+    achieved: hasGold && hasTotalGold && state.age.currentAge === 'modern',
   };
 }
 
