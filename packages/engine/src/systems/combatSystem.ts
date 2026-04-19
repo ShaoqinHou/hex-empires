@@ -4,6 +4,7 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus } from '../state/EffectUtils';
+import { computeEffectiveCS } from '../state/CombatAnalytics';
 
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
@@ -14,6 +15,7 @@ import { getCombatBonus } from '../state/EffectUtils';
  */
 export function combatSystem(state: GameState, action: GameAction): GameState {
   if (action.type === 'ATTACK_CITY') return handleAttackCity(state, action);
+  if (action.type === 'ATTACK_DISTRICT') return handleAttackDistrict(state, action);
   if (action.type !== 'ATTACK_UNIT') return state;
 
   const attacker = state.units.get(action.attackerId);
@@ -56,7 +58,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     adjacentAlly: false,
   });
   const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile) + attackerPromoBonus;
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile, defender) + attackerPromoBonus;
   const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
   // Calculate damage with seeded randomness
@@ -178,11 +180,64 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   };
 }
 
-/** Get base combat strength, reduced by health using discrete -1 CS per 10 HP lost */
-function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord, attackerTile?: HexTile | null): number {
+/**
+ * F-03 (W4-05): Returns empire-resource combat mods for the given player at the current age.
+ * Only resources with type 'empire' in their bonusTable entry contribute combatMod.
+ */
+function playerResourceCombatMods(
+  state: GameState,
+  playerId: string,
+): ReadonlyArray<{ readonly unitCategory: string; readonly value: number; readonly versusCategory?: string }> {
+  const player = state.players.get(playerId);
+  if (!player) return [];
+  const owned = (player as typeof player & { readonly ownedResources?: ReadonlyArray<string> }).ownedResources;
+  if (!owned || owned.length === 0) return [];
+  const mods: Array<{ readonly unitCategory: string; readonly value: number; readonly versusCategory?: string }> = [];
+  const currentAge = state.age.currentAge;
+  for (const resId of owned) {
+    const resDef = state.config.resources.get(resId);
+    const row = resDef?.bonusTable?.[currentAge];
+    if (row?.combatMod) {
+      mods.push(row.combatMod);
+    }
+  }
+  return mods;
+}
+
+/**
+ * Sum all empire-resource combat bonuses for a player's unit of the given category.
+ * `versusCategory` restricts the mod to apply only when fighting a specific unit category.
+ */
+function calculateResourceCombatBonus(
+  state: GameState,
+  playerId: string,
+  unitCategory: string,
+  defenderUnit: UnitState | undefined,
+): number {
+  const mods = playerResourceCombatMods(state, playerId);
+  let bonus = 0;
+  for (const mod of mods) {
+    if (mod.unitCategory !== unitCategory) continue;
+    if (mod.versusCategory !== undefined && mod.versusCategory !== null) {
+      if (!defenderUnit) continue;
+      const defDef = state.config.units.get(defenderUnit.typeId);
+      const defCategory = defDef?.category ?? 'melee';
+      if (defCategory !== mod.versusCategory) continue;
+    }
+    bonus += mod.value;
+  }
+  return bonus;
+}
+
+/**
+ * Get effective combat strength for an attacking unit.
+ * Uses computeEffectiveCS (VII: multiplicative HP scaling) so combat resolution
+ * and CombatPreview display agree on the same formula.
+ */
+function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord, attackerTile?: HexTile | null, defenderUnit?: UnitState): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  // B7: Discrete HP degradation — rulebook §6.3: "For every 10 HP lost, -1 CS" (flat subtraction, not multiplier)
-  const healthPenalty = Math.floor((100 - unit.health) / 10);
+  // VII: health scales CS multiplicatively — computeEffectiveCS(base, hp) = floor(base * hp/100)
+  const effectiveBase = computeEffectiveCS(base, unit.health);
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
@@ -194,7 +249,9 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const unitDef = state.config.units.get(unit.typeId);
   const category = unitDef?.category ?? 'melee';
   const effectBonus = getCombatBonus(state, unit.owner, category);
-  return base - healthPenalty + flankingBonus + firstStrikeBonus + effectBonus - riverPenalty - warSupportPenalty;
+  // F-03 (W4-05): Empire resource combat strength modifiers
+  const resourceBonus = calculateResourceCombatBonus(state, unit.owner, category, defenderUnit);
+  return effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus - riverPenalty - warSupportPenalty;
 }
 
 /**
@@ -231,12 +288,15 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
   return maxPenalty;
 }
 
-/** Get effective defense strength with terrain and fortification bonuses */
+/**
+ * Get effective defense strength with terrain and fortification bonuses.
+ * Uses computeEffectiveCS (VII: multiplicative HP scaling) so combat resolution
+ * and CombatPreview display agree on the same formula.
+ */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  // B7: Discrete HP degradation — rulebook §6.3: "For every 10 HP lost, -1 CS" (flat subtraction, not multiplier)
-  const healthPenalty = Math.floor((100 - unit.health) / 10);
-  let strength = base - healthPenalty;
+  // VII: health scales CS multiplicatively — computeEffectiveCS(base, hp) = floor(base * hp/100)
+  let strength = computeEffectiveCS(base, unit.health);
 
   // Terrain defense bonus — multiplicative component on base strength
   if (tile) {
@@ -286,21 +346,39 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
 }
 
 /**
- * Flanking bonus per rulebook §6.7:
- *   - Unlocked after researching `military_training` (F9).
- *   - Applies only when the attacker is a melee/cavalry unit (F7 — §6.7
- *     "Melee combat creates a Battlefront...").
- *   - Requires 2+ friendly MILITARY units adjacent to the defender (F2, F5).
- *     Civilian / religious units do NOT contribute.
- *   - The attacker itself is never counted as its own flanker.
- * Bonus: +2 CS per qualifying flanker, capped at +6 (3 flankers).
+ * Flanking bonus per rulebook §6.7 + VII directional battlefront model (W4-03):
+ *
+ * Directional model (when defender has facing):
+ *   - If the attacker is in the defender's rear arc (opposite to defender.facing ±1 direction),
+ *     grant +5 CS rear-flank bonus (VII rear attack).
+ *   - Otherwise fall through to the legacy count-based support bonus.
+ *
+ * Legacy / support model (when defender lacks facing or attacker is not in rear arc):
+ *   - Requires military_training tech (F9).
+ *   - Attacker must be melee/cavalry (F7).
+ *   - Requires 2+ friendly MILITARY units adjacent to defender (F2, F5).
+ *   - +2 CS per qualifying flanker, capped at +6 (3 flankers).
  */
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
-  // F7: attacker must be melee/cavalry for flanking to apply at all.
+  // F7: attacker must be melee/cavalry for any flanking to apply.
   const attackerDef = state.config.units.get(attacker.typeId);
   const attackerCategory = attackerDef?.category;
   if (attackerCategory !== 'melee' && attackerCategory !== 'cavalry') return 0;
 
+  // Directional rear-flank check: requires the defender unit to have a known facing.
+  const defender = findUnitAtPosition(defenderPosition, state);
+  if (defender && defender.facing !== undefined) {
+    const attackAngleDir = hexDirectionIndex(defenderPosition, attacker.position);
+    if (attackAngleDir !== -1) {
+      // Rear arc: 3 directions centred on the direction OPPOSITE to defender's facing.
+      const oppositeDir = (defender.facing + 3) % 6;
+      if (isInRearArc(attackAngleDir, oppositeDir)) {
+        return 5; // VII rear-flank = +5 CS
+      }
+    }
+  }
+
+  // Legacy count-based support bonus (no facing or not a rear attack).
   // F9: attacker's owner must have researched Military Training.
   const attackerPlayer = state.players.get(attacker.owner);
   if (!attackerPlayer) return 0;
@@ -321,6 +399,47 @@ function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord,
   // F2: rulebook requires 2+ friendly flankers — a single flanker grants nothing.
   if (flankingCount < 2) return 0;
   return Math.min(flankingCount * 2, 6);
+}
+
+/**
+ * Find a unit located at the given hex position.
+ * Used to look up the defender's facing for directional flanking.
+ */
+function findUnitAtPosition(position: HexCoord, state: GameState): UnitState | undefined {
+  for (const [, u] of state.units) {
+    if (u.position.q === position.q && u.position.r === position.r) return u;
+  }
+  return undefined;
+}
+
+/**
+ * Returns the HEX_DIRECTIONS index (0–5) for the direction from `from` to `to`
+ * when they are exactly adjacent, or -1 if not adjacent or not a unit-step direction.
+ * HEX_DIRECTIONS: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE
+ */
+function hexDirectionIndex(from: HexCoord, to: HexCoord): number {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  const HEX_DIRECTIONS = [
+    { q: 1, r: 0 },   // 0 E
+    { q: 1, r: -1 },  // 1 NE
+    { q: 0, r: -1 },  // 2 NW
+    { q: -1, r: 0 },  // 3 W
+    { q: -1, r: 1 },  // 4 SW
+    { q: 0, r: 1 },   // 5 SE
+  ];
+  return HEX_DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
+}
+
+/**
+ * Returns true if `attackDir` is within the rear arc centred on `oppositeDir`.
+ * The rear arc covers 3 directions: oppositeDir-1, oppositeDir, oppositeDir+1 (mod 6).
+ * This is a 180° rear half-plane in hex direction space.
+ */
+function isInRearArc(attackDir: number, oppositeDir: number): boolean {
+  const diff = ((attackDir - oppositeDir) + 6) % 6;
+  // diff === 0 → directly behind; diff === 1 → one step CW; diff === 5 → one step CCW
+  return diff === 0 || diff === 1 || diff === 5;
 }
 
 /** Check if the attacker has a friendly unit adjacent to the defender */
@@ -493,6 +612,171 @@ function handleAttackCity(
     rng: currentRng,
     lastValidation: null,
   };
+}
+
+/**
+ * Handle ATTACK_DISTRICT action (W4-03: multi-district siege HP model).
+ *
+ * Attackers target individual district tiles (keyed in city.districtHPs).
+ * Each urban district has 100 HP; city_center has 200 HP.
+ * CAPTURE_CITY is only possible when all non-center districts are destroyed
+ * (i.e. reduced to 0 HP) — this function reduces the targeted district's HP.
+ * The city_center (key = coordToKey(city.position)) must be the last district standing.
+ */
+function handleAttackDistrict(
+  state: GameState,
+  action: { readonly type: 'ATTACK_DISTRICT'; readonly attackerId: string; readonly cityId: string; readonly districtTile: string },
+): GameState {
+  const attacker = state.units.get(action.attackerId);
+  const city = state.cities.get(action.cityId);
+  if (!attacker || !city) return createInvalidResult(state, 'Attacker or city not found', 'combat');
+  if (attacker.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your unit or turn', 'combat');
+  if (attacker.owner === city.owner) return createInvalidResult(state, 'Cannot attack own city', 'combat');
+  if (attacker.movementLeft <= 0) return createInvalidResult(state, 'Unit has already attacked this turn', 'combat');
+
+  // Build initial districtHPs if not yet present (first attack triggers the model)
+  const districtHPs: Map<string, number> = city.districtHPs
+    ? new Map(city.districtHPs)
+    : buildInitialDistrictHPs(city);
+
+  // Validate the target district tile exists
+  const currentDistrictHP = districtHPs.get(action.districtTile);
+  if (currentDistrictHP === undefined) {
+    return createInvalidResult(state, 'Target district tile not found in city', 'combat');
+  }
+  if (currentDistrictHP <= 0) {
+    return createInvalidResult(state, 'District already destroyed', 'combat');
+  }
+
+  // City center cannot be attacked while non-center districts still stand
+  const cityCenter = coordToKey(city.position);
+  if (action.districtTile === cityCenter) {
+    const hasStandingNonCenter = [...districtHPs.entries()].some(
+      ([key, hp]) => key !== cityCenter && hp > 0,
+    );
+    if (hasStandingNonCenter) {
+      return createInvalidResult(state, 'Must destroy all outer districts before attacking the city center', 'combat');
+    }
+  }
+
+  // Attacker must be adjacent or in range
+  const attackerRange = getUnitRange(state, attacker.typeId) + getPromotionRangeBonus(state, attacker);
+  const baseRange = getUnitRange(state, attacker.typeId);
+  // Parse district tile back to HexCoord for distance check
+  const [dq, dr] = action.districtTile.split(',').map(Number);
+  const districtPos: HexCoord = { q: dq, r: dr };
+  const dist = distance(attacker.position, districtPos);
+
+  if (baseRange === 0) {
+    if (dist !== 1) return createInvalidResult(state, 'Target out of melee range', 'combat');
+  } else {
+    if (dist > attackerRange || dist === 0) return createInvalidResult(state, 'Target out of attack range', 'combat');
+  }
+
+  // Calculate damage to district
+  const attackerTile = state.map.tiles.get(coordToKey(attacker.position));
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, undefined, attackerTile);
+  const districtDefense = action.districtTile === cityCenter
+    ? getCityDefenseStrength(city)
+    : 10; // Outer districts have base defense 10
+
+  const strengthDiff = attackerStrength - districtDefense;
+  const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
+  const modifier1 = 0.75 + randomFactor1 * 0.5;
+  const damageToDistrict = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1);
+
+  const newDistrictHP = Math.max(0, currentDistrictHP - damageToDistrict);
+  districtHPs.set(action.districtTile, newDistrictHP);
+
+  // City retaliates on melee attackers
+  const isMelee = baseRange === 0;
+  const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
+  const modifier2 = 0.75 + randomFactor2 * 0.5;
+  const retaliationStrengthDiff = districtDefense - attackerStrength;
+  const damageToAttacker = isMelee
+    ? Math.round(30 * Math.exp(retaliationStrengthDiff / 25) * modifier2)
+    : 0;
+
+  const newAttackerHealth = Math.max(0, attacker.health - damageToAttacker);
+
+  const updatedUnits = new Map(state.units);
+  const updatedCities = new Map(state.cities);
+  const logEntries = [...state.log];
+
+  // Update attacker
+  if (newAttackerHealth <= 0) {
+    updatedUnits.delete(attacker.id);
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} was destroyed attacking a district in ${city.name}`,
+      type: 'combat',
+      severity: 'critical',
+      blocksTurn: true,
+    });
+  } else {
+    updatedUnits.set(attacker.id, {
+      ...attacker,
+      health: newAttackerHealth,
+      movementLeft: 0,
+      experience: attacker.experience + 5,
+    });
+  }
+
+  // Update city
+  updatedCities.set(city.id, {
+    ...city,
+    districtHPs,
+  });
+
+  const districtLabel = action.districtTile === cityCenter ? 'city center' : 'district';
+  if (newDistrictHP <= 0) {
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} destroyed a ${districtLabel} in ${city.name}!`,
+      type: 'combat',
+      severity: 'warning',
+    });
+  } else {
+    logEntries.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${attacker.typeId} attacked a ${districtLabel} in ${city.name} (${newDistrictHP} HP remaining)`,
+      type: 'combat',
+      severity: 'info',
+    });
+  }
+
+  return {
+    ...state,
+    units: updatedUnits,
+    cities: updatedCities,
+    log: logEntries,
+    rng: rng2,
+    lastValidation: null,
+  };
+}
+
+/**
+ * Build the initial districtHPs map for a city that has not yet been attacked.
+ * City center (city.position key) = 200 HP; each urban district tile = 100 HP.
+ * Falls back to just the city center when no urbanTiles are present.
+ */
+function buildInitialDistrictHPs(city: CityState): Map<string, number> {
+  const hps = new Map<string, number>();
+  const centerKey = coordToKey(city.position);
+  hps.set(centerKey, 200);
+
+  if (city.urbanTiles) {
+    for (const [tileKey] of city.urbanTiles) {
+      if (tileKey !== centerKey) {
+        hps.set(tileKey, 100);
+      }
+    }
+  }
+
+  return hps;
 }
 
 /**

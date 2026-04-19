@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { combatSystem } from '../combatSystem';
-import { createTestState, createTestUnit, createTestPlayer, setTile } from './helpers';
+import { createTestState, createTestUnit, createTestPlayer, createTestCity, setTile } from './helpers';
 
 describe('combatSystem', () => {
   it('deals damage to defender on melee attack', () => {
@@ -616,24 +616,16 @@ describe('combatSystem — B6: fortification flat +5 CS', () => {
   });
 });
 
-describe('combatSystem — B7: discrete HP degradation', () => {
-  it('unit at 90 HP has 0.9x effective strength compared to 100 HP (not 0.9x continuous)', () => {
-    // At 90 HP: Math.floor(90/10)/10 = 9/10 = 0.9 (same in this case, but formula is correct)
-    // At 95 HP (continuous would give 0.95x, discrete gives 0.9x floor)
-    // Test: unit at 91 HP and unit at 99 HP should have identical effective strength (both floor to 0.9x)
-    const state91 = createTestState({
+describe('combatSystem — HP health penalty (W4-03: VII multiplicative formula)', () => {
+  // VII uses computeEffectiveCS: floor(baseCS * hp/100) — continuous multiplicative,
+  // not the old discrete -1 CS per 10 HP bracket. Tests updated for W4-03.
+
+  it('unit at 50 HP has exactly half the effective combat strength of the same unit at 100 HP', () => {
+    // computeEffectiveCS(20, 50) = floor(20 * 0.5) = 10; vs computeEffectiveCS(20, 100) = 20
+    // Units at different HP attack the same defender; lower HP → less damage.
+    const makeState = (attackerHP: number) => createTestState({
       units: new Map([
-        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 91 })],
-        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-      ]),
-      players: new Map([
-        ['p1', createTestPlayer({ id: 'p1' })],
-        ['p2', createTestPlayer({ id: 'p2' })],
-      ]),
-    });
-    const state99 = createTestState({
-      units: new Map([
-        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
         ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
       ]),
       players: new Map([
@@ -642,16 +634,17 @@ describe('combatSystem — B7: discrete HP degradation', () => {
       ]),
     });
 
-    const next91 = combatSystem(state91, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const next99 = combatSystem(state99, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next100 = combatSystem(makeState(100), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const next50 = combatSystem(makeState(50), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
 
-    // Both should deal the same damage (both floor to 0.9x bracket)
-    const defHP91 = next91.units.get('d1')?.health ?? -1;
-    const defHP99 = next99.units.get('d1')?.health ?? -1;
-    expect(defHP91).toBe(defHP99);
+    // At 100 HP attacker also gets +5 First Strike; the key invariant is the 50-HP unit deals LESS damage.
+    // defHP50 > defHP100 (defender takes less damage from the weaker attacker)
+    const defHP100 = next100.units.get('d1')?.health ?? -1;
+    const defHP50 = next50.units.get('d1')?.health ?? -1;
+    expect(defHP50).toBeGreaterThan(defHP100);
   });
 
-  it('unit at 80 HP deals less damage than unit at 90 HP (stepped brackets)', () => {
+  it('unit at 80 HP deals less damage than unit at 90 HP (continuous scaling)', () => {
     const makeState = (attackerHP: number) => createTestState({
       units: new Map([
         ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
@@ -669,7 +662,7 @@ describe('combatSystem — B7: discrete HP degradation', () => {
     const defHP90 = next90.units.get('d1')?.health ?? -1;
     const defHP80 = next80.units.get('d1')?.health ?? -1;
 
-    // Lower health bracket → less damage → defender survives with more HP
+    // Lower health → lower effectiveCS → less damage → defender survives with more HP
     expect(defHP80).toBeGreaterThan(defHP90);
   });
 });
@@ -777,5 +770,149 @@ describe('combatSystem — S6: war support CS penalty', () => {
 
     // No war → no penalty; penalised state deals less damage → defender has more HP
     expect(defHPPeace).toBeLessThanOrEqual(defHPPenalised);
+  });
+});
+
+// ── W4-03: Directional flanking ──
+
+describe('combatSystem — W4-03: directional rear-flank bonus', () => {
+  it('rear attack on a defender with facing = 0 (E) gets +5 CS when attacker is in western arc', () => {
+    // Defender faces E (0). Rear is W (3). Attacker at q=3,r=3, defender at q=4,r=3.
+    // Attack direction: from defender (4,3) → attacker (3,3) = dq=-1,dr=0 = direction 3 (W) = rear.
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, currentPlayerId: 'p1' });
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    // Rear flank = +5 CS for attacker → more damage → defender has lower HP than without flank.
+    // We compare against a front attack (attacker in front of defender).
+    const frontUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
+    ]);
+    const frontState = createTestState({ units: frontUnits, players, currentPlayerId: 'p1' });
+    const frontNext = combatSystem(frontState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const rearDefHP = next.units.get('d1')?.health ?? 100;
+    const frontDefHP = frontNext.units.get('d1')?.health ?? 100;
+    // Rear attack deals more damage → defender has less HP remaining
+    expect(rearDefHP).toBeLessThanOrEqual(frontDefHP);
+  });
+
+  it('front attack on a defender with facing gets no rear-flank bonus (same as facing=undefined)', () => {
+    // Attacker is at q=5,r=3 — east side of defender at q=4,r=3. Attack direction = direction 0 (E) from defender.
+    // Defender faces E (0). Front = E (0). Rear arc = W (3) ± 1. E is NOT in rear arc → no rear bonus.
+    // Defender faces E (0) means rear is W. Attacker is to the E = front = no bonus.
+    // Same position for both scenarios (same RNG seed), only facing differs; facing shouldn't change outcome
+    // when it's a front attack (attacker at e=5,r=3 relative to defender at 4,3).
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    // Defender facing E (0) — attacker also to the E → front attack
+    const unitsFrontFacing = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
+    ]);
+    // No facing
+    const unitsNoFacing = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+
+    const stateWithFrontFacing = createTestState({ units: unitsFrontFacing, players, currentPlayerId: 'p1' });
+    const stateNoFacing = createTestState({ units: unitsNoFacing, players, currentPlayerId: 'p1' });
+
+    const nextFront = combatSystem(stateWithFrontFacing, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextNoFacing = combatSystem(stateNoFacing, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Front attack with facing should not grant rear bonus — same result as no-facing
+    const frontDefHP = nextFront.units.get('d1')?.health ?? 100;
+    const noFacingDefHP = nextNoFacing.units.get('d1')?.health ?? 100;
+    expect(frontDefHP).toBe(noFacingDefHP);
+  });
+});
+
+// ── W4-03: District HPs ──
+
+describe('combatSystem — W4-03: ATTACK_DISTRICT', () => {
+  it('reduces district HP on attack', () => {
+    // City at (0,0), district at (1,0), attacker at (2,0) — adjacent to district
+    const cityPos = { q: 0, r: 0 };
+    const districtKey = '1,0'; // urban district tile key
+    const districtHPs = new Map([['0,0', 200], [districtKey, 100]]);
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: cityPos,
+      defenseHP: 100,
+      districtHPs,
+    });
+    const units = new Map([
+      // Attacker at q=2,r=0 — adjacent to district at q=1,r=0, not occupying it
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 2, r: 0 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
+    const next = combatSystem(state, { type: 'ATTACK_DISTRICT', attackerId: 'a1', cityId: 'c1', districtTile: districtKey });
+
+    const updatedCity = next.cities.get('c1')!;
+    const remainingHP = updatedCity.districtHPs!.get(districtKey)!;
+    expect(remainingHP).toBeLessThan(100);
+  });
+
+  it('initializes districtHPs if absent when attacked', () => {
+    const cityPos = { q: 0, r: 0 };
+    const districtKey = '1,0';
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: cityPos,
+      defenseHP: 100,
+      // No districtHPs — should be initialized on first attack
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 1, r: 0 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
+    const next = combatSystem(state, { type: 'ATTACK_DISTRICT', attackerId: 'a1', cityId: 'c1', districtTile: '0,0' });
+
+    const updatedCity = next.cities.get('c1')!;
+    // Should have initialized districtHPs with the city center
+    expect(updatedCity.districtHPs).toBeDefined();
+    expect(updatedCity.districtHPs!.get('0,0')).toBeLessThan(200);
+  });
+
+  it('rejects attack on non-existent district tile', () => {
+    const city = createTestCity({ id: 'c1', owner: 'p2', position: { q: 0, r: 0 }, defenseHP: 100 });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 1, r: 0 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const districtHPs = new Map([['0,0', 200]]);
+    const state = createTestState({
+      units,
+      players,
+      cities: new Map([['c1', { ...city, districtHPs }]]),
+      currentPlayerId: 'p1',
+    });
+    const next = combatSystem(state, { type: 'ATTACK_DISTRICT', attackerId: 'a1', cityId: 'c1', districtTile: 'nonexistent,tile' });
+    expect(next.lastValidation).toMatchObject({ valid: false });
   });
 });

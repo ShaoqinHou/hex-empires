@@ -3,6 +3,7 @@ import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
 import { nextRandom } from './SeededRng';
+import { computeEffectiveCS } from './CombatAnalytics';
 
 /**
  * Target type for combat preview.
@@ -698,6 +699,10 @@ function getCityDefenseStrength(city: CityState): number {
   return base + wallsBonus;
 }
 
+/**
+ * Get effective combat strength for preview — uses computeEffectiveCS to match
+ * combatSystem's resolution formula exactly (VII: multiplicative HP scaling).
+ */
 function getEffectiveCombatStrength(
   state: GameState,
   unit: UnitState,
@@ -706,23 +711,29 @@ function getEffectiveCombatStrength(
   attackerTile?: HexTile | null,
 ): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  const healthModifier = Math.floor(unit.health / 10) / 10;
+  // VII: health scales CS multiplicatively — same formula as combatSystem
+  const effectiveBase = computeEffectiveCS(base, unit.health);
   const flankingBonus = isAttacking && defenderPosition
     ? calculateFlankingBonus(unit, defenderPosition, state)
     : 0;
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
+  // B1: River penalty — flat -2 CS (matches combatSystem, not old 15% of base)
   const riverPenalty = isAttacking && attackerTile && attackerTile.river.length > 0
-    ? base * 0.15
+    ? 2
     : 0;
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
 
-  return base * healthModifier + flankingBonus + firstStrikeBonus - riverPenalty - warSupportPenalty;
+  return effectiveBase + flankingBonus + firstStrikeBonus - riverPenalty - warSupportPenalty;
 }
 
+/**
+ * Get effective defense strength for preview — uses computeEffectiveCS to match
+ * combatSystem's resolution formula exactly (VII: multiplicative HP scaling).
+ */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  const healthModifier = Math.floor(unit.health / 10) / 10;
-  let strength = base * healthModifier;
+  // VII: health scales CS multiplicatively — same formula as combatSystem
+  let strength = computeEffectiveCS(base, unit.health);
 
   if (tile) {
     const terrainBonus = getTerrainDefenseBonus(state, tile);

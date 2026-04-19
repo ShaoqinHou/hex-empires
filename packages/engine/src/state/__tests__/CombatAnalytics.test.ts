@@ -6,9 +6,40 @@ import {
   totalCombatStrength,
   averageCityDefense,
   combatStrengthRanking,
+  computeEffectiveCS,
 } from '../CombatAnalytics';
 import type { CityState } from '../../types/GameState';
 import { createTestState, createTestUnit, createTestPlayer } from '../../systems/__tests__/helpers';
+
+// ── W4-03: computeEffectiveCS ──
+
+describe('computeEffectiveCS', () => {
+  it('computeEffectiveCS(30, 50) === 15', () => {
+    // floor(30 * 50/100) = floor(15) = 15
+    expect(computeEffectiveCS(30, 50)).toBe(15);
+  });
+
+  it('full HP preserves base CS exactly', () => {
+    expect(computeEffectiveCS(20, 100)).toBe(20);
+    expect(computeEffectiveCS(30, 100)).toBe(30);
+  });
+
+  it('zero HP produces zero effective CS', () => {
+    expect(computeEffectiveCS(20, 0)).toBe(0);
+  });
+
+  it('uses floor — fractional results round down', () => {
+    // floor(20 * 91/100) = floor(18.2) = 18
+    expect(computeEffectiveCS(20, 91)).toBe(18);
+    // floor(20 * 99/100) = floor(19.8) = 19
+    expect(computeEffectiveCS(20, 99)).toBe(19);
+  });
+
+  it('respects custom maxHP parameter', () => {
+    // floor(30 * 50/200) = floor(7.5) = 7
+    expect(computeEffectiveCS(30, 50, 200)).toBe(7);
+  });
+});
 
 function makeCity(overrides: Partial<CityState> = {}): CityState {
   return {

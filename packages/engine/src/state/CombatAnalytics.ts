@@ -2,6 +2,18 @@ import type { GameState, UnitCategory } from '../types/GameState';
 import type { PlayerId } from '../types/Ids';
 
 /**
+ * Computes effective combat strength given base CS and current HP.
+ * VII: health scales CS multiplicatively. Wounded unit fights weaker.
+ * Unified so combat resolution and preview display agree.
+ *
+ * Formula: effectiveCS = floor(baseCS * (hp / maxHP))
+ * e.g. computeEffectiveCS(30, 50) === 15
+ */
+export function computeEffectiveCS(baseCS: number, hp: number, maxHP: number = 100): number {
+  return Math.floor(baseCS * (hp / maxHP));
+}
+
+/**
  * Unit categories that count as "military" for combat analytics.
  * Civilian and religious units are excluded from strength/health snapshots.
  */

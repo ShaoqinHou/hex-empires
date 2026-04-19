@@ -170,34 +170,22 @@ describe('R62: Damage formula — base 30 at equal CS, ~+4% exponential per CS p
 
 // ── §6.3 HP Degradation ──
 
-describe('R63: HP degradation — unit loses -1 CS per 10 HP lost', () => {
-  it('defender at 70 HP (lost 30 → -3 CS) takes more damage than defender at 100 HP', () => {
+// W4-03: HP degradation updated to VII multiplicative formula: floor(baseCS * hp/100).
+// Old discrete bracket (-1 CS per 10 HP) replaced; every HP point now matters continuously.
+describe('HP degradation — VII multiplicative formula (W4-03 replaces R63 discrete brackets)', () => {
+  it('defender at 70 HP takes more damage than defender at 100 HP (lower defenseCS)', () => {
     const full = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, defender: { health: 100 } }),
     );
     const wounded = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, defender: { health: 70 } }),
     );
-    // Wounded defender has effective CS 20-3=17; attacker CS stays 20 → diff +3.
-    // Expected: 30 × e^(3/25) ≈ 33.8. Full: 30. So wounded should take ≥3 more damage avg.
+    // computeEffectiveCS(20, 70) = 14 vs computeEffectiveCS(20, 100) = 20 → diff = +6 for attacker.
+    // Wounded defender takes more damage; expect significant difference.
     expect(wounded - full).toBeGreaterThanOrEqual(2);
   });
 
-  it('attackers at 99 HP and 91 HP deal identical damage (same 0-bracket)', () => {
-    // floor((100-99)/10)=0 and floor((100-91)/10)=0 → both have 0 penalty.
-    // Same seed → identical RNG → identical damage.
-    const n99 = combatSystem(
-      buildMeleeScenario({ seed: 7, attacker: { health: 99 } }),
-      { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' },
-    );
-    const n91 = combatSystem(
-      buildMeleeScenario({ seed: 7, attacker: { health: 91 } }),
-      { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' },
-    );
-    expect(n99.units.get('d1')!.health).toBe(n91.units.get('d1')!.health);
-  });
-
-  it('attacker at 50 HP (-5 CS penalty) deals less damage than at 100 HP', () => {
+  it('attacker at 50 HP deals less damage than at 100 HP (lower attackCS)', () => {
     const full = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, attacker: { health: 100 } }),
     );

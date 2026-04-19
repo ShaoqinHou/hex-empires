@@ -248,31 +248,11 @@ describe('B6: Fortification grants flat +5 CS (rulebook §6.5)', () => {
   });
 });
 
-// ── B7: HP degradation is discrete -1 CS per 10 HP lost (rulebook §6.3) ──
-describe('B7: HP degradation is discrete -1 CS per 10 HP lost (rulebook §6.3)', () => {
-  it('attackers at 91 HP and 99 HP deal identical damage (same 0-HP-lost bracket)', () => {
-    // (100-91)/10 floor = 0; (100-99)/10 floor = 0 → both have 0 CS penalty
-    const makeState = (attackerHP: number) => createTestState({
-      units: new Map([
-        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
-        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-      ]),
-      players: new Map([
-        ['p1', createTestPlayer({ id: 'p1' })],
-        ['p2', createTestPlayer({ id: 'p2' })],
-      ]),
-    });
-
-    const r91 = combatSystem(makeState(91), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const r99 = combatSystem(makeState(99), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    // Note: at 100 HP the attacker also receives +5 First Strike; 99/91 are both 0-penalty but no First Strike,
-    // so comparing 91 vs 99 (both sub-100, same penalty bracket) isolates B7 discretisation.
-    const d91 = r91.units.get('d1')!.health;
-    const d99 = r99.units.get('d1')!.health;
-    expect(d91).toBe(d99);
-  });
-
-  it('attacker at 50 HP (penalty 5) deals less damage than attacker at 90 HP (penalty 1)', () => {
+// ── HP degradation: VII multiplicative formula (W4-03) ──
+// Replaced old discrete bracket model with computeEffectiveCS: floor(baseCS * hp/100).
+// The continuous multiplicative model means every HP point matters, not just each 10 HP.
+describe('HP degradation: VII multiplicative formula (W4-03 — replaces discrete B7 brackets)', () => {
+  it('attacker at 50 HP deals less damage than attacker at 90 HP (continuous scaling)', () => {
     const makeState = (attackerHP: number) => createTestState({
       units: new Map([
         ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
@@ -287,7 +267,7 @@ describe('B7: HP degradation is discrete -1 CS per 10 HP lost (rulebook §6.3)',
     const r50 = combatSystem(makeState(50), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const d90 = r90.units.get('d1')!.health;
     const d50 = r50.units.get('d1')!.health;
-    // Lower HP → more CS penalty → less damage → defender has more HP
+    // Lower HP → lower effectiveCS → less damage → defender has more HP remaining
     expect(d50).toBeGreaterThan(d90);
   });
 });
