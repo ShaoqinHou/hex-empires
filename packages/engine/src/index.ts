@@ -87,6 +87,15 @@ export { Registry } from './registry';
 export { nextRandom, randomInt, shuffle, createRng, noise2D, smoothNoise2D, fractalNoise2D } from './state';
 export { allUnitsHaveActed } from './state/AllUnitsActed';
 export {
+  CELEBRATION_THRESHOLDS,
+  CELEBRATION_DURATION,
+  celebrationThresholdForCount,
+} from './state/CelebrationConstants';
+export {
+  WONDER_ADJACENCY_PER_NEIGHBOR,
+  SPECIALIST_AMPLIFIER,
+} from './state/AdjacencyConstants';
+export {
   calculateCombatPreview,
   calculateCityCombatPreview,
   getAttackableUnits,
@@ -241,7 +250,7 @@ export {
 
 // Crisis data
 export type { CrisisEventDef, CrisisTriggerCondition } from './data/crises';
-export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, GOLDEN_AGE, TRADE_OPPORTUNITY, NATURAL_DISASTER } from './data/crises';
+export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, NATURAL_DISASTER } from './data/crises';
 
 // Resource data
 export type { ResourceDef } from './data/resources';

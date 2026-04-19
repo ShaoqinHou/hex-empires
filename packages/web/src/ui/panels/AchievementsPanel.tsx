@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { ALL_ACHIEVEMENTS, type AchievementDef } from '@hex/engine';
+import type { AchievementDef } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { PanelShell } from './PanelShell';
 
@@ -23,8 +23,9 @@ export function AchievementsPanel({ onClose }: AchievementsPanelProps) {
     return new Set(list);
   }, [state]);
 
-  const earned = ALL_ACHIEVEMENTS.filter(a => unlocked.has(a.id));
-  const locked = ALL_ACHIEVEMENTS.filter(a => !unlocked.has(a.id));
+  const allAchievements = useMemo(() => [...state.config.achievements.values()], [state.config.achievements]);
+  const earned = allAchievements.filter(a => unlocked.has(a.id));
+  const locked = allAchievements.filter(a => !unlocked.has(a.id));
 
   return (
     <PanelShell
@@ -41,7 +42,7 @@ export function AchievementsPanel({ onClose }: AchievementsPanelProps) {
           marginBottom: 'var(--panel-padding-md)',
         }}
       >
-        {earned.length} of {ALL_ACHIEVEMENTS.length} unlocked
+        {earned.length} of {allAchievements.length} unlocked
       </div>
 
       {earned.length > 0 && (

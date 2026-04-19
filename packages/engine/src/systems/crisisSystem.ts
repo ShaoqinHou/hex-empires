@@ -1,6 +1,5 @@
 import type { GameState, GameAction, CrisisState, CityState } from '../types/GameState';
 import type { CrisisEventDef } from '../data/crises/types';
-import { ALL_CRISES } from '../data/crises/all-crises';
 
 /**
  * CrisisSystem handles narrative/crisis events.
@@ -26,7 +25,7 @@ function checkCrisisTriggers(state: GameState): GameState {
   const triggeredIds = new Set(state.crises.map(c => c.id));
   const newCrises: CrisisState[] = [];
 
-  for (const def of ALL_CRISES) {
+  for (const def of state.config.crises) {
     if (triggeredIds.has(def.id)) continue;
     if (isTriggerMet(state, def)) {
       newCrises.push(crisisFromDef(def, state.turn));
@@ -160,7 +159,7 @@ function resolveCrisis(state: GameState, crisisId: string, choiceId: string): Ga
   const crisis = state.crises[crisisIndex];
 
   // Find the original def for full effect info
-  const def = ALL_CRISES.find(d => d.id === crisisId);
+  const def = state.config.crises.find(d => d.id === crisisId);
   if (!def) return state;
 
   const choiceDef = def.choices.find(c => c.id === choiceId);

@@ -16,6 +16,7 @@ import type { FollowerBeliefDef } from '../data/religion/follower-beliefs';
 import type { CivilizationDef } from '../data/civilizations/types';
 import type { LeaderDef } from '../data/leaders/types';
 import type { AchievementDef } from '../data/achievements';
+import type { CrisisEventDef } from '../data/crises/types';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -42,6 +43,7 @@ export interface GameConfig {
   readonly founderBeliefs: ReadonlyMap<string, FounderBeliefDef>;
   readonly followerBeliefs: ReadonlyMap<string, FollowerBeliefDef>;
   readonly achievements: ReadonlyMap<string, AchievementDef>;
+  readonly crises: ReadonlyArray<CrisisEventDef>;
 
   /**
    * Feature flag — when false (default), the Achievements panel is hidden

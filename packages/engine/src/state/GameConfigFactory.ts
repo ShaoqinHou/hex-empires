@@ -35,6 +35,7 @@ import { ALL_GOVERNMENTS, ALL_POLICIES } from '../data/governments';
 import { ALL_FOUNDER_BELIEFS } from '../data/religion/founder-beliefs';
 import { ALL_FOLLOWER_BELIEFS } from '../data/religion/follower-beliefs';
 import { ALL_ACHIEVEMENTS } from '../data/achievements';
+import { ALL_CRISES } from '../data/crises/all-crises';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -95,5 +96,5 @@ export function createGameConfig(): GameConfig {
   const achievements = new Map<string, AchievementDef>();
   for (const a of ALL_ACHIEVEMENTS) achievements.set(a.id, a);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, experimentalAchievements: false };
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, experimentalAchievements: false };
 }
