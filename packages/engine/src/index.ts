@@ -319,3 +319,9 @@ export { legendsSystem, evaluateLegends } from './systems/legendsSystem';
 export type { LegendsResult } from './systems/legendsSystem';
 // Memento apply utilities
 export { applyEquippedMementos, filterValidMementos } from './state/MementoApply';
+
+// Attribute tree data + system (W3-07)
+export type { AttributeType, AttributeNodeDef } from './types/Attribute';
+export { ALL_ATTRIBUTE_NODES } from './data/attribute-trees';
+export { ECONOMIC_NODES, MILITARISTIC_NODES, DIPLOMATIC_NODES, EXPANSIONIST_NODES, CULTURAL_NODES, SCIENTIFIC_NODES } from './data/attribute-trees';
+export { attributeSystem } from './systems/attributeSystem';

@@ -109,6 +109,10 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     ideology: null,
     // ── Religion — pantheon only clears on Antiquity→Exploration (§18) ──
     pantheonId: (state.age.currentAge === 'antiquity') ? null : player.pantheonId,
+    // ── Attribute points (W3-07) — award 1 point per age transition ──
+    // attributeTree and wildcard/non-wildcard pools are intentionally NOT reset
+    // (the only in-game upgrade system that persists across ages).
+    attributePoints: (player.attributePoints ?? 0) + 1,
   });
 
   const logEntries: GameEvent[] = [
@@ -400,12 +404,23 @@ function checkLegacyMilestones(state: GameState): GameState {
   const oldPaths = player.legacyPaths;
   const oldByAxis = player.legacyPointsByAxis ?? { military: 0, economic: 0, science: 0, culture: 0 };
 
-  // Per-axis gains (typed points — F-10)
-  const militaryGain = newPaths.military - oldPaths.military;
-  const economicGain = newPaths.economic - oldPaths.economic;
-  const scienceGain  = newPaths.science  - oldPaths.science;
-  const cultureGain  = newPaths.culture  - oldPaths.culture;
+  // Per-axis gains clamped ≥0 (F-36d8fce8): after TRANSITION_AGE resets
+  // killsThisAge=0, scoreLegacyPaths() can return a lower tier than the stored
+  // oldPaths value, producing a negative delta that would silently decrement
+  // legacyPoints, legacyPointsByAxis, and totalCareerLegacyPoints.
+  const militaryGain = Math.max(0, newPaths.military - oldPaths.military);
+  const economicGain = Math.max(0, newPaths.economic - oldPaths.economic);
+  const scienceGain  = Math.max(0, newPaths.science  - oldPaths.science);
+  const cultureGain  = Math.max(0, newPaths.culture  - oldPaths.culture);
   const totalGain = militaryGain + economicGain + scienceGain + cultureGain;
+
+  // Stored legacyPaths also never regresses within an age: take max of old and new.
+  const clampedPaths: LegacyPaths = {
+    military: Math.max(oldPaths.military, newPaths.military) as 0 | 1 | 2 | 3,
+    economic: Math.max(oldPaths.economic, newPaths.economic) as 0 | 1 | 2 | 3,
+    science:  Math.max(oldPaths.science,  newPaths.science)  as 0 | 1 | 2 | 3,
+    culture:  Math.max(oldPaths.culture,  newPaths.culture)  as 0 | 1 | 2 | 3,
+  };
 
   const newByAxis: Record<'military' | 'economic' | 'science' | 'culture', number> = {
     military: oldByAxis.military + militaryGain,
@@ -421,7 +436,7 @@ function checkLegacyMilestones(state: GameState): GameState {
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
-    legacyPaths: newPaths,
+    legacyPaths: clampedPaths,
     legacyPoints: player.legacyPoints + totalGain,
     legacyPointsByAxis: newByAxis,
     totalCareerLegacyPoints: newCareerTotal,
