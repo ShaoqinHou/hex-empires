@@ -334,3 +334,11 @@ export type { NarrativeEventDef, NarrativeChoice, NarrativeRequirements, Discove
 export { ALL_NARRATIVE_EVENTS } from './data/narrative-events';
 export { ALL_DISCOVERIES } from './data/discoveries';
 export { narrativeEventSystem, enqueueDiscoveryEvent, isAgeGateOpen } from './systems/narrativeEventSystem';
+
+// Y5 — Espionage + Treaties (diplomacy F-05 / F-06)
+export type { EspionageActionId, EspionageActionDef, EspionageOperation } from './types/Espionage';
+export { ALL_ESPIONAGE_ACTIONS } from './data/espionage';
+export { espionageSystem } from './systems/espionageSystem';
+export type { TreatyId, TreatyStatus, TreatyDef, ActiveTreaty } from './types/Treaty';
+export { ALL_TREATIES } from './data/treaties';
+export { treatySystem } from './systems/treatySystem';
