@@ -38,6 +38,11 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     return state;
   }
 
+  // F-08: validate newCivId against player's unlocked civ list
+  if (!isCivUnlockAllowed(newCivId, nextAge, player, state)) {
+    return state;
+  }
+
   // Get legacy bonus from current civ (F-06: uses state.config, not hardcoded table)
   const legacyBonus = getCivLegacyBonus(player.civilizationId, state);
 
@@ -570,4 +575,39 @@ function getCivLegacyBonus(civId: string, state: GameState): ActiveEffect | null
   const civDef = state.config.civilizations.get(civId);
   if (!civDef?.legacyBonus) return null;
   return { effect: civDef.legacyBonus.effect, source: `civ:${civId}:legacyBonus` };
+}
+
+/**
+ * F-08: Check whether a civ is available for the player to pick on age transition.
+ *
+ * - If `player.unlockedCivIds` is undefined → all civs for the target age are
+ *   allowed (backward compat).
+ * - If `player.unlockedCivIds` is set, the civ is allowed if:
+ *   (a) its id is in `unlockedCivIds`, OR
+ *   (b) its `historicalPair` includes the player's current civ id.
+ *
+ * Also validates that the requested civ actually exists and belongs to the
+ * target age. Returns false if the civ doesn't exist or is for the wrong age.
+ */
+function isCivUnlockAllowed(
+  newCivId: string,
+  nextAge: string,
+  player: import('../types/GameState').PlayerState,
+  state: GameState,
+): boolean {
+  const civDef = state.config.civilizations.get(newCivId);
+  // Civ must exist and be for the target age
+  if (!civDef || civDef.age !== nextAge) return false;
+
+  // No unlock restriction → all age-matching civs allowed
+  if (player.unlockedCivIds === undefined) return true;
+
+  // Explicit unlock
+  if (player.unlockedCivIds.includes(newCivId)) return true;
+
+  // Historical pair unlock: if the requested civ's historicalPair includes
+  // the player's current civ, it's automatically available
+  if (civDef.historicalPair?.includes(player.civilizationId)) return true;
+
+  return false;
 }

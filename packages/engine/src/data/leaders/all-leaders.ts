@@ -11,6 +11,35 @@ export const AUGUSTUS: LeaderDef = {
   agendas: ['expansionist', 'builder'],
 
   primaryAttributes: ['economic', 'militaristic'],
+  // F-05: persona scaffold — two variants of Augustus
+  personas: [
+    {
+      id: 'augustus_imperator',
+      name: 'Imperator',
+      abilityOverride: {
+        name: 'Imperial Legion',
+        description: '+7 combat strength for melee units. +1 production in all cities.',
+        effects: [
+          { type: 'MODIFY_COMBAT', target: 'melee', value: 7 },
+          { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 },
+        ],
+      },
+      primaryAttributesOverride: ['militaristic', 'economic'],
+    },
+    {
+      id: 'augustus_pater_patriae',
+      name: 'Pater Patriae',
+      abilityOverride: {
+        name: 'Father of the Nation',
+        description: '+3 culture and +2 food in all cities.',
+        effects: [
+          { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+          { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 2 },
+        ],
+      },
+      primaryAttributesOverride: ['cultural', 'economic'],
+    },
+  ],
 };
 
 export const CLEOPATRA: LeaderDef = {
@@ -84,8 +113,11 @@ export const ALEXANDER: LeaderDef = {
   name: 'Alexander',
   ability: {
     name: 'To the World\'s End',
-    description: 'Cities never incur war weariness. All military units heal when capturing a city.',
-    effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 3 }],
+    description: 'Cities never incur war weariness. All military units heal when capturing a city. Grants Hephaestion, a named commander, at game start.',
+    effects: [
+      { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+      { type: 'GRANT_UNIT', unitId: 'hephaestion', count: 1 },
+    ],
   },
   agendas: ['conqueror', 'expansionist'],
 

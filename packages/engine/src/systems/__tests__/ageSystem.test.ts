@@ -775,3 +775,176 @@ describe('ageSystem — celebration reset on TRANSITION_AGE (W3-03 F-06)', () =>
     expect((updated as typeof updated & { socialPolicySlots: number }).socialPolicySlots).toBe(3);
   });
 });
+
+// ── F-08: Civ unlock system ──
+
+describe('F-08: civ unlock system', () => {
+  it('allows any age-matching civ when unlockedCivIds is undefined', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      // unlockedCivIds intentionally omitted
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    // spain is an exploration civ — should be allowed when no restriction
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.age).toBe('exploration');
+    expect(next.players.get('p1')!.civilizationId).toBe('spain');
+  });
+
+  it('rejects civ not in unlockedCivIds and not in historicalPair', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'egypt', // egypt has no historicalPair connection to spain
+      ageProgress: 50,
+      unlockedCivIds: ['france'], // france only — spain not allowed
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // Should reject — spain not in unlockedCivIds and egypt→spain is not a historical pair
+    expect(next.players.get('p1')!.age).toBe('antiquity');
+    expect(next.players.get('p1')!.civilizationId).toBe('egypt');
+  });
+
+  it('allows civ in unlockedCivIds', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      unlockedCivIds: ['spain', 'france'],
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.age).toBe('exploration');
+    expect(next.players.get('p1')!.civilizationId).toBe('spain');
+  });
+
+  it('allows civ via historicalPair even if not in unlockedCivIds', () => {
+    // spain has historicalPair: ['rome'] — playing as rome should unlock spain
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      unlockedCivIds: ['france'], // spain not listed but rome → spain historical pair
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.age).toBe('exploration');
+    expect(next.players.get('p1')!.civilizationId).toBe('spain');
+  });
+
+  it('rejects civ for wrong age even if in unlockedCivIds', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      unlockedCivIds: ['america'], // america is modern, not exploration
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'america' });
+    // america is modern age — wrong age for antiquity→exploration transition
+    expect(next.players.get('p1')!.age).toBe('antiquity');
+  });
+
+  it('rejects nonexistent civ id', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'nonexistent_civ' });
+    expect(next.players.get('p1')!.age).toBe('antiquity');
+  });
+});
+
+// ── F-05: Persona scaffold ──
+
+describe('F-05: leader persona scaffold', () => {
+  it('Augustus has two personas defined', async () => {
+    const { ALL_LEADERS } = await import('../../data/leaders/all-leaders');
+    const augustus = ALL_LEADERS.find(l => l.id === 'augustus');
+    expect(augustus).toBeDefined();
+    expect(augustus!.personas).toBeDefined();
+    expect(augustus!.personas!.length).toBe(2);
+  });
+
+  it('persona has correct structure with abilityOverride', async () => {
+    const { ALL_LEADERS } = await import('../../data/leaders/all-leaders');
+    const augustus = ALL_LEADERS.find(l => l.id === 'augustus');
+    const imperator = augustus!.personas!.find(p => p.id === 'augustus_imperator');
+    expect(imperator).toBeDefined();
+    expect(imperator!.name).toBe('Imperator');
+    expect(imperator!.abilityOverride).toBeDefined();
+    expect(imperator!.abilityOverride!.effects.length).toBe(2);
+    expect(imperator!.abilityOverride!.effects[0]).toEqual({ type: 'MODIFY_COMBAT', target: 'melee', value: 7 });
+  });
+
+  it('PersonaDef type accepts primaryAttributesOverride', async () => {
+    const { ALL_LEADERS } = await import('../../data/leaders/all-leaders');
+    const augustus = ALL_LEADERS.find(l => l.id === 'augustus');
+    const paterPatriae = augustus!.personas!.find(p => p.id === 'augustus_pater_patriae');
+    expect(paterPatriae).toBeDefined();
+    expect(paterPatriae!.primaryAttributesOverride).toEqual(['cultural', 'economic']);
+  });
+
+  it('leaders without personas compile and work (no regression)', async () => {
+    const { ALL_LEADERS } = await import('../../data/leaders/all-leaders');
+    const cleopatra = ALL_LEADERS.find(l => l.id === 'cleopatra');
+    expect(cleopatra).toBeDefined();
+    // personas is undefined for leaders that don't define them
+    expect(cleopatra!.personas).toBeUndefined();
+  });
+});
+
+// ── F-11: Named commander grant ──
+
+describe('F-11: named commander grant (Alexander + Hephaestion)', () => {
+  it('Hephaestion unit def exists with correct properties', async () => {
+    const { ALL_UNITS } = await import('../../data/units/index');
+    const heph = ALL_UNITS.find(u => u.id === 'hephaestion');
+    expect(heph).toBeDefined();
+    expect(heph!.name).toBe('Hephaestion');
+    expect(heph!.age).toBe('antiquity');
+    expect(heph!.leaderId).toBe('alexander');
+    expect(heph!.combat).toBe(30);
+    expect(heph!.abilities).toContain('commander');
+  });
+
+  it('Alexander has GRANT_UNIT effect for hephaestion', async () => {
+    const { ALL_LEADERS } = await import('../../data/leaders/all-leaders');
+    const alex = ALL_LEADERS.find(l => l.id === 'alexander');
+    expect(alex).toBeDefined();
+    const grant = alex!.ability.effects.find(e => e.type === 'GRANT_UNIT');
+    expect(grant).toBeDefined();
+    if (grant?.type === 'GRANT_UNIT') {
+      expect(grant.unitId).toBe('hephaestion');
+      expect(grant.count).toBe(1);
+    }
+  });
+
+  it('Hephaestion is in ALL_ANTIQUITY_UNITS', async () => {
+    const { ALL_ANTIQUITY_UNITS } = await import('../../data/units/antiquity-units');
+    const ids = ALL_ANTIQUITY_UNITS.map(u => u.id);
+    expect(ids).toContain('hephaestion');
+  });
+});

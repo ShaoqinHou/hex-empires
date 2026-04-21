@@ -17,6 +17,7 @@ export const SPAIN: CivilizationDef = {
     effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
   },
   color: '#c62828',
+  historicalPair: ['rome'],
 };
 
 export const ENGLAND: CivilizationDef = {
@@ -36,6 +37,7 @@ export const ENGLAND: CivilizationDef = {
     effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 },
   },
   color: '#1565c0',
+  historicalPair: ['vikings'],
 };
 
 export const FRANCE: CivilizationDef = {

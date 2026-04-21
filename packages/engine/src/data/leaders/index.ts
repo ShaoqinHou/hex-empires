@@ -1,4 +1,4 @@
-export type { LeaderDef } from './types';
+export type { LeaderDef, PersonaDef } from './types';
 export {
   ALL_LEADERS,
   AUGUSTUS, CLEOPATRA, PERICLES, CYRUS,

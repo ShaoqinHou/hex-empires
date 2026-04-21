@@ -13,4 +13,10 @@ export interface UnitDef {
   readonly requiredResource?: string; // strategic resource ID required to produce this unit
   readonly upgradesTo: string | null;
   readonly abilities: ReadonlyArray<string>;
+  /**
+   * F-11: When set, this unit is a unique named commander granted to the
+   * specified leader at game start. The GRANT_UNIT effect on the leader's
+   * ability references this unit by id.
+   */
+  readonly leaderId?: string;
 }

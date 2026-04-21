@@ -252,6 +252,28 @@ export const TRADE_SHIP: UnitDef = {
   abilities: ['trade_route_anchor'],
 } as const;
 
+/**
+ * F-11: Hephaestion — Alexander's trusted companion and named commander.
+ * Granted via GRANT_UNIT effect on Alexander's leader ability at game start.
+ * Stronger than a regular warrior; acts as a commander unit.
+ */
+export const HEPHAESTION: UnitDef = {
+  id: 'hephaestion',
+  name: 'Hephaestion',
+  age: 'antiquity',
+  category: 'cavalry',
+  cost: 0,          // never produced — granted by leader ability
+  combat: 30,
+  rangedCombat: 0,
+  range: 0,
+  movement: 4,
+  sightRange: 3,
+  requiredTech: null,
+  upgradesTo: null,
+  abilities: ['commander'],
+  leaderId: 'alexander',
+} as const;
+
 export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   WARRIOR,
   SLINGER,
@@ -268,4 +290,5 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   ANTIQUITY_HORSEMAN,
   CARAVAN,
   TRADE_SHIP,
+  HEPHAESTION,
 ] as const;

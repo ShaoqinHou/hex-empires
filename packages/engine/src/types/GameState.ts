@@ -80,6 +80,14 @@ export interface UnitState {
    * independently until DEPLOY_ARMY is dispatched.
    */
   readonly packedInCommanderId?: string | null;
+
+  /**
+   * F-08: Missionary spread charges remaining. Default 3 for Missionary units.
+   * Each SPREAD_RELIGION action consumes one charge. When depleted the unit
+   * can no longer spread religion. Optional so existing UnitState construction
+   * keeps compiling unchanged.
+   */
+  readonly spreadsRemaining?: number;
 }
 
 // ── Cities ──
@@ -164,6 +172,20 @@ export interface CityState {
   readonly originalOwner?: string;
   /** True if this settlement occupies an Urban tile slot in the V2 district model */
   readonly isUrban?: boolean;
+
+  /**
+   * F-08: The religion currently dominant in this city (set by SPREAD_RELIGION).
+   * Null / undefined when the city has no majority religion.
+   * Optional so existing CityState construction keeps compiling unchanged.
+   */
+  readonly religionId?: string | null;
+
+  /**
+   * F-09: Relics currently displayed in this city's Reliquary buildings.
+   * Each displayed relic contributes its faithPerTurn / culturePerTurn yields.
+   * Optional so existing CityState construction keeps compiling unchanged.
+   */
+  readonly relicsDisplayed?: ReadonlyArray<string>;
 
   /**
    * ── W4-03: Multi-district siege HP model ──
@@ -441,6 +463,14 @@ export interface PlayerState {
    */
   readonly ownedResources?: ReadonlyArray<ResourceId>;
 
+  /**
+   * F-09: Relic IDs this player has acquired (via exploration, events, or
+   * religious gameplay). Used by the Cultural Legacy Path to track relic-based
+   * progress and by victorySystem for cultural victory.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly relics?: ReadonlyArray<string>;
+
   // ── W5-01: Modern Victory Projects ──
   /**
    * IDs of projects this player has completed via COMPLETE_PROJECT.
@@ -462,6 +492,23 @@ export interface PlayerState {
    * Optional so existing PlayerState construction keeps compiling unchanged.
    */
   readonly worldBankOfficesRemaining?: number | null;
+
+  // ── F-08: Civ unlock system ──
+  /**
+   * IDs of civilizations this player is allowed to pick on age transition.
+   * When undefined, all civs for the target age are available (backward compat).
+   * When set, only civs in this list (plus those unlocked via historicalPair)
+   * can be chosen during TRANSITION_AGE.
+   */
+  readonly unlockedCivIds?: ReadonlyArray<string>;
+
+  // ── F-05: Persona selection ──
+  /**
+   * The persona variant the player selected for their leader at game start.
+   * Null when no persona was selected (base leader). Undefined for backward
+   * compat with existing saves that predate the persona feature.
+   */
+  readonly personaId?: string | null;
 }
 
 /**
@@ -729,6 +776,27 @@ export interface GameState {
    * Used by the global age-transition UI bar.
    */
   readonly ageProgressMeter?: number;
+
+  /**
+   * ── F-01: Global age transition coordination ──
+   *
+   * Tracks simultaneous age transitions across all players.
+   * - "none": no transition in progress
+   * - "pending": one or more players have transitioned, waiting for all
+   * - "in-progress": all players ready, transitions executing
+   * - "complete": transitions done, clearing imminent
+   *
+   * Optional so pre-F-01 saves and test helpers keep compiling unchanged.
+   */
+  readonly transitionPhase?: 'none' | 'pending' | 'in-progress' | 'complete';
+
+  /**
+   * ── F-01: Player IDs that have completed their age transition this cycle ──
+   *
+   * Cleared (set to empty array) when all players have transitioned.
+   * Optional so pre-F-01 saves and test helpers keep compiling unchanged.
+   */
+  readonly playersReadyToTransition?: ReadonlyArray<string>;
 
   /**
    * ── W4-04: Commander runtime state ──
@@ -1016,7 +1084,16 @@ export type GameAction =
    * `picks` contains bonusIds from pending entries.
    * On success: chosen effects appended to legacyBonuses, pendingLegacyBonuses cleared.
    */
-  | { readonly type: 'CHOOSE_LEGACY_BONUSES'; readonly picks: readonly string[] };
+  | { readonly type: 'CHOOSE_LEGACY_BONUSES'; readonly picks: readonly string[] }
+  // ── F-08: Missionary spread religion ──
+  /**
+   * Missionary unit spreads the owner's founded religion to a target city.
+   * Validates: unit exists and has spread_religion ability, target city exists
+   * and is within spread range (distance <= 1), owner has founded a religion,
+   * unit has spreadsRemaining > 0.
+   * On success: city.religionId = owner's religion id, unit.spreadsRemaining decremented.
+   */
+  | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId };
 
 // ── Events ──
 
