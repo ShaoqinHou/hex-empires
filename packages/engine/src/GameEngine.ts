@@ -39,6 +39,8 @@ import { victorySystem } from './systems/victorySystem';
 import { independentPowerSystem } from './systems/independentPowerSystem';
 import { attributeSystem } from './systems/attributeSystem';
 import { projectsSystem } from './systems/projectsSystem';
+import { espionageSystem } from './systems/espionageSystem';
+import { treatySystem } from './systems/treatySystem';
 
 /**
  * Default engine pipeline. Ordered to match the documented system
@@ -111,6 +113,8 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   narrativeEventSystem,
   attributeSystem,
   projectsSystem,
+  espionageSystem,
+  treatySystem,
   victorySystem,
 ];
 

@@ -88,7 +88,7 @@ describe('religionSystem', () => {
   describe('ADOPT_PANTHEON — valid', () => {
     it('deducts faithCost from the player when faith is sufficient', () => {
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 40 })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 40, researchedCivics: ['mysticism'] })]]),
       });
       const next = religionSystem(state, {
         type: 'ADOPT_PANTHEON',
@@ -100,7 +100,7 @@ describe('religionSystem', () => {
 
     it('appends a legacy-type log event describing the adoption', () => {
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', name: 'Rome', faith: 100 })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', name: 'Rome', faith: 100, researchedCivics: ['mysticism'] })]]),
       });
       const next = religionSystem(state, {
         type: 'ADOPT_PANTHEON',
@@ -206,7 +206,8 @@ describe('religionSystem', () => {
       const next = religionSystem(state, action);
       // Must SUCCEED — pantheon is not required in VII.
       expect(next).not.toBe(state);
-      expect(next.players.get('p1')!.faith).toBe(300); // 500 - 200 faith cost
+      // F-04: No faith cost to found a religion in Civ VII
+      expect(next.players.get('p1')!.faith).toBe(500);
       expect(next.religion).toBeDefined();
       expect(next.religion!.religions.length).toBe(1);
       expect(next.religion!.religions[0].name).toBe('Zen');
@@ -253,7 +254,7 @@ describe('religionSystem', () => {
       expect(next).toBe(state);
     });
 
-    it('returns state unchanged when player has insufficient faith (<200)', () => {
+    it('founds religion even with low faith — F-04 removed faith cost (Civ VII)', () => {
       const city = createTestCity({ id: 'c1', owner: 'p1' });
       const state = createTestState({
         players: new Map([
@@ -270,8 +271,10 @@ describe('religionSystem', () => {
         followerBelief: 'jesuit_education',
       };
       const next = religionSystem(state, action);
-      expect(next).toBe(state);
+      // F-04: No faith cost — founding succeeds regardless of faith amount
+      expect(next).not.toBe(state);
       expect(next.players.get('p1')!.faith).toBe(150);
+      expect(next.religion).toBeDefined();
     });
 
     it('returns state unchanged when holy city id is unknown', () => {
@@ -315,7 +318,7 @@ describe('religionSystem', () => {
   });
 
   describe('FOUND_RELIGION — valid (with religion slot)', () => {
-    it('appends a ReligionRecord and deducts 200 faith when state has a religion slot', () => {
+    it('appends a ReligionRecord — F-04 no faith deduction (Civ VII)', () => {
       const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
       const base = createTestState({
         turn: 12,
@@ -336,7 +339,8 @@ describe('religionSystem', () => {
       const next = religionSystem(state, action) as GameState & {
         readonly religion: { readonly religions: ReadonlyArray<ReligionRecord> };
       };
-      expect(next.players.get('p1')!.faith).toBe(300);
+      // F-04: No faith deduction — founding a religion is free in Civ VII
+      expect(next.players.get('p1')!.faith).toBe(500);
       expect(next.religion.religions.length).toBe(1);
       const record = next.religion.religions[0];
       expect(record.name).toBe('Pax Romana');
@@ -368,12 +372,12 @@ describe('religionSystem', () => {
         followerBelief: 'jesuit_education',
       };
       const next = religionSystem(state, action);
-      // Slot now exists, single record appended, faith deducted.
+      // Slot now exists, single record appended, no faith deducted (F-04).
       expect(next.religion).toBeDefined();
       expect(next.religion!.religions.length).toBe(1);
       expect(next.religion!.religions[0].name).toBe('Zen');
       expect(next.religion!.religions[0].foundedOnTurn).toBe(4);
-      expect(next.players.get('p1')!.faith).toBe(300);
+      expect(next.players.get('p1')!.faith).toBe(500);
     });
   });
 
@@ -429,7 +433,7 @@ describe('religionSystem', () => {
   describe('canAdoptPantheon helper', () => {
     it('returns true for a known pantheon with enough faith', () => {
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 25 })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 25, researchedCivics: ['mysticism'] })]]),
       });
       expect(canAdoptPantheon(state, 'p1', 'god_of_healing')).toBe(true);
     });

@@ -26,6 +26,8 @@ import type { MementoDef } from './Memento';
 import type { QuarterDef } from './Quarter';
 import type { ProjectDef } from './Project';
 import type { NaturalWonderDef } from './NaturalWonder';
+import type { EspionageActionDef } from './Espionage';
+import type { TreatyDef } from './Treaty';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -123,4 +125,16 @@ export interface GameConfig {
    * GameConfigFactory. Systems that don't need natural wonders pass new Map() explicitly.
    */
   readonly naturalWonders: ReadonlyMap<string, NaturalWonderDef>;
+
+  /**
+   * Y5 — Espionage action definitions (F-05). Optional so existing GameConfig
+   * construction compiles unchanged. espionageSystem no-ops when absent.
+   */
+  readonly espionageActions?: ReadonlyMap<string, EspionageActionDef>;
+
+  /**
+   * Y5 — Treaty definitions (F-06). Optional so existing GameConfig
+   * construction compiles unchanged. treatySystem no-ops when absent.
+   */
+  readonly treaties?: ReadonlyMap<string, TreatyDef>;
 }

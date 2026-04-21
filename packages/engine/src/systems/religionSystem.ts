@@ -40,11 +40,10 @@ import type {
 } from '../types/Religion';
 
 /**
- * Faith cost to found a religion. Mirrors RELIGION_FOUND_FAITH_COST in
- * types/Religion.ts; inlined here to keep systems/ from importing design
- * constants through long chains. Rulebook §18.
+ * F-04: Removed FOUND_RELIGION_FAITH_COST (200) — Civ VII has no faith cost
+ * to found a religion. The constant, the faith gate, and the faith deduction
+ * were all removed.
  */
-const FOUND_RELIGION_FAITH_COST = 200 as const;
 
 /**
  * Widened action type accepted by religionSystem. The pipeline's
@@ -72,6 +71,9 @@ export function canAdoptPantheon(
 ): boolean {
   const player = state.players.get(playerId);
   if (!player) return false;
+
+  // F-01: Mysticism civic is required before adopting a pantheon (rulebook §18).
+  if (!(player.researchedCivics as ReadonlyArray<string>).includes('mysticism')) return false;
 
   // Graceful no-op: if the schema ever loses the `faith` field, we
   // cannot evaluate cost — disallow adoption.
@@ -119,6 +121,10 @@ function handleAdoptPantheon(
   const { playerId, pantheonId } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
+
+  // F-01: Mysticism civic is required before adopting a pantheon (rulebook §18).
+  if (!(player.researchedCivics as ReadonlyArray<string>).includes('mysticism')) return state;
+
   if (!playerHasFaithField(player)) return state;
 
   const pantheon = findPantheon(state, pantheonId);
@@ -204,8 +210,7 @@ function handleFoundReligion(
   // carried over from Civ VI's pantheon→religion pipeline. Players can now
   // found a religion regardless of whether they previously adopted a pantheon.
 
-  // Faith cost (rulebook §18, fallback 200 when unspecified).
-  if (player.faith < FOUND_RELIGION_FAITH_COST) return state;
+  // F-04: No faith cost to found a religion in Civ VII.
 
   // Belief existence — both belief IDs must be in their respective
   // catalogues.
@@ -232,12 +237,12 @@ function handleFoundReligion(
   );
   if (followerTaken) return state;
 
-  // Apply: deduct faith, append religion record, log. Lazily initialize
+  // Apply: append religion record, log. Lazily initialize
   // the religion slot on first use — pre-religion saves carry
   // `state.religion === undefined` and need no migration.
+  // F-04: No faith deduction — founding a religion is free in Civ VII.
   const updatedPlayer: PlayerState = {
     ...player,
-    faith: player.faith - FOUND_RELIGION_FAITH_COST,
   };
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);

@@ -65,12 +65,24 @@ function isCommercialBuilding(state: GameState, buildingId: BuildingId): boolean
 /**
  * Does any building on the given urban tile satisfy the predicate?
  * Returns false for an empty tile.
+ *
+ * F-02: Skips buildings whose age does not match the current game age and
+ * are not marked ageless — non-ageless old-age buildings lose adjacency
+ * contribution (they keep base yields only, handled in YieldCalculator).
  */
 function tileHasBuilding(
   tile: UrbanTileV2,
   predicate: (id: BuildingId) => boolean,
+  state?: GameState,
 ): boolean {
   for (const id of tile.buildings) {
+    // F-02: non-ageless old-age buildings contribute only base yields
+    if (state) {
+      const buildingDef = state.config.buildings.get(id);
+      if (buildingDef && buildingDef.age !== state.age.currentAge && !buildingDef.isAgeless) {
+        continue;
+      }
+    }
     if (predicate(id)) return true;
   }
   return false;
@@ -133,13 +145,13 @@ export function computeAdjacencyBonus(
     // Same-city urban-neighbour rules: campus/theater/commercial.
     const neighbourUrban = urbanTileAt(city, neighbourCoord);
     if (neighbourUrban !== undefined) {
-      if (tileHasBuilding(neighbourUrban, (id) => isCampusBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isCampusBuilding(state, id), state)) {
         bonus = addYields(bonus, { science: 1 });
       }
-      if (tileHasBuilding(neighbourUrban, (id) => isTheaterBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isTheaterBuilding(state, id), state)) {
         bonus = addYields(bonus, { culture: 1 });
       }
-      if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
     }
@@ -266,13 +278,13 @@ function computeBaseAdjacencyWithoutSpecialist(
 
     const neighbourUrban = urbanTileAt(city, neighbourCoord);
     if (neighbourUrban !== undefined) {
-      if (tileHasBuilding(neighbourUrban, (id) => isCampusBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isCampusBuilding(state, id), state)) {
         bonus = addYields(bonus, { science: 1 });
       }
-      if (tileHasBuilding(neighbourUrban, (id) => isTheaterBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isTheaterBuilding(state, id), state)) {
         bonus = addYields(bonus, { culture: 1 });
       }
-      if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id))) {
+      if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
     }

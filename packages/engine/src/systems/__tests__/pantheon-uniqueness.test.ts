@@ -43,7 +43,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
       const state = createTestState({
         currentPlayerId: 'pA',
         players: new Map([
-          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100 })],
+          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100, researchedCivics: ['mysticism'] })],
         ]),
       });
       const action: ReligionAction = {
@@ -64,8 +64,8 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
       const base = createTestState({
         currentPlayerId: 'pA',
         players: new Map([
-          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100 })],
-          ['pB', createTestPlayer({ id: 'pB', name: 'Beta', faith: 100 })],
+          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100, researchedCivics: ['mysticism'] })],
+          ['pB', createTestPlayer({ id: 'pB', name: 'Beta', faith: 100, researchedCivics: ['mysticism'] })],
         ]),
       });
       const afterA = religionSystem(base, {
@@ -95,8 +95,8 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
       const base = createTestState({
         currentPlayerId: 'pA',
         players: new Map([
-          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100 })],
-          ['pB', createTestPlayer({ id: 'pB', name: 'Beta', faith: 100 })],
+          ['pA', createTestPlayer({ id: 'pA', name: 'Alpha', faith: 100, researchedCivics: ['mysticism'] })],
+          ['pB', createTestPlayer({ id: 'pB', name: 'Beta', faith: 100, researchedCivics: ['mysticism'] })],
         ]),
       });
       const afterA = religionSystem(base, {
@@ -126,7 +126,7 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
     () => {
       const state = createTestState({
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', faith: 100 })],
+          ['p1', createTestPlayer({ id: 'p1', faith: 100, researchedCivics: ['mysticism'] })],
         ]),
       });
       // Precondition: no religion slot at all.
@@ -222,9 +222,9 @@ describe('pantheon uniqueness — ADOPT_PANTHEON invariants', () => {
       const base = createTestState({
         currentPlayerId: 'p1',
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', name: 'One', faith: 100 })],
-          ['p2', createTestPlayer({ id: 'p2', name: 'Two', faith: 100 })],
-          ['p3', createTestPlayer({ id: 'p3', name: 'Three', faith: 100 })],
+          ['p1', createTestPlayer({ id: 'p1', name: 'One', faith: 100, researchedCivics: ['mysticism'] })],
+          ['p2', createTestPlayer({ id: 'p2', name: 'Two', faith: 100, researchedCivics: ['mysticism'] })],
+          ['p3', createTestPlayer({ id: 'p3', name: 'Three', faith: 100, researchedCivics: ['mysticism'] })],
         ]),
       });
 

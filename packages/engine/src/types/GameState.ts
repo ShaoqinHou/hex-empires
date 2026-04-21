@@ -9,6 +9,8 @@ import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
 import type { ReligionSlotState } from './Religion';
 import type { NotificationCategory, NotificationPanelTargetHint } from './Notification';
 import type { CommanderState } from './Commander';
+import type { EspionageOperation } from './Espionage';
+import type { ActiveTreaty } from './Treaty';
 
 // ── Turn ──
 
@@ -344,6 +346,17 @@ export interface PlayerState {
   readonly killsThisAge?: number;
   /** Which axis triggered a Golden Age this transition (at most one per transition) */
   readonly goldenAgeChosen?: 'military' | 'economic' | 'science' | 'culture' | null;
+  /**
+   * F-04: Pending legacy bonuses awaiting player selection at age end.
+   * Max 4 entries shown to player; max 2 pickable via CHOOSE_LEGACY_BONUSES.
+   * Populated during TRANSITION_AGE; cleared once player picks.
+   */
+  readonly pendingLegacyBonuses?: ReadonlyArray<{
+    readonly bonusId: string;
+    readonly axis: string;
+    readonly description: string;
+    readonly effect: EffectDef;
+  }>;
 
   // ── Future Tech ──
   /** Tech id that will be boosted in the next age (from Future Tech selection) */
@@ -494,6 +507,26 @@ export interface DiplomacyRelation {
 
 export interface DiplomacyState {
   readonly relations: ReadonlyMap<string, DiplomacyRelation>; // key: "p1:p2"
+
+  /**
+   * ── Y5: Espionage (F-05 scaffold) ──
+   *
+   * All active, pending, and recently-resolved espionage operations across all
+   * players. Optional so existing DiplomacyState construction (engine, web,
+   * tests, save files) keeps compiling unchanged. Systems treat absence as
+   * an empty array.
+   */
+  readonly activeEspionageOps?: ReadonlyArray<EspionageOperation>;
+
+  /**
+   * ── Y5: Treaties (F-06 scaffold) ──
+   *
+   * All treaty instances (pending, active, rejected, expired) across all
+   * players. Optional so existing DiplomacyState construction (engine, web,
+   * tests, save files) keeps compiling unchanged. Systems treat absence as
+   * an empty array.
+   */
+  readonly activeTreaties?: ReadonlyArray<ActiveTreaty>;
 }
 
 // ── Effects ──
@@ -930,6 +963,38 @@ export type GameAction =
    * worldBankOfficesRemaining when id === 'world_bank_office'.
    */
   | { readonly type: 'COMPLETE_PROJECT'; readonly playerId: string; readonly projectId: string; readonly cityId?: string }
+  // ── Y5: Espionage (F-05 scaffold) ──
+  /**
+   * Initiate a covert espionage operation against another player.
+   * Validates: target exists, actionId is known, player has sufficient influence.
+   * On success: creates an EspionageOperation appended to diplomacy.activeEspionageOps.
+   */
+  | { readonly type: 'INITIATE_ESPIONAGE'; readonly targetPlayerId: PlayerId; readonly actionId: string; readonly influenceSpent: number }
+  /**
+   * Target player spends influence to counter an in-progress operation.
+   * Validates: opId exists and targets the current player, player has sufficient influence.
+   * On success: increases counterInfluence on the operation, raising effective detection chance.
+   */
+  | { readonly type: 'COUNTER_ESPIONAGE'; readonly opId: string; readonly counterInfluence: number }
+  // ── Y5: Treaties (F-06 scaffold) ──
+  /**
+   * Propose a treaty to another player.
+   * Validates: treatyId is known, target exists, player has sufficient influence.
+   * On success: creates an ActiveTreaty with status 'pending' in diplomacy.activeTreaties.
+   */
+  | { readonly type: 'PROPOSE_TREATY'; readonly targetPlayerId: PlayerId; readonly treatyId: string; readonly influenceSpent: number }
+  /**
+   * Accept a pending treaty proposed to the current player.
+   * Validates: treatyId exists and targets the current player.
+   * On success: status transitions to 'active', activeSinceTurn is set.
+   */
+  | { readonly type: 'ACCEPT_TREATY'; readonly treatyId: string }
+  /**
+   * Reject a pending treaty proposed to the current player.
+   * Validates: treatyId exists and targets the current player.
+   * On success: status transitions to 'rejected'.
+   */
+  | { readonly type: 'REJECT_TREATY'; readonly treatyId: string }
   // ── W5-02: Explorer Artifact Excavation ──
   /**
    * Explorer unit excavates an artifact site on an adjacent or occupied tile.
@@ -944,7 +1009,14 @@ export type GameAction =
    * - tile.hasArtifactSite cleared (set to false)
    * - unit movement consumed (movementLeft = 0)
    */
-  | { readonly type: 'EXCAVATE_ARTIFACT'; readonly unitId: UnitId; readonly tile: HexCoord };
+  | { readonly type: 'EXCAVATE_ARTIFACT'; readonly unitId: UnitId; readonly tile: HexCoord }
+  // ── F-04: Legacy bonus selection ──
+  /**
+   * Player picks legacy bonuses from pendingLegacyBonuses (max 2).
+   * `picks` contains bonusIds from pending entries.
+   * On success: chosen effects appended to legacyBonuses, pendingLegacyBonuses cleared.
+   */
+  | { readonly type: 'CHOOSE_LEGACY_BONUSES'; readonly picks: readonly string[] };
 
 // ── Events ──
 

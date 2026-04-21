@@ -142,7 +142,8 @@ function processNormalCivicResearch(state: GameState): GameState {
       researchedCivics: [...player.researchedCivics, player.currentCivic],
       currentCivic: null,
       civicProgress: 0,
-      ageProgress: player.ageProgress + 5, // +5 age progress per civic
+      // F-13: Removed ageProgress +5 per civic — age progress comes from
+      // ageSystem's END_TURN milestone check only.
       policySwapWindowOpen: true,
     });
 

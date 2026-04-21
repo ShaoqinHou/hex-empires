@@ -5,6 +5,7 @@ import {
   calculateSettlementCapPenalty as _calculateSettlementCapPenalty,
   applyHappinessPenalty as _applyHappinessPenalty,
 } from '../state/HappinessUtils';
+import { celebrationThresholdForCount } from '../state/CelebrationConstants';
 
 // Re-export happiness helpers so existing callers that import from this
 // module continue to work (tests, barrel exports, web UI via @hex/engine).
@@ -15,20 +16,13 @@ export {
   applyHappinessPenalty,
 } from '../state/HappinessUtils';
 
-/** Threshold (excess happiness) required to trigger the Nth celebration (1-indexed). */
-const CELEBRATION_BASE_THRESHOLD = 50;
-/** Production bonus percent awarded per active celebration. */
-const CELEBRATION_BONUS_PERCENT = 10;
-/** Number of turns a celebration bonus lasts. */
-const CELEBRATION_DURATION_TURNS = 10;
-
 /**
- * Calculate the next celebration threshold for a player.
- * First celebration: 50. Each subsequent: 50 * (celebrationCount + 1).
- * Capped at the 8th multiplier (celebrationCount 7): threshold stops increasing after 7th celebration.
+ * @deprecated Use `celebrationThresholdForCount(age, count)` from CelebrationConstants instead.
+ * Kept for backward-compat with existing tests that import this function directly.
+ * Returns the old linear formula: first celebration = 50, each subsequent +50.
  */
 export function nextCelebrationThreshold(celebrationCount: number): number {
-  return CELEBRATION_BASE_THRESHOLD * Math.min(celebrationCount + 1, 8);
+  return 50 * Math.min(celebrationCount + 1, 8);
 }
 
 /**
@@ -154,7 +148,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
 
     const netGold = totalGold - maintenance;
 
-    // --- Celebration mechanic ---
+    // --- Celebration mechanic (W3-03: globalHappiness accumulator + age-specific thresholds) ---
     let { celebrationCount, celebrationBonus, celebrationTurnsLeft } = player;
 
     // Decrement celebration timer first
@@ -165,12 +159,31 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       }
     }
 
-    // Check if excess happiness meets the next celebration threshold
-    const threshold = nextCelebrationThreshold(celebrationCount);
-    if (totalExcessHappiness >= threshold) {
-      celebrationCount += 1;
-      celebrationBonus = CELEBRATION_BONUS_PERCENT;
-      celebrationTurnsLeft = CELEBRATION_DURATION_TURNS;
+    // Accumulate global happiness (F-01): add this turn's excess to the running total.
+    // globalHappiness is NOT reset when a celebration triggers — it persists as a
+    // monotonically-increasing counter so the next threshold check works correctly.
+    const prevGlobalHappiness = player.globalHappiness ?? 0;
+    const newGlobalHappiness = prevGlobalHappiness + totalExcessHappiness;
+
+    // F-02: age-specific threshold table (not linear formula)
+    const threshold = celebrationThresholdForCount(player.age, celebrationCount);
+
+    // Only trigger a new celebration if:
+    //  - the new global happiness value crosses the threshold
+    //  - no celebration is currently pending resolution (avoid double-trigger)
+    const alreadyPending = (player.pendingCelebrationChoice ?? null) !== null;
+
+    let pendingCelebrationChoice = player.pendingCelebrationChoice ?? null;
+    if (!alreadyPending && newGlobalHappiness >= threshold) {
+      // F-03: instead of auto-applying a +10% bonus, set a pending choice for the player.
+      // The player must dispatch PICK_CELEBRATION_BONUS to resolve it.
+      // governmentSystem handles PICK_CELEBRATION_BONUS → applies bonus + increments counts.
+      const governmentId = (player.governmentId ?? null) as string | null;
+      if (governmentId !== null) {
+        // Government-gated: only trigger the menu if the player has a government.
+        pendingCelebrationChoice = { governmentId };
+      }
+      // If player has no government, fall through without triggering (rare early-game edge case).
     }
 
     // Gold floor: gold cannot go below 0 (bankrupt players can't spiral into
@@ -187,6 +200,8 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       celebrationCount,
       celebrationBonus,
       celebrationTurnsLeft,
+      globalHappiness: newGlobalHappiness,
+      pendingCelebrationChoice,
     });
     changed = true;
   }

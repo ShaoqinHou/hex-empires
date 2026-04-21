@@ -95,7 +95,9 @@ describe('civicSystem', () => {
       });
       const next = civicSystem(state, { type: 'END_TURN' });
       if (next.players.get('p1')!.researchedCivics.includes('code_of_laws')) {
-        expect(next.players.get('p1')!.ageProgress).toBe(5);
+        // F-13: ageProgress +5 per civic removed — age progress comes from
+        // ageSystem's END_TURN milestone check only.
+        expect(next.players.get('p1')!.ageProgress).toBe(0);
       }
     });
 

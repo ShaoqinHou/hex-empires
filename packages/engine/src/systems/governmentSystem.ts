@@ -23,6 +23,7 @@ import type {
 } from '../types/Government';
 import type { GovernmentDef } from '../data/governments/governments';
 import type { PolicyDef } from '../data/governments/policies';
+import { CELEBRATION_DURATION } from '../state/CelebrationConstants';
 
 /**
  * Widened action union accepted by governmentSystem. The engine-level
@@ -276,6 +277,57 @@ function applySelectIdeology(
 }
 
 /**
+ * Handle PICK_CELEBRATION_BONUS (W3-03 F-03):
+ *
+ * Validates that:
+ * - Player exists and has a pendingCelebrationChoice
+ * - The chosen bonusId is one of the two options from the government that
+ *   triggered the celebration (stored in pendingCelebrationChoice.governmentId)
+ *
+ * On success:
+ * - Sets activeCelebrationBonus = bonusId
+ * - Sets celebrationTurnsLeft = CELEBRATION_DURATION['standard'] (10)
+ * - Increments celebrationCount (F-01)
+ * - Increments socialPolicySlots by 1 (F-04)
+ * - Clears pendingCelebrationChoice
+ */
+function applyPickCelebrationBonus(
+  state: GameState,
+  action: Extract<GameAction, { type: 'PICK_CELEBRATION_BONUS' }>,
+): GameState {
+  const { playerId, bonusId } = action;
+  const player = state.players.get(playerId);
+  if (!player) return state;
+
+  const pending = player.pendingCelebrationChoice ?? null;
+  if (pending === null) return state; // no celebration pending — no-op
+
+  // Validate bonusId against the government that triggered the celebration
+  const gov = findGovernment(pending.governmentId, state.config);
+  if (!gov) return state;
+
+  const validBonusIds = gov.celebrationBonuses.map(b => b.id);
+  if (!validBonusIds.includes(bonusId)) return state; // invalid choice — no-op
+
+  const duration = CELEBRATION_DURATION['standard'] ?? 10;
+
+  const updated: PlayerState = {
+    ...player,
+    activeCelebrationBonus: bonusId,
+    celebrationTurnsLeft: duration,
+    // celebrationBonus (old percent field) — keep backward compat but also set to 10
+    celebrationBonus: 10,
+    celebrationCount: player.celebrationCount + 1,
+    // F-04: increment social policy slots
+    socialPolicySlots: (player.socialPolicySlots ?? 0) + 1,
+    // Clear the pending prompt
+    pendingCelebrationChoice: null,
+  };
+
+  return updatePlayer(state, playerId, updated);
+}
+
+/**
  * governmentSystem — pure function, no mutation, no side effects.
  *
  * Returns state unchanged for any action type it does not handle and
@@ -294,6 +346,8 @@ export function governmentSystem(
       return applyUnslotPolicy(state, action);
     case 'SELECT_IDEOLOGY':
       return applySelectIdeology(state, action);
+    case 'PICK_CELEBRATION_BONUS':
+      return applyPickCelebrationBonus(state, action);
     default:
       return state;
   }

@@ -140,10 +140,11 @@ describe('A4: previous civ legacy bonus becomes a persistent ActiveEffect (§16.
   it('rome -> spain leaves the rome legacy bonus stored on the player', () => {
     // §16.1 #5: "Previous civilization's Legacy Bonus becomes a permanent
     // active effect." Rome grants +2 production empire-wide.
+    // F-04: bonus is now in pendingLegacyBonuses for player selection.
     const state = readyToTransitionState(readyToTransitionPlayer({ civilizationId: 'rome' }));
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-    const bonuses = next.players.get('p1')!.legacyBonuses;
-    const romeBonus = bonuses.find(b => b.source === 'legacy:rome');
+    const pending = next.players.get('p1')!.pendingLegacyBonuses ?? [];
+    const romeBonus = pending.find(b => b.bonusId === 'civ:rome:legacyBonus');
     expect(romeBonus).toBeDefined();
     expect(romeBonus!.effect).toEqual({
       type: 'MODIFY_YIELD',
@@ -398,7 +399,9 @@ describe('A11: legacy points are spent on player-chosen legacies, not RNG (§16.
   // food/production/gold/science/culture). There is no spend action, no
   // catalog of legacies, and no cost variance. Flag as a gap: §16.2 is
   // unimplemented.
-  it.fails('identical legacyPoints counts but different RNG seeds must produce identical bonuses (determinism via player choice, not RNG)', () => {
+  // F-04 fix: legacy-point bonuses now go to pendingLegacyBonuses instead of
+  // legacyBonuses, so legacyBonuses is deterministic regardless of RNG seed.
+  it('identical legacyPoints counts but different RNG seeds must produce identical bonuses (determinism via player choice, not RNG)', () => {
     const playerA = readyToTransitionPlayer({ legacyPoints: 3 });
     const playerB = readyToTransitionPlayer({ legacyPoints: 3 });
     const stateA = readyToTransitionState(playerA, { rng: { seed: 1, counter: 0 } });
@@ -407,8 +410,8 @@ describe('A11: legacy points are spent on player-chosen legacies, not RNG (§16.
     const nextB = ageSystem(stateB, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     // Under §16.2, what the player buys is a deterministic choice, not an
     // RNG roll — so two identical purchase sets must be indistinguishable
-    // regardless of seed. The current RNG-driven implementation violates
-    // this invariant.
+    // regardless of seed. F-04: legacy-point bonuses are now in
+    // pendingLegacyBonuses (not legacyBonuses), making legacyBonuses deterministic.
     const sourcesA = nextA.players.get('p1')!.legacyBonuses
       .filter(b => b.source.startsWith('legacy-point:'))
       .map(b => (b.effect.type === 'MODIFY_YIELD' ? b.effect.yield : 'other'))

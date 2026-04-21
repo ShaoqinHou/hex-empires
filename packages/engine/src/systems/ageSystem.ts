@@ -1,4 +1,4 @@
-import type { GameState, GameAction, ActiveEffect, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, EffectDef, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
 import type { YieldType } from '../types/Yields';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
@@ -16,6 +16,8 @@ export function ageSystem(state: GameState, action: GameAction): GameState {
       return handleTransition(state, action.newCivId);
     case 'END_TURN':
       return checkLegacyMilestones(state);
+    case 'CHOOSE_LEGACY_BONUSES':
+      return handleChooseLegacyBonuses(state, action.picks);
     default:
       return state;
   }
@@ -31,30 +33,64 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   const threshold = state.age.ageThresholds[nextAge];
   if (player.ageProgress < threshold) return state; // not ready
 
-  // Get legacy bonus from current civ
-  const legacyBonus = getCivLegacyBonus(player.civilizationId);
+  // F-03: unresolved crisis blocks transition
+  if (player.crisisPhase && player.crisisPhase !== 'none' && player.crisisPhase !== 'resolved') {
+    return state;
+  }
 
-  // Spend legacy points: each point grants +1 to a yield permanently
-  let bonuses = legacyBonus
-    ? [...player.legacyBonuses, legacyBonus]
-    : [...player.legacyBonuses];
+  // Get legacy bonus from current civ (F-06: uses state.config, not hardcoded table)
+  const legacyBonus = getCivLegacyBonus(player.civilizationId, state);
 
+  // Determine golden/dark age effects based on legacy path milestones (max 1 golden age per transition)
   let rng = state.rng;
+  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.goldenAgeChosen ?? null);
+  rng = goldenDarkResult.rng;
+
+  // Dark age effects apply immediately (penalties are not selectable)
+  const darkAgeEffects = goldenDarkResult.effects.filter(e => e.source.includes('dark-age'));
+  let bonuses: ActiveEffect[] = [...player.legacyBonuses, ...darkAgeEffects];
+
+  // F-04: Collect eligible bonuses for player selection (max 4 shown, max 2 pickable)
+  const eligible: Array<{ bonusId: string; axis: string; description: string; effect: EffectDef }> = [];
+
+  if (legacyBonus) {
+    eligible.push({
+      bonusId: legacyBonus.source,
+      axis: 'civ',
+      description: `Legacy bonus from ${player.civilizationId}`,
+      effect: legacyBonus.effect,
+    });
+  }
+
   const yieldTypes: ReadonlyArray<YieldType> = ['food', 'production', 'gold', 'science', 'culture'];
   for (let i = 0; i < player.legacyPoints; i++) {
     const result = nextRandom(rng);
     rng = result.rng;
     const yieldType = yieldTypes[Math.floor(result.value * yieldTypes.length)];
-    bonuses.push({
-      source: `legacy-point:${player.age}:${i}`,
+    eligible.push({
+      bonusId: `legacy-point:${player.age}:${i}`,
+      axis: 'legacy-points',
+      description: `+1 ${yieldType} (legacy point)`,
       effect: { type: 'MODIFY_YIELD', target: 'empire', yield: yieldType, value: 1 },
     });
   }
 
-  // Determine golden/dark age effects based on legacy path milestones (max 1 golden age per transition)
-  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.goldenAgeChosen ?? null);
-  bonuses = [...bonuses, ...goldenDarkResult.effects];
-  rng = goldenDarkResult.rng;
+  // Golden age effects are eligible for selection
+  const goldenAgeEffects = goldenDarkResult.effects.filter(e => !e.source.includes('dark-age'));
+  for (const ge of goldenAgeEffects) {
+    const axis = ge.source.includes(':military:') ? 'military'
+      : ge.source.includes(':economic:') ? 'economic'
+      : ge.source.includes(':science:') ? 'science'
+      : 'culture';
+    eligible.push({
+      bonusId: ge.source,
+      axis,
+      description: `Golden Age bonus (${axis})`,
+      effect: ge.effect,
+    });
+  }
+
+  const pendingLegacyBonuses = eligible.slice(0, 4);
 
   const updatedPlayers = new Map(state.players);
 
@@ -75,6 +111,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     age: nextAge,
     ageProgress: 0,
     legacyBonuses: bonuses,
+    pendingLegacyBonuses: pendingLegacyBonuses.length > 0 ? pendingLegacyBonuses : undefined,
     legacyPoints: 0, // spent all legacy points (reset; totalCareerLegacyPoints is not reset)
     gold: player.gold + goldAdjustment,
     // Reset per-age counters for the new age
@@ -202,6 +239,20 @@ function handleTransition(state: GameState, newCivId: string): GameState {
         panelTarget: 'age' as const,
       });
     }
+  }
+
+  // F-07 (population-specialists): Reset food to 0 for all cities owned by
+  // the transitioning player so the growth curve restarts fresh in the new age.
+  {
+    const nextCities = new Map(updatedCities);
+    let foodReset = false;
+    for (const [cityId, city] of updatedCities) {
+      if (city.owner !== player.id) continue;
+      if (city.food === 0) continue;
+      nextCities.set(cityId, { ...city, food: 0 });
+      foodReset = true;
+    }
+    if (foodReset) updatedCities = nextCities;
   }
 
   // W4-04 (F-08): state.commanders is intentionally NOT reset here.
@@ -440,7 +491,8 @@ function checkLegacyMilestones(state: GameState): GameState {
     legacyPoints: player.legacyPoints + totalGain,
     legacyPointsByAxis: newByAxis,
     totalCareerLegacyPoints: newCareerTotal,
-    ageProgress: player.ageProgress + 1,
+    // F-02: +1 base per turn + milestone acceleration (+10 per newly completed milestone)
+    ageProgress: player.ageProgress + 1 + totalGain * 10,
   });
 
   const logEntries = [...state.log];
@@ -460,6 +512,46 @@ function checkLegacyMilestones(state: GameState): GameState {
   };
 }
 
+/**
+ * F-04: Handle CHOOSE_LEGACY_BONUSES — player picks up to 2 bonuses
+ * from pendingLegacyBonuses. Chosen effects are appended to legacyBonuses;
+ * pendingLegacyBonuses is cleared.
+ */
+function handleChooseLegacyBonuses(state: GameState, picks: readonly string[]): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+  const pending = player.pendingLegacyBonuses;
+  if (!pending || pending.length === 0) return state;
+
+  // Max 2 picks
+  const selectedPicks = Array.from(picks).slice(0, 2);
+  const chosen = pending.filter(p => selectedPicks.includes(p.bonusId));
+  if (chosen.length === 0) return state;
+
+  const newBonuses: ReadonlyArray<ActiveEffect> = chosen.map(p => ({
+    source: p.bonusId,
+    effect: p.effect,
+  }));
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, {
+    ...player,
+    legacyBonuses: [...player.legacyBonuses, ...newBonuses],
+    pendingLegacyBonuses: undefined,
+  });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: player.id,
+      message: `Selected ${chosen.length} legacy bonus(es).`,
+      type: 'legacy' as const,
+    }],
+  };
+}
+
 function getNextAge(current: string): 'exploration' | 'modern' | null {
   switch (current) {
     case 'antiquity': return 'exploration';
@@ -468,32 +560,14 @@ function getNextAge(current: string): 'exploration' | 'modern' | null {
   }
 }
 
-function getCivLegacyBonus(civId: string): ActiveEffect | null {
-  const bonuses: Record<string, ActiveEffect> = {
-    rome: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
-    },
-    egypt: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
-    },
-    greece: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
-    },
-    persia: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
-    },
-    india: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 },
-    },
-    china: {
-      source: `legacy:${civId}`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 },
-    },
-  };
-  return bonuses[civId] ?? null;
+/**
+ * F-06: Data-driven legacy bonus lookup. Reads the civilization's
+ * legacyBonus from state.config.civilizations instead of a hardcoded
+ * switch/table. Every civ with a legacyBonus in the registry is covered
+ * automatically — no code change needed when adding new civs.
+ */
+function getCivLegacyBonus(civId: string, state: GameState): ActiveEffect | null {
+  const civDef = state.config.civilizations.get(civId);
+  if (!civDef?.legacyBonus) return null;
+  return { effect: civDef.legacyBonus.effect, source: `civ:${civId}:legacyBonus` };
 }

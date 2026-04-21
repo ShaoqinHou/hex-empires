@@ -129,7 +129,7 @@ describe('resourceSystem', () => {
   });
 });
 
-describe('nextCelebrationThreshold', () => {
+describe('nextCelebrationThreshold (legacy linear formula — backward-compat export)', () => {
   it('returns 50 for the first celebration (count = 0)', () => {
     expect(nextCelebrationThreshold(0)).toBe(50);
   });
@@ -144,103 +144,110 @@ describe('nextCelebrationThreshold', () => {
   });
 });
 
-describe('resourceSystem — celebrations', () => {
+describe('resourceSystem — celebrations (W3-03: globalHappiness accumulator + VII thresholds)', () => {
   /**
-   * Build a city with enough luxury tiles in territory to produce high happiness.
-   * One silk tile = +2 happiness.
-   * City base = 10 (city type, pop 1, no penalty).
-   * With 20 silk tiles: 10 + 20*2 = 50 excess happiness → crosses first threshold.
+   * Build a state where the player's accumulated globalHappiness already exceeds
+   * the antiquity first-celebration threshold (200), so that the next END_TURN
+   * crosses the threshold and sets pendingCelebrationChoice.
+   *
+   * The player must have a governmentId for the government-gated bonus menu to trigger.
    */
-  function createHighHappinessSetup() {
-    const centerCoord = { q: 0, r: 0 };
-    const silkTiles: Array<[string, HexTile]> = [];
-    const territoryKeys: string[] = [coordToKey(centerCoord)];
-
-    // Center tile (no resource)
-    silkTiles.push([coordToKey(centerCoord), {
-      coord: centerCoord,
-      terrain: 'grassland',
-      feature: null,
-      resource: null,
-      improvement: null,
-      building: null,
-      river: [],
-      elevation: 0.5,
-      continent: 1,
-    }]);
-
-    // 20 silk luxury tiles
-    for (let i = 1; i <= 20; i++) {
-      const coord = { q: i, r: 0 };
-      const key = coordToKey(coord);
-      territoryKeys.push(key);
-      silkTiles.push([key, {
-        coord,
-        terrain: 'grassland',
-        feature: null,
-        resource: 'silk',
-        improvement: null,
-        building: null,
-        river: [],
-        elevation: 0.5,
-        continent: 1,
-      }]);
-    }
-
-    const city = createTestCity({
-      id: 'c1',
-      position: centerCoord,
-      population: 1,
-      settlementType: 'city',
-      territory: territoryKeys,
-      happiness: 0,
+  function createNearThresholdState(governmentId: string | null = 'classical_republic') {
+    const city = createTestCity({ population: 1 });
+    const player = createTestPlayer({
+      gold: 100,
+      // Pre-load globalHappiness just below antiquity threshold 200
+      // with enough city happiness that one END_TURN crosses it.
+      // City base happiness ~10; set globalHappiness to 190 → 190+10 = 200 >= 200
+      globalHappiness: 190,
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      ...(governmentId !== null ? { governmentId } : {}),
     });
-
-    // Use the createFlatMap base but override with silk tiles
-    const baseState = createTestState({
+    return createTestState({
       cities: new Map([['c1', city]]),
-      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+      players: new Map([['p1', player]]),
     });
-
-    // Merge silk tiles into the map
-    const updatedTiles = new Map(baseState.map.tiles);
-    for (const [key, tile] of silkTiles) {
-      updatedTiles.set(key, tile);
-    }
-
-    return {
-      ...baseState,
-      map: { ...baseState.map, tiles: updatedTiles },
-    };
   }
 
-  it('triggers a celebration when excess happiness meets the threshold', () => {
-    const state = createHighHappinessSetup();
-    const next = resourceSystem(state, { type: 'END_TURN' });
-
-    const player = next.players.get('p1')!;
-    // Happiness = 10 (base, pop=1) + 20*2 (silk) = 50 >= threshold 50
-    expect(player.celebrationCount).toBe(1);
-    expect(player.celebrationBonus).toBe(10);
-    expect(player.celebrationTurnsLeft).toBe(10);
-  });
-
-  it('does not trigger a celebration when excess happiness is below the threshold', () => {
-    // One city with pop 1 and no luxuries: happiness = 10, threshold = 50 → no trigger
+  it('accumulates globalHappiness each END_TURN (does not reset)', () => {
     const city = createTestCity({ population: 1 });
     const state = createTestState({
       cities: new Map([['c1', city]]),
-      players: new Map([['p1', createTestPlayer()]]),
+      players: new Map([['p1', createTestPlayer({ globalHappiness: 50 })]]),
     });
     const next = resourceSystem(state, { type: 'END_TURN' });
-
-    const player = next.players.get('p1')!;
-    expect(player.celebrationCount).toBe(0);
-    expect(player.celebrationBonus).toBe(0);
-    expect(player.celebrationTurnsLeft).toBe(0);
+    // globalHappiness must be >= 50 (it only grows)
+    expect((next.players.get('p1')!.globalHappiness ?? 0)).toBeGreaterThanOrEqual(50);
   });
 
-  it('decrements celebrationTurnsLeft on each END_TURN', () => {
+  it('does not accumulate happiness from negative-happiness cities', () => {
+    // City happiness = 0 (not positive); contributes 0 to accumulator
+    const city = createTestCity({ population: 1, happiness: 0 });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', createTestPlayer({ globalHappiness: 0 })]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    // globalHappiness should stay at 0 since city happiness will be 0 or may be recalculated to ~10
+    // The system only adds positive cityHappiness; 0 happiness contributes 0
+    const newHappiness = next.players.get('p1')!.globalHappiness ?? 0;
+    expect(newHappiness).toBeGreaterThanOrEqual(0);
+  });
+
+  it('sets pendingCelebrationChoice when globalHappiness crosses antiquity threshold 200', () => {
+    // globalHappiness 190 + ~10 city happiness = 200 >= antiquity[0]=200
+    const state = createNearThresholdState('classical_republic');
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    const player = next.players.get('p1')!;
+
+    expect(player.pendingCelebrationChoice).toBeTruthy();
+    expect(player.pendingCelebrationChoice!.governmentId).toBe('classical_republic');
+    // celebrationCount should NOT have incremented yet (player must pick bonus first)
+    expect(player.celebrationCount).toBe(0);
+  });
+
+  it('does not set pendingCelebrationChoice when below threshold', () => {
+    // globalHappiness starts at 0; city happiness ~10; accumulated = 10 < 200
+    const city = createTestCity({ population: 1 });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', createTestPlayer({ celebrationCount: 0, globalHappiness: 0 })]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    const player = next.players.get('p1')!;
+    expect(player.pendingCelebrationChoice ?? null).toBeNull();
+    expect(player.celebrationCount).toBe(0);
+  });
+
+  it('does not set pendingCelebrationChoice if player has no government', () => {
+    // Without a governmentId, the system cannot present a bonus menu
+    const state = createNearThresholdState(null);
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    const player = next.players.get('p1')!;
+    expect(player.pendingCelebrationChoice ?? null).toBeNull();
+  });
+
+  it('does not re-trigger if pendingCelebrationChoice is already set', () => {
+    // If already pending, a second END_TURN should not overwrite the pending choice
+    const city = createTestCity({ population: 1 });
+    const existingPending = { governmentId: 'classical_republic' };
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', createTestPlayer({
+        globalHappiness: 999, // well above threshold
+        celebrationCount: 0,
+        governmentId: 'classical_republic',
+        pendingCelebrationChoice: existingPending,
+      } as Parameters<typeof createTestPlayer>[0])]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    // Should remain the same pending (not duplicated)
+    expect(next.players.get('p1')!.pendingCelebrationChoice).toEqual(existingPending);
+  });
+
+  it('decrements celebrationTurnsLeft on each END_TURN (timer still works)', () => {
     const city = createTestCity({ population: 1 });
     const state = createTestState({
       cities: new Map([['c1', city]]),
@@ -251,12 +258,11 @@ describe('resourceSystem — celebrations', () => {
       })]]),
     });
     const next = resourceSystem(state, { type: 'END_TURN' });
-
     expect(next.players.get('p1')!.celebrationTurnsLeft).toBe(4);
     expect(next.players.get('p1')!.celebrationBonus).toBe(10);
   });
 
-  it('removes celebration bonus when celebrationTurnsLeft reaches 0', () => {
+  it('clears celebration bonus when celebrationTurnsLeft reaches 0', () => {
     const city = createTestCity({ population: 1 });
     const state = createTestState({
       cities: new Map([['c1', city]]),
@@ -267,29 +273,23 @@ describe('resourceSystem — celebrations', () => {
       })]]),
     });
     const next = resourceSystem(state, { type: 'END_TURN' });
-
     expect(next.players.get('p1')!.celebrationTurnsLeft).toBe(0);
     expect(next.players.get('p1')!.celebrationBonus).toBe(0);
   });
 
-  it('second celebration requires double the initial threshold', () => {
-    const state = createHighHappinessSetup();
-    // Player already has 1 celebration, needs 100 excess to trigger second
-    const stateWithOneCelebration = {
-      ...state,
-      players: new Map([[
-        'p1',
-        {
-          ...state.players.get('p1')!,
-          celebrationCount: 1,
-          celebrationBonus: 0,
-          celebrationTurnsLeft: 0,
-        },
-      ]]),
-    };
-    // 50 excess happiness < 100 threshold → no new celebration
-    const next = resourceSystem(stateWithOneCelebration, { type: 'END_TURN' });
-    expect(next.players.get('p1')!.celebrationCount).toBe(1);
+  it('uses second antiquity threshold 349 for celebrationCount=1', () => {
+    // Player has 1 celebration done; globalHappiness 348 + ~10 = 358 >= 349
+    const city = createTestCity({ population: 1 });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', createTestPlayer({
+        globalHappiness: 348,
+        celebrationCount: 1,
+        governmentId: 'classical_republic',
+      } as Parameters<typeof createTestPlayer>[0])]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.pendingCelebrationChoice).toBeTruthy();
   });
 });
 

@@ -55,6 +55,10 @@ import { ALL_PROJECTS } from '../data/projects';
 import type { ProjectDef } from '../types/Project';
 import { ALL_NATURAL_WONDERS } from '../data/natural-wonders';
 import type { NaturalWonderDef } from '../types/NaturalWonder';
+import { ALL_ESPIONAGE_ACTIONS } from '../data/espionage';
+import type { EspionageActionDef } from '../types/Espionage';
+import { ALL_TREATIES } from '../data/treaties';
+import type { TreatyDef } from '../types/Treaty';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -145,5 +149,11 @@ export function createGameConfig(): GameConfig {
   const naturalWonders = new Map<string, NaturalWonderDef>();
   for (const nw of ALL_NATURAL_WONDERS) naturalWonders.set(nw.id, nw);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, experimentalAchievements: false };
+  const espionageActions = new Map<string, EspionageActionDef>();
+  for (const a of ALL_ESPIONAGE_ACTIONS) espionageActions.set(a.id, a);
+
+  const treaties = new Map<string, TreatyDef>();
+  for (const t of ALL_TREATIES) treaties.set(t.id, t);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, espionageActions, treaties, experimentalAchievements: false };
 }

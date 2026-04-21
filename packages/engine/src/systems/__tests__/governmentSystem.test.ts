@@ -615,3 +615,123 @@ describe('governmentSystem', () => {
     expect(frozen.governmentId).toBe(null);
   });
 });
+
+// ── W3-03: PICK_CELEBRATION_BONUS ──
+
+describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
+  function withPendingCelebration(player: PlayerState, governmentId: string): PlayerState {
+    return {
+      ...player,
+      governmentId,
+      slottedPolicies: [],
+      pendingCelebrationChoice: { governmentId },
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 0,
+    } as unknown as PlayerState;
+  }
+
+  it('no-ops when player has no pendingCelebrationChoice', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({ id: 'p1' }),
+      { governmentId: 'classical_republic', slottedPolicies: [] },
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    expect(next).toBe(state);
+  });
+
+  it('no-ops for an invalid bonusId not in the government celebrationBonuses', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1' }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'invalid-bonus-id',
+    });
+    expect(next).toBe(state);
+  });
+
+  it('applies valid bonus: sets activeCelebrationBonus + clears pendingCelebrationChoice', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1' }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    const updated = next.players.get('p1')!;
+    expect((updated as typeof updated & { activeCelebrationBonus: string }).activeCelebrationBonus).toBe('classical-rep-culture');
+    expect((updated as typeof updated & { pendingCelebrationChoice: null }).pendingCelebrationChoice).toBeNull();
+  });
+
+  it('increments celebrationCount on valid pick (F-01)', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1', celebrationCount: 0 }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    expect(next.players.get('p1')!.celebrationCount).toBe(1);
+  });
+
+  it('increments socialPolicySlots by 1 on valid pick (F-04)', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1' }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    const updated = next.players.get('p1')!;
+    expect((updated as typeof updated & { socialPolicySlots: number }).socialPolicySlots).toBe(1);
+  });
+
+  it('sets celebrationTurnsLeft = 10 on valid pick', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1' }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-wonder',
+    });
+    expect(next.players.get('p1')!.celebrationTurnsLeft).toBe(10);
+  });
+
+  it('accepts either bonus option A or B', () => {
+    const player = withPendingCelebration(
+      createTestPlayer({ id: 'p1' }),
+      'classical_republic',
+    );
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    // Option B
+    const nextB = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-wonder',
+    });
+    const updatedB = nextB.players.get('p1')!;
+    expect((updatedB as typeof updatedB & { activeCelebrationBonus: string }).activeCelebrationBonus).toBe('classical-rep-wonder');
+  });
+});

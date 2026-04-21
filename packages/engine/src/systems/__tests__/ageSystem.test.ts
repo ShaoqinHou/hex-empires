@@ -32,8 +32,10 @@ describe('ageSystem', () => {
       age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-    expect(next.players.get('p1')!.legacyBonuses.length).toBe(1);
-    expect(next.players.get('p1')!.legacyBonuses[0].source).toContain('rome');
+    // F-04: civ legacy bonus is now in pendingLegacyBonuses, not legacyBonuses
+    const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+    expect(pending.length).toBeGreaterThanOrEqual(1);
+    expect(pending.some(p => p.bonusId.includes('rome'))).toBe(true);
   });
 
   it('rejects transition with insufficient age progress', () => {
@@ -188,10 +190,12 @@ describe('ageSystem', () => {
       age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-    // Should have civ legacy bonus + 3 legacy point bonuses (no golden/dark effects with milestones=1)
+    // Should have spent all legacy points (reset to 0)
     expect(next.players.get('p1')!.legacyPoints).toBe(0);
+    // F-04: civ legacy + 3 legacy point bonuses now go to pendingLegacyBonuses (max 4 cap)
+    const pending = next.players.get('p1')!.pendingLegacyBonuses!;
     // 1 civ legacy bonus (rome) + 3 from legacy points = 4 total
-    expect(next.players.get('p1')!.legacyBonuses.length).toBe(4);
+    expect(pending.length).toBe(4);
   });
 
   describe('golden/dark age effects', () => {
@@ -209,8 +213,9 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
-      const goldenMilitary = bonuses.find(b => b.source.includes('golden-age:military'));
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+      const goldenMilitary = pending.find(b => b.bonusId.includes('golden-age:military'));
       expect(goldenMilitary).toBeDefined();
       expect(goldenMilitary!.effect).toEqual({ type: 'MODIFY_COMBAT', target: 'all', value: 5 });
       expect(next.log.some(e => e.message.includes('Military Golden Age'))).toBe(true);
@@ -230,8 +235,9 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
-      const goldenEconomic = bonuses.find(b => b.source.includes('golden-age:economic'));
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+      const goldenEconomic = pending.find(b => b.bonusId.includes('golden-age:economic'));
       expect(goldenEconomic).toBeDefined();
       expect(goldenEconomic!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: 3 });
     });
@@ -250,8 +256,9 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
-      const goldenScience = bonuses.find(b => b.source.includes('golden-age:science'));
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+      const goldenScience = pending.find(b => b.bonusId.includes('golden-age:science'));
       expect(goldenScience).toBeDefined();
       expect(goldenScience!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 3 });
     });
@@ -270,8 +277,9 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
-      const goldenCulture = bonuses.find(b => b.source.includes('golden-age:culture'));
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+      const goldenCulture = pending.find(b => b.bonusId.includes('golden-age:culture'));
       expect(goldenCulture).toBeDefined();
       expect(goldenCulture!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 3 });
     });
@@ -390,10 +398,11 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
       // F-05: only 1 golden age effect granted (first eligible axis: military)
-      expect(bonuses.filter(b => b.source.includes('golden-age')).length).toBe(1);
-      expect(bonuses.some(b => b.source.includes('golden-age:military'))).toBe(true);
+      expect(pending.filter(b => b.bonusId.includes('golden-age')).length).toBe(1);
+      expect(pending.some(b => b.bonusId.includes('golden-age:military'))).toBe(true);
       expect(next.log.filter(e => e.message.includes('Golden Age')).length).toBe(1);
     });
 
@@ -412,9 +421,10 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      const bonuses = next.players.get('p1')!.legacyBonuses;
-      expect(bonuses.filter(b => b.source.includes('golden-age')).length).toBe(1);
-      expect(bonuses.some(b => b.source.includes('golden-age:culture'))).toBe(true);
+      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses!;
+      expect(pending.filter(b => b.bonusId.includes('golden-age')).length).toBe(1);
+      expect(pending.some(b => b.bonusId.includes('golden-age:culture'))).toBe(true);
       // goldenAgeChosen resets to null after transition
       expect(next.players.get('p1')!.goldenAgeChosen).toBeNull();
     });

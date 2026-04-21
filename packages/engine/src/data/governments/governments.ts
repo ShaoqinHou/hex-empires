@@ -27,6 +27,16 @@ export interface PolicySlotCounts {
   readonly total: number;
 }
 
+/**
+ * One of the two Celebration bonus options for a Government (§4.5 / §14.4).
+ * Player picks Option A or Option B when a celebration is triggered.
+ */
+export interface GovernmentCelebrationBonus {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+}
+
 export interface GovernmentDef {
   readonly id: string;
   readonly name: string;
@@ -36,6 +46,8 @@ export interface GovernmentDef {
   readonly policySlots: PolicySlotCounts;
   readonly legacyBonus: EffectDef;
   readonly description: string;
+  /** Exactly two celebration bonus options. Player picks one when threshold is crossed. */
+  readonly celebrationBonuses: readonly [GovernmentCelebrationBonus, GovernmentCelebrationBonus];
 }
 
 // ── Antiquity ──
@@ -52,6 +64,18 @@ export const CLASSICAL_REPUBLIC: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
   description:
     'Early representative government. +1 Culture per City while active.',
+  celebrationBonuses: [
+    {
+      id: 'classical-rep-culture',
+      name: '+20% Culture for 10 turns',
+      description: 'All empire culture output increased by 20% for the celebration window.',
+    },
+    {
+      id: 'classical-rep-wonder',
+      name: '+15% Wonder Production for 10 turns',
+      description: 'Wonder construction production boosted by 15% for the celebration window.',
+    },
+  ],
 };
 
 export const DESPOTISM: GovernmentDef = {
@@ -63,6 +87,18 @@ export const DESPOTISM: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_COMBAT', target: 'melee', value: 2 },
   description:
     'Strong-arm rule. +2 Combat Strength to Melee units while active.',
+  celebrationBonuses: [
+    {
+      id: 'despotism-military',
+      name: '+20% Unit Production for 10 turns',
+      description: 'All military unit production increased by 20% for the celebration window.',
+    },
+    {
+      id: 'despotism-tribute',
+      name: '+30 Gold per turn for 10 turns',
+      description: 'Empire receives a tribute of +30 Gold per turn during the celebration.',
+    },
+  ],
 };
 
 export const OLIGARCHY: GovernmentDef = {
@@ -74,6 +110,18 @@ export const OLIGARCHY: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 },
   description:
     'Rule by elite council. +2 Gold per turn to the empire while active.',
+  celebrationBonuses: [
+    {
+      id: 'oligarchy-trade',
+      name: '+25% Gold for 10 turns',
+      description: 'Empire gold output increased by 25% for the celebration window.',
+    },
+    {
+      id: 'oligarchy-growth',
+      name: '+20% City Growth for 10 turns',
+      description: 'All city food-toward-growth increased by 20% for the celebration window.',
+    },
+  ],
 };
 
 // ── Exploration ──
@@ -87,6 +135,18 @@ export const FEUDAL_MONARCHY: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 2 },
   description:
     'Hereditary royal rule. +2 Food per City-Center while active.',
+  celebrationBonuses: [
+    {
+      id: 'feudal-monarchy-levies',
+      name: '+2 Free Units for 10 turns',
+      description: 'Empire receives 2 free military units (no maintenance) for the celebration window.',
+    },
+    {
+      id: 'feudal-monarchy-harvest',
+      name: '+30% Food for 10 turns',
+      description: 'All city food output increased by 30% for the celebration window.',
+    },
+  ],
 };
 
 export const PLUTOCRACY: GovernmentDef = {
@@ -98,6 +158,18 @@ export const PLUTOCRACY: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 4 },
   description:
     'Wealth-driven oligarchy. +4 Gold per turn to the empire while active.',
+  celebrationBonuses: [
+    {
+      id: 'plutocracy-commerce',
+      name: '+30% Gold for 10 turns',
+      description: 'Empire gold output increased by 30% for the celebration window.',
+    },
+    {
+      id: 'plutocracy-trade-routes',
+      name: '+50 Gold per Trade Route for 10 turns',
+      description: 'Each active trade route yields an additional +50 Gold for the celebration window.',
+    },
+  ],
 };
 
 export const THEOCRACY: GovernmentDef = {
@@ -109,6 +181,18 @@ export const THEOCRACY: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 },
   description:
     'Religious authority rules the state. +3 Faith per turn to the empire.',
+  celebrationBonuses: [
+    {
+      id: 'theocracy-faith',
+      name: '+30% Faith for 10 turns',
+      description: 'All empire faith output increased by 30% for the celebration window.',
+    },
+    {
+      id: 'theocracy-missionaries',
+      name: '+2 Free Missionaries for 10 turns',
+      description: 'Receive 2 free missionaries during the celebration window.',
+    },
+  ],
 };
 
 // ── Modern ──
@@ -122,6 +206,18 @@ export const ELECTIVE_REPUBLIC: GovernmentDef = {
   legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
   description:
     'Government by elected representatives. +3 Culture per turn to the empire while active.',
+  celebrationBonuses: [
+    {
+      id: 'elective-republic-culture',
+      name: '+30% Culture for 10 turns',
+      description: 'Empire culture output increased by 30% for the celebration window.',
+    },
+    {
+      id: 'elective-republic-science',
+      name: '+20% Science for 10 turns',
+      description: 'Empire science output increased by 20% for the celebration window.',
+    },
+  ],
 };
 
 // ── Barrel ──

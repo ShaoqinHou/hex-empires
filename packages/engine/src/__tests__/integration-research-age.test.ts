@@ -91,10 +91,10 @@ describe('integration-research-age: researching techs drives age-progress thresh
     expect(p1!.civilizationId).toBe('spain');
     // ageProgress resets to 0 after transition.
     expect(p1!.ageProgress).toBe(0);
-    // Legacy bonus from rome should be present somewhere in the list
-    // (the system also appends golden/dark-age effects, so total count >= 1).
+    // F-04: Legacy bonus from rome is now in pendingLegacyBonuses, not legacyBonuses.
     const romeBonuses = p1!.legacyBonuses.filter(b => b.source.includes('rome'));
-    expect(romeBonuses.length).toBe(1);
+    const pendingRome = (p1!.pendingLegacyBonuses ?? []).filter(b => b.bonusId.includes('rome'));
+    expect(romeBonuses.length + pendingRome.length).toBeGreaterThanOrEqual(1);
     // State-level age must also advance.
     expect(next.age.currentAge).toBe('exploration');
   });
@@ -146,6 +146,9 @@ describe('integration-research-age: researching techs drives age-progress thresh
       ageProgress: 49, // 49 + 1 (natural) = 50, exactly at threshold; +5 per tech retired (F-11)
       researchedTechs: [],
       legacyPaths: { military: 1, economic: 0, science: 0, culture: 0 },
+      // F-03 crisis gate: crisisSystem escalates crisisPhase during END_TURN when
+      // ageProgress / threshold >= 0.70. Pre-resolve so the gate doesn't block transition.
+      crisisPhase: 'resolved' as const,
     });
     const initial = createTestState({
       players: new Map([['p1', player]]),

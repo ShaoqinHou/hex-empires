@@ -22,7 +22,7 @@ describe('integration-m12: standalone systems wired into pipeline', () => {
   function seedState(): GameState {
     return createTestState({
       players: new Map([
-        ['p1', createTestPlayer({ id: 'p1', name: 'Faithful', faith: 100 })],
+        ['p1', createTestPlayer({ id: 'p1', name: 'Faithful', faith: 100, researchedCivics: ['mysticism'] })],
       ]),
     });
   }
