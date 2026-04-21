@@ -38,8 +38,8 @@ describe('modern technologies expansion — rulebook §9.6', () => {
     expect(NEW_MODERN_TECHS).toHaveLength(9);
   });
 
-  it('ALL_MODERN_TECHS grew by 9 (from 14 to 23)', () => {
-    expect(ALL_MODERN_TECHS).toHaveLength(23);
+  it('ALL_MODERN_TECHS grew by 9 (from 14 to 24, including FUTURE_TECH)', () => {
+    expect(ALL_MODERN_TECHS).toHaveLength(24);
   });
 
   it('every new tech has a unique id within ALL_MODERN_TECHS', () => {

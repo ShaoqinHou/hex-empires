@@ -46,6 +46,45 @@ describe('researchSystem', () => {
       const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'gunpowder' });
       expect(next.players.get('p1')!.currentResearch).toBe('gunpowder');
     });
+
+    it('rejects researching a tech when prerequisites are not met', () => {
+      // Writing requires pottery; player has not researched pottery
+      const player = createTestPlayer({ age: 'antiquity', researchedTechs: [] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'writing' });
+      expect(next.players.get('p1')!.currentResearch).toBeNull();
+      expect(next).toBe(state);
+    });
+
+    it('allows researching a tech when all prerequisites are met', () => {
+      // Writing requires pottery; player has researched pottery
+      const player = createTestPlayer({ age: 'antiquity', researchedTechs: ['pottery'] });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'writing' });
+      expect(next.players.get('p1')!.currentResearch).toBe('writing');
+    });
+
+    it('F-13: allows future tech when prerequisites are met', () => {
+      // future_tech_antiquity requires mathematics + iron_working
+      const player = createTestPlayer({
+        age: 'antiquity',
+        researchedTechs: ['mathematics', 'iron_working'],
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_antiquity' });
+      expect(next.players.get('p1')!.currentResearch).toBe('future_tech_antiquity');
+    });
+
+    it('F-13: rejects future tech when prerequisites are not met', () => {
+      const player = createTestPlayer({
+        age: 'antiquity',
+        researchedTechs: ['mathematics'], // missing iron_working
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_antiquity' });
+      expect(next.players.get('p1')!.currentResearch).toBeNull();
+      expect(next).toBe(state);
+    });
   });
 
   describe('END_TURN research', () => {
@@ -92,6 +131,32 @@ describe('researchSystem', () => {
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = researchSystem(state, { type: 'END_TURN' });
       expect(next).toBe(state);
+    });
+
+    it('F-13: future tech is repeatable — grants age progress without adding to researchedTechs', () => {
+      // future_tech_antiquity costs 100. Start at 95, add 6 science → 101 >= 100 → complete.
+      const player = createTestPlayer({
+        currentResearch: 'future_tech_antiquity',
+        researchProgress: 95,
+        ageProgress: 20,
+        researchedTechs: ['mathematics', 'iron_working'],
+      });
+      const city = createTestCity({ population: 5 }); // sciencePerTurn = 1(min) + 5 = 6
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      const p = next.players.get('p1')!;
+      // Repeatable: NOT added to researchedTechs
+      expect(p.researchedTechs).not.toContain('future_tech_antiquity');
+      // Age progress granted
+      expect(p.ageProgress).toBe(30); // 20 + 10
+      // Reset for next iteration
+      expect(p.currentResearch).toBeNull();
+      expect(p.researchProgress).toBe(0);
+      // Log entry
+      expect(next.log.some(e => e.message.includes('Future Tech'))).toBe(true);
     });
 
     it('S2: carries overflow science to next research on completion', () => {
@@ -398,19 +463,19 @@ describe('researchSystem', () => {
         researchProgress: 15,
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
-      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'writing' });
+      const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'mining' });
       const p = next.players.get('p1')!;
-      expect(p.currentResearch).toBe('writing');
+      expect(p.currentResearch).toBe('mining');
       // Saved progress for pottery
       expect(p.techProgressMap?.get('pottery')).toBe(15);
-      // Writing starts fresh (not previously researched)
+      // Mining starts fresh (not previously researched)
       expect(p.researchProgress).toBe(0);
     });
 
     it('restores saved progress when switching back to a previous tech', () => {
       const techMap = new Map<string, number>([['pottery', 15]]);
       const player = createTestPlayer({
-        currentResearch: 'writing',
+        currentResearch: 'mining',
         researchProgress: 10,
         techProgressMap: techMap,
       });
@@ -419,8 +484,8 @@ describe('researchSystem', () => {
       const p = next.players.get('p1')!;
       expect(p.currentResearch).toBe('pottery');
       expect(p.researchProgress).toBe(15); // restored
-      // Writing's progress saved
-      expect(p.techProgressMap?.get('writing')).toBe(10);
+      // Mining's progress saved
+      expect(p.techProgressMap?.get('mining')).toBe(10);
     });
 
     it('clears techProgressMap on TRANSITION_AGE', () => {

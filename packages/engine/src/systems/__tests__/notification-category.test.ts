@@ -180,7 +180,7 @@ describe('notification category — ageSystem', () => {
       players: new Map([['p1', player]]),
       age: { currentAge: 'antiquity', ageThresholds: { exploration: explorationThreshold, modern: 100 } },
     });
-    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'greece' });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     const evt = lastEvent(next.log, e => e.type === 'age');
     expect(evt).toBeDefined();
     expect(evt!.category).toBe('age');

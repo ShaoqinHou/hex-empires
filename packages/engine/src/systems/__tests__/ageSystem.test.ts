@@ -948,3 +948,75 @@ describe('F-11: named commander grant (Alexander + Hephaestion)', () => {
     expect(ids).toContain('hephaestion');
   });
 });
+
+// ── F-01: Simultaneous global age transition ──
+
+describe('F-01: simultaneous global age transition', () => {
+  it('single-player transition clears tracking immediately', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // Single player: all ready immediately
+    expect(next.transitionPhase).toBe('none');
+    expect(next.playersReadyToTransition).toEqual([]);
+    // Transition still happens
+    expect(next.players.get('p1')!.age).toBe('exploration');
+  });
+
+  it('multi-player: first transition sets pending, second clears', () => {
+    const player1 = createTestPlayer({
+      id: 'p1', age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const player2 = createTestPlayer({
+      id: 'p2', age: 'antiquity', civilizationId: 'egypt', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player1], ['p2', player2]]),
+      currentPlayerId: 'p1',
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    // p1 transitions
+    const next1 = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next1.transitionPhase).toBe('pending');
+    expect(next1.playersReadyToTransition).toEqual(['p1']);
+    // p1's transition ran
+    expect(next1.players.get('p1')!.age).toBe('exploration');
+
+    // p2 transitions
+    const next2 = ageSystem(
+      { ...next1, currentPlayerId: 'p2' },
+      { type: 'TRANSITION_AGE', newCivId: 'spain' },
+    );
+    // All players ready — cleared
+    expect(next2.transitionPhase).toBe('none');
+    expect(next2.playersReadyToTransition).toEqual([]);
+    // p2's transition ran
+    expect(next2.players.get('p2')!.age).toBe('exploration');
+  });
+
+  it('duplicate TRANSITION_AGE from same player is idempotent', () => {
+    const player = createTestPlayer({
+      age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const player2 = createTestPlayer({ id: 'p2', age: 'antiquity' });
+    const state = createTestState({
+      players: new Map([['p1', player], ['p2', player2]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next1 = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // Dispatch again as p1 — should be idempotent
+    const next2 = ageSystem(next1, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next2).toBe(next1); // same reference, no change
+  });
+});

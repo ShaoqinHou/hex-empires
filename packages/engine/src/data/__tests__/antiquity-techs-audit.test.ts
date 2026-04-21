@@ -58,8 +58,8 @@ describe('antiquity technologies audit — rulebook §9.4', () => {
     expect(NEW_ANTIQUITY_TECHS).toHaveLength(4);
   });
 
-  it('catalog grew to include all 4 new techs (total 18; ASTROLOGY retired)', () => {
-    expect(ALL_ANTIQUITY_TECHS).toHaveLength(18);
+  it('catalog grew to include all 4 new techs (total 19; ASTROLOGY retired + FUTURE_TECH added)', () => {
+    expect(ALL_ANTIQUITY_TECHS).toHaveLength(19);
     for (const tech of NEW_ANTIQUITY_TECHS) {
       expect(ALL_ANTIQUITY_TECHS).toContain(tech);
     }

@@ -38,6 +38,10 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     return state;
   }
 
+  // F-01: check if this player has already transitioned in this cycle
+  const readyList = state.playersReadyToTransition ?? [];
+  if (readyList.includes(player.id)) return state;
+
   // F-08: validate newCivId against player's unlocked civ list
   if (!isCivUnlockAllowed(newCivId, nextAge, player, state)) {
     return state;
@@ -263,6 +267,12 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   // W4-04 (F-08): state.commanders is intentionally NOT reset here.
   // Commander state (XP, promotions, packed army) persists across age transitions.
   // The spread `...state` below preserves the commanders map unchanged.
+
+  // F-01: Simultaneous global transition — track which players have transitioned
+  const newReadyList = [...readyList, player.id];
+  const allPlayerIds = [...state.players.keys()];
+  const allReady = allPlayerIds.every(id => newReadyList.includes(id));
+
   return {
     ...state,
     players: updatedPlayers,
@@ -271,6 +281,9 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
     ...(updatedIPMap !== undefined ? { independentPowers: updatedIPMap } : {}),
+    // F-01: clear tracking when all players have transitioned, otherwise mark pending
+    transitionPhase: allReady ? 'none' as const : 'pending' as const,
+    playersReadyToTransition: allReady ? [] : newReadyList,
   };
 }
 

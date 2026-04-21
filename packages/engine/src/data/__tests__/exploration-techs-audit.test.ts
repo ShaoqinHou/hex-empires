@@ -60,8 +60,8 @@ describe('exploration technologies audit — rulebook §9.5', () => {
     expect(NEW_EXPLORATION_TECHS).toHaveLength(6);
   });
 
-  it('catalog grew from 12 to 18 exploration techs', () => {
-    expect(ALL_EXPLORATION_TECHS).toHaveLength(18);
+  it('catalog grew from 12 to 19 exploration techs (18 + FUTURE_TECH)', () => {
+    expect(ALL_EXPLORATION_TECHS).toHaveLength(19);
     for (const tech of NEW_EXPLORATION_TECHS) {
       expect(ALL_EXPLORATION_TECHS).toContain(tech);
     }

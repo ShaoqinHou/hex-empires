@@ -255,6 +255,19 @@ export const AERODYNAMICS: TechnologyDef = {
   treePosition: { row: 1, col: 4 },
 };
 
+/** F-13: Repeatable Future Tech for Modern age. Available once all other techs are researched. */
+export const FUTURE_TECH_MODERN: TechnologyDef = {
+  id: 'future_tech_modern',
+  name: 'Future Tech',
+  age: 'modern',
+  cost: 100,
+  prerequisites: ['rocketry', 'nuclear_fission'],
+  unlocks: [],
+  description: 'Repeatable tech granting +10 age progress',
+  treePosition: { row: 6, col: 5 },
+  isFutureTech: true,
+};
+
 export const ALL_MODERN_TECHS: ReadonlyArray<TechnologyDef> = [
   SCIENTIFIC_THEORY, RIFLING, INDUSTRIALIZATION,
   STEAM_POWER, ELECTRICITY, REPLACEABLE_PARTS,
@@ -262,4 +275,5 @@ export const ALL_MODERN_TECHS: ReadonlyArray<TechnologyDef> = [
   MASS_CONSUMPTION, MASS_MEDIA, AMPHIBIOUS_WARFARE, RADAR,
   ACADEMICS, MILITARY_SCIENCE, URBANIZATION, COMBUSTION,
   RADIO, MASS_PRODUCTION, MOBILIZATION, ARMOR, AERODYNAMICS,
+  FUTURE_TECH_MODERN,
 ];

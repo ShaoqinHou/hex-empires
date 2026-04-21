@@ -392,4 +392,48 @@ describe('turnSystem — END_TURN blocksTurn guard', () => {
       expect(next.phase).toBe('start');
     });
   });
+
+  describe('F-01: age transition blocks END_TURN', () => {
+    it('blocks END_TURN when transitionPhase is pending', () => {
+      const state = createTestState({
+        transitionPhase: 'pending',
+        playersReadyToTransition: ['p1'],
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('actions');
+      expect(next.lastValidation).not.toBeNull();
+      expect(next.lastValidation!.valid).toBe(false);
+    });
+
+    it('blocks END_TURN when transitionPhase is in-progress', () => {
+      const state = createTestState({
+        transitionPhase: 'in-progress',
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('actions');
+      expect(next.lastValidation!.valid).toBe(false);
+    });
+
+    it('allows END_TURN when transitionPhase is none', () => {
+      const state = createTestState({
+        transitionPhase: 'none',
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('allows END_TURN when transitionPhase is complete', () => {
+      const state = createTestState({
+        transitionPhase: 'complete',
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('allows END_TURN when transitionPhase is undefined', () => {
+      const state = createTestState({}); // transitionPhase undefined
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+  });
 });

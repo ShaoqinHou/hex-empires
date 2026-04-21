@@ -193,6 +193,18 @@ function getHealAmount(
 }
 
 function handleEndTurn(state: GameState): GameState {
+  // F-01: Block END_TURN if an age transition is in progress (waiting for all players)
+  if (state.transitionPhase === 'pending' || state.transitionPhase === 'in-progress') {
+    return {
+      ...state,
+      lastValidation: {
+        valid: false,
+        reason: 'Cannot end turn while age transition is in progress.',
+        category: 'general',
+      },
+    };
+  }
+
   // Block END_TURN if the human player has any unacknowledged critical events this turn.
   // AI players bypass this check — they auto-dismiss all events.
   const currentPlayer = state.players.get(state.currentPlayerId);

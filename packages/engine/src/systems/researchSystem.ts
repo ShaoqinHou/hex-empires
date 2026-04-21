@@ -26,8 +26,7 @@ export function researchSystem(state: GameState, action: GameAction): GameState 
 }
 
 /** Special tech ID for repeatable future research */
-const FUTURE_TECH_ID = 'future_tech';
-const FUTURE_TECH_COST = 100;
+/** Age progress granted per Future Tech completion */
 const FUTURE_TECH_AGE_PROGRESS = 10;
 
 /** Mastery costs 80% of the original tech cost */
@@ -40,27 +39,16 @@ function handleSetResearch(state: GameState, techId: string): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
-  // Allow future_tech when all techs for the current age are researched
-  if (techId === FUTURE_TECH_ID) {
-    if (!allAgeTechsResearched(state, player)) return state;
-    // Save current research progress before switching
-    const prevMap = saveCurrentProgress(player);
-    const updatedPlayers = new Map(state.players);
-    updatedPlayers.set(player.id, {
-      ...player,
-      currentResearch: FUTURE_TECH_ID,
-      researchProgress: 0,
-      techProgressMap: prevMap,
-    });
-    return { ...state, players: updatedPlayers };
-  }
-
-  // Can't research already-known tech
-  if (player.researchedTechs.includes(techId)) return state;
-
-  // Tech must belong to the player's current age
+  // Can't research already-known tech (except future techs which are repeatable)
   const techDef = state.config.technologies.get(techId);
   if (!techDef || techDef.age !== player.age) return state;
+
+  if (!techDef.isFutureTech && player.researchedTechs.includes(techId)) return state;
+
+  // F-13: Check prerequisites — all prerequisite techs must be researched
+  for (const prereq of techDef.prerequisites) {
+    if (!player.researchedTechs.includes(prereq)) return state;
+  }
 
   // Save current research progress, restore saved progress for the new tech
   const prevMap = saveCurrentProgress(player);
@@ -84,7 +72,7 @@ function handleSetResearch(state: GameState, techId: string): GameState {
 function saveCurrentProgress(player: PlayerState): ReadonlyMap<string, number> {
   const prevTech = player.currentResearch;
   const prevMap = new Map(player.techProgressMap ?? new Map<string, number>());
-  if (prevTech && prevTech !== FUTURE_TECH_ID && player.researchProgress > 0) {
+  if (prevTech && player.researchProgress > 0) {
     prevMap.set(prevTech, player.researchProgress);
   }
   return prevMap;
@@ -122,16 +110,6 @@ function handleSetMastery(state: GameState, techId: string): GameState {
   });
 
   return { ...state, players: updatedPlayers };
-}
-
-/** Check if a player has researched all technologies available in their current age */
-function allAgeTechsResearched(state: GameState, player: { readonly age: string; readonly researchedTechs: ReadonlyArray<string> }): boolean {
-  for (const [techId, techDef] of state.config.technologies) {
-    if (techDef.age === player.age && !player.researchedTechs.includes(techId)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /** On TRANSITION_AGE: clear techProgressMap — new age, new tech tree */
@@ -216,12 +194,13 @@ function processNormalResearch(state: GameState): GameState {
 
   // Check if research is complete (look up tech cost)
   const techCost = getTechCost(state, player.currentResearch);
+  const techDef = state.config.technologies.get(player.currentResearch);
 
   if (newProgress >= techCost) {
     const updatedPlayers = new Map(state.players);
 
-    if (player.currentResearch === FUTURE_TECH_ID) {
-      // Future tech: repeatable — grant age progress but don't add to researchedTechs
+    // F-13: Future tech is repeatable — grant age progress, don't add to researchedTechs
+    if (techDef?.isFutureTech) {
       updatedPlayers.set(player.id, {
         ...player,
         currentResearch: null,
@@ -385,7 +364,6 @@ function calculateSciencePerTurn(state: GameState, playerId: string): number {
 
 /** Tech cost from state.config.technologies — driven by data */
 function getTechCost(state: GameState, techId: string): number {
-  if (techId === FUTURE_TECH_ID) return FUTURE_TECH_COST;
   return state.config.technologies.get(techId)?.cost ?? 100;
 }
 

@@ -13,4 +13,10 @@ export interface TechnologyDef {
   readonly masteryEffect?: EffectDef;
   /** Number of codices awarded when this tech is mastered (0-2). */
   readonly masteryCodexCount?: number;
+  /**
+   * True if this is a repeatable Future Tech entry.
+   * Future Tech grants +10 age progress on completion and can be
+   * researched again indefinitely (never added to researchedTechs).
+   */
+  readonly isFutureTech?: boolean;
 }
