@@ -14,7 +14,7 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
  *   Scaffold fallback: gold >= 500 + totalGoldEarned >= 1000 (if no project chain started)
  * - Military: complete Operation Ivy project (completedProjects.includes('operation_ivy')) [W5-01]
  *   Scaffold fallback: totalKills >= 20 + at least 5 cities (if Operation Ivy not completed)
- * - Score: highest score at turn limit (300 turns) using legacy-based scoring
+ * - Score: highest score when Modern age progress reaches 100% (F-06) using legacy-based scoring
  *
  * Note: diplomacy victory type was removed (no GDD basis — W1-C / W2-08).
  * W5-02 (Culture/Artifacts/World's Fair) is a separate workpack.
@@ -152,17 +152,43 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
     const ARTIFACTS_REQUIRED = 15;
     const artifactsCollected = player.artifactsCollected ?? 0;
     const worldsFairOwnedByPlayer = worldsFairBuiltByPlayer(state, playerId);
+    const relicCount = player.relics?.length ?? 0;
 
-    // Progress: 70% from artifacts, 30% from World's Fair
+    // F-09: Relics contribute to cultural victory alongside artifacts.
+    // Progress: 50% from artifacts, 20% from relics, 30% from World's Fair
     const artifactProgress = Math.min(1, artifactsCollected / ARTIFACTS_REQUIRED);
+    const relicProgress = Math.min(1, relicCount / 6);
     const wonderProgress = worldsFairOwnedByPlayer ? 1 : 0;
-    const progress = artifactProgress * 0.7 + wonderProgress * 0.3;
+    const progress = artifactProgress * 0.5 + relicProgress * 0.2 + wonderProgress * 0.3;
 
     const achieved = artifactsCollected >= ARTIFACTS_REQUIRED && worldsFairOwnedByPlayer && state.age.currentAge === 'modern';
     return { type: 'culture', progress, achieved };
   }
 
-  // Scaffold proxy (backwards compat when no artifact gameplay has occurred):
+  // F-09: Relic-based progress for the scaffold proxy path.
+  // When relics are present, they contribute alongside culture + civics.
+  const relicCount = player.relics?.length ?? 0;
+  const anyRelicsCollected = [...state.players.values()].some(p => (p.relics?.length ?? 0) > 0);
+
+  if (anyRelicsCollected) {
+    const cultureThreshold = 300;
+    const civicsRequired = 5;
+    const civicsCount = player.researchedCivics.length;
+
+    const cultureProgress = Math.min(1, player.culture / cultureThreshold);
+    const civicsProgress = Math.min(1, civicsCount / civicsRequired);
+    const relicProgress = Math.min(1, relicCount / 6);
+    const progress = cultureProgress * 0.4 + civicsProgress * 0.3 + relicProgress * 0.3;
+
+    const meetsRequirements = player.culture >= cultureThreshold && civicsCount >= civicsRequired;
+    return {
+      type: 'culture',
+      progress,
+      achieved: meetsRequirements && state.age.currentAge === 'modern',
+    };
+  }
+
+  // Scaffold proxy (backwards compat when no artifact or relic gameplay has occurred):
   // culture >= 300 AND at least 5 civics researched
   const cultureThreshold = 300;
   const civicsRequired = 5;
@@ -286,11 +312,16 @@ function checkMilitary(state: GameState, playerId: string): VictoryProgress {
 }
 
 function checkScore(state: GameState, playerId: string): VictoryProgress {
-  const TURN_LIMIT = 300;
-  const progress = Math.min(1, state.turn / TURN_LIMIT);
+  const player = state.players.get(playerId);
+  if (!player) return { type: 'score', progress: 0, achieved: false };
 
-  // Score victory triggers at turn limit
-  if (state.turn >= TURN_LIMIT) {
+  // F-06: Score victory triggers when modern age progress reaches 100%,
+  // not at a fixed turn limit. This ties game length to the age system.
+  const modernThreshold = state.age.ageThresholds?.modern ?? 100;
+  const ageProgressRatio = player.ageProgress / modernThreshold;
+  const progress = Math.min(1, ageProgressRatio);
+
+  if (state.age.currentAge === 'modern' && ageProgressRatio >= 1.0 && !state.victory?.winner) {
     // Calculate scores
     const score = calculateScore(state, playerId);
     let isHighest = true;

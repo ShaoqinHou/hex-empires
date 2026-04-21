@@ -136,12 +136,14 @@ function processNormalCivicResearch(state: GameState): GameState {
 
   if (newProgress >= civicCost) {
     // Civic complete! Open policy swap window (W2-03 GP F-08)
+    // F-02: Carry overflow culture forward instead of discarding it.
+    const overflow = newProgress - civicCost;
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
       researchedCivics: [...player.researchedCivics, player.currentCivic],
       currentCivic: null,
-      civicProgress: 0,
+      civicProgress: overflow,
       // F-13: Removed ageProgress +5 per civic — age progress comes from
       // ageSystem's END_TURN milestone check only.
       policySwapWindowOpen: true,

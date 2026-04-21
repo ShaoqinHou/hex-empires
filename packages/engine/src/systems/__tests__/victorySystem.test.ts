@@ -260,14 +260,20 @@ describe('victorySystem', () => {
         legacyPoints: 5,
         culture: 100,
         researchedTechs: ['a', 'b', 'c'],
+        ageProgress: 100, // F-06: age progress at modern threshold
       })],
-      ['p2', createTestPlayer({ id: 'p2' })],
+      ['p2', createTestPlayer({ id: 'p2', ageProgress: 100 })],
     ]);
     const cities = new Map([
       ['c1', makeCity('c1', 'p1')],
       ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })], // p2 has a city so domination doesn't trigger
     ]);
-    const state = createTestState({ players, cities, currentPlayerId: 'p2', turn: 300 });
+    const state = createTestState({
+      players,
+      cities,
+      currentPlayerId: 'p2',
+      age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+    });
     const next = victorySystem(state, { type: 'END_TURN' });
     // p1 score: milestones(6)*100 + legacyPoints(5)*50 + cities(1)*100 + techs(3)*20 + culture(100)
     //         = 600 + 250 + 100 + 60 + 100 = 1110

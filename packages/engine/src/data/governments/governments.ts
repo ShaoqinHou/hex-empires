@@ -48,6 +48,8 @@ export interface GovernmentDef {
   readonly description: string;
   /** Exactly two celebration bonus options. Player picks one when threshold is crossed. */
   readonly celebrationBonuses: readonly [GovernmentCelebrationBonus, GovernmentCelebrationBonus];
+  /** If set, this government is only available to the specified civilization. Undefined = universal. */
+  readonly civRequired?: string;
 }
 
 // ── Antiquity ──
@@ -220,6 +222,78 @@ export const ELECTIVE_REPUBLIC: GovernmentDef = {
   ],
 };
 
+// ── Modern (F-04) ──
+
+export const AUTHORITARIANISM: GovernmentDef = {
+  id: 'authoritarianism',
+  name: 'Authoritarianism',
+  age: 'modern',
+  unlockCivic: 'totalitarianism',
+  policySlots: { total: 4 },
+  legacyBonus: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+  description:
+    'Centralised power under a single strong leader. +3 Combat Strength to all units while active.',
+  celebrationBonuses: [
+    {
+      id: 'authoritarianism-military',
+      name: '+25% Unit Production for 10 turns',
+      description: 'All military unit production increased by 25% for the celebration window.',
+    },
+    {
+      id: 'authoritarianism-suppression',
+      name: '+40 Gold per turn for 10 turns',
+      description: 'Empire receives +40 Gold per turn from suppressed trade during the celebration.',
+    },
+  ],
+};
+
+export const BUREAUCRATIC_MONARCHY: GovernmentDef = {
+  id: 'bureaucratic_monarchy',
+  name: 'Bureaucratic Monarchy',
+  age: 'modern',
+  unlockCivic: 'political_theory',
+  policySlots: { total: 4 },
+  legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 3 },
+  description:
+    'Centralised royal administration with a professional civil service. +3 Science per City while active.',
+  celebrationBonuses: [
+    {
+      id: 'bureaucratic-monarchy-science',
+      name: '+30% Science for 10 turns',
+      description: 'Empire science output increased by 30% for the celebration window.',
+    },
+    {
+      id: 'bureaucratic-monarchy-stability',
+      name: '+20% Food and Production for 10 turns',
+      description: 'All city food and production increased by 20% for the celebration window.',
+    },
+  ],
+};
+
+export const REVOLUCION: GovernmentDef = {
+  id: 'revolucion',
+  name: 'Revolución',
+  age: 'modern',
+  unlockCivic: 'class_struggle',
+  policySlots: { total: 4 },
+  legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 4 },
+  description:
+    'Revolutionary government born of popular uprising. +4 Culture per turn to the empire while active.',
+  celebrationBonuses: [
+    {
+      id: 'revolucion-uprising',
+      name: '+3 Free Units for 10 turns',
+      description: 'Empire receives 3 free military units (no maintenance) for the celebration window.',
+    },
+    {
+      id: 'revolucion-solidarity',
+      name: '+35% Culture for 10 turns',
+      description: 'Empire culture output increased by 35% for the celebration window.',
+    },
+  ],
+  civRequired: 'mexico',
+};
+
 // ── Barrel ──
 
 export const ALL_GOVERNMENTS: ReadonlyArray<GovernmentDef> = [
@@ -230,4 +304,7 @@ export const ALL_GOVERNMENTS: ReadonlyArray<GovernmentDef> = [
   PLUTOCRACY,
   THEOCRACY,
   ELECTIVE_REPUBLIC,
+  AUTHORITARIANISM,
+  BUREAUCRATIC_MONARCHY,
+  REVOLUCION,
 ];
