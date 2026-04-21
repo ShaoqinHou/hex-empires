@@ -55,6 +55,7 @@ export interface TerrainFeatureDef {
   readonly movementCostModifier: number;   // added to base terrain cost
   readonly defenseBonusModifier: number;   // multiplicative defense bonus (e.g. 0.25 = +25%)
   readonly flatDefenseBonus?: number;      // flat +CS defender bonus (rulebook §6.4 rough/vegetated terrain)
+  readonly depletesMovement?: boolean;     // true = entering this feature consumes ALL remaining MP (binary movement, §6.3)
   readonly yieldModifiers: Partial<YieldSet>;
   readonly blocksMovement: boolean;        // e.g., mountains
   readonly color: string;                  // rendering overlay color

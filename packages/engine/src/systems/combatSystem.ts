@@ -242,6 +242,10 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
   // B1: River penalty applies to ATTACKER attacking from a river tile (rulebook §6.4: -2 CS flat)
+  // TODO (F-08): river-crossing penalty — if attacker crosses a river edge to attack,
+  // defender gets -5 CS per VII spec. Currently only attacker-side river tile penalty is
+  // implemented. The river-edge-crossing check requires comparing river arrays on both
+  // the attacker and defender tiles to detect an actual river boundary between them.
   const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? 2 : 0;
   // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);

@@ -32,8 +32,17 @@ function checkCrisisTriggers(state: GameState): GameState {
   const triggeredIds = new Set(state.crises.map(c => c.id));
   const newCrises: CrisisState[] = [];
 
+  // F-04: filter by activeCrisisType when set — only crises matching
+  // the seeded crisis type for the current age are eligible to trigger.
+  const activeCrisisType = state.age.activeCrisisType;
+
   for (const def of state.config.crises) {
     if (triggeredIds.has(def.id)) continue;
+
+    // F-04: if the age system seeded an active crisis type, skip crises
+    // that have a different crisisType (crises without crisisType are always eligible)
+    if (activeCrisisType && def.crisisType && def.crisisType !== activeCrisisType) continue;
+
     if (isTriggerMet(state, def)) {
       newCrises.push(crisisFromDef(def, state.turn));
     }

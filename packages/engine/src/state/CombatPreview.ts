@@ -760,16 +760,23 @@ function getUnitRange(state: GameState, typeId: string): number {
 }
 
 function getTerrainDefenseBonus(state: GameState, tile: HexTile): number {
-  let bonus = 0;
+  let percent = 0;
+  let flat = 0;
   const terrainDef = state.config.terrains.get(tile.terrain);
-  bonus += terrainDef?.defenseBonus ?? 0;
+  percent += terrainDef?.defenseBonus ?? 0;
 
   if (tile.feature) {
     const featureDef = state.config.features.get(tile.feature);
-    bonus += featureDef?.defenseBonusModifier ?? 0;
+    percent += featureDef?.defenseBonusModifier ?? 0;
+    // F-08: include flat defense bonus (rulebook §6.4 rough/vegetated terrain)
+    flat += featureDef?.flatDefenseBonus ?? 0;
   }
 
-  return bonus;
+  // Return combined effect as a single display value:
+  // percent (fractional, displayed as %) + flat (CS, displayed as CS)
+  // The caller multiplies by 100 for percent display, so we convert flat
+  // to the same scale by treating each CS as 1.0 (= 100 when × 100).
+  return percent + flat;
 }
 
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {

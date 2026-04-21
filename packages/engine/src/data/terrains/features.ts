@@ -3,9 +3,10 @@ import type { TerrainFeatureDef } from '../../types/Terrain';
 export const HILLS: TerrainFeatureDef = {
   id: 'hills',
   name: 'Hills',
-  movementCostModifier: 1, // +1 to enter
+  movementCostModifier: 1, // +1 to enter (binary deplete: see depletesMovement)
   defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
   flatDefenseBonus: 3,      // +3 CS to defenders (rulebook §6.4 rough terrain)
+  depletesMovement: true,   // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#8a7a55',
@@ -29,6 +30,7 @@ export const FOREST: TerrainFeatureDef = {
   movementCostModifier: 1,
   defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
   flatDefenseBonus: 2,      // +2 CS to defenders (rulebook §6.4 vegetated terrain)
+  depletesMovement: true,   // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { production: 1 },
   blocksMovement: false,
   color: '#2d5a1e',
@@ -39,7 +41,9 @@ export const JUNGLE: TerrainFeatureDef = {
   id: 'jungle',
   name: 'Jungle',
   movementCostModifier: 1,
-  defenseBonusModifier: 0.25,
+  defenseBonusModifier: 0,    // F-08: standardized to flat bonus (was 0.25 multiplicative)
+  flatDefenseBonus: 2,        // F-08: +2 CS to defenders (rulebook §6.4 vegetated terrain)
+  depletesMovement: true,     // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { production: 2, science: 1 },
   blocksMovement: false,
   color: '#1a4a0f',
@@ -50,7 +54,9 @@ export const MARSH: TerrainFeatureDef = {
   id: 'marsh',
   name: 'Marsh',
   movementCostModifier: 1,
-  defenseBonusModifier: -0.15, // negative defense
+  defenseBonusModifier: 0,    // F-08: standardized (was -0.15 multiplicative)
+  flatDefenseBonus: 0,        // F-08: no flat defense bonus (marsh offers no cover)
+  depletesMovement: true,     // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { food: 1 },
   blocksMovement: false,
   color: '#5a6b3a',

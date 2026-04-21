@@ -75,7 +75,7 @@ describe('movementSystem', () => {
     expect(next.units.get('u1')!.position).toEqual({ q: 0, r: 0 });
   });
 
-  it('charges extra movement for hills', () => {
+  it('depletes all movement for hills (binary deplete, F-03)', () => {
     const units = new Map([
       ['u1', createTestUnit({ id: 'u1', position: { q: 0, r: 0 }, movementLeft: 3 })],
     ]);
@@ -87,7 +87,7 @@ describe('movementSystem', () => {
       { type: 'MOVE_UNIT', unitId: 'u1', path: [{ q: 1, r: 0 }] },
     );
     expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
-    expect(next.units.get('u1')!.movementLeft).toBe(1); // cost 2 (1 base + 1 hills)
+    expect(next.units.get('u1')!.movementLeft).toBe(0); // F-03: hills deplete all remaining MP
   });
 
   it('rejects movement to non-adjacent hex', () => {

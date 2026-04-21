@@ -2,6 +2,7 @@ import type { GameState, GameAction, UnitState } from '../types/GameState';
 import { coordToKey, distance, neighbors } from '../hex/HexMath';
 import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
+import type { MovementCostResult } from '../hex/TerrainCost';
 import { enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
 
 /**
@@ -104,8 +105,11 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   // First pass: validate entire path for adjacency and passability
   let totalCost = 0;
   let prevCoord = unit.position;
+  let depletingStep = -1; // index of first depleting step, if any
 
-  for (const nextCoord of action.path) {
+  for (let i = 0; i < action.path.length; i++) {
+    const nextCoord = action.path[i];
+
     // Each step must be adjacent
     if (distance(prevCoord, nextCoord) !== 1) {
       return createInvalidResult(state, 'Movement path must be adjacent hexes', 'movement');
@@ -128,11 +132,20 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
       continue;
     }
 
-    const cost = getMovementCost(tile);
-    if (cost === null) return createInvalidResult(state, 'Terrain is impassable', 'movement');
+    const costResult = getMovementCost(tile);
+    if (costResult === null) return createInvalidResult(state, 'Terrain is impassable', 'movement');
 
-    totalCost += cost;
+    totalCost += costResult.cost;
     prevCoord = nextCoord;
+
+    // F-03: binary deplete-all — entering depleting terrain ends movement;
+    // reject the path if there are steps beyond this one.
+    if (costResult.deplete) {
+      depletingStep = i;
+      if (i < action.path.length - 1) {
+        return createInvalidResult(state, 'Terrain depletes all movement — cannot continue', 'movement');
+      }
+    }
   }
 
   // Check unit has enough movement
@@ -165,18 +178,33 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   const unitDef = state.config.units.get(unit.typeId);
   const isCavalry = unitDef?.category === 'cavalry';
 
-  // Step-by-step movement with ZoC enforcement
+  // Step-by-step movement with ZoC enforcement and deplete tracking
   let movementSpent = 0;
   let currentPos = unit.position;
   let stoppedByZoC = false;
+  let depleted = false;
 
   for (const nextCoord of action.path) {
     const tile = state.map.tiles.get(coordToKey(nextCoord));
     const terrainDefStep = tile ? state.config.terrains.get(tile.terrain) : undefined;
+
     // W4-02 (F-05): Deep ocean costs 1 MP regardless (blocked path validated above)
-    const cost = terrainDefStep?.isDeepOcean ? 1 : getMovementCost(tile!);
-    movementSpent += cost!;
+    let stepResult: MovementCostResult;
+    if (terrainDefStep?.isDeepOcean) {
+      stepResult = { cost: 1, deplete: false };
+    } else {
+      stepResult = getMovementCost(tile!)!;
+    }
+
+    movementSpent += stepResult.cost;
     currentPos = nextCoord;
+
+    // F-03: binary deplete-all — entering depleting terrain consumes ALL remaining MP
+    if (stepResult.deplete) {
+      movementSpent = unit.movementLeft;
+      depleted = true;
+      break;
+    }
 
     // After moving to this hex, check ZoC (unless cavalry)
     if (!isCavalry && isInEnemyZoC(nextCoord, unit.owner, unit.id, state)) {
@@ -214,7 +242,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   updatedUnits.set(unit.id, {
     ...unit,
     position: currentPos,
-    movementLeft: stoppedByZoC ? 0 : unit.movementLeft - movementSpent,
+    movementLeft: (stoppedByZoC || depleted) ? 0 : unit.movementLeft - movementSpent,
     health: Math.max(1, unit.health - deepOceanAttrition), // attrition cannot kill outright
     fortified: false, // moving breaks fortification
   });
