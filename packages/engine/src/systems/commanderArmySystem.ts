@@ -1,7 +1,7 @@
 import type { GameState, GameAction, UnitState } from '../types/GameState';
 import type { CommanderState } from '../types/Commander';
 import { COMMANDER_BASE_STACK_CAP } from '../types/Commander';
-import { distance } from '../hex/HexMath';
+import { distance, neighbors } from '../hex/HexMath';
 
 /**
  * Commander Army Pack / Unpack system — W4-04.
@@ -102,12 +102,22 @@ function handleDeploy(state: GameState, commanderId: string): GameState {
 
   if (!commander.packed) return state;
 
-  // Clear packedInCommanderId on all attached units
+  const commanderUnit = state.units.get(commanderId);
+  if (!commanderUnit) return state;
+
+  // Determine adjacent tiles for placement
+  const adjacentTiles = neighbors(commanderUnit.position);
+
+  // Clear packedInCommanderId on all attached units and reposition them
+  // to adjacent tiles around the commander's current position.
   const nextUnits = new Map(state.units);
-  for (const uid of commander.attachedUnits) {
+  const unitIds = commander.attachedUnits;
+  for (let i = 0; i < unitIds.length; i++) {
+    const uid = unitIds[i];
     const unit = nextUnits.get(uid);
     if (unit && unit.packedInCommanderId === commanderId) {
-      nextUnits.set(uid, { ...unit, packedInCommanderId: null });
+      const targetPos = adjacentTiles[i % adjacentTiles.length];
+      nextUnits.set(uid, { ...unit, packedInCommanderId: null, position: targetPos });
     }
   }
 

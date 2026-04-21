@@ -313,6 +313,33 @@ describe('commanderArmySystem — DEPLOY_ARMY', () => {
     expect(state.units.get('u1')!.packedInCommanderId).toBe('cmd1');
     expect(state.commanders!.get('cmd1')!.packed).toBe(true);
   });
+
+  it('repositions packed units onto adjacent tiles around the commander', () => {
+    // Commander at q=0,r=0. Units are packed but stored at distant positions.
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 99, r: 99 }, packedInCommanderId: 'cmd1' });
+    const u2 = createTestUnit({ id: 'u2', owner: 'p1', position: { q: 50, r: 50 }, packedInCommanderId: 'cmd1' });
+    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1', 'u2'] });
+    const state = stateWithCommander(cmdState, new Map([['u1', u1], ['u2', u2]]));
+
+    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    // neighbors of {q:0,r:0} are: E{1,0}, NE{1,-1}, NW{0,-1}, W{-1,0}, SW{-1,1}, SE{0,1}
+    // u1 (index 0) → E {q:1, r:0}, u2 (index 1) → NE {q:1, r:-1}
+    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.units.get('u2')!.position).toEqual({ q: 1, r: -1 });
+  });
+
+  it('returns unchanged state when commander unit is missing from units map', () => {
+    // Commander state exists but no matching unit
+    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1'] });
+    const commanders = new Map<string, CommanderState>([['cmd1', cmdState]]);
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, packedInCommanderId: 'cmd1' });
+    // No commander unit in the units map
+    const state = createTestState({ units: new Map([['u1', u1]]), commanders });
+
+    const result = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+    expect(result).toBe(state);
+  });
 });
 
 // ── Age persistence (F-08) ──
