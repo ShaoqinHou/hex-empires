@@ -49,9 +49,12 @@ export interface TreeViewProps {
   readonly researchedIds: ReadonlySet<string>;
   readonly activeId: string | null;
   readonly activeProgress: number;
+  readonly masteredIds?: ReadonlySet<string>;
+  readonly masteryActiveId?: string | null;
   readonly accentColor: string;   // 'var(--color-science)' or 'var(--color-culture)'
   readonly costIcon: string;      // '⚗' or '🎭'
   readonly onSelect: (id: string) => void;
+  readonly onMasterySelect?: (id: string) => void;
 }
 
 // ── Unlock emoji helper ────────────────────────────────────────────────────────
@@ -111,9 +114,12 @@ interface TreeNodeCardProps {
   readonly canResearch: boolean;
   readonly prereqsMet: boolean;
   readonly progress: number;
+  readonly isMastered: boolean;
+  readonly isMasteryActive: boolean;
   readonly accentColor: string;
   readonly costIcon: string;
   readonly onSelect: () => void;
+  readonly onMasterySelect?: () => void;
 }
 
 function TreeNodeCard({
@@ -123,9 +129,12 @@ function TreeNodeCard({
   canResearch,
   prereqsMet,
   progress,
+  isMastered,
+  isMasteryActive,
   accentColor,
   costIcon,
   onSelect,
+  onMasterySelect,
 }: TreeNodeCardProps) {
   const progressPct = isActive
     ? Math.min(100, Math.round((progress / item.cost) * 100))
@@ -185,13 +194,44 @@ function TreeNodeCard({
       disabled={!canResearch}
     >
       {/* Researched checkmark overlay */}
-      {isResearched && (
+      {isResearched && !isMastered && (
         <div
           className="absolute top-1 right-1.5 text-sm leading-none"
           style={{ color: 'var(--tech-state-researched)', textShadow: '0 0 4px var(--tech-state-researched)' }}
         >
           ✓
         </div>
+      )}
+
+      {/* Mastery chip — ★ for mastered, clickable for mastery-eligible */}
+      {isResearched && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onMasterySelect && !isMastered) onMasterySelect();
+          }}
+          disabled={isMastered}
+          className="absolute top-1 right-1.5 text-sm leading-none"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: isMastered ? 'default' : 'pointer',
+            padding: 0,
+            color: isMastered
+              ? 'var(--panel-accent-gold)'
+              : isMasteryActive
+                ? accentColor
+                : 'var(--panel-muted-color)',
+            textShadow: isMastered
+              ? '0 0 6px color-mix(in srgb, var(--panel-accent-gold) 50%, transparent)'
+              : undefined,
+            fontSize: isMastered ? '14px' : '11px',
+          }}
+          title={isMastered ? 'Mastered' : isMasteryActive ? 'Mastering...' : 'Click to master'}
+        >
+          {isMastered ? '★' : isMasteryActive ? '☆' : '★'}
+        </button>
       )}
 
       {/* Item name */}
@@ -477,9 +517,12 @@ export function TreeView({
   researchedIds,
   activeId,
   activeProgress,
+  masteredIds,
+  masteryActiveId,
   accentColor,
   costIcon,
   onSelect,
+  onMasterySelect,
 }: TreeViewProps): React.ReactElement {
   const activeItem = activeId ? (items.find(i => i.id === activeId) ?? null) : null;
 
@@ -529,11 +572,14 @@ export function TreeView({
                 canResearch={canResearch}
                 prereqsMet={prereqsMet}
                 progress={isActive ? activeProgress : 0}
+                isMastered={masteredIds?.has(item.id) ?? false}
+                isMasteryActive={masteryActiveId === item.id}
                 accentColor={accentColor}
                 costIcon={costIcon}
                 onSelect={() => {
                   if (canResearch) onSelect(item.id);
                 }}
+                onMasterySelect={onMasterySelect ? () => onMasterySelect(item.id) : undefined}
               />
             );
           })}

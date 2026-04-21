@@ -32,7 +32,8 @@ export type PanelId =
   | 'victory'
   | 'tradeRoutes'
   | 'achievements'
-  | 'narrativeEvent';
+  | 'narrativeEvent'
+  | 'celebrationBonus';
 
 /**
  * Panel priority — controls z-index, backdrop, and input-blocking.
@@ -87,6 +88,7 @@ export const PANEL_REGISTRY: ReadonlyMap<PanelId, PanelRegistryEntry> = new Map<
   ['tradeRoutes',     { id: 'tradeRoutes',     title: 'Trade Routes',        icon: '🤝', keyboardShortcut: 'X', priority: 'overlay' }],
   ['achievements',    { id: 'achievements',    title: 'Achievements',        icon: '🏅', keyboardShortcut: 'A', priority: 'overlay' }],
   ['narrativeEvent',  { id: 'narrativeEvent',  title: 'Event',               icon: '📜',                           priority: 'modal'   }],
+  ['celebrationBonus', { id: 'celebrationBonus', title: 'Celebration Bonus', icon: '🎉', priority: 'modal' }],
 ]);
 
 /** Convenience: all ids in registration order. */

@@ -23,9 +23,12 @@ export function TechTreePanel({ onClose }: TechTreePanelProps) {
         researchedIds={new Set(player.researchedTechs)}
         activeId={player.currentResearch}
         activeProgress={player.researchProgress}
+        masteredIds={new Set(player.masteredTechs ?? [])}
+        masteryActiveId={player.currentMastery}
         accentColor="var(--color-science)"
         costIcon="⚗"
         onSelect={(techId) => dispatch({ type: 'SET_RESEARCH', techId })}
+        onMasterySelect={(techId) => dispatch({ type: 'SET_MASTERY', techId })}
       />
     </PanelShell>
   );

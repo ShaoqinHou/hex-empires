@@ -91,6 +91,7 @@ export {
   CELEBRATION_DURATION,
   celebrationThresholdForCount,
 } from './state/CelebrationConstants';
+export { calculateEffectiveSettlementCap } from './state/HappinessUtils';
 export {
   WONDER_ADJACENCY_PER_NEIGHBOR,
   SPECIALIST_AMPLIFIER,

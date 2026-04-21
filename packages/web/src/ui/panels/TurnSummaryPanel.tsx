@@ -1,5 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
-import { calculateResourceChanges, getGrowthThreshold } from '@hex/engine';
+import { calculateResourceChanges, getGrowthThreshold, calculateEffectiveSettlementCap } from '@hex/engine';
 import { ResourceChangeSummaryDisplay } from '../components/ResourceChangeBadge';
 import { DramaModal } from './DramaModal';
 import type { DramaChoice } from './DramaModal';
@@ -68,6 +68,18 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
               <span style={{ color: 'var(--panel-muted-color)' }}>Cities:</span>
               <span className="ml-1 font-bold">{playerCities.length}</span>
             </div>
+            {(() => {
+              const cap = calculateEffectiveSettlementCap(state, state.currentPlayerId);
+              const overCap = playerCities.length > cap;
+              return (
+                <div>
+                  <span style={{ color: 'var(--panel-muted-color)' }}>Settlements:</span>
+                  <span className="ml-1 font-bold" style={overCap ? { color: 'var(--color-health-low)' } : undefined}>
+                    {playerCities.length} / {cap}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

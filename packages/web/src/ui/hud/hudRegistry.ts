@@ -31,7 +31,8 @@ export type HUDElementId =
   | 'yieldsToggle'
   | 'labelsToggle'
   | 'resourceTooltip'
-  | 'idleUnitsToast';
+  | 'idleUnitsToast'
+  | 'happinessProgress';
 
 /**
  * HUD element priority — maps to the z-index tier in `hud-tokens.css`.
@@ -71,6 +72,7 @@ export const HUD_REGISTRY: ReadonlyMap<HUDElementId, HUDRegistryEntry> = new Map
   ['labelsToggle',         { id: 'labelsToggle',         priority: 'floating' }],
   ['resourceTooltip',      { id: 'resourceTooltip',      priority: 'floating' }],
   ['idleUnitsToast',       { id: 'idleUnitsToast',       priority: 'toast',    defaultTimeout: 2500 }],
+  ['happinessProgress',   { id: 'happinessProgress',    priority: 'fixed'    }],
 ]);
 
 /** Convenience: all ids in registration order. */

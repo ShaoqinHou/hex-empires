@@ -19,6 +19,7 @@ The "shell mode" column matches `TooltipShell`'s `position` prop where applicabl
 | labelsToggle | packages/web/src/ui/components/LabelsToggle.tsx | TooltipShell floating | compact | no | Toggle button for unit-type text label pills on the canvas. Keyboard shortcut: L. When active, each unit icon shows its type name below it for readability. |
 | resourceTooltip | packages/web/src/ui/hud/ResourceTooltip.tsx | TooltipShell floating | compact | no | Appears when the cursor hovers a tile that has a resource (iron, wheat, silk, etc.). Shows resource name, type badge (bonus/strategic/luxury), yield contributions, happiness bonus (luxury only), and unlock status (requires tech / always available). offset="large" so it sits in a different quadrant from tileTooltip. |
 | idleUnitsToast | packages/web/src/ui/components/IdleUnitsToast.tsx | TooltipShell fixed-corner | detailed | no | Brief "No idle units" message shown when J is pressed but no unit with movement remains. Auto-dismisses after `defaultTimeout` (2500 ms). Triggered by a `triggerCount` prop that increments on each J press so consecutive presses refresh the timer. |
+| happinessProgress | packages/web/src/ui/hud/HappinessHUD.tsx | (no TooltipShell — fixed-position HUD element) | — | no | Celebrations progress bar showing empire happiness vs next celebration threshold. Fixed at bottom-left. Glows gold when threshold reached. |
 
 ## Cross-checking against `hudRegistry.ts`
 
