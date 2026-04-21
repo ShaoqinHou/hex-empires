@@ -59,6 +59,8 @@ import { ALL_ESPIONAGE_ACTIONS } from '../data/espionage';
 import type { EspionageActionDef } from '../types/Espionage';
 import { ALL_TREATIES } from '../data/treaties';
 import type { TreatyDef } from '../types/Treaty';
+import { ALL_RELICS } from '../data/relics';
+import type { RelicDef } from '../types/Relic';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -155,5 +157,8 @@ export function createGameConfig(): GameConfig {
   const treaties = new Map<string, TreatyDef>();
   for (const t of ALL_TREATIES) treaties.set(t.id, t);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, espionageActions, treaties, experimentalAchievements: false };
+  const relics = new Map<string, RelicDef>();
+  for (const r of ALL_RELICS) relics.set(r.id, r);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, espionageActions, treaties, relics, experimentalAchievements: false };
 }

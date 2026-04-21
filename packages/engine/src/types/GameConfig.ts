@@ -28,6 +28,7 @@ import type { ProjectDef } from './Project';
 import type { NaturalWonderDef } from './NaturalWonder';
 import type { EspionageActionDef } from './Espionage';
 import type { TreatyDef } from './Treaty';
+import type { RelicDef } from './Relic';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -137,4 +138,10 @@ export interface GameConfig {
    * construction compiles unchanged. treatySystem no-ops when absent.
    */
   readonly treaties?: ReadonlyMap<string, TreatyDef>;
+
+  /**
+   * F-09 — Relic definitions. Optional so existing GameConfig
+   * construction compiles unchanged. Systems treat absence as an empty Map.
+   */
+  readonly relics?: ReadonlyMap<string, RelicDef>;
 }

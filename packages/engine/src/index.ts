@@ -211,6 +211,7 @@ export {
 export {
   SWORDSMAN, CROSSBOWMAN, PIKEMAN, HORSEMAN, KNIGHT,
   MUSKETMAN, BOMBARD, CANNON, SIEGE_TOWER, CARAVEL,
+  EXPLORER, MISSIONARY,
 } from './data/units';
 export {
   INFANTRY, MACHINE_GUN, TANK, FIGHTER,
@@ -342,3 +343,7 @@ export { espionageSystem } from './systems/espionageSystem';
 export type { TreatyId, TreatyStatus, TreatyDef, ActiveTreaty } from './types/Treaty';
 export { ALL_TREATIES } from './data/treaties';
 export { treatySystem } from './systems/treatySystem';
+
+// F-08/F-09 — Missionary + Relic subsystems (Z3)
+export type { RelicId, RelicDef } from './types/Relic';
+export { ALL_RELICS, ARK_OF_COVENANT, SHROUD, SACRED_TOOTH, STAFF_OF_MOSES, SPEAR_OF_DESTINY, HOLY_GRAIL } from './data/relics';

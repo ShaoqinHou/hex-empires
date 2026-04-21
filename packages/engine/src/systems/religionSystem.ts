@@ -38,6 +38,7 @@ import type {
   ReligionRecord,
   ReligionSlotState,
 } from '../types/Religion';
+import { distance } from '../hex/HexMath';
 
 /**
  * F-04: Removed FOUND_RELIGION_FAITH_COST (200) — Civ VII has no faith cost
@@ -109,6 +110,7 @@ function playerHasFaithField(player: PlayerState): player is PlayerState & { rea
 export function religionSystem(state: GameState, action: ReligionSystemAction): GameState {
   if (action.type === 'ADOPT_PANTHEON') return handleAdoptPantheon(state, action);
   if (action.type === 'FOUND_RELIGION') return handleFoundReligion(state, action);
+  if (action.type === 'SPREAD_RELIGION') return handleSpreadReligion(state, action);
   return state;
 }
 
@@ -274,5 +276,76 @@ function handleFoundReligion(
     players: updatedPlayers,
     log: [...state.log, event],
     religion: updatedReligionSlot,
+  };
+}
+
+// ── SPREAD_RELIGION ──────────────────────────────────────────────────
+
+/** Maximum hex distance from which a missionary can spread religion to a city. */
+const SPREAD_RANGE = 1;
+
+function handleSpreadReligion(
+  state: GameState,
+  action: Extract<ReligionSystemAction, { type: 'SPREAD_RELIGION' }>,
+): GameState {
+  const { unitId, targetCityId } = action;
+
+  // Unit must exist.
+  const unit = state.units.get(unitId);
+  if (!unit) return state;
+
+  // Unit's type definition must have the spread_religion ability.
+  const unitDef = state.config.units.get(unit.typeId);
+  if (!unitDef || !unitDef.abilities.includes('spread_religion')) return state;
+
+  // Unit must have spreads remaining (default 3 for missionaries).
+  const remaining = unit.spreadsRemaining ?? 3;
+  if (remaining <= 0) return state;
+
+  // Target city must exist.
+  const city = state.cities.get(targetCityId);
+  if (!city) return state;
+
+  // City must be within spread range of the unit.
+  if (distance(unit.position, city.position) > SPREAD_RANGE) return state;
+
+  // The unit's owner must have founded a religion.
+  const player = state.players.get(unit.owner);
+  if (!player) return state;
+
+  const existingReligions: ReadonlyArray<ReligionRecord> =
+    state.religion?.religions ?? [];
+  const ownerReligion = existingReligions.find(
+    (r) => r.founderPlayerId === unit.owner,
+  );
+  if (!ownerReligion) return state;
+
+  // Apply: set city religion, decrement spread charge, log event.
+  const updatedCity: typeof city = {
+    ...city,
+    religionId: ownerReligion.id,
+  };
+  const updatedCities = new Map(state.cities);
+  updatedCities.set(targetCityId, updatedCity);
+
+  const updatedUnit: typeof unit = {
+    ...unit,
+    spreadsRemaining: remaining - 1,
+  };
+  const updatedUnits = new Map(state.units);
+  updatedUnits.set(unitId, updatedUnit);
+
+  const event: GameEvent = {
+    turn: state.turn,
+    playerId: unit.owner,
+    message: `${player.name} spread ${ownerReligion.name} to ${city.name}.`,
+    type: 'legacy',
+  };
+
+  return {
+    ...state,
+    cities: updatedCities,
+    units: updatedUnits,
+    log: [...state.log, event],
   };
 }

@@ -261,6 +261,22 @@ export const EXPLORER: UnitDef = {
   abilities: ['excavate'],
 } as const;
 
+export const MISSIONARY: UnitDef = {
+  id: 'missionary',
+  name: 'Missionary',
+  age: 'exploration',
+  category: 'civilian',
+  cost: 100,
+  combat: 0,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'theology',
+  upgradesTo: null,
+  abilities: ['spread_religion'],
+} as const;
+
 export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   SWORDSMAN,
   CROSSBOWMAN,
@@ -278,4 +294,5 @@ export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   LANCER,
   CUIRASSIER,
   EXPLORER,
+  MISSIONARY,
 ] as const;

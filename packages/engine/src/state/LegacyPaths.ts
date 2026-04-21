@@ -259,20 +259,32 @@ const EXPLORATION_CULTURE: LegacyPath = {
     {
       id: 'exploration_culture_t1',
       tier: 1,
-      description: 'Accumulate 100 Culture (proxy for 4 Relics)', // PROXY: no Relic system
-      check: (pid, s) => (s.players.get(pid)?.culture ?? 0) >= 100,
+      description: 'Collect 4 Relics (proxy: 100 Culture)', // F-09: relics when present, culture proxy fallback
+      check: (pid, s) => {
+        const relics = s.players.get(pid)?.relics;
+        if (relics && relics.length > 0) return relics.length >= 4;
+        return (s.players.get(pid)?.culture ?? 0) >= 100;
+      },
     },
     {
       id: 'exploration_culture_t2',
       tier: 2,
-      description: 'Accumulate 250 Culture (proxy for 8 Relics)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.culture ?? 0) >= 250,
+      description: 'Collect 8 Relics (proxy: 250 Culture)', // F-09
+      check: (pid, s) => {
+        const relics = s.players.get(pid)?.relics;
+        if (relics && relics.length > 0) return relics.length >= 8;
+        return (s.players.get(pid)?.culture ?? 0) >= 250;
+      },
     },
     {
       id: 'exploration_culture_t3',
       tier: 3,
-      description: 'Toshakhana: 500 Culture (proxy for 12 Relics)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.culture ?? 0) >= 500,
+      description: 'Toshakhana: Collect 12 Relics (proxy: 500 Culture)', // F-09
+      check: (pid, s) => {
+        const relics = s.players.get(pid)?.relics;
+        if (relics && relics.length > 0) return relics.length >= 12;
+        return (s.players.get(pid)?.culture ?? 0) >= 500;
+      },
     },
   ],
 };
