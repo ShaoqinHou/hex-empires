@@ -40,9 +40,9 @@ export type CommanderPromotionId = string;
  * - `maneuver`    — Flanking and repositioning.
  * - `leadership`  — Command radius, stacking, and morale.
  *
- * A Commander locks into exactly one tree on their first promotion
- * pick. Whether respec/retraining is allowed is an open question; see
- * commander-system.md §9.
+ * F-03: Commanders may pick from any tree — no single-tree lock (VII allows
+ * cross-tree picks). Whether respec/retraining is allowed is an open question;
+ * see commander-system.md §9.
  */
 export type CommanderTree =
   | 'bastion'
@@ -156,7 +156,7 @@ export interface CommanderPromotionDef {
  * - `commanderLevel` is derivable from `xp` but stored for save
  *   stability across curve re-balancing.
  * - `unspentPromotionPicks` is the currency spent on promotions.
- * - `tree` is null until the first pick; then locked to that branch.
+ * - `tree` is null until the first pick; commanders may pick from any tree.
  * - `attachedUnits` enforces the 4-unit pack cap (validated by system).
  * - `packed` means the pack moves as one unit this turn.
  */
@@ -201,11 +201,6 @@ export type CommanderAction =
       readonly type: 'PROMOTE_COMMANDER';
       readonly commanderId: UnitId;
       readonly promotionId: CommanderPromotionId;
-    }
-  | {
-      readonly type: 'SELECT_COMMANDER_TREE';
-      readonly commanderId: UnitId;
-      readonly tree: CommanderTree;
     }
   | {
       readonly type: 'ATTACH_UNIT_TO_COMMANDER';

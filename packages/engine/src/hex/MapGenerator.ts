@@ -159,6 +159,14 @@ function pickTerrain(
     return { terrain: 'desert', feature: isHills ? 'hills' : null };
   }
 
+  // Tropical (very hot + very wet) — uses tropical biome terrain
+  if (temperature > 0.7 && moisture > 0.6) {
+    if (moisture > 0.8) {
+      return { terrain: 'rainforest', feature: isHills ? 'hills' : null };
+    }
+    return { terrain: 'tropical', feature: isHills ? 'hills' : (moisture > 0.7 ? 'jungle' : null) };
+  }
+
   // Grassland vs plains based on moisture
   const baseTerrain = moisture > 0.5 ? 'grassland' : 'plains';
 

@@ -19,4 +19,9 @@ export interface UnitDef {
    * ability references this unit by id.
    */
   readonly leaderId?: string;
+  /**
+   * F-03: True for unique named commanders (e.g. Hephaestion) — distinguishes
+   * them from generic/mercenary commanders that any civ can produce.
+   */
+  readonly isNamedCommander?: boolean;
 }

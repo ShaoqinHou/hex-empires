@@ -183,16 +183,11 @@ describe('Commander types — compile-time shape tests', () => {
     expect(bonus.value).toBe(3);
   });
 
-  it('CommanderAction covers all six Commander-scoped actions', () => {
+  it('CommanderAction covers all five Commander-scoped actions (F-03: SELECT_COMMANDER_TREE removed)', () => {
     const promote: CommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'u-c-1',
       promotionId: 'assault.vanguard.t1',
-    };
-    const pickTree: CommanderAction = {
-      type: 'SELECT_COMMANDER_TREE',
-      commanderId: 'u-c-1',
-      tree: 'assault',
     };
     const attach: CommanderAction = {
       type: 'ATTACH_UNIT_TO_COMMANDER',
@@ -212,14 +207,13 @@ describe('Commander types — compile-time shape tests', () => {
 
     const actions: ReadonlyArray<CommanderAction> = [
       promote,
-      pickTree,
       attach,
       detach,
       pack,
       unpack,
     ];
     const kinds = new Set(actions.map((a) => a.type));
-    expect(kinds.size).toBe(6);
+    expect(kinds.size).toBe(5);
   });
 
   it('exposes rulebook constants for radius and stack cap', () => {

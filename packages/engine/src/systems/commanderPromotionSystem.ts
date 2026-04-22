@@ -52,13 +52,13 @@ export type CommanderSystemAction =
  * Cumulative XP required to reach level N.
  *
  * Index = level (1..5). Level 1 is the starting level, reached at 0 XP.
- * Level 6 threshold (800) is listed so the derivation loop terminates
- * cleanly for very high-XP commanders — the published cap is level 5.
+ * Published cap is level 5 — F-04 removed the spurious level-6 threshold.
  */
-export const LEVEL_THRESHOLDS = [0, 50, 150, 300, 500, 800] as const;
+export const LEVEL_THRESHOLDS = [0, 50, 150, 300, 500] as const;
 
-/** Commander level for a given cumulative XP total. */
+/** Commander level for a given cumulative XP total. Hard-capped at 5. */
 export function commanderLevelForXp(xp: number): number {
+  const MAX_LEVEL = 5;
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
     if (xp >= LEVEL_THRESHOLDS[i]) {
@@ -67,7 +67,7 @@ export function commanderLevelForXp(xp: number): number {
       break;
     }
   }
-  return level;
+  return Math.min(level, MAX_LEVEL);
 }
 
 // ── Commander lookup ──

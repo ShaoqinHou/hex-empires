@@ -272,6 +272,7 @@ export const HEPHAESTION: UnitDef = {
   upgradesTo: null,
   abilities: ['commander'],
   leaderId: 'alexander',
+  isNamedCommander: true,
 } as const;
 
 export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [

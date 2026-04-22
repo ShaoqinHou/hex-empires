@@ -182,7 +182,7 @@ export const HATSHEPSUT: LeaderDef = {
   id: 'hatshepsut',
   name: 'Hatshepsut',
   ability: {
-    name: 'Gods Wife of Amun',
+    name: "God's Wife of Amun",
     description: 'International trade routes generate +2 gold and +1 food.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },

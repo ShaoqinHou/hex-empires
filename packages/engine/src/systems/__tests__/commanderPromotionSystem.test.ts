@@ -230,8 +230,8 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
 });
 
 describe('commanderLevelForXp / LEVEL_THRESHOLDS', () => {
-  it('matches the published table [0,50,150,300,500,800]', () => {
-    expect(LEVEL_THRESHOLDS).toEqual([0, 50, 150, 300, 500, 800]);
+  it('matches the published table [0,50,150,300,500] (F-04: level-6 threshold removed)', () => {
+    expect(LEVEL_THRESHOLDS).toEqual([0, 50, 150, 300, 500]);
   });
 
   it('maps XP to level at exact thresholds and between', () => {
@@ -242,8 +242,8 @@ describe('commanderLevelForXp / LEVEL_THRESHOLDS', () => {
     expect(commanderLevelForXp(150)).toBe(3);
     expect(commanderLevelForXp(300)).toBe(4);
     expect(commanderLevelForXp(500)).toBe(5);
-    expect(commanderLevelForXp(800)).toBe(6);
-    expect(commanderLevelForXp(9999)).toBe(6);
+    expect(commanderLevelForXp(800)).toBe(5); // F-04: hard-capped at 5
+    expect(commanderLevelForXp(9999)).toBe(5); // F-04: hard-capped at 5
   });
 });
 

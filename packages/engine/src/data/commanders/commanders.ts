@@ -136,6 +136,8 @@ export const FLEET_ADMIRAL: CommanderUnitDef = {
  * to. Role is `'air'`; falls back to the `ranged` unit category as
  * compat anchor (matching the Jet Fighter's category) until the
  * dedicated air-unit category lands.
+ *
+ * [CUSTOM-EXTENSION] — no VII source confirms air commanders (F-06).
  */
 export const AIR_GENERAL: CommanderUnitDef = {
   id: 'air_general',
@@ -155,6 +157,8 @@ export const AIR_GENERAL: CommanderUnitDef = {
  * ground forces. Lower combat than a line General but cheaper to
  * produce; pairs with the `maneuver` promotion tree (Guerilla Tactics)
  * for flanking and extra-movement auras.
+ *
+ * [CUSTOM-EXTENSION] — no VII source confirms partisan commander subtype (F-10).
  */
 export const PARTISAN_LEADER: CommanderUnitDef = {
   id: 'partisan_leader',
