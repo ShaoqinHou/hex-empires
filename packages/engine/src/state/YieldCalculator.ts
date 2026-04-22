@@ -59,6 +59,16 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     });
   }
 
+  // Building base yields. F-02: ALL buildings contribute base yields regardless of
+  // age — obsolete (different age, non-ageless) buildings lose adjacency only,
+  // not base yields. Adjacency skip is handled in DistrictAdjacency.ts.
+  for (const buildingId of city.buildings) {
+    const buildingDef = state.config.buildings.get(buildingId);
+    if (buildingDef) {
+      total = addYields(total, buildingDef.yields);
+    }
+  }
+
   // Civ/leader/legacy ability yield bonuses (MODIFY_YIELD with target: 'empire')
   total = addYields(total, {
     food: getYieldBonus(state, city.owner, 'food'),

@@ -41,12 +41,6 @@ import type {
 import { distance } from '../hex/HexMath';
 
 /**
- * F-04: Removed FOUND_RELIGION_FAITH_COST (200) — Civ VII has no faith cost
- * to found a religion. The constant, the faith gate, and the faith deduction
- * were all removed.
- */
-
-/**
  * Widened action type accepted by religionSystem. The pipeline's
  * canonical `GameAction` does not yet include `ReligionAction`; cycle D
  * will unify them. For now religionSystem accepts either so callers

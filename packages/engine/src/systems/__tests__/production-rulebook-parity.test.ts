@@ -316,9 +316,13 @@ describe('R54: Production Bonuses — buildings add % bonuses to specific item c
 
     const basePerTurn = baseAfter.productionProgress - (-500);
     const boostedPerTurn = boostedAfter.productionProgress - (-500);
+    // F-02: building yields are included in YieldCalculator, so the boosted city
+    // has higher base production from the barracks' own yield (+2). The 10%
+    // bonus applies to (basePerTurn + barracksYield), not just basePerTurn.
+    const barracksProd = withBarracksState.config.buildings.get('barracks')?.yields.production ?? 0;
     expect(basePerTurn).toBeGreaterThanOrEqual(10);
     expect(boostedPerTurn).toBeGreaterThan(basePerTurn);
-    expect(boostedPerTurn).toBe(Math.floor(basePerTurn * 1.1));
+    expect(boostedPerTurn).toBe(Math.floor((basePerTurn + barracksProd) * 1.1));
   });
 
   it('Barracks does NOT apply its bonus to civilian units (e.g. settler)', () => {
@@ -344,7 +348,10 @@ describe('R54: Production Bonuses — buildings add % bonuses to specific item c
     const b = productionSystem(stB, { type: 'END_TURN' }).cities.get('c1')!;
     expect(a.productionQueue).toHaveLength(1);
     expect(b.productionQueue).toHaveLength(1);
-    expect(a.productionProgress).toBe(b.productionProgress);
+    // F-02: barracks contributes its own production yield to the base, so the
+    // two cities differ by exactly the building's yield — NOT by the 10% bonus.
+    const barracksProd = stA.config.buildings.get('barracks')?.yields.production ?? 0;
+    expect(a.productionProgress - b.productionProgress).toBe(barracksProd);
   });
 
   it('Workshop grants +10% production toward buildings', () => {
@@ -372,9 +379,13 @@ describe('R54: Production Bonuses — buildings add % bonuses to specific item c
     expect(b.productionQueue).toHaveLength(1);
     const basePerTurn = b.productionProgress - (-500);
     const boostedPerTurn = a.productionProgress - (-500);
+    // F-02: workshop yields (+3 production) are included in YieldCalculator,
+    // so the boosted city has higher base. The 10% bonus applies to
+    // (basePerTurn + workshopYield), not just basePerTurn.
+    const workshopProd = stA.config.buildings.get('workshop')?.yields.production ?? 0;
     expect(basePerTurn).toBeGreaterThanOrEqual(10);
     expect(boostedPerTurn).toBeGreaterThan(basePerTurn);
-    expect(boostedPerTurn).toBe(Math.floor(basePerTurn * 1.1));
+    expect(boostedPerTurn).toBe(Math.floor((basePerTurn + workshopProd) * 1.1));
   });
 
   it.fails('R54-A: Workshop bonus does NOT apply to Wonders (rulebook §5.4 — Amphitheatre/Kiln is the wonder-bonus building)', () => {
