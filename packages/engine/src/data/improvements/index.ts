@@ -77,6 +77,78 @@ export const CAMP: ImprovementDef = {
   modifier: {},
 } as const;
 
+// ── Civ-unique rural improvements ──
+
+export const BARAY: ImprovementDef = {
+  id: 'baray',
+  name: 'Baray',
+  category: 'basic',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['grassland', 'plains'],
+  },
+  yields: { food: 2, faith: 1 },
+  modifier: {},
+  ageless: true,
+  civId: 'khmer',
+} as const;
+
+export const GREAT_WALL: ImprovementDef = {
+  id: 'great_wall',
+  name: 'Great Wall',
+  category: 'infrastructure',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['plains', 'hills', 'desert'],
+  },
+  yields: { gold: 1, culture: 1 },
+  modifier: { defense: 0.5 },
+  ageless: true,
+  civId: 'china',
+} as const;
+
+export const PAIRIDAEZA: ImprovementDef = {
+  id: 'pairidaeza',
+  name: 'Pairidaeza',
+  category: 'basic',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['plains', 'grassland', 'desert'],
+  },
+  yields: { culture: 1, gold: 1 },
+  modifier: {},
+  ageless: true,
+  civId: 'persia',
+} as const;
+
+export const POTKOP: ImprovementDef = {
+  id: 'potkop',
+  name: 'Potkop',
+  category: 'basic',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['plains', 'grassland'],
+  },
+  yields: { food: 1, production: 1 },
+  modifier: {},
+  ageless: true,
+  civId: 'mississippian',
+} as const;
+
+export const TERRACE_FARM: ImprovementDef = {
+  id: 'terrace_farm',
+  name: 'Terrace Farm',
+  category: 'basic',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['hills', 'mountains'],
+  },
+  yields: { food: 2, production: 1 },
+  modifier: {},
+  ageless: true,
+  civId: 'inca',
+} as const;
+
 export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   FARM,
   MINE,
@@ -84,4 +156,9 @@ export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   PLANTATION,
   QUARRY,
   CAMP,
+  BARAY,
+  GREAT_WALL,
+  PAIRIDAEZA,
+  POTKOP,
+  TERRACE_FARM,
 ] as const;

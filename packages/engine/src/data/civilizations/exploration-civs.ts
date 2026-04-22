@@ -116,6 +116,54 @@ export const MONGOLIA: CivilizationDef = {
   color: '#33691e',
 };
 
+export const MAYA: CivilizationDef = {
+  id: 'maya',
+  name: 'Maya',
+  age: 'exploration',
+  description: 'Astronomers and architects of the jungle whose city-states mastered mathematics and the calendar.',
+  uniqueAbility: {
+    name: 'Mayan Astronomy',
+    description: '+2 science in all cities. Farms adjacent to the capital provide +1 science.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Mayan Calendars',
+    description: '+3 science in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  },
+  color: '#2e7d32',
+  historicalPair: [],
+};
+
+export const NORMANS: CivilizationDef = {
+  id: 'normans',
+  name: 'Normans',
+  age: 'exploration',
+  description: 'Warrior-descendants of Vikings who conquered England and Sicily, building castles and cathedrals across Europe.',
+  uniqueAbility: {
+    name: 'Castle Builders',
+    description: '+2 culture in all cities. Fortified cities gain +4 defense bonus.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+      { type: 'MODIFY_COMBAT', target: 'all', value: 2 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Norman Legacy',
+    description: '+2 culture and +1 production in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+  },
+  color: '#455a64',
+  historicalPair: ['vikings'],
+};
+
 export const ALL_EXPLORATION_CIVS: ReadonlyArray<CivilizationDef> = [
   SPAIN, ENGLAND, FRANCE, OTTOMAN, JAPAN, MONGOLIA,
+  MAYA, NORMANS,
 ];

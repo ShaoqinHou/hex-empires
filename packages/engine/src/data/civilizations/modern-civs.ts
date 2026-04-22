@@ -86,6 +86,31 @@ export const BRAZIL: CivilizationDef = {
   color: '#1b5e20',
 };
 
+export const MEXICO: CivilizationDef = {
+  id: 'mexico',
+  name: 'Mexico',
+  age: 'modern',
+  description: ' heirs of Aztec and Spanish traditions whose revolution reshaped the Americas.',
+  uniqueAbility: {
+    name: 'Reforma',
+    description: '+2 culture and +1 gold per city. City-state suzerainty bonuses are doubled.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Mexican Heritage',
+    description: '+3 culture in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+  },
+  color: '#00695c',
+  historicalPair: ['maya', 'spain'],
+};
+
 export const ALL_MODERN_CIVS: ReadonlyArray<CivilizationDef> = [
   AMERICA, GERMANY, RUSSIA, BRAZIL,
+  MEXICO,
 ];

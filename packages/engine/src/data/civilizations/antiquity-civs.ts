@@ -138,6 +138,80 @@ export const VIKINGS: CivilizationDef = {
   startingBias: 'coastal',
 };
 
+export const ASSYRIA: CivilizationDef = {
+  id: 'assyria',
+  name: 'Assyria',
+  age: 'antiquity',
+  description: 'Iron-fisted empire builders whose siege mastery reshaped the ancient Near East.',
+  uniqueAbility: {
+    name: 'Siege Warfare',
+    description: '+5 combat strength for siege units. Conquered cities retain one extra population.',
+    effects: [
+      { type: 'MODIFY_COMBAT', target: 'siege', value: 5 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Assyrian Discipline',
+    description: '+2 production in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  },
+  color: '#d32f2f',
+  historicalPair: [],
+};
+
+export const HITTITES: CivilizationDef = {
+  id: 'hittites',
+  name: 'Hittites',
+  age: 'antiquity',
+  description: 'Masters of chariot warfare and early iron-working who rivalled Egypt at Kadesh.',
+  uniqueAbility: {
+    name: 'Iron Chariots',
+    description: '+3 combat strength for cavalry units. +1 production from strategic resources.',
+    effects: [
+      { type: 'MODIFY_COMBAT', target: 'cavalry', value: 3 },
+      { type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Hittite Metalcraft',
+    description: '+1 production and +1 science in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 },
+  },
+  color: '#6d4c41',
+  historicalPair: [],
+};
+
+export const PHOENICIA: CivilizationDef = {
+  id: 'phoenicia',
+  name: 'Phoenicia',
+  age: 'antiquity',
+  description: 'Seafaring merchant traders who founded Carthage and spread the alphabet across the Mediterranean.',
+  uniqueAbility: {
+    name: 'Mediterranean Colonists',
+    description: 'Coastal cities gain +2 gold. +1 movement for naval units.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 },
+      { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Phoenician Trade Network',
+    description: '+3 gold in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  },
+  color: '#5c6bc0',
+  startingBias: 'coastal',
+  historicalPair: [],
+};
+
 export const ALL_ANTIQUITY_CIVS: ReadonlyArray<CivilizationDef> = [
   ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA, VIKINGS,
+  ASSYRIA, HITTITES, PHOENICIA,
 ];

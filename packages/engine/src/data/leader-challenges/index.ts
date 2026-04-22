@@ -1,7 +1,7 @@
 /**
  * Leader Challenges — per-leader milestones that award Leader XP.
  *
- * Two challenges per leader × 9 leaders = 18 total.
+ * Two challenges per leader × 9 leaders (Tier 1) + 12 Tier-2 challenges = 30 total.
  * Leader XP accumulates in AccountState.leaderXP[leaderId] and feeds into
  * leader levels (1-10). Each level unlocks attribute nodes.
  */
@@ -180,5 +180,113 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
     description: 'As Genghis Khan, found 6 cities.',
     xp: 200,
     condition: { type: 'cities_at_least', count: 6 },
+  },
+
+  // ── Augustus Tier 2 ──
+  {
+    id: 'augustus_road_builder',
+    leaderId: 'augustus',
+    name: 'Imperium Maius: Road Builder',
+    description: 'As Augustus, found 8 cities.',
+    xp: 350,
+    condition: { type: 'cities_at_least', count: 8 },
+  },
+  {
+    id: 'augustus_scholar',
+    leaderId: 'augustus',
+    name: 'Imperium Maius: Scholar',
+    description: 'As Augustus, research 10 technologies.',
+    xp: 350,
+    condition: { type: 'techs_researched_at_least', count: 10 },
+  },
+
+  // ── Cleopatra Tier 2 ──
+  {
+    id: 'cleopatra_conqueror',
+    leaderId: 'cleopatra',
+    name: 'Mediterranean Bride: Conqueror',
+    description: 'As Cleopatra, win 5 combats.',
+    xp: 350,
+    condition: { type: 'combat_wins_at_least', count: 5 },
+  },
+  {
+    id: 'cleopatra_patron',
+    leaderId: 'cleopatra',
+    name: 'Mediterranean Bride: Patron',
+    description: 'As Cleopatra, build 15 buildings.',
+    xp: 350,
+    condition: { type: 'buildings_built_at_least', count: 15 },
+  },
+
+  // ── Pericles Tier 2 ──
+  {
+    id: 'pericles_scholar',
+    leaderId: 'pericles',
+    name: 'Surrounded by Glory: Scholar',
+    description: 'As Pericles, research 12 technologies.',
+    xp: 350,
+    condition: { type: 'techs_researched_at_least', count: 12 },
+  },
+  {
+    id: 'pericles_warrior',
+    leaderId: 'pericles',
+    name: 'Surrounded by Glory: Warrior',
+    description: 'As Pericles, win 8 combats.',
+    xp: 350,
+    condition: { type: 'combat_wins_at_least', count: 8 },
+  },
+
+  // ── Cyrus Tier 2 ──
+  {
+    id: 'cyrus_builder',
+    leaderId: 'cyrus',
+    name: 'Fall of Babylon: Builder',
+    description: 'As Cyrus, build 12 buildings.',
+    xp: 350,
+    condition: { type: 'buildings_built_at_least', count: 12 },
+  },
+  {
+    id: 'cyrus_scholar',
+    leaderId: 'cyrus',
+    name: 'Fall of Babylon: Scholar',
+    description: 'As Cyrus, research 8 technologies.',
+    xp: 350,
+    condition: { type: 'techs_researched_at_least', count: 8 },
+  },
+
+  // ── Gandhi Tier 2 ──
+  {
+    id: 'gandhi_culturalist',
+    leaderId: 'gandhi',
+    name: 'Satyagraha: Culturalist',
+    description: 'As Gandhi, found 5 cities.',
+    xp: 350,
+    condition: { type: 'cities_at_least', count: 5 },
+  },
+  {
+    id: 'gandhi_sage',
+    leaderId: 'gandhi',
+    name: 'Satyagraha: Sage',
+    description: 'As Gandhi, research 15 technologies.',
+    xp: 350,
+    condition: { type: 'techs_researched_at_least', count: 15 },
+  },
+
+  // ── Qin Shi Huang Tier 2 ──
+  {
+    id: 'qin_scholar',
+    leaderId: 'qin_shi_huang',
+    name: 'First Emperor: Scholar',
+    description: 'As Qin Shi Huang, research 12 technologies.',
+    xp: 350,
+    condition: { type: 'techs_researched_at_least', count: 12 },
+  },
+  {
+    id: 'qin_warrior',
+    leaderId: 'qin_shi_huang',
+    name: 'First Emperor: Warrior',
+    description: 'As Qin Shi Huang, win 10 combats.',
+    xp: 350,
+    condition: { type: 'combat_wins_at_least', count: 10 },
   },
 ];
