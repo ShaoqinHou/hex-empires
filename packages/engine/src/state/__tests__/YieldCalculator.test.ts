@@ -15,33 +15,27 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
   };
 }
 
-describe('B3: specialist food cost (-2 food per specialist)', () => {
-  it('city with no specialists has no food penalty', () => {
+describe('B3: specialist yields (food cost moved to growthSystem F-02)', () => {
+  it('city with no specialists has no specialist bonus', () => {
     const state = createTestState();
     const city = makeCity({ specialists: 0 });
     const yields = calculateCityYields(city, state);
-    // Grassland center: 2 food base from city center + 2 from grassland tile = 4 food
-    // No penalty for 0 specialists
     expect(yields.food).toBeGreaterThan(0);
   });
 
-  it('each specialist reduces food yield by 2', () => {
+  it('specialists do NOT deduct food from yields (cost moved to growthSystem)', () => {
     const state = createTestState();
     const cityNoSpec = makeCity({ specialists: 0 });
-    const cityWith1Spec = makeCity({ specialists: 1 });
     const cityWith2Spec = makeCity({ specialists: 2 });
 
     const yieldsNoSpec = calculateCityYields(cityNoSpec, state);
-    const yields1Spec = calculateCityYields(cityWith1Spec, state);
     const yields2Spec = calculateCityYields(cityWith2Spec, state);
 
-    // 1 specialist: -2 food
-    expect(yieldsNoSpec.food - yields1Spec.food).toBe(2);
-    // 2 specialists: -4 food
-    expect(yieldsNoSpec.food - yields2Spec.food).toBe(4);
+    // Food cost is handled in growthSystem.foodConsumed, not here
+    expect(yieldsNoSpec.food).toBe(yields2Spec.food);
   });
 
-  it('specialists still produce +2 science and +2 culture each', () => {
+  it('specialists produce +2 science and +2 culture each', () => {
     const state = createTestState();
     const cityNoSpec = makeCity({ specialists: 0 });
     const cityWith2Spec = makeCity({ specialists: 2 });
@@ -52,7 +46,5 @@ describe('B3: specialist food cost (-2 food per specialist)', () => {
     // 2 specialists: +4 science, +4 culture
     expect(yields2Spec.science - yieldsNoSpec.science).toBe(4);
     expect(yields2Spec.culture - yieldsNoSpec.culture).toBe(4);
-    // But also -4 food
-    expect(yieldsNoSpec.food - yields2Spec.food).toBe(4);
   });
 });

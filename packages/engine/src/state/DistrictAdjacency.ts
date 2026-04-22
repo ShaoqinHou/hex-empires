@@ -5,7 +5,7 @@ import type { BuildingId } from '../types/Ids';
 import type { UrbanTileV2 } from '../types/DistrictOverhaul';
 import { EMPTY_YIELDS, addYields } from '../types/Yields';
 import { neighbors, coordToKey } from '../hex/HexMath';
-import { SPECIALIST_AMPLIFIER } from './AdjacencyConstants';
+import { SPECIALIST_AMPLIFIER, WONDER_ADJACENCY_PER_NEIGHBOR } from './AdjacencyConstants';
 
 /**
  * Pure adjacency + Quarter yield helpers for the Districts Overhaul (Cycle D).
@@ -154,6 +154,14 @@ export function computeAdjacencyBonus(
       if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
+      // F-06: Wonder adjacency — +2 culture, +1 science per neighbor urban tile with a wonder
+      for (const bid of neighbourUrban.buildings) {
+        const bDef = state.config.buildings.get(bid);
+        if (bDef?.isWonder) {
+          bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+          break; // one wonder adjacency per neighbor tile
+        }
+      }
     }
   }
 
@@ -286,6 +294,14 @@ function computeBaseAdjacencyWithoutSpecialist(
       }
       if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
+      }
+      // F-06: Wonder adjacency (same rule as computeAdjacencyBonus)
+      for (const bid of neighbourUrban.buildings) {
+        const bDef = state.config.buildings.get(bid);
+        if (bDef?.isWonder) {
+          bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+          break;
+        }
       }
     }
   }

@@ -50,12 +50,12 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     total = addYields(total, getSpecializationYields(city.specialization));
   }
 
-  // Specialist yields: each specialist produces +2 science and +2 culture, costs -2 food
+  // Specialist yields: each specialist produces +2 science and +2 culture.
+  // Food cost (−2 per specialist) is handled in growthSystem.foodConsumed (F-02).
   if (city.specialists > 0) {
     total = addYields(total, {
       science: city.specialists * 2,
       culture: city.specialists * 2,
-      food: -(city.specialists * 2),
     });
   }
 

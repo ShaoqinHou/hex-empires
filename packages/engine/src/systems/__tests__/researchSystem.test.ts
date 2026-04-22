@@ -289,7 +289,8 @@ describe('researchSystem', () => {
       expect(next.players.get('p1')!.masteryProgress).toBe(0);
     });
 
-    it('grants +1 science empire yield bonus on mastery completion', () => {
+    it('grants per-tech mastery yield bonus on mastery completion', () => {
+      // Pottery has masteryEffect: +1 food empire (W3-08 per-tech mastery)
       const player = createTestPlayer({
         researchedTechs: ['pottery'],
         masteredTechs: [],
@@ -308,7 +309,7 @@ describe('researchSystem', () => {
       expect(masteryBonus).toBeDefined();
       expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
       if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
-        expect(masteryBonus!.effect.yield).toBe('science');
+        expect(masteryBonus!.effect.yield).toBe('food');
         expect(masteryBonus!.effect.value).toBe(1);
         expect(masteryBonus!.effect.target).toBe('empire');
       }
@@ -432,12 +433,12 @@ describe('researchSystem', () => {
     });
 
     it('falls back to generic +1 science when tech has no masteryEffect', () => {
-      // Pottery has no masteryEffect — should get fallback MODIFY_YIELD science +1
+      // future_tech_antiquity has no masteryEffect — should get fallback MODIFY_YIELD science +1
       const player = createTestPlayer({
-        researchedTechs: ['pottery'],
+        researchedTechs: ['future_tech_antiquity'],
         masteredTechs: [],
-        currentMastery: 'pottery',
-        masteryProgress: 19,
+        currentMastery: 'future_tech_antiquity',
+        masteryProgress: 79, // mastery cost = ceil(100 * 0.8) = 80
         legacyBonuses: [],
       });
       const city = createTestCity({ population: 1 });
@@ -447,7 +448,7 @@ describe('researchSystem', () => {
       });
       const next = researchSystem(state, { type: 'END_TURN' });
       const bonuses = next.players.get('p1')!.legacyBonuses;
-      const masteryBonus = bonuses.find(b => b.source === 'mastery:pottery');
+      const masteryBonus = bonuses.find(b => b.source === 'mastery:future_tech_antiquity');
       expect(masteryBonus).toBeDefined();
       if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
         expect(masteryBonus!.effect.yield).toBe('science');

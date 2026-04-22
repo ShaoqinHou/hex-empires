@@ -134,20 +134,32 @@ const ANTIQUITY_SCIENCE: LegacyPath = {
     {
       id: 'antiquity_science_t1',
       tier: 1,
-      description: 'Research 4 technologies', // GUESS — rulebook only states final codex milestone
-      check: (pid, s) => techsResearched(s, pid) >= 4,
+      description: 'Display 3 Codices (fallback: Research 4 technologies)',
+      check: (pid, s) => {
+        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
+        if (codexCount > 0) return codexCount >= 3;
+        return techsResearched(s, pid) >= 4;
+      },
     },
     {
       id: 'antiquity_science_t2',
       tier: 2,
-      description: 'Research 8 technologies', // GUESS
-      check: (pid, s) => techsResearched(s, pid) >= 8,
+      description: 'Display 6 Codices (fallback: Research 8 technologies)',
+      check: (pid, s) => {
+        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
+        if (codexCount > 0) return codexCount >= 6;
+        return techsResearched(s, pid) >= 8;
+      },
     },
     {
       id: 'antiquity_science_t3',
       tier: 3,
-      description: 'Great Library: build a Library in every owned city (proxy for 10 Codices)',
-      check: (pid, s) => hasBuildingInEveryCity(s, pid, 'library'),
+      description: 'Display 10 Codices (fallback: Library in every owned city)',
+      check: (pid, s) => {
+        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
+        if (codexCount > 0) return codexCount >= 10;
+        return hasBuildingInEveryCity(s, pid, 'library');
+      },
     },
   ],
 };

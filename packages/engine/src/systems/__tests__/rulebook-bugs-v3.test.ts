@@ -114,9 +114,9 @@ describe('B2: Specialists cost -2 happiness each (rulebook §2.2/3.3)', () => {
   });
 });
 
-// ── B3: Specialist food cost = -2 food per specialist ──
+// ── B3: Specialist food cost = -2 food per specialist (now in growthSystem F-02) ──
 describe('B3: Specialists cost -2 food each (rulebook §3.3)', () => {
-  it('2 specialists reduce food yield by exactly 4', () => {
+  it('specialists do NOT reduce food in YieldCalculator (cost moved to growthSystem)', () => {
     const baseCity = makeCity({ specialists: 0 });
     const specCity = makeCity({ specialists: 2 });
     const state = createTestState({
@@ -126,7 +126,8 @@ describe('B3: Specialists cost -2 food each (rulebook §3.3)', () => {
     const y0 = calculateCityYields(baseCity, state);
     const y2 = calculateCityYields(specCity, state);
 
-    expect(y0.food - y2.food).toBe(4); // 2 specialists × -2 = -4 food
+    // Food deduction moved to growthSystem.foodConsumed — yields are equal
+    expect(y0.food).toBe(y2.food);
   });
 });
 

@@ -9,6 +9,8 @@ export const CARTOGRAPHY: TechnologyDef = {
   unlocks: ['caravel'],
   description: 'Enables Caravel naval unit',
   treePosition: { row: 3, col: 0 },
+  masteryEffect: { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+  masteryCodexCount: 1,
 };
 
 export const GUNPOWDER: TechnologyDef = {
@@ -20,6 +22,8 @@ export const GUNPOWDER: TechnologyDef = {
   unlocks: ['musketman'],
   description: 'Enables Musketman unit',
   treePosition: { row: 2, col: 0 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'ranged', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const PRINTING: TechnologyDef = {
@@ -31,6 +35,8 @@ export const PRINTING: TechnologyDef = {
   unlocks: [],
   description: 'Bonus science from libraries',
   treePosition: { row: 0, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const BANKING: TechnologyDef = {
@@ -42,6 +48,8 @@ export const BANKING: TechnologyDef = {
   unlocks: ['bank'],
   description: 'Enables Bank building',
   treePosition: { row: 0, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const ASTRONOMY: TechnologyDef = {
@@ -53,6 +61,8 @@ export const ASTRONOMY: TechnologyDef = {
   unlocks: [],
   description: 'Ocean crossing enabled',
   treePosition: { row: 3, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const METALLURGY: TechnologyDef = {
@@ -64,6 +74,8 @@ export const METALLURGY: TechnologyDef = {
   unlocks: ['bombard'],
   description: 'Enables Bombard siege unit',
   treePosition: { row: 2, col: 1 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'siege', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const EDUCATION: TechnologyDef = {
@@ -75,6 +87,8 @@ export const EDUCATION: TechnologyDef = {
   unlocks: ['university'],
   description: 'Enables University building',
   treePosition: { row: 0, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const MILITARY_TACTICS: TechnologyDef = {
@@ -86,6 +100,8 @@ export const MILITARY_TACTICS: TechnologyDef = {
   unlocks: ['knight'],
   description: 'Enables Knight cavalry unit',
   treePosition: { row: 1, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const ECONOMICS: TechnologyDef = {
@@ -97,6 +113,8 @@ export const ECONOMICS: TechnologyDef = {
   unlocks: ['stock_exchange'],
   description: 'Enables Stock Exchange',
   treePosition: { row: 0, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const SIEGE_TACTICS: TechnologyDef = {
@@ -108,6 +126,8 @@ export const SIEGE_TACTICS: TechnologyDef = {
   unlocks: ['cannon'],
   description: 'Enables Cannon unit',
   treePosition: { row: 2, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'siege', value: 5 },
+  masteryCodexCount: 2,
 };
 
 export const APPRENTICESHIP: TechnologyDef = {
@@ -119,6 +139,8 @@ export const APPRENTICESHIP: TechnologyDef = {
   unlocks: ['workshop_exp'],
   description: 'Enables Workshop building',
   treePosition: { row: 1, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const MILITARY_SCIENCE: TechnologyDef = {
@@ -130,6 +152,8 @@ export const MILITARY_SCIENCE: TechnologyDef = {
   unlocks: ['barracks_exp'],
   description: 'Enables Barracks building',
   treePosition: { row: 1, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 4 },
+  masteryCodexCount: 2,
 };
 
 export const MACHINERY: TechnologyDef = {
@@ -141,6 +165,8 @@ export const MACHINERY: TechnologyDef = {
   unlocks: ['catapult', 'gristmill', 'sawmill'],
   description: 'Enables Catapult siege unit, Gristmill and Sawmill buildings',
   treePosition: { row: 4, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const CASTLES: TechnologyDef = {
@@ -152,6 +178,8 @@ export const CASTLES: TechnologyDef = {
   unlocks: ['crossbowman', 'dungeon'],
   description: 'Enables Crossbowman ranged unit and Dungeon building',
   treePosition: { row: 5, col: 1 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const FEUDALISM: TechnologyDef = {
@@ -163,6 +191,8 @@ export const FEUDALISM: TechnologyDef = {
   unlocks: ['inn'],
   description: 'Enables Inn building and medieval infrastructure',
   treePosition: { row: 5, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const GUILDS: TechnologyDef = {
@@ -174,6 +204,8 @@ export const GUILDS: TechnologyDef = {
   unlocks: ['guildhall'],
   description: 'Enables Guildhall building for merchant networks',
   treePosition: { row: 1, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const SHIPBUILDING: TechnologyDef = {
@@ -185,6 +217,8 @@ export const SHIPBUILDING: TechnologyDef = {
   unlocks: ['shipyard'],
   description: 'Enables Shipyard for naval production',
   treePosition: { row: 3, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const METAL_CASTING: TechnologyDef = {
@@ -196,6 +230,8 @@ export const METAL_CASTING: TechnologyDef = {
   unlocks: ['pikeman', 'lancer'],
   description: 'Enables Pikeman anti-cavalry infantry and Lancer cavalry',
   treePosition: { row: 2, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'melee', value: 3 },
+  masteryCodexCount: 1,
 };
 
 /** F-13: Repeatable Future Tech for Exploration age. Available once all other techs are researched. */

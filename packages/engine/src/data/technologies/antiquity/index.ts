@@ -9,7 +9,8 @@ export const POTTERY: TechnologyDef = {
   unlocks: ['granary'],
   description: 'Enables Granary building',
   treePosition: { row: 0, col: 0 },
-  // No masteryEffect — uses generic +1 science fallback
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 1 },
+  masteryCodexCount: 0,
 };
 
 export const ANIMAL_HUSBANDRY: TechnologyDef = {

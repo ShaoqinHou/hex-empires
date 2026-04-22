@@ -509,6 +509,15 @@ export interface PlayerState {
    * compat with existing saves that predate the persona feature.
    */
   readonly personaId?: string | null;
+
+  // ── F-06: Dark Age opt-in ──
+  /**
+   * Whether the player has opted into dark age effects on age transition.
+   * - undefined: auto-apply dark ages (backward compat — current behavior)
+   * - true: player explicitly chose to embrace dark age
+   * - false: skip dark age effects entirely
+   */
+  readonly darkAgeOptIn?: boolean;
 }
 
 /**
@@ -552,8 +561,28 @@ export interface DiplomacyRelation {
   readonly activeSanctions: ReadonlyArray<DiplomaticSanction>;
 }
 
+/**
+ * F-04: A pending endeavor awaiting the target player's response.
+ * Created by PROPOSE_ENDEAVOR; resolved by RESPOND_ENDEAVOR.
+ */
+export interface PendingEndeavor {
+  readonly id: string;
+  readonly sourceId: PlayerId;
+  readonly targetId: PlayerId;
+  readonly endeavorType: string;
+  /** Influence cost already spent by the proposer (used for support-benefit calculation). */
+  readonly influenceCost: number;
+}
+
 export interface DiplomacyState {
   readonly relations: ReadonlyMap<string, DiplomacyRelation>; // key: "p1:p2"
+
+  /**
+   * F-04: Pending endeavors awaiting target response. Optional so existing
+   * DiplomacyState construction (engine, web, tests, save files) keeps
+   * compiling unchanged. Systems treat absence as an empty array.
+   */
+  readonly pendingEndeavors?: ReadonlyArray<PendingEndeavor>;
 
   /**
    * ── Y5: Espionage (F-05 scaffold) ──
@@ -861,7 +890,8 @@ export type GameAction =
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
   | { readonly type: 'SET_CIVIC'; readonly civicId: string }
-  | { readonly type: 'DIPLOMATIC_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
+  | { readonly type: 'PROPOSE_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
+  | { readonly type: 'RESPOND_ENDEAVOR'; readonly endeavorId: string; readonly response: 'support' | 'accept' | 'reject' }
   | { readonly type: 'DIPLOMATIC_SANCTION'; readonly targetId: PlayerId; readonly sanctionType: string }
   | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
   | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
@@ -1093,7 +1123,9 @@ export type GameAction =
    * unit has spreadsRemaining > 0.
    * On success: city.religionId = owner's religion id, unit.spreadsRemaining decremented.
    */
-  | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId };
+  | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId }
+  // ── F-06: Dark Age opt-in ──
+  | { readonly type: 'CHOOSE_DARK_AGE'; readonly optIn: boolean };
 
 // ── Events ──
 

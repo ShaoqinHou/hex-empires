@@ -9,6 +9,8 @@ export const INDUSTRIALIZATION: TechnologyDef = {
   unlocks: ['factory'],
   description: 'Enables Factory building',
   treePosition: { row: 1, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const SCIENTIFIC_THEORY: TechnologyDef = {
@@ -20,6 +22,8 @@ export const SCIENTIFIC_THEORY: TechnologyDef = {
   unlocks: ['research_lab'],
   description: 'Enables Research Lab',
   treePosition: { row: 0, col: 0 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const RIFLING: TechnologyDef = {
@@ -31,6 +35,8 @@ export const RIFLING: TechnologyDef = {
   unlocks: ['infantry'],
   description: 'Enables Infantry unit',
   treePosition: { row: 2, col: 0 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'melee', value: 5 },
+  masteryCodexCount: 1,
 };
 
 export const STEAM_POWER: TechnologyDef = {
@@ -42,6 +48,8 @@ export const STEAM_POWER: TechnologyDef = {
   unlocks: ['ironclad'],
   description: 'Enables Ironclad naval unit',
   treePosition: { row: 3, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const ELECTRICITY: TechnologyDef = {
@@ -53,6 +61,8 @@ export const ELECTRICITY: TechnologyDef = {
   unlocks: ['power_plant'],
   description: 'Enables Power Plant',
   treePosition: { row: 0, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const REPLACEABLE_PARTS: TechnologyDef = {
@@ -64,6 +74,8 @@ export const REPLACEABLE_PARTS: TechnologyDef = {
   unlocks: ['machine_gun'],
   description: 'Enables Machine Gun unit',
   treePosition: { row: 2, col: 1 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'ranged', value: 4 },
+  masteryCodexCount: 1,
 };
 
 export const FLIGHT: TechnologyDef = {
@@ -75,6 +87,8 @@ export const FLIGHT: TechnologyDef = {
   unlocks: ['biplane'],
   description: 'Enables air units',
   treePosition: { row: 1, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'ranged', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const NUCLEAR_FISSION: TechnologyDef = {
@@ -86,6 +100,8 @@ export const NUCLEAR_FISSION: TechnologyDef = {
   unlocks: ['nuclear_plant'],
   description: 'Enables nuclear power and weapons',
   treePosition: { row: 0, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 5 },
+  masteryCodexCount: 2,
 };
 
 export const COMBINED_ARMS: TechnologyDef = {
@@ -97,6 +113,8 @@ export const COMBINED_ARMS: TechnologyDef = {
   unlocks: ['tank', 'fighter'],
   description: 'Enables Tank and Fighter units',
   treePosition: { row: 2, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 4 },
+  masteryCodexCount: 2,
 };
 
 export const ROCKETRY: TechnologyDef = {
@@ -108,6 +126,8 @@ export const ROCKETRY: TechnologyDef = {
   unlocks: ['rocket_artillery'],
   description: 'Enables Rocket Artillery',
   treePosition: { row: 1, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'siege', value: 5 },
+  masteryCodexCount: 2,
 };
 
 export const MASS_CONSUMPTION: TechnologyDef = {
@@ -119,6 +139,8 @@ export const MASS_CONSUMPTION: TechnologyDef = {
   unlocks: ['mall'],
   description: 'Enables Mall and consumer economy',
   treePosition: { row: 3, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const MASS_MEDIA: TechnologyDef = {
@@ -130,6 +152,8 @@ export const MASS_MEDIA: TechnologyDef = {
   unlocks: ['stadium'],
   description: 'Enables Stadium and cultural influence',
   treePosition: { row: 4, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const AMPHIBIOUS_WARFARE: TechnologyDef = {
@@ -141,6 +165,8 @@ export const AMPHIBIOUS_WARFARE: TechnologyDef = {
   unlocks: ['marine'],
   description: 'Enables Marine unit',
   treePosition: { row: 2, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'melee', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const RADAR: TechnologyDef = {
@@ -152,6 +178,8 @@ export const RADAR: TechnologyDef = {
   unlocks: ['sam'],
   description: 'Enables SAM Battery',
   treePosition: { row: 0, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+  masteryCodexCount: 1,
 };
 
 // --- Rulebook §9.6 expansion: missing modern-age technologies ---
@@ -165,6 +193,8 @@ export const ACADEMICS: TechnologyDef = {
   unlocks: ['schoolhouse', 'oxford_university'],
   description: 'Enables Schoolhouse and Oxford University wonder',
   treePosition: { row: 5, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const MILITARY_SCIENCE: TechnologyDef = {
@@ -176,6 +206,8 @@ export const MILITARY_SCIENCE: TechnologyDef = {
   unlocks: ['military_academy', 'pentagon'],
   description: 'Enables Military Academy and the Pentagon wonder',
   treePosition: { row: 2, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 4 },
+  masteryCodexCount: 2,
 };
 
 export const URBANIZATION: TechnologyDef = {
@@ -187,6 +219,8 @@ export const URBANIZATION: TechnologyDef = {
   unlocks: ['opera_house', 'museum', 'department_store'],
   description: 'Enables Opera House, Museum, and Department Store',
   treePosition: { row: 4, col: 2 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const COMBUSTION: TechnologyDef = {
@@ -198,6 +232,8 @@ export const COMBUSTION: TechnologyDef = {
   unlocks: ['destroyer', 'submarine'],
   description: 'Enables Destroyer and Submarine naval units',
   treePosition: { row: 3, col: 2 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'naval', value: 4 },
+  masteryCodexCount: 2,
 };
 
 export const RADIO: TechnologyDef = {
@@ -209,6 +245,8 @@ export const RADIO: TechnologyDef = {
   unlocks: ['radio_station', 'broadcast_tower', 'tenement'],
   description: 'Enables Radio Station, Broadcast Tower, and Tenement',
   treePosition: { row: 4, col: 3 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+  masteryCodexCount: 1,
 };
 
 export const MASS_PRODUCTION: TechnologyDef = {
@@ -220,6 +258,8 @@ export const MASS_PRODUCTION: TechnologyDef = {
   unlocks: ['hospital', 'rail_station'],
   description: 'Enables Hospital and Rail Station via assembly-line production',
   treePosition: { row: 1, col: 1 },
+  masteryEffect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 3 },
+  masteryCodexCount: 1,
 };
 
 export const MOBILIZATION: TechnologyDef = {
@@ -231,6 +271,8 @@ export const MOBILIZATION: TechnologyDef = {
   unlocks: ['battleship', 'military_base'],
   description: 'Enables Battleship and Military Base',
   treePosition: { row: 3, col: 3 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+  masteryCodexCount: 2,
 };
 
 export const ARMOR: TechnologyDef = {
@@ -242,6 +284,8 @@ export const ARMOR: TechnologyDef = {
   unlocks: ['paratroopers', 'mechanized_infantry'],
   description: 'Enables Paratroopers and Mechanized Infantry',
   treePosition: { row: 2, col: 4 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'cavalry', value: 5 },
+  masteryCodexCount: 2,
 };
 
 export const AERODYNAMICS: TechnologyDef = {
@@ -253,6 +297,8 @@ export const AERODYNAMICS: TechnologyDef = {
   unlocks: ['bomber', 'airport', 'jet_fighter'],
   description: 'Enables Bomber, Airport, and Jet Fighter',
   treePosition: { row: 1, col: 4 },
+  masteryEffect: { type: 'MODIFY_COMBAT', target: 'ranged', value: 5 },
+  masteryCodexCount: 2,
 };
 
 /** F-13: Repeatable Future Tech for Modern age. Available once all other techs are researched. */
