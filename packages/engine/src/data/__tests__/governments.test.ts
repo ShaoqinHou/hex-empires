@@ -71,9 +71,9 @@ const VALID_AGES: ReadonlySet<Age> = new Set<Age>(['antiquity', 'exploration', '
 // ── Governments ──
 
 describe('ALL_GOVERNMENTS', () => {
-  it('contains between 6 and 8 governments', () => {
-    expect(ALL_GOVERNMENTS.length).toBeGreaterThanOrEqual(6);
-    expect(ALL_GOVERNMENTS.length).toBeLessThanOrEqual(8);
+  it('contains between 8 and 14 governments (Z1 added 3 Modern: AUTHORITARIANISM/BUREAUCRATIC_MONARCHY/REVOLUCION)', () => {
+    expect(ALL_GOVERNMENTS.length).toBeGreaterThanOrEqual(8);
+    expect(ALL_GOVERNMENTS.length).toBeLessThanOrEqual(14);
   });
 
   it('has unique ids', () => {
