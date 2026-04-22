@@ -1,85 +1,269 @@
+/**
+ * CrisisPanel — persistent 3-stage slot-filling panel (F-06).
+ *
+ * Wraps PanelShell with priority="modal". Stays open while the current
+ * player's crisisPhase is stage1 / stage2 / stage3. The close button is
+ * disabled until the player has filled all required policy slots; once
+ * filled, the panel auto-closes on the next render (engine sets
+ * crisisPhase to 'resolved' after END_TURN).
+ *
+ * Policy cards come from `state.config.policies`. On click, the panel
+ * dispatches FORCE_CRISIS_POLICY.
+ */
+
+import type { CSSProperties } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import type { CrisisState } from '@hex/engine';
-import { DramaModal } from './DramaModal';
-import type { DramaChoice } from './DramaModal';
+import { PanelShell } from './PanelShell';
 
 interface CrisisPanelProps {
-  readonly onResolve: () => void;
+  readonly onClose: () => void;
 }
 
-export function CrisisPanel({ onResolve }: CrisisPanelProps) {
+/** Stage → human-readable label + numeric index */
+const STAGE_META: Record<string, { readonly label: string; readonly index: number }> = {
+  stage1: { label: 'Stage 1', index: 1 },
+  stage2: { label: 'Stage 2', index: 2 },
+  stage3: { label: 'Stage 3', index: 3 },
+};
+
+export function CrisisPanel({ onClose }: CrisisPanelProps) {
   const { state, dispatch } = useGameState();
-  const activeCrisis: CrisisState | undefined = state.crises.find(c => c.active);
 
-  // Safety guard: if the panel is rendered but no active crisis exists
-  // (e.g. state updated between the useEffect and render), render nothing.
-  if (!activeCrisis) return null;
+  const player = state.players.get(state.currentPlayerId);
+  const phase = player?.crisisPhase ?? 'none';
 
-  const handleChoice = (choiceId: string) => {
-    dispatch({ type: 'RESOLVE_CRISIS', crisisId: activeCrisis.id, choice: choiceId });
-    // Close the panel after resolution — the engine will clear the active
-    // crisis; the useEffect in App.tsx will not re-open since the list is
-    // now empty.
-    onResolve();
+  // Panel should not render if there is no active crisis phase.
+  if (phase === 'none' || phase === 'resolved') return null;
+
+  const filledCount = (player?.crisisPolicies ?? []).length;
+  const requiredSlots = player?.crisisPolicySlots ?? 0;
+  const allFilled = filledCount >= requiredSlots;
+  const selectedPolicies = new Set(player?.crisisPolicies ?? []);
+
+  // Crisis type lookup via age.activeCrisisType → config.crises
+  const activeCrisisType = state.age.activeCrisisType;
+  const crisisDef = activeCrisisType
+    ? state.config.crises.find(c => c.crisisType === activeCrisisType || c.id === activeCrisisType)
+    : undefined;
+  const crisisName = crisisDef?.name ?? 'Crisis';
+  const crisisGlyph = getCrisisGlyph(activeCrisisType ?? '');
+  const crisisDescription = crisisDef?.description ?? getDescription(activeCrisisType ?? '');
+
+  const stageMeta = STAGE_META[phase] ?? { label: phase, index: 0 };
+
+  const handlePolicyClick = (policyId: string) => {
+    dispatch({ type: 'FORCE_CRISIS_POLICY', policyId });
   };
 
-  // Map choices to DramaChoice[] — all secondary tone (player picks one option).
-  const dramaChoices: ReadonlyArray<DramaChoice> = activeCrisis.choices.map(c => ({
-    id: c.id,
-    label: c.text,
-    tone: 'secondary' as const,
-    onSelect: () => handleChoice(c.id),
-  }));
-
-  // Hero glyph — picks a contextual emoji per crisis id.
-  const heroGlyph = getCrisisGlyph(activeCrisis.id);
-  const heroNode = (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '80px', lineHeight: 1.1 }}>{heroGlyph}</div>
-    </div>
-  );
-
-  // Body — flavor description text.
-  const bodyNode = (
-    <p style={{ color: 'var(--panel-muted-color)', lineHeight: 1.6 }}>
-      {getDescription(activeCrisis.id)}
-    </p>
-  );
+  // Collect all policies from config
+  const allPolicies = [...(state.config.policies?.values() ?? [])];
 
   return (
-    <DramaModal
+    <PanelShell
       id="crisis"
-      title={activeCrisis.name}
-      subtitle={`Turn ${activeCrisis.turn}`}
-      hero={heroNode}
-      body={bodyNode}
-      choices={dramaChoices}
-      onResolve={onResolve}
-      tone="crisis"
-    />
+      title={crisisName}
+      onClose={onClose}
+      priority="modal"
+      width="wide"
+      dismissible={allFilled}
+    >
+      {/* Hero glyph */}
+      <div style={heroStyle}>
+        <span style={{ fontSize: '56px', lineHeight: 1 }}>{crisisGlyph}</span>
+      </div>
+
+      {/* Description */}
+      <p style={descriptionStyle}>{crisisDescription}</p>
+
+      {/* Stage indicator */}
+      <div style={stageRowStyle}>
+        <span style={stageLabelStyle}>
+          {stageMeta.label}
+        </span>
+        <span style={slotProgressStyle}>
+          {filledCount} / {requiredSlots} policies filled
+        </span>
+      </div>
+
+      {/* Stage progress dots */}
+      <div style={dotsRowStyle}>
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            style={{
+              ...dotStyle,
+              backgroundColor: i <= stageMeta.index
+                ? 'var(--panel-accent-gold)'
+                : 'var(--panel-muted-bg)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Policy card grid */}
+      <div style={gridStyle}>
+        {allPolicies.map(policy => {
+          const isSelected = selectedPolicies.has(policy.id);
+          const isFull = !isSelected && filledCount >= requiredSlots;
+          return (
+            <button
+              key={policy.id}
+              type="button"
+              disabled={isFull}
+              onClick={() => handlePolicyClick(policy.id)}
+              style={{
+                ...cardStyle,
+                borderColor: isSelected
+                  ? 'var(--panel-accent-gold)'
+                  : 'var(--panel-border)',
+                opacity: isFull ? 0.4 : 1,
+                cursor: isFull ? 'not-allowed' : 'pointer',
+              }}
+              data-testid={`crisis-policy-${policy.id}`}
+            >
+              <div style={cardTitleStyle}>{policy.name}</div>
+              <div style={cardDescStyle}>{policy.description}</div>
+              {isSelected && (
+                <div style={selectedBadgeStyle}>✓</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Status hint when not all slots filled */}
+      {!allFilled && (
+        <p style={hintStyle}>
+          Select {requiredSlots - filledCount} more {requiredSlots - filledCount === 1 ? 'policy' : 'policies'} to resolve this crisis stage.
+        </p>
+      )}
+    </PanelShell>
   );
 }
 
-/** Pick a contextual glyph for a known crisis id */
-function getCrisisGlyph(crisisId: string): string {
+// ── Styles (all token-based) ──
+
+const heroStyle: CSSProperties = {
+  textAlign: 'center',
+  padding: 'var(--panel-padding-md) 0',
+};
+
+const descriptionStyle: CSSProperties = {
+  color: 'var(--panel-muted-color)',
+  lineHeight: 1.6,
+  margin: '0 0 var(--panel-padding-md) 0',
+  fontSize: '14px',
+};
+
+const stageRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 'var(--panel-padding-sm) 0',
+  borderTop: '1px solid var(--panel-border)',
+  borderBottom: '1px solid var(--panel-border)',
+  marginBottom: 'var(--panel-padding-sm)',
+};
+
+const stageLabelStyle: CSSProperties = {
+  font: 'var(--type-heading)',
+  color: 'var(--panel-accent-gold)',
+  fontSize: '15px',
+};
+
+const slotProgressStyle: CSSProperties = {
+  color: 'var(--panel-text-color)',
+  fontSize: '14px',
+};
+
+const dotsRowStyle: CSSProperties = {
+  display: 'flex',
+  gap: '6px',
+  justifyContent: 'center',
+  marginBottom: 'var(--panel-padding-md)',
+};
+
+const dotStyle: CSSProperties = {
+  width: '10px',
+  height: '10px',
+  borderRadius: '50%',
+  transition: 'background-color 0.2s',
+};
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  gap: 'var(--panel-padding-sm)',
+  marginBottom: 'var(--panel-padding-md)',
+};
+
+const cardStyle: CSSProperties = {
+  background: 'var(--panel-muted-bg-soft)',
+  border: '1px solid var(--panel-border)',
+  borderRadius: 'var(--panel-radius)',
+  padding: 'var(--panel-padding-sm) var(--panel-padding-md)',
+  textAlign: 'left',
+  position: 'relative',
+  transition: 'border-color 0.15s, opacity 0.15s',
+};
+
+const cardTitleStyle: CSSProperties = {
+  font: 'var(--type-heading)',
+  color: 'var(--panel-text-color)',
+  fontSize: '13px',
+  marginBottom: '2px',
+};
+
+const cardDescStyle: CSSProperties = {
+  color: 'var(--panel-muted-color)',
+  fontSize: '12px',
+  lineHeight: 1.4,
+};
+
+const selectedBadgeStyle: CSSProperties = {
+  position: 'absolute',
+  top: 4,
+  right: 8,
+  color: 'var(--panel-accent-gold)',
+  fontWeight: 700,
+  fontSize: '14px',
+};
+
+const hintStyle: CSSProperties = {
+  color: 'var(--panel-muted-color)',
+  fontSize: '13px',
+  textAlign: 'center',
+  margin: 0,
+};
+
+/** Pick a contextual glyph for a known crisis type or id */
+function getCrisisGlyph(crisisTypeOrId: string): string {
   const glyphs: Record<string, string> = {
     plague:            '🦠',
     barbarian_invasion:'⚔️',
     golden_age:        '✨',
     trade_opportunity: '🤝',
     natural_disaster:  '🌊',
+    revolt:            '🔥',
+    invasion:          '⚔️',
+    revolution:        '🏴',
+    wars_of_religion:  '⛪',
   };
-  return glyphs[crisisId] ?? '⚠️';
+  return glyphs[crisisTypeOrId] ?? '⚠️';
 }
 
-/** Get description for a known crisis id */
-function getDescription(crisisId: string): string {
+/** Get description for a known crisis type or id */
+function getDescription(crisisTypeOrId: string): string {
   const descriptions: Record<string, string> = {
     plague: 'A devastating plague sweeps across your empire, threatening the lives of your citizens. Your advisors urge immediate action.',
     barbarian_invasion: 'Barbarian hordes have been spotted near your borders. They demand tribute or they will attack!',
-    golden_age: 'Your civilization has achieved great intellectual progress! Scholars and artists flock to your cities. How will you harness this momentum?',
-    trade_opportunity: 'A wealthy foreign trade caravan has arrived at your borders, offering valuable goods in exchange for passage and hospitality.',
+    golden_age: 'Your civilization has achieved great intellectual progress! Scholars and artists flock to your cities.',
+    trade_opportunity: 'A wealthy foreign trade caravan has arrived at your borders, offering valuable goods in exchange for passage.',
     natural_disaster: 'Earthquakes and floods threaten your empire! Your people look to you for guidance in this time of crisis.',
+    revolt: 'Civil unrest threatens to tear your empire apart. Your advisors urge immediate action to restore order.',
+    invasion: 'Hostile forces amass at your borders. You must respond before they breach your defenses.',
+    revolution: 'Revolutionary fervor sweeps through your cities. The old order is crumbling.',
+    wars_of_religion: 'Religious tensions have ignited conflict across your empire. Faith and diplomacy must guide your hand.',
   };
-  return descriptions[crisisId] ?? 'A crisis requires your attention.';
+  return descriptions[crisisTypeOrId] ?? 'A crisis requires your attention. Select policies to mitigate the damage.';
 }

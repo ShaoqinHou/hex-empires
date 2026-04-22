@@ -77,17 +77,19 @@ function GameUI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [winnerId]);
 
-  // Auto-open the crisis modal when an unresolved crisis appears. The panel
-  // is non-dismissible (the player must pick a choice). Once the player
-  // dispatches RESOLVE_CRISIS, CrisisPanel calls onClose → closePanel(),
-  // and the list will be empty so this effect won't re-open it.
-  const hasActiveCrisis = state.crises.some(c => c.active);
+  // Auto-open the crisis panel when the current player enters an active
+  // crisis phase (stage1 / stage2 / stage3). The panel stays open until
+  // the player fills all required policy slots and dismisses, at which
+  // point the engine advances crisisPhase to 'resolved' after END_TURN.
+  const currentPlayer = state.players.get(state.currentPlayerId);
+  const crisisPhase = currentPlayer?.crisisPhase ?? 'none';
+  const hasActiveCrisisPhase = crisisPhase !== 'none' && crisisPhase !== 'resolved';
   useEffect(() => {
-    if (hasActiveCrisis) {
+    if (hasActiveCrisisPhase) {
       openPanel('crisis');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasActiveCrisis]);
+  }, [hasActiveCrisisPhase]);
 
   // Keyboard shortcuts for panel toggles. ESC is handled inside
   // PanelManagerProvider (capture phase) so it's not duplicated here.
@@ -232,7 +234,7 @@ onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
             <VictoryPanel onResolve={closePanel} />
           )}
           {activePanel === 'crisis' && (
-            <CrisisPanel onResolve={closePanel} />
+            <CrisisPanel onClose={closePanel} />
           )}
           {activePanel === 'tradeRoutes' && (
             <TradeRoutesPanel onClose={closePanel} />
