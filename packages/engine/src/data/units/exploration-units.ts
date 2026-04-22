@@ -272,7 +272,7 @@ export const MISSIONARY: UnitDef = {
   range: 0,
   movement: 2,
   sightRange: 2,
-  requiredTech: 'theology',
+  requiredTech: 'printing',
   upgradesTo: null,
   abilities: ['spread_religion'],
 } as const;
