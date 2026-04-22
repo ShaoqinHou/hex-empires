@@ -105,7 +105,6 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
   // First pass: validate entire path for adjacency and passability
   let totalCost = 0;
   let prevCoord = unit.position;
-  let depletingStep = -1; // index of first depleting step, if any
 
   for (let i = 0; i < action.path.length; i++) {
     const nextCoord = action.path[i];
@@ -141,7 +140,6 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     // F-03: binary deplete-all — entering depleting terrain ends movement;
     // reject the path if there are steps beyond this one.
     if (costResult.deplete) {
-      depletingStep = i;
       if (i < action.path.length - 1) {
         return createInvalidResult(state, 'Terrain depletes all movement — cannot continue', 'movement');
       }

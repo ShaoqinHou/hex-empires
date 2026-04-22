@@ -192,10 +192,10 @@ describe('ageSystem', () => {
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     // Should have spent all legacy points (reset to 0)
     expect(next.players.get('p1')!.legacyPoints).toBe(0);
-    // F-04: civ legacy + 3 legacy point bonuses now go to pendingLegacyBonuses (max 4 cap)
+    // F-11: random yield loop removed. Only civ legacy bonus remains in pending.
     const pending = next.players.get('p1')!.pendingLegacyBonuses!;
-    // 1 civ legacy bonus (rome) + 3 from legacy points = 4 total
-    expect(pending.length).toBe(4);
+    // 1 civ legacy bonus (rome) only — no random yields
+    expect(pending.length).toBe(1);
   });
 
   describe('golden/dark age effects', () => {
@@ -300,15 +300,12 @@ describe('ageSystem', () => {
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const bonuses = next.players.get('p1')!.legacyBonuses;
       const darkCombat = bonuses.find(b => b.source === 'dark-age:military:antiquity');
-      const darkPenalty = bonuses.find(b => b.source === 'dark-age:military:antiquity:penalty');
       expect(darkCombat).toBeDefined();
-      expect(darkCombat!.effect).toEqual({ type: 'MODIFY_COMBAT', target: 'all', value: 3 });
-      expect(darkPenalty).toBeDefined();
-      expect(darkPenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: -2 });
+      expect(darkCombat!.effect).toEqual({ type: 'MODIFY_COMBAT', target: 'all', value: -2 });
       expect(next.log.some(e => e.message.includes('Military Dark Age'))).toBe(true);
     });
 
-    it('applies economic dark age: -50 gold immediately and +2 production', () => {
+    it('applies economic dark age: -50 gold immediately and -2 production per city', () => {
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -325,12 +322,12 @@ describe('ageSystem', () => {
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const updatedPlayer = next.players.get('p1')!;
       expect(updatedPlayer.gold).toBe(150); // 200 - 50
-      const productionBonus = updatedPlayer.legacyBonuses.find(b => b.source.includes('dark-age:economic') && b.source.includes('bonus'));
-      expect(productionBonus).toBeDefined();
-      expect(productionBonus!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 });
+      const productionPenalty = updatedPlayer.legacyBonuses.find(b => b.source.includes('dark-age:economic') && b.source.includes('penalty'));
+      expect(productionPenalty).toBeDefined();
+      expect(productionPenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: -2 });
     });
 
-    it('applies science dark age: -2 science penalty and +5 science (tech-loss retired F-12)', () => {
+    it('applies science dark age: -2 science per city (pure penalty, no silver lining)', () => {
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -348,18 +345,14 @@ describe('ageSystem', () => {
       const updatedPlayer = next.players.get('p1')!;
       // Tech-loss retired: all 3 techs must still be present
       expect(updatedPlayer.researchedTechs.length).toBe(3);
-      // Science penalty bonus should exist
-      const sciencePenalty = updatedPlayer.legacyBonuses.find(b => b.source.includes('dark-age:science:antiquity:penalty'));
+      // Science penalty only — no +5 bonus (F-10: dark ages are pure penalties)
+      const sciencePenalty = updatedPlayer.legacyBonuses.find(b => b.source === 'dark-age:science:antiquity');
       expect(sciencePenalty).toBeDefined();
       expect(sciencePenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: -2 });
-      // Science buff bonus should also exist
-      const scienceBonus = updatedPlayer.legacyBonuses.find(b => b.source === 'dark-age:science:antiquity');
-      expect(scienceBonus).toBeDefined();
-      expect(scienceBonus!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 5 });
       expect(next.log.some(e => e.message.includes('Science Dark Age'))).toBe(true);
     });
 
-    it('applies culture dark age: -2 happiness and +4 culture', () => {
+    it('applies culture dark age: -2 culture per city (pure penalty)', () => {
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -374,12 +367,9 @@ describe('ageSystem', () => {
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const bonuses = next.players.get('p1')!.legacyBonuses;
-      const culturePenalty = bonuses.find(b => b.source.includes('dark-age:culture') && b.source.includes('penalty'));
-      const cultureBonus = bonuses.find(b => b.source === 'dark-age:culture:antiquity');
+      const culturePenalty = bonuses.find(b => b.source === 'dark-age:culture:antiquity');
       expect(culturePenalty).toBeDefined();
-      expect(culturePenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: -2 });
-      expect(cultureBonus).toBeDefined();
-      expect(cultureBonus!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 4 });
+      expect(culturePenalty!.effect).toEqual({ type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: -2 });
       expect(next.log.some(e => e.message.includes('Culture Dark Age'))).toBe(true);
     });
 

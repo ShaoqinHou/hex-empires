@@ -278,7 +278,7 @@ export function calculateCombatPreview(
 
   // Gather modifiers for display
   const flankingBonus = calculateFlankingBonus(attacker, defender.position, state);
-  const terrainDefenseBonus = defenderTile ? getTerrainDefenseBonus(state, defenderTile) : 0;
+  const terrainBonusForDisplay = defenderTile ? getTerrainDefenseBonus(state, defenderTile) : { percent: 0, flat: 0 };
   const riverPenalty = Boolean(attackerTile && attackerTile.river.length > 0);
   const firstStrikeBonus = attacker.health === 100;
   const warSupportPenalty = calculateWarSupportPenalty(state, attacker.owner);
@@ -289,7 +289,7 @@ export function calculateCombatPreview(
     attackerFortified: attacker.fortified,
     defenderFortified: defender.fortified,
     flankingBonus,
-    terrainDefenseBonus: Math.round(terrainDefenseBonus * 100),
+    terrainDefenseBonus: Math.round(terrainBonusForDisplay.percent * 100) + terrainBonusForDisplay.flat,
     riverPenalty,
     firstStrikeBonus,
     warSupportPenalty,
@@ -736,8 +736,9 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   let strength = computeEffectiveCS(base, unit.health);
 
   if (tile) {
-    const terrainBonus = getTerrainDefenseBonus(state, tile);
-    strength *= (1 + terrainBonus);
+    const { percent, flat } = getTerrainDefenseBonus(state, tile);
+    strength *= (1 + percent);
+    strength += flat;
   }
 
   if (unit.fortified) {
@@ -759,7 +760,7 @@ function getUnitRange(state: GameState, typeId: string): number {
   return state.config.units.get(typeId)?.range ?? 0;
 }
 
-function getTerrainDefenseBonus(state: GameState, tile: HexTile): number {
+function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: number; flat: number } {
   let percent = 0;
   let flat = 0;
   const terrainDef = state.config.terrains.get(tile.terrain);
@@ -772,11 +773,7 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): number {
     flat += featureDef?.flatDefenseBonus ?? 0;
   }
 
-  // Return combined effect as a single display value:
-  // percent (fractional, displayed as %) + flat (CS, displayed as CS)
-  // The caller multiplies by 100 for percent display, so we convert flat
-  // to the same scale by treating each CS as 1.0 (= 100 when × 100).
-  return percent + flat;
+  return { percent, flat };
 }
 
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {

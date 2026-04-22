@@ -1,5 +1,4 @@
 import type { GameState, GameAction, ActiveEffect, EffectDef, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
-import type { YieldType } from '../types/Yields';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
@@ -18,6 +17,8 @@ export function ageSystem(state: GameState, action: GameAction): GameState {
       return checkLegacyMilestones(state);
     case 'CHOOSE_LEGACY_BONUSES':
       return handleChooseLegacyBonuses(state, action.picks);
+    case 'CHOOSE_DARK_AGE':
+      return handleChooseDarkAge(state, action.optIn);
     default:
       return state;
   }
@@ -52,7 +53,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
 
   // Determine golden/dark age effects based on legacy path milestones (max 1 golden age per transition)
   let rng = state.rng;
-  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.goldenAgeChosen ?? null);
+  const goldenDarkResult = getGoldenDarkAgeEffects(player.legacyPaths, player.age, rng, player.goldenAgeChosen ?? null, player.darkAgeOptIn);
   rng = goldenDarkResult.rng;
 
   // Dark age effects apply immediately (penalties are not selectable)
@@ -71,18 +72,8 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     });
   }
 
-  const yieldTypes: ReadonlyArray<YieldType> = ['food', 'production', 'gold', 'science', 'culture'];
-  for (let i = 0; i < player.legacyPoints; i++) {
-    const result = nextRandom(rng);
-    rng = result.rng;
-    const yieldType = yieldTypes[Math.floor(result.value * yieldTypes.length)];
-    eligible.push({
-      bonusId: `legacy-point:${player.age}:${i}`,
-      axis: 'legacy-points',
-      description: `+1 ${yieldType} (legacy point)`,
-      effect: { type: 'MODIFY_YIELD', target: 'empire', yield: yieldType, value: 1 },
-    });
-  }
+  // F-11: Random yield loop removed — legacyPoints are spent via pickN UI (F-04),
+  // not auto-converted to random yields. The loop was not a Civ VII mechanic.
 
   // Golden age effects are eligible for selection
   const goldenAgeEffects = goldenDarkResult.effects.filter(e => !e.source.includes('dark-age'));
@@ -336,6 +327,7 @@ function getGoldenDarkAgeEffects(
   age: string,
   rng: import('../types/GameState').RngState,
   goldenAgeChosen: 'military' | 'economic' | 'science' | 'culture' | null,
+  darkAgeOptIn: boolean | undefined,
 ): GoldenDarkResult {
   const effects: ActiveEffect[] = [];
   const logEntries: string[] = [];
@@ -362,16 +354,12 @@ function getGoldenDarkAgeEffects(
       effect: { type: 'MODIFY_COMBAT', target: 'all', value: 5 },
     });
     logEntries.push('Military Golden Age! +5 combat strength for all units permanently.');
-  } else if (paths.military === 0) {
+  } else if (paths.military === 0 && darkAgeOptIn !== false) {
     effects.push({
       source: `dark-age:military:${age}`,
-      effect: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+      effect: { type: 'MODIFY_COMBAT', target: 'all', value: -2 },
     });
-    effects.push({
-      source: `dark-age:military:${age}:penalty`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: -2 },
-    });
-    logEntries.push('Military Dark Age! +3 combat but -2 happiness in all cities.');
+    logEntries.push('Military Dark Age! -2 combat strength empire-wide.');
   }
 
   // Economic path
@@ -381,16 +369,16 @@ function getGoldenDarkAgeEffects(
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: 3 },
     });
     logEntries.push('Economic Golden Age! +3 gold in all cities permanently.');
-  } else if (paths.economic === 0) {
+  } else if (paths.economic === 0 && darkAgeOptIn !== false) {
     effects.push({
       source: `dark-age:economic:${age}`,
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: -50 },
     });
     effects.push({
-      source: `dark-age:economic:${age}:bonus`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 },
+      source: `dark-age:economic:${age}:penalty`,
+      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: -2 },
     });
-    logEntries.push('Economic Dark Age! -50 gold immediately but +2 production permanently.');
+    logEntries.push('Economic Dark Age! -50 gold immediately, -2 production per city.');
   }
 
   // Science path
@@ -400,17 +388,13 @@ function getGoldenDarkAgeEffects(
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 3 },
     });
     logEntries.push('Science Golden Age! +3 science in all cities permanently.');
-  } else if (paths.science === 0) {
-    // Science Dark Age: -2 science per city for the next age (yield penalty via legacy bonus)
-    effects.push({
-      source: `dark-age:science:${age}:penalty`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: -2 },
-    });
+  } else if (paths.science === 0 && darkAgeOptIn !== false) {
+    // Science Dark Age: -2 science per city (pure penalty, no silver lining)
     effects.push({
       source: `dark-age:science:${age}`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: 5 },
+      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'science', value: -2 },
     });
-    logEntries.push('Science Dark Age! -2 science per city but +5 science permanently.');
+    logEntries.push('Science Dark Age! -2 science per city.');
   }
 
   // Culture path
@@ -420,16 +404,12 @@ function getGoldenDarkAgeEffects(
       effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 3 },
     });
     logEntries.push('Culture Golden Age! +3 culture in all cities permanently.');
-  } else if (paths.culture === 0) {
-    effects.push({
-      source: `dark-age:culture:${age}:penalty`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: -2 },
-    });
+  } else if (paths.culture === 0 && darkAgeOptIn !== false) {
     effects.push({
       source: `dark-age:culture:${age}`,
-      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 4 },
+      effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: -2 },
     });
-    logEntries.push('Culture Dark Age! -2 happiness but +4 culture permanently.');
+    logEntries.push('Culture Dark Age! -2 culture per city.');
   }
 
   return { effects, logEntries, rng: currentRng };
@@ -566,6 +546,29 @@ function handleChooseLegacyBonuses(state: GameState, picks: readonly string[]): 
       playerId: player.id,
       message: `Selected ${chosen.length} legacy bonus(es).`,
       type: 'legacy' as const,
+    }],
+  };
+}
+
+/**
+ * F-06: Handle CHOOSE_DARK_AGE — player opts in or out of dark age effects
+ * for the upcoming age transition. Stores the choice on PlayerState.
+ * This should be dispatched before TRANSITION_AGE. The actual dark age
+ * effect application happens in getGoldenDarkAgeEffects during transition.
+ */
+function handleChooseDarkAge(state: GameState, optIn: boolean): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, { ...player, darkAgeOptIn: optIn });
+  return {
+    ...state,
+    players: updatedPlayers,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: player.id,
+      message: optIn ? 'Embracing dark age effects.' : 'Declining dark age effects.',
+      type: 'age' as const,
     }],
   };
 }

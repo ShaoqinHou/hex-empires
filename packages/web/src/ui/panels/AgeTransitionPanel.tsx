@@ -17,8 +17,14 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
   const threshold = state.age.ageThresholds[nextAge];
   const ready = player.ageProgress >= threshold;
 
-  // Available civs for the next age
-  const availableCivs = [...state.config.civilizations.values()].filter(c => c.age === nextAge);
+  // Available civs for the next age, sorted with historical-pair matches first
+  const availableCivs = [...state.config.civilizations.values()]
+    .filter(c => c.age === nextAge)
+    .sort((a, b) => {
+      const aMatch = a.historicalPair?.includes(player.civilizationId) ? 0 : 1;
+      const bMatch = b.historicalPair?.includes(player.civilizationId) ? 0 : 1;
+      return aMatch - bMatch;
+    });
 
   // ── Blocking-modal semantic ──
   // AgeTransition is a blocking modal: the player MUST pick a civ to
@@ -86,9 +92,6 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
           />
         </div>
 
-        <div className="mt-3 text-xs" style={{ color: 'var(--panel-muted-color)' }}>
-          💡 Each technology researched grants +5 age progress
-        </div>
       </div>
 
       {/* Current legacy bonuses */}
@@ -136,6 +139,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
           {availableCivs.map(civ => {
             const uniqueUnit = civ.uniqueUnit ? state.config.units.get(civ.uniqueUnit) : undefined;
             const uniqueBuilding = civ.uniqueBuilding ? state.config.buildings.get(civ.uniqueBuilding) : undefined;
+            const isRecommended = civ.historicalPair?.includes(player.civilizationId) ?? false;
 
             return (
               <button
@@ -167,7 +171,17 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                 {/* Civ header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <div className="font-bold text-lg" style={{ color: civ.color }}>{civ.name}</div>
+                    <div className="font-bold text-lg flex items-center gap-2" style={{ color: civ.color }}>
+                      {civ.name}
+                      {isRecommended && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                          style={{ backgroundColor: 'var(--panel-accent-gold-soft)', color: 'var(--panel-turn-badge-text)' }}
+                        >
+                          ★ Recommended
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs capitalize" style={{ color: 'var(--panel-muted-color)' }}>{civ.age} Age</div>
                   </div>
                   {ready && (
