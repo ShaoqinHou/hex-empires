@@ -1,5 +1,23 @@
 import type { EffectDef } from '../../types/GameState';
 import type { AttributeType } from '../../types/Attribute';
+import type { TerrainId } from '../../types/Terrain';
+import type { CivilizationId } from '../../types/Ids';
+
+/**
+ * F-04: A leader's agenda drives AI diplomatic behaviour. Each agenda has a
+ * typed trigger action and a relationship delta so diplomacySystem can
+ * evaluate leader opinions without string parsing.
+ */
+export interface AgendaDef {
+  readonly id: string;
+  readonly name: string;
+  /** Engine action that activates this agenda's relationship effect. */
+  readonly triggerAction?: string;
+  /** Diplomatic relationship change when triggered. Positive = friendly. */
+  readonly relationshipDelta?: number;
+  /** Human-readable description of when this agenda fires. */
+  readonly condition?: string;
+}
 
 /**
  * F-05: A persona is an alternative variant of a leader. The player selects
@@ -14,7 +32,7 @@ export interface PersonaDef {
     readonly description: string;
     readonly effects: ReadonlyArray<EffectDef>;
   };
-  readonly agendaOverride?: ReadonlyArray<string>;
+  readonly agendaOverride?: ReadonlyArray<AgendaDef>;
   readonly primaryAttributesOverride?: readonly [AttributeType, AttributeType];
 }
 
@@ -26,13 +44,24 @@ export interface LeaderDef {
     readonly description: string;
     readonly effects: ReadonlyArray<EffectDef>;
   };
-  readonly agendas: ReadonlyArray<string>;
+  readonly agendas: ReadonlyArray<AgendaDef>;
   /**
    * The two attribute trees this leader has an affinity for.
    * Primary attributes represent this leader's historical strengths and
    * are used to guide recommended attribute spending in the UI.
    */
   readonly primaryAttributes: readonly [AttributeType, AttributeType];
+  /**
+   * F-09: Preferred starting terrain. Used by map generator to place
+   * the leader's starting settlement near this terrain type.
+   */
+  readonly startingBias?: TerrainId;
+  /**
+   * F-09: The civilization this leader is historically associated with.
+   * Used by the UI to show historical pairings and by the random leader
+   * assignment to suggest historically accurate combos.
+   */
+  readonly historicalCivId?: CivilizationId;
   /**
    * F-05: Alternative personas for this leader. When absent the leader has
    * only the base persona. When present, the player may choose one at game

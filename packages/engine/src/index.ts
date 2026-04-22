@@ -261,7 +261,7 @@ export type { ResourceType } from './types/Resource';
 export { ALL_RESOURCES, WHEAT, CATTLE, STONE, IRON, HORSES, NITER, SILK, GEMS, SPICES, WINE } from './data/resources';
 
 // Leader data
-export type { LeaderDef } from './data/leaders';
+export type { LeaderDef, PersonaDef, AgendaDef } from './data/leaders';
 export { ALL_LEADERS } from './data/leaders';
 
 // ── M12 Integration — newly exposed data barrels ──

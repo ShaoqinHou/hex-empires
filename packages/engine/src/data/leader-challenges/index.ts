@@ -24,7 +24,7 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
   {
     id: 'augustus_city_builder',
     leaderId: 'augustus',
-    name: 'Pax Romana: Builder',
+    name: 'Imperium Maius: Builder',
     description: 'As Augustus, found 5 cities.',
     xp: 200,
     condition: { type: 'cities_at_least', count: 5 },
@@ -32,7 +32,7 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
   {
     id: 'augustus_architect',
     leaderId: 'augustus',
-    name: 'Pax Romana: Architect',
+    name: 'Imperium Maius: Architect',
     description: 'As Augustus, build 10 buildings.',
     xp: 200,
     condition: { type: 'buildings_built_at_least', count: 10 },
@@ -150,7 +150,7 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
   {
     id: 'hatshepsut_builder',
     leaderId: 'hatshepsut',
-    name: 'Eye of Horus: Builder',
+    name: 'Gods Wife of Amun: Builder',
     description: 'As Hatshepsut, build 10 buildings.',
     xp: 200,
     condition: { type: 'buildings_built_at_least', count: 10 },
@@ -158,7 +158,7 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
   {
     id: 'hatshepsut_age',
     leaderId: 'hatshepsut',
-    name: 'Eye of Horus: Age Transcendent',
+    name: 'Gods Wife of Amun: Age Transcendent',
     description: 'As Hatshepsut, reach the Exploration Age.',
     xp: 200,
     condition: { type: 'age_at_least', age: 'exploration' },

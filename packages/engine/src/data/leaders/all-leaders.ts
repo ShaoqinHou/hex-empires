@@ -1,14 +1,21 @@
-import type { LeaderDef } from './types';
+import type { LeaderDef, AgendaDef } from './types';
+
+const AUGUSTUS_AGENDAS: readonly AgendaDef[] = [
+  { id: 'expansionist', name: 'Expansionist', triggerAction: 'FOUND_CITY', relationshipDelta: 1, condition: 'Likes civs that found cities rapidly' },
+  { id: 'builder', name: 'Builder', triggerAction: 'BUILDING_COMPLETE', relationshipDelta: 1, condition: 'Likes civs that construct buildings' },
+] as const;
 
 export const AUGUSTUS: LeaderDef = {
   id: 'augustus',
   name: 'Augustus',
   ability: {
-    name: 'Pax Romana',
+    name: 'Imperium Maius',
     description: '+5 combat strength when defending. Cities grow 10% faster.',
     effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 5 }],
   },
-  agendas: ['expansionist', 'builder'],
+  agendas: AUGUSTUS_AGENDAS,
+  startingBias: 'grassland',
+  historicalCivId: 'rome',
 
   primaryAttributes: ['economic', 'militaristic'],
   // F-05: persona scaffold — two variants of Augustus
@@ -42,6 +49,12 @@ export const AUGUSTUS: LeaderDef = {
   ],
 };
 
+const CLEOPATRA_AGENDAS: readonly AgendaDef[] = [
+  { id: 'diplomat', name: 'Diplomat', triggerAction: 'DECLARE_FRIENDSHIP', relationshipDelta: 2, condition: 'Likes civs that maintain friendly relations' },
+  { id: 'trader', name: 'Trader', triggerAction: 'TRADE_ROUTE_ESTABLISHED', relationshipDelta: 1, condition: 'Likes civs that trade actively' },
+] as const;
+
+// [CIV-VI-HOLDOVER: unverified VII name — "Mediterranean Bride" is from Civ VI]
 export const CLEOPATRA: LeaderDef = {
   id: 'cleopatra',
   name: 'Cleopatra',
@@ -50,11 +63,19 @@ export const CLEOPATRA: LeaderDef = {
     description: 'Trade routes to other civs provide +4 gold. +2 food from floodplains.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
   },
-  agendas: ['diplomat', 'trader'],
+  agendas: CLEOPATRA_AGENDAS,
+  startingBias: 'floodplains',
+  historicalCivId: 'egypt',
 
   primaryAttributes: ['diplomatic', 'economic'],
 };
 
+const PERICLES_AGENDAS: readonly AgendaDef[] = [
+  { id: 'culturalist', name: 'Culturalist', triggerAction: 'CULTURE_MILESTONE', relationshipDelta: 1, condition: 'Likes civs that invest in culture' },
+  { id: 'diplomat', name: 'Diplomat', triggerAction: 'DECLARE_FRIENDSHIP', relationshipDelta: 2, condition: 'Likes civs that maintain friendly relations' },
+] as const;
+
+// [CIV-VI-HOLDOVER: not confirmed as a Civ VII leader — carried from Civ VI]
 export const PERICLES: LeaderDef = {
   id: 'pericles',
   name: 'Pericles',
@@ -64,11 +85,18 @@ export const PERICLES: LeaderDef = {
     // TODO(W3-04 F-08): dynamic multiplier pending attribute system (W3-07). Currently flat +2 culture.
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
   },
-  agendas: ['culturalist', 'diplomat'],
+  agendas: PERICLES_AGENDAS,
+  historicalCivId: 'greece',
 
   primaryAttributes: ['cultural', 'diplomatic'],
 };
 
+const CYRUS_AGENDAS: readonly AgendaDef[] = [
+  { id: 'conqueror', name: 'Conqueror', triggerAction: 'WAR_DECLARED', relationshipDelta: -2, condition: 'Dislikes civs that fall behind militarily' },
+  { id: 'opportunist', name: 'Opportunist', triggerAction: 'WAR_DECLARED', relationshipDelta: 1, condition: 'Likes civs that exploit momentary advantages' },
+] as const;
+
+// [CIV-VI-HOLDOVER: not confirmed as a Civ VII leader — carried from Civ VI]
 export const CYRUS: LeaderDef = {
   id: 'cyrus',
   name: 'Cyrus',
@@ -77,11 +105,18 @@ export const CYRUS: LeaderDef = {
     description: '+2 movement for all units for 10 turns after declaring surprise war.',
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'all', value: 2 }],
   },
-  agendas: ['conqueror', 'opportunist'],
+  agendas: CYRUS_AGENDAS,
+  historicalCivId: 'persia',
 
   primaryAttributes: ['militaristic', 'diplomatic'],
 };
 
+const GANDHI_AGENDAS: readonly AgendaDef[] = [
+  { id: 'peacemaker', name: 'Peacemaker', triggerAction: 'WAR_DECLARED', relationshipDelta: -3, condition: 'Dislikes civs that declare wars' },
+  { id: 'religious', name: 'Religious', triggerAction: 'FOUND_RELIGION', relationshipDelta: 2, condition: 'Likes civs that found and spread religion' },
+] as const;
+
+// [CIV-VI-HOLDOVER: not confirmed as a Civ VII leader — carried from Civ VI]
 export const GANDHI: LeaderDef = {
   id: 'gandhi',
   name: 'Gandhi',
@@ -90,10 +125,16 @@ export const GANDHI: LeaderDef = {
     description: '+5 faith for each civ at peace with. Opponents receive doubled war weariness.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 }],
   },
-  agendas: ['peacemaker', 'religious'],
+  agendas: GANDHI_AGENDAS,
+  historicalCivId: 'india',
 
   primaryAttributes: ['cultural', 'scientific'],
 };
+
+const QIN_SHI_HUANG_AGENDAS: readonly AgendaDef[] = [
+  { id: 'builder', name: 'Builder', triggerAction: 'BUILDING_COMPLETE', relationshipDelta: 1, condition: 'Likes civs that construct buildings' },
+  { id: 'wonder_obsessed', name: 'Wonder Obsessed', triggerAction: 'WONDER_BUILT', relationshipDelta: 2, condition: 'Likes civs that build wonders' },
+] as const;
 
 export const QIN_SHI_HUANG: LeaderDef = {
   id: 'qin_shi_huang',
@@ -103,10 +144,16 @@ export const QIN_SHI_HUANG: LeaderDef = {
     description: 'Builders receive extra charge. Can spend builder charges to rush wonders.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
   },
-  agendas: ['builder', 'wonder_obsessed'],
+  agendas: QIN_SHI_HUANG_AGENDAS,
+  historicalCivId: 'china',
 
   primaryAttributes: ['militaristic', 'economic'],
 };
+
+const ALEXANDER_AGENDAS: readonly AgendaDef[] = [
+  { id: 'conqueror', name: 'Conqueror', triggerAction: 'WAR_DECLARED', relationshipDelta: -2, condition: 'Dislikes civs that fall behind militarily' },
+  { id: 'expansionist', name: 'Expansionist', triggerAction: 'FOUND_CITY', relationshipDelta: 1, condition: 'Likes civs that found cities rapidly' },
+] as const;
 
 export const ALEXANDER: LeaderDef = {
   id: 'alexander',
@@ -119,24 +166,38 @@ export const ALEXANDER: LeaderDef = {
       { type: 'GRANT_UNIT', unitId: 'hephaestion', count: 1 },
     ],
   },
-  agendas: ['conqueror', 'expansionist'],
+  agendas: ALEXANDER_AGENDAS,
+  startingBias: 'hills',
+  historicalCivId: 'greece',
 
   primaryAttributes: ['militaristic', 'expansionist'],
 };
+
+const HATSHEPSUT_AGENDAS: readonly AgendaDef[] = [
+  { id: 'trader', name: 'Trader', triggerAction: 'TRADE_ROUTE_ESTABLISHED', relationshipDelta: 1, condition: 'Likes civs that trade actively' },
+  { id: 'builder', name: 'Builder', triggerAction: 'BUILDING_COMPLETE', relationshipDelta: 1, condition: 'Likes civs that construct buildings' },
+] as const;
 
 export const HATSHEPSUT: LeaderDef = {
   id: 'hatshepsut',
   name: 'Hatshepsut',
   ability: {
-    name: 'Eye of Horus',
+    name: 'Gods Wife of Amun',
     description: 'International trade routes generate +2 gold and +1 food.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },
-  agendas: ['trader', 'builder'],
+  agendas: HATSHEPSUT_AGENDAS,
+  historicalCivId: 'egypt',
 
   primaryAttributes: ['cultural', 'economic'],
 };
 
+const GENGHIS_KHAN_AGENDAS: readonly AgendaDef[] = [
+  { id: 'conqueror', name: 'Conqueror', triggerAction: 'WAR_DECLARED', relationshipDelta: -2, condition: 'Dislikes civs that fall behind militarily' },
+  { id: 'expansionist', name: 'Expansionist', triggerAction: 'FOUND_CITY', relationshipDelta: 1, condition: 'Likes civs that found cities rapidly' },
+] as const;
+
+// [CIV-VI-HOLDOVER: not confirmed as a Civ VII leader — carried from Civ VI]
 export const GENGHIS_KHAN: LeaderDef = {
   id: 'genghis_khan',
   name: 'Genghis Khan',
@@ -145,7 +206,9 @@ export const GENGHIS_KHAN: LeaderDef = {
     description: '+10 combat strength for cavalry units. Cavalry units ignore movement penalties from terrain.',
     effects: [{ type: 'MODIFY_COMBAT', target: 'cavalry', value: 10 }],
   },
-  agendas: ['conqueror', 'expansionist'],
+  agendas: GENGHIS_KHAN_AGENDAS,
+  startingBias: 'plains',
+  historicalCivId: 'mongolia',
 
   primaryAttributes: ['militaristic', 'expansionist'],
 };
