@@ -39,7 +39,7 @@ echo "========================================"
 echo ""
 
 echo "--- Units ---"
-check "BUILDER unit retired (tile-improvements F-01)" "export const BUILDER|id: ['\"]builder['\"]"
+check "BUILDER unit retired (tile-improvements F-01)" "export const BUILDER:" packages/engine/src/data/units
 check "build_improvement ability retired" "'build_improvement'" packages/engine/src
 
 echo ""
