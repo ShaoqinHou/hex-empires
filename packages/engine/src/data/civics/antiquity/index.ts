@@ -9,6 +9,7 @@ export const CODE_OF_LAWS: CivicDef = {
   unlocks: ['monument'],
   description: 'Establishes foundational governance. Unlocks Monument.',
   treePosition: { row: 0, col: 0 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
 };
 
 export const CRAFTSMANSHIP: CivicDef = {
@@ -20,6 +21,7 @@ export const CRAFTSMANSHIP: CivicDef = {
   unlocks: [],
   description: '+1 production from improved tiles',
   treePosition: { row: 0, col: 1 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
 };
 
 export const FOREIGN_TRADE: CivicDef = {
@@ -42,6 +44,7 @@ export const EARLY_EMPIRE: CivicDef = {
   unlocks: [],
   description: '+1 settlement cap',
   treePosition: { row: 0, col: 2 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
 };
 
 export const MYSTICISM: CivicDef = {
@@ -75,6 +78,7 @@ export const MILITARY_TRADITION: CivicDef = {
   unlocks: [],
   description: '+25% combat XP gain',
   treePosition: { row: 1, col: 3 },
+  masteryUnlocks: [{ type: 'MODIFY_COMBAT', target: 'melee', value: 2 }],
 };
 
 export const RECORDED_HISTORY: CivicDef = {

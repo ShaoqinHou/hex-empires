@@ -417,7 +417,7 @@ describe('updateDiplomacyCounters', () => {
   });
 });
 
-describe('DIPLOMATIC_ENDEAVOR action', () => {
+describe('PROPOSE_ENDEAVOR action', () => {
   function twoPlayerStateWithInfluence(influence: number) {
     return createTestState({
       players: new Map([
@@ -428,24 +428,27 @@ describe('DIPLOMATIC_ENDEAVOR action', () => {
     });
   }
 
-  it('adds an endeavor to the relation when player has enough influence', () => {
+  it('creates a pending endeavor when player has enough influence', () => {
     const state = twoPlayerStateWithInfluence(100);
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'trade_mission',
     });
-    const rel = next.diplomacy.relations.get('p1:p2')!;
-    expect(rel.activeEndeavors).toHaveLength(1);
-    expect(rel.activeEndeavors[0].type).toBe('trade_mission');
-    expect(rel.activeEndeavors[0].turnsRemaining).toBe(10);
-    expect(rel.activeEndeavors[0].sourceId).toBe('p1');
+    const pending = next.diplomacy.pendingEndeavors ?? [];
+    expect(pending).toHaveLength(1);
+    expect(pending[0].sourceId).toBe('p1');
+    expect(pending[0].targetId).toBe('p2');
+    expect(pending[0].endeavorType).toBe('trade_mission');
+    // No activeEndeavors yet — awaiting response
+    const rel = next.diplomacy.relations.get('p1:p2');
+    expect(rel?.activeEndeavors ?? []).toHaveLength(0);
   });
 
   it('deducts influence cost from the acting player', () => {
     const state = twoPlayerStateWithInfluence(100);
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'trade_mission',
     });
@@ -455,13 +458,12 @@ describe('DIPLOMATIC_ENDEAVOR action', () => {
   it('rejects endeavor when player has insufficient influence', () => {
     const state = twoPlayerStateWithInfluence(30);
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'trade_mission',
     });
-    // No relation created / no endeavors added
-    const rel = next.diplomacy.relations.get('p1:p2');
-    expect(rel?.activeEndeavors ?? []).toHaveLength(0);
+    // No pending endeavor created
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
     // Influence unchanged
     expect(next.players.get('p1')!.influence).toBe(30);
     // Log entry explains rejection
@@ -471,21 +473,163 @@ describe('DIPLOMATIC_ENDEAVOR action', () => {
   it('adds a log entry on success', () => {
     const state = twoPlayerStateWithInfluence(100);
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'cultural_exchange',
     });
-    expect(next.log.some(e => e.message.includes('cultural_exchange') && e.message.includes('p2'))).toBe(true);
+    expect(next.log.some(e => e.message.includes('Proposed') && e.message.includes('cultural_exchange') && e.message.includes('p2'))).toBe(true);
   });
 
   it('ignores endeavor targeting self', () => {
     const state = twoPlayerStateWithInfluence(100);
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p1',
       endeavorType: 'trade_mission',
     });
     expect(next).toBe(state);
+  });
+});
+
+describe('RESPOND_ENDEAVOR action', () => {
+  function stateWithPendingEndeavor() {
+    return createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 500 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 500 })],
+      ]),
+      currentPlayerId: 'p2', // target responds
+      diplomacy: {
+        relations: new Map([['p1:p2', defaultRelation()]]),
+        pendingEndeavors: [{
+          id: 'endeavor_1',
+          sourceId: 'p1',
+          targetId: 'p2',
+          endeavorType: 'trade_mission',
+          influenceCost: 50,
+        }],
+      },
+    });
+  }
+
+  it('accept: activates the endeavor with +5 relationship', () => {
+    const state = stateWithPendingEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'accept',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.activeEndeavors).toHaveLength(1);
+    expect(rel.activeEndeavors[0].type).toBe('trade_mission');
+    expect(rel.activeEndeavors[0].turnsRemaining).toBe(10);
+    expect(rel.relationship).toBe(5); // +5 for accept
+    // Pending removed
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+
+  it('support: activates the endeavor with +10 relationship and both players gain benefit', () => {
+    const state = stateWithPendingEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'support',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.activeEndeavors).toHaveLength(1);
+    expect(rel.relationship).toBe(10); // +10 for support
+    // Both players gain a culture bonus
+    const p1Bonus = next.players.get('p1')!.legacyBonuses.find(b => b.source.startsWith('endeavor_support:'));
+    const p2Bonus = next.players.get('p2')!.legacyBonuses.find(b => b.source.startsWith('endeavor_support:'));
+    expect(p1Bonus).toBeDefined();
+    expect(p2Bonus).toBeDefined();
+    if (p1Bonus!.effect.type === 'MODIFY_YIELD') {
+      expect(p1Bonus!.effect.yield).toBe('culture');
+      expect(p1Bonus!.effect.value).toBe(1);
+    }
+    // Pending removed
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+
+  it('reject: removes pending endeavor with -10 relationship', () => {
+    const state = stateWithPendingEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'reject',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.activeEndeavors).toHaveLength(0); // no endeavor activated
+    expect(rel.relationship).toBe(-10); // -10 for reject
+    // Pending removed
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+
+  it('only the target player can respond', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 500 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 500 })],
+      ]),
+      currentPlayerId: 'p1', // source tries to respond to their own proposal
+      diplomacy: {
+        relations: new Map([['p1:p2', defaultRelation()]]),
+        pendingEndeavors: [{
+          id: 'endeavor_1',
+          sourceId: 'p1',
+          targetId: 'p2',
+          endeavorType: 'trade_mission',
+          influenceCost: 50,
+        }],
+      },
+    });
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'accept',
+    });
+    // Should be unchanged — source can't respond
+    expect(next).toBe(state);
+  });
+
+  it('unknown endeavor id is ignored', () => {
+    const state = stateWithPendingEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'nonexistent',
+      response: 'accept',
+    });
+    expect(next).toBe(state);
+  });
+
+  it('accept updates diplomatic status based on new relationship', () => {
+    // Start with relationship at 19, accept adds +5 → 24 → friendly
+    const relation = { ...defaultRelation(), relationship: 19 };
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 500 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 500 })],
+      ]),
+      currentPlayerId: 'p2',
+      diplomacy: {
+        relations: new Map([['p1:p2', relation]]),
+        pendingEndeavors: [{
+          id: 'endeavor_1',
+          sourceId: 'p1',
+          targetId: 'p2',
+          endeavorType: 'trade_mission',
+          influenceCost: 50,
+        }],
+      },
+    });
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'accept',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.relationship).toBe(24);
+    expect(rel.status).toBe('friendly');
   });
 });
 

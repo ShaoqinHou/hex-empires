@@ -306,37 +306,36 @@ describe('D8: negative War Support reduces CS of the disadvantaged side in comba
 // ── D9: Endeavor costs Influence (§11.1 / §11.3) ───────────────────────────
 
 describe('D9: diplomatic endeavors cost Influence when executed (§11.1, §11.3)', () => {
-  it('executing a Research Collaboration endeavor deducts Influence from the initiator', () => {
+  it('proposing a Research Collaboration endeavor deducts Influence from the initiator', () => {
     // §11.1: "Influence is spent on all diplomatic actions." We fire one
-    // endeavor and verify the sourcing player's Influence strictly decreases.
+    // endeavor proposal and verify the sourcing player's Influence strictly decreases.
     const state = stateWithRelation({}, { p1: { influence: 500 } });
     const before = state.players.get('p1')!.influence;
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'research_collaboration',
     });
     const after = next.players.get('p1')!.influence;
     expect(after).toBeLessThan(before);
-    // And the endeavor must have been recorded on the relation.
-    const rel = next.diplomacy.relations.get('p1:p2')!;
-    expect(rel.activeEndeavors.length).toBe(1);
-    expect(rel.activeEndeavors[0].type).toBe('research_collaboration');
+    // F-04: endeavor is now pending (awaiting target response), not active.
+    const pending = next.diplomacy.pendingEndeavors ?? [];
+    expect(pending.length).toBe(1);
+    expect(pending[0].endeavorType).toBe('research_collaboration');
   });
 
   it('endeavor is REJECTED when initiator lacks Influence', () => {
     // An insufficient-Influence proposal must be a no-op on the relation —
-    // no endeavor gets attached and Influence is not deducted.
+    // no pending endeavor created and Influence is not deducted.
     const state = stateWithRelation({}, { p1: { influence: 0 } });
     const next = diplomacySystem(state, {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'research_collaboration',
     });
     expect(next.players.get('p1')!.influence).toBe(0);
-    const rel = next.diplomacy.relations.get('p1:p2');
-    // Either the row doesn't exist yet, or it exists with no endeavors.
-    expect(rel?.activeEndeavors.length ?? 0).toBe(0);
+    const pending = next.diplomacy.pendingEndeavors ?? [];
+    expect(pending.length).toBe(0);
   });
 });
 
@@ -354,12 +353,12 @@ describe('D10: endeavor Influence cost scales with Age (x1 Antiquity, x2 Explora
       return { ...base, age: { ...base.age, currentAge } };
     };
     const antiquity = diplomacySystem(buildState('antiquity'), {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'research_collaboration',
     });
     const exploration = diplomacySystem(buildState('exploration'), {
-      type: 'DIPLOMATIC_ENDEAVOR',
+      type: 'PROPOSE_ENDEAVOR',
       targetId: 'p2',
       endeavorType: 'research_collaboration',
     });

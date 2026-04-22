@@ -203,16 +203,21 @@ function processCivicMasteryResearch(state: GameState): GameState {
   const newProgress = player.civicMasteryProgress + culturePerTurn;
 
   if (newProgress >= masteryCost) {
-    // Civic mastery complete — grant +1 culture empire-wide yield bonus
-    const masteryBonus: ActiveEffect = {
-      source: `civic_mastery:${player.currentCivicMastery}`,
-      effect: {
-        type: 'MODIFY_YIELD',
-        target: 'empire',
-        yield: 'culture',
-        value: 1,
-      },
-    };
+    // F-09: Apply per-civic masteryUnlocks, or fall back to generic +1 culture
+    const masteryEffects: ReadonlyArray<ActiveEffect> = civicDef?.masteryUnlocks
+      ? civicDef.masteryUnlocks.map(effect => ({
+          source: `civic_mastery:${player.currentCivicMastery}`,
+          effect,
+        }))
+      : [{
+          source: `civic_mastery:${player.currentCivicMastery}`,
+          effect: {
+            type: 'MODIFY_YIELD' as const,
+            target: 'empire' as const,
+            yield: 'culture' as const,
+            value: 1,
+          },
+        }];
 
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
@@ -220,8 +225,18 @@ function processCivicMasteryResearch(state: GameState): GameState {
       masteredCivics: [...player.masteredCivics, player.currentCivicMastery],
       currentCivicMastery: null,
       civicMasteryProgress: 0,
-      legacyBonuses: [...player.legacyBonuses, masteryBonus],
+      legacyBonuses: [...player.legacyBonuses, ...masteryEffects],
     });
+
+    // Build a human-readable summary of effects
+    const effectSummary = masteryEffects
+      .map(e => {
+        if (e.effect.type === 'MODIFY_YIELD') return `+${e.effect.value} ${e.effect.yield}`;
+        if (e.effect.type === 'MODIFY_COMBAT') return `+${e.effect.value} combat (${e.effect.target})`;
+        if (e.effect.type === 'MODIFY_MOVEMENT') return `+${e.effect.value} movement (${e.effect.target})`;
+        return e.effect.type;
+      })
+      .join(', ');
 
     return {
       ...state,
@@ -229,7 +244,7 @@ function processCivicMasteryResearch(state: GameState): GameState {
       log: [...state.log, {
         turn: state.turn,
         playerId: player.id,
-        message: `Mastered civic: ${civicDef?.name ?? player.currentCivicMastery}! (+1 Culture per turn)`,
+        message: `Mastered civic: ${civicDef?.name ?? player.currentCivicMastery}! (${effectSummary})`,
         type: 'civic',
         category: 'civic' as const,
         panelTarget: 'civics' as const,

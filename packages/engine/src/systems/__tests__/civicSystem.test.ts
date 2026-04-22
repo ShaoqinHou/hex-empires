@@ -209,7 +209,7 @@ describe('civicSystem', () => {
       expect(next.players.get('p1')!.civicMasteryProgress).toBe(0);
     });
 
-    it('grants +1 culture empire yield bonus on civic mastery completion', () => {
+    it('grants per-civic masteryUnlocks on civic mastery completion', () => {
       const player = createTestPlayer({
         researchedCivics: ['code_of_laws'],
         masteredCivics: [],
@@ -229,7 +229,7 @@ describe('civicSystem', () => {
       expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
       if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
         expect(masteryBonus!.effect.yield).toBe('culture');
-        expect(masteryBonus!.effect.value).toBe(1);
+        expect(masteryBonus!.effect.value).toBe(2); // masteryUnlocks for code_of_laws
         expect(masteryBonus!.effect.target).toBe('empire');
       }
     });
@@ -392,7 +392,7 @@ describe('civicSystem', () => {
       expect(next.players.get('p1')!.civicMasteryProgress).toBe(0);
     });
 
-    it('grants +1 culture empire yield bonus on civic mastery completion', () => {
+    it('grants per-civic masteryUnlocks on civic mastery completion', () => {
       const player = createTestPlayer({
         researchedCivics: ['code_of_laws'],
         masteredCivics: [],
@@ -412,7 +412,7 @@ describe('civicSystem', () => {
       expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
       if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
         expect(masteryBonus!.effect.yield).toBe('culture');
-        expect(masteryBonus!.effect.value).toBe(1);
+        expect(masteryBonus!.effect.value).toBe(2); // masteryUnlocks for code_of_laws
         expect(masteryBonus!.effect.target).toBe('empire');
       }
     });

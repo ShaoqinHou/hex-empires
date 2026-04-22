@@ -1,3 +1,5 @@
+import type { EffectDef } from './GameState';
+
 export interface CivicDef {
   readonly id: string;
   readonly name: string;
@@ -16,4 +18,10 @@ export interface CivicDef {
    * Only used in the Modern age (W2-03 CT F-08).
    */
   readonly ideologyBranch?: 'democracy' | 'fascism' | 'communism';
+  /**
+   * F-09: Per-civic mastery unlock effects. When a player masters this civic
+   * (re-researches it at 80% cost), these effects are applied instead of the
+   * generic +1 culture/turn. Undefined falls back to MODIFY_YIELD/culture/+1.
+   */
+  readonly masteryUnlocks?: ReadonlyArray<EffectDef>;
 }

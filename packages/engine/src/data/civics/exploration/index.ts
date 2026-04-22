@@ -9,6 +9,7 @@ export const HUMANISM: CivicDef = {
   unlocks: [],
   description: '+2 science per academy',
   treePosition: { row: 0, col: 0 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 }],
 };
 
 export const MERCANTILISM: CivicDef = {
@@ -20,6 +21,7 @@ export const MERCANTILISM: CivicDef = {
   unlocks: [],
   description: '+3 gold from trade routes',
   treePosition: { row: 2, col: 0 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
 };
 
 export const DIVINE_RIGHT: CivicDef = {
@@ -86,6 +88,7 @@ export const NATIONALISM: CivicDef = {
   unlocks: [],
   description: '+5 combat strength in own territory',
   treePosition: { row: 1, col: 4 },
+  masteryUnlocks: [{ type: 'MODIFY_COMBAT', target: 'all', value: 3 }],
 };
 
 /**

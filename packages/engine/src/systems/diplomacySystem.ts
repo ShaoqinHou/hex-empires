@@ -1,4 +1,4 @@
-import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect } from '../types/GameState';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 /**
@@ -37,17 +37,23 @@ function ageCostMultiplier(age: Age): number {
 export function diplomacySystem(state: GameState, action: GameAction): GameState {
   if (
     action.type !== 'PROPOSE_DIPLOMACY' &&
-    action.type !== 'DIPLOMATIC_ENDEAVOR' &&
+    action.type !== 'PROPOSE_ENDEAVOR' &&
+    action.type !== 'RESPOND_ENDEAVOR' &&
     action.type !== 'DIPLOMATIC_SANCTION'
   ) return state;
+
+  // Handle RESPOND_ENDEAVOR (target player responds to a pending endeavor)
+  if (action.type === 'RESPOND_ENDEAVOR') {
+    return handleRespondEndeavor(state, action.endeavorId, action.response);
+  }
 
   const sourceId = state.currentPlayerId;
   const targetId = action.targetId;
   if (sourceId === targetId) return state;
   if (!state.players.has(targetId)) return state;
 
-  // Handle DIPLOMATIC_ENDEAVOR
-  if (action.type === 'DIPLOMATIC_ENDEAVOR') {
+  // Handle PROPOSE_ENDEAVOR (step 1 of 2-step endeavor flow)
+  if (action.type === 'PROPOSE_ENDEAVOR') {
     return handleEndeavor(state, sourceId, targetId, action.endeavorType);
   }
 
@@ -285,6 +291,10 @@ function clampWarSupport(value: number): number {
   return Math.max(-100, Math.min(100, value));
 }
 
+/**
+ * F-04 STEP 1: PROPOSE_ENDEAVOR creates a pending endeavor.
+ * Influence is deducted immediately. Target must respond via RESPOND_ENDEAVOR.
+ */
 function handleEndeavor(state: GameState, sourceId: string, targetId: string, endeavorType: string): GameState {
   const sourcePlayer = state.players.get(sourceId)!;
 
@@ -298,23 +308,23 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
       log: [...state.log, {
         turn: state.turn,
         playerId: sourceId,
-        message: `Cannot conduct ${endeavorType} endeavor with ${targetId} (insufficient Influence, need ${cost})`,
+        message: `Cannot propose ${endeavorType} endeavor to ${targetId} (insufficient Influence, need ${cost})`,
         type: 'diplomacy',
       }],
     };
   }
 
-  const relationKey = getRelationKey(sourceId, targetId);
-  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+  // Generate a deterministic endeavor id
+  const pending = state.diplomacy.pendingEndeavors ?? [];
+  const endeavorId = `${sourceId}:${targetId}:${endeavorType}:t${state.turn}:${pending.length}`;
 
-  const newEndeavor: DiplomaticEndeavor = { type: endeavorType, turnsRemaining: ENDEAVOR_DURATION, sourceId };
-  const updatedRelation: DiplomacyRelation = {
-    ...currentRelation,
-    activeEndeavors: [...currentRelation.activeEndeavors, newEndeavor],
+  const newPending: PendingEndeavor = {
+    id: endeavorId,
+    sourceId,
+    targetId,
+    endeavorType,
+    influenceCost: cost,
   };
-
-  const updatedRelations = new Map(state.diplomacy.relations);
-  updatedRelations.set(relationKey, updatedRelation);
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(sourceId, { ...sourcePlayer, influence: sourcePlayer.influence - cost });
@@ -322,16 +332,121 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
   return {
     ...state,
     players: updatedPlayers,
-    diplomacy: { relations: updatedRelations },
+    diplomacy: {
+      ...state.diplomacy,
+      pendingEndeavors: [...pending, newPending],
+    },
     log: [...state.log, {
       turn: state.turn,
       playerId: sourceId,
-      message: `Conducted ${endeavorType} endeavor with ${targetId}`,
+      message: `Proposed ${endeavorType} endeavor to ${targetId}`,
       type: 'diplomacy',
       category: 'diplomatic' as const,
       panelTarget: 'diplomacy' as const,
     }],
   };
+}
+
+/** Relationship delta for accept (standard) / support (bigger) / reject (negative). */
+const RELATIONSHIP_DELTA_ACCEPT = 5;
+const RELATIONSHIP_DELTA_SUPPORT = 10;
+const RELATIONSHIP_DELTA_REJECT = -10;
+
+/**
+ * F-04 STEP 2: RESPOND_ENDEAVOR resolves a pending endeavor.
+ * - accept: activates the endeavor with standard relationship delta
+ * - support: activates the endeavor with bigger relationship delta + both players gain benefit
+ * - reject: removes the pending endeavor, negative relationship delta
+ */
+function handleRespondEndeavor(state: GameState, endeavorId: string, response: 'support' | 'accept' | 'reject'): GameState {
+  const pending = state.diplomacy.pendingEndeavors ?? [];
+  const idx = pending.findIndex(e => e.id === endeavorId);
+  if (idx === -1) return state; // not found
+
+  const endeavor = pending[idx];
+
+  // Only the target player can respond
+  if (state.currentPlayerId !== endeavor.targetId) return state;
+
+  // Remove from pending
+  const updatedPending = pending.filter((_, i) => i !== idx);
+
+  const relationKey = getRelationKey(endeavor.sourceId, endeavor.targetId);
+  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+  const updatedRelations = new Map(state.diplomacy.relations);
+
+  let logMessage: string;
+
+  if (response === 'reject') {
+    // Rejection: negative relationship delta, no active endeavor created
+    const newRelationship = clampRelationship(currentRelation.relationship + RELATIONSHIP_DELTA_REJECT);
+    updatedRelations.set(relationKey, {
+      ...currentRelation,
+      relationship: newRelationship,
+      status: getStatusFromRelationship(newRelationship),
+    });
+
+    logMessage = `Rejected ${endeavor.endeavorType} endeavor from ${endeavor.sourceId}`;
+  } else {
+    // Accept or Support: activate the endeavor
+    const delta = response === 'support' ? RELATIONSHIP_DELTA_SUPPORT : RELATIONSHIP_DELTA_ACCEPT;
+    const newRelationship = clampRelationship(currentRelation.relationship + delta);
+    const newEndeavor: DiplomaticEndeavor = { type: endeavor.endeavorType, turnsRemaining: ENDEAVOR_DURATION, sourceId: endeavor.sourceId };
+
+    updatedRelations.set(relationKey, {
+      ...currentRelation,
+      relationship: newRelationship,
+      status: getStatusFromRelationship(newRelationship),
+      activeEndeavors: [...currentRelation.activeEndeavors, newEndeavor],
+    });
+
+    const responseLabel = response === 'support' ? 'Supported' : 'Accepted';
+    logMessage = `${responseLabel} ${endeavor.endeavorType} endeavor from ${endeavor.sourceId}`;
+  }
+
+  let next: GameState = {
+    ...state,
+    diplomacy: {
+      ...state.diplomacy,
+      relations: updatedRelations,
+      pendingEndeavors: updatedPending,
+    },
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: logMessage,
+      type: 'diplomacy',
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
+    }],
+  };
+
+  // Support: both players gain a benefit (ActiveEffect)
+  if (response === 'support') {
+    const benefit: ActiveEffect = {
+      source: `endeavor_support:${endeavor.id}`,
+      effect: {
+        type: 'MODIFY_YIELD',
+        target: 'empire',
+        yield: 'culture',
+        value: 1,
+      },
+    };
+
+    const updatedPlayers = new Map(next.players);
+    for (const pid of [endeavor.sourceId, endeavor.targetId]) {
+      const p = updatedPlayers.get(pid);
+      if (p) {
+        updatedPlayers.set(pid, {
+          ...p,
+          legacyBonuses: [...p.legacyBonuses, benefit],
+        });
+      }
+    }
+    next = { ...next, players: updatedPlayers };
+  }
+
+  return next;
 }
 
 function handleSanction(state: GameState, sourceId: string, targetId: string, sanctionType: string): GameState {

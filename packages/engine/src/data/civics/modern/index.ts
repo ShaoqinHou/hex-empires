@@ -17,6 +17,7 @@ export const IDEOLOGY: CivicDef = {
   description: '+3 culture from broadcast towers',
   treePosition: { row: 0, col: 0 },
   ideologyBranch: 'fascism',
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 }],
 };
 
 export const SUFFRAGE: CivicDef = {
@@ -29,6 +30,7 @@ export const SUFFRAGE: CivicDef = {
   description: '+2 happiness per city',
   treePosition: { row: 2, col: 0 },
   ideologyBranch: 'democracy',
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 2 }],
 };
 
 export const TOTALITARIANISM: CivicDef = {
@@ -111,6 +113,7 @@ export const ENLIGHTENMENT: CivicDef = {
   description:
     'Liberty, reason, and the consent of the governed. Unlocks the Elective Republic government.',
   treePosition: { row: 1, col: 1 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 }],
 };
 
 /**
