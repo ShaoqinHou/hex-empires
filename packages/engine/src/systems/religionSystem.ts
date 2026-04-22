@@ -120,6 +120,9 @@ function handleAdoptPantheon(
   state: GameState,
   action: Extract<ReligionAction, { type: 'ADOPT_PANTHEON' }>,
 ): GameState {
+  // F-10: Modern age religion freeze — no new pantheons in the modern age.
+  if (state.age.currentAge === 'modern') return state;
+
   const { playerId, pantheonId } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
@@ -200,6 +203,9 @@ function handleFoundReligion(
   state: GameState,
   action: Extract<ReligionAction, { type: 'FOUND_RELIGION' }>,
 ): GameState {
+  // F-10: Modern age religion freeze — no new religions in the modern age.
+  if (state.age.currentAge === 'modern') return state;
+
   const { playerId, cityId, religionName, founderBelief, followerBelief } = action;
 
   // Player must exist and carry a faith field.

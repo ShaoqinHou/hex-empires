@@ -289,4 +289,112 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
     xp: 350,
     condition: { type: 'combat_wins_at_least', count: 10 },
   },
+
+  // ── Confucius ──
+  {
+    id: 'confucius_scholar',
+    leaderId: 'confucius',
+    name: 'Great Teacher: Scholar',
+    description: 'As Confucius, research 10 technologies.',
+    xp: 200,
+    condition: { type: 'techs_researched_at_least', count: 10 },
+  },
+  {
+    id: 'confucius_builder',
+    leaderId: 'confucius',
+    name: 'Great Teacher: Builder',
+    description: 'As Confucius, build 8 buildings.',
+    xp: 200,
+    condition: { type: 'buildings_built_at_least', count: 8 },
+  },
+
+  // ── Ibn Battuta ──
+  {
+    id: 'ibn_battuta_explorer',
+    leaderId: 'ibn_battuta',
+    name: 'Travels: Explorer',
+    description: 'As Ibn Battuta, found 5 cities.',
+    xp: 200,
+    condition: { type: 'cities_at_least', count: 5 },
+  },
+  {
+    id: 'ibn_battuta_trader',
+    leaderId: 'ibn_battuta',
+    name: 'Travels: Trader',
+    description: 'As Ibn Battuta, build 6 buildings.',
+    xp: 200,
+    condition: { type: 'buildings_built_at_least', count: 6 },
+  },
+
+  // ── Harriet Tubman ──
+  {
+    id: 'harriet_tubman_defender',
+    leaderId: 'harriet_tubman',
+    name: 'Underground Railroad: Defender',
+    description: 'As Harriet Tubman, win 6 combats.',
+    xp: 200,
+    condition: { type: 'combat_wins_at_least', count: 6 },
+  },
+  {
+    id: 'harriet_tubman_diplomat',
+    leaderId: 'harriet_tubman',
+    name: 'Underground Railroad: Diplomat',
+    description: 'As Harriet Tubman, found 4 cities.',
+    xp: 200,
+    condition: { type: 'cities_at_least', count: 4 },
+  },
+
+  // ── Napoleon ──
+  {
+    id: 'napoleon_conqueror',
+    leaderId: 'napoleon',
+    name: 'Empereur: Conqueror',
+    description: 'As Napoleon, win 8 combats.',
+    xp: 200,
+    condition: { type: 'combat_wins_at_least', count: 8 },
+  },
+  {
+    id: 'napoleon_patron',
+    leaderId: 'napoleon',
+    name: 'Empereur: Patron',
+    description: 'As Napoleon, build 10 buildings.',
+    xp: 200,
+    condition: { type: 'buildings_built_at_least', count: 10 },
+  },
+
+  // ── Tecumseh ──
+  {
+    id: 'tecumseh_defender',
+    leaderId: 'tecumseh',
+    name: 'Pan-Confederacy: Defender',
+    description: 'As Tecumseh, win 6 combats.',
+    xp: 200,
+    condition: { type: 'combat_wins_at_least', count: 6 },
+  },
+  {
+    id: 'tecumseh_unifier',
+    leaderId: 'tecumseh',
+    name: 'Pan-Confederacy: Unifier',
+    description: 'As Tecumseh, found 5 cities.',
+    xp: 200,
+    condition: { type: 'cities_at_least', count: 5 },
+  },
+
+  // ── Napoleon (Revolutionary) ──
+  {
+    id: 'napoleon_revolutionary_zeal',
+    leaderId: 'napoleon_revolutionary',
+    name: 'Revolutionary Zeal: Liberator',
+    description: 'As Napoleon (Revolutionary), win 10 combats.',
+    xp: 200,
+    condition: { type: 'combat_wins_at_least', count: 10 },
+  },
+  {
+    id: 'napoleon_revolutionary_empire',
+    leaderId: 'napoleon_revolutionary',
+    name: 'Revolutionary Zeal: Empire',
+    description: 'As Napoleon (Revolutionary), found 6 cities.',
+    xp: 200,
+    condition: { type: 'cities_at_least', count: 6 },
+  },
 ];

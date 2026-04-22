@@ -324,9 +324,43 @@ export const AQUEDUCT: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+export const GIZA: BuildingDef = {
+  id: 'giza',
+  name: 'Great Pyramid of Giza',
+  age: 'antiquity',
+  cost: 420,
+  maintenance: 0,
+  yields: { production: 5, faith: 3 },
+  effects: ['+2 Production on all Desert tiles in this city', '+1 Great Engineer point per turn', '+10% wonder production empire-wide'],
+  requiredTech: 'masonry',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'engineer', amount: 1 },
+} as const;
+
+export const GREAT_LIBRARY: BuildingDef = {
+  id: 'great_library',
+  name: 'Great Library',
+  age: 'antiquity',
+  cost: 380,
+  maintenance: 0,
+  yields: { science: 8 },
+  effects: ['+3 Science adjacency', '+1 Great Scientist point per turn', '+4 Codex slots', 'Free technology when any other civ researches a technology you have not'],
+  requiredTech: 'writing',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'scientist', amount: 1 },
+  codexSlots: 4,
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
   BATH, ARENA, ALTAR, VILLA, AMPHITHEATRE, GARDEN, BLACKSMITH, AQUEDUCT,
   PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
+  GIZA, GREAT_LIBRARY,
 ] as const;

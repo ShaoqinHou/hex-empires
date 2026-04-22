@@ -465,10 +465,53 @@ export const WORLDS_FAIR: BuildingDef = {
   greatPersonPoints: { type: 'artist', amount: 1 },
 } as const;
 
+export const MANHATTAN_PROJECT: BuildingDef = {
+  id: 'manhattan_project',
+  name: 'Manhattan Project',
+  age: 'modern',
+  cost: 1200,
+  maintenance: 0,
+  yields: { science: 6, production: 4 },
+  effects: [
+    'Requires ideology unlock (any ideology chosen)',
+    'Enables Nuclear Fission projects in all cities',
+    '+1 Great Scientist point per turn',
+    'Terminal Military Victory prerequisite wonder',
+  ],
+  requiredTech: 'nuclear_fission',
+  requiredCivic: 'ideology_unlock',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'scientist', amount: 1 },
+} as const;
+
+export const WORLDS_FAIR_EXTRA: BuildingDef = {
+  id: 'worlds_fair_extra',
+  name: "World's Fair Exhibition Hall",
+  age: 'modern',
+  cost: 950,
+  maintenance: 0,
+  yields: { culture: 8, gold: 6 },
+  effects: [
+    'Requires a Stadium in this city',
+    '+6 Gold from all trade routes',
+    '+2 Great Merchant point per turn',
+    'Doubles tourism output of this city',
+  ],
+  requiredTech: 'mass_media',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'merchant', amount: 2 },
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
   MILITARY_ACADEMY, AERODROME, CITY_PARK, DEPARTMENT_STORE, RADIO_STATION, MUSEUM, OPERA_HOUSE, SCHOOLHOUSE, RAIL_STATION, TENEMENT,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
   BRANDENBURG_GATE, SYDNEY_OPERA_HOUSE, PANAMA_CANAL, BROADWAY, CRISTO_REDENTOR,
-  WORLDS_FAIR,
+  WORLDS_FAIR, MANHATTAN_PROJECT, WORLDS_FAIR_EXTRA,
 ] as const;

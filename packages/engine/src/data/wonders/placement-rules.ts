@@ -100,4 +100,25 @@ export const WONDER_PLACEMENT_RULES: ReadonlyMap<string, WonderPlacementRule> = 
     constraint: { type: 'BETWEEN_TWO_WATERS' },
     description: 'Must be placed on a land tile between two separate bodies of water.',
   }],
+  // T1 additions
+  ['giza', {
+    wonderId: 'giza',
+    constraint: { type: 'TERRAIN_OR_FEATURE', terrain: 'desert', feature: 'floodplains' },
+    description: 'Must be placed on flat Desert or Floodplains terrain.',
+  }],
+  ['great_library', {
+    wonderId: 'great_library',
+    constraint: { type: 'ADJACENT_RIVER' },
+    description: 'Must be placed adjacent to a river.',
+  }],
+  ['manhattan_project', {
+    wonderId: 'manhattan_project',
+    constraint: { type: 'UNCONSTRAINED' },
+    description: 'May be placed on any land tile within a city.',
+  }],
+  ['worlds_fair_extra', {
+    wonderId: 'worlds_fair_extra',
+    constraint: { type: 'FLAT_LAND' },
+    description: 'Must be placed on flat land (not water, not mountains).',
+  }],
 ]);

@@ -195,6 +195,26 @@ export const DEEP_OCEAN: TerrainDef = {
   modifier: 'flat',
 } as const;
 
+// ── Lake (freshwater body) ─────────────────────────────────────────────────
+
+/**
+ * Lake — a small freshwater body surrounded by land.
+ * Provides fresh water to adjacent tiles (hasFreshWater bonus for cities).
+ * Land units cannot enter; naval units treat as water.
+ */
+export const LAKE: TerrainDef = {
+  id: 'lake',
+  name: 'Lake',
+  movementCost: 1,
+  defenseBonus: 0,
+  baseYields: { food: 2, production: 0, gold: 1, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
+  isPassable: false, // land units cannot enter; naval units use isWater=true
+  isWater: true,
+  color: '#6bb3d9',
+  biome: 'marine',
+  modifier: 'flat',
+} as const;
+
 export const ALL_BASE_TERRAINS: ReadonlyArray<TerrainDef> = [
   GRASSLAND,
   PLAINS,
@@ -208,4 +228,5 @@ export const ALL_BASE_TERRAINS: ReadonlyArray<TerrainDef> = [
   MANGROVE,
   NAVIGABLE_RIVER,
   DEEP_OCEAN,
+  LAKE,
 ] as const;
