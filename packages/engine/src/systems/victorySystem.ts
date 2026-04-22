@@ -42,6 +42,11 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
     legacyProgress.set(pid, scoreLegacyPaths(pid, state));
   }
 
+  // F-11: Collect ALL winners this turn before picking one.
+  // If multiple players achieve victory on the same turn, tiebreak by
+  // highest totalCareerLegacyPoints; on further tie, insertion order wins.
+  const winners: Array<{ playerId: string; winType: VictoryType; player: typeof player }> = [];
+
   for (const [playerId, player] of state.players) {
     const playerProgress: VictoryProgress[] = [
       checkDomination(state, playerId),
@@ -54,25 +59,40 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
 
     progress.set(playerId, playerProgress);
 
-    // Check if any victory achieved
+    // Collect any victory achieved
     const won = playerProgress.find(p => p.achieved);
     if (won) {
-      return {
-        ...state,
-        victory: {
-          winner: playerId,
-          winType: won.type,
-          progress,
-          legacyProgress,
-        },
-        log: [...state.log, {
-          turn: state.turn,
-          playerId,
-          message: `${player.name} achieved ${won.type} victory!`,
-          type: 'victory',
-        }],
-      };
+      winners.push({ playerId, winType: won.type, player });
     }
+  }
+
+  if (winners.length > 0) {
+    // F-11 tiebreak: highest totalCareerLegacyPoints, then insertion order
+    const tied = winners.length > 1;
+    if (tied) {
+      winners.sort((a, b) => {
+        const scoreA = a.player.totalCareerLegacyPoints ?? a.player.legacyPoints;
+        const scoreB = b.player.totalCareerLegacyPoints ?? b.player.legacyPoints;
+        return scoreB - scoreA; // higher score first; equal scores keep insertion order
+      });
+    }
+    const winner = winners[0];
+    return {
+      ...state,
+      victory: {
+        winner: winner.playerId,
+        winType: winner.winType,
+        progress,
+        legacyProgress,
+        tied,
+      },
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: winner.playerId,
+        message: `${winner.player.name} achieved ${winner.winType} victory!${tied ? ' (tiebreak resolved)' : ''}`,
+        type: 'victory',
+      }],
+    };
   }
 
   return { ...state, victory: { ...state.victory, progress, legacyProgress } };

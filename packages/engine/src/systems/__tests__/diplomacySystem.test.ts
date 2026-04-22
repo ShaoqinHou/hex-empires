@@ -238,7 +238,7 @@ describe('diplomacySystem', () => {
   });
 
   describe('denounce', () => {
-    it('denounces and degrades relationship', () => {
+    it('denounces and degrades relationship by 60 (F-03)', () => {
       const state = twoPlayerState();
       const next = diplomacySystem(state, {
         type: 'PROPOSE_DIPLOMACY',
@@ -247,7 +247,7 @@ describe('diplomacySystem', () => {
       });
       const rel = next.diplomacy.relations.get('p1:p2')!;
       expect(rel.hasDenounced).toBe(true);
-      expect(rel.relationship).toBe(-25);
+      expect(rel.relationship).toBe(-60);
     });
 
     it('denounce breaks existing alliance', () => {

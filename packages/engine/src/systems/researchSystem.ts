@@ -331,7 +331,7 @@ function processMasteryResearch(state: GameState): GameState {
   return { ...state, players: updatedPlayers };
 }
 
-/** Calculate science per turn for a player from their cities (includes codex placements) */
+/** Calculate science per turn for a player from their cities (includes codex placements + policy bonuses) */
 function calculateSciencePerTurn(state: GameState, playerId: string): number {
   const player = state.players.get(playerId);
   let sciencePerTurn = player && player.science > 0 ? 0 : 1; // minimum 1 science per turn
@@ -356,6 +356,28 @@ function calculateSciencePerTurn(state: GameState, playerId: string): number {
       const buildingDef = state.config.buildings.get(placement.buildingId);
       if (buildingDef?.codexSlots && buildingDef.codexSlots > 0) {
         sciencePerTurn += SCIENCE_PER_CODEX;
+      }
+    }
+
+    // F-05: Policy multipliers — slotted policies with MODIFY_YIELD science contribute
+    const slotted = player.slottedPolicies;
+    if (slotted) {
+      for (const policyId of slotted) {
+        if (policyId === null) continue;
+        const policyDef = state.config.policies?.get(policyId);
+        if (!policyDef) continue;
+        const bonus = policyDef.bonus;
+        if (
+          bonus.type === 'MODIFY_YIELD' &&
+          bonus.yield === 'science' &&
+          (bonus.target === 'empire' || bonus.target === 'city')
+        ) {
+          // 'city'-targeted policies apply per city the player owns
+          const cityCount = bonus.target === 'city'
+            ? [...state.cities.values()].filter(c => c.owner === playerId).length
+            : 1;
+          sciencePerTurn += bonus.value * Math.max(1, cityCount);
+        }
       }
     }
   }

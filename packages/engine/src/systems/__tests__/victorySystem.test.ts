@@ -405,4 +405,88 @@ describe('victorySystem', () => {
       expect(next.victory.legacyProgress).toBeUndefined();
     });
   });
+
+  // ── F-11: Simultaneous victory tiebreak ────────────────────────────────────
+  describe('F-11: simultaneous victory tiebreak', () => {
+    it('resolves tie by highest totalCareerLegacyPoints', () => {
+      // Both p1 and p2 can achieve domination (the other has no cities).
+      // Give both a city each so neither dominates the other, then use score victory.
+      // Actually: set up so both achieve culture victory simultaneously.
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          culture: 300,
+          researchedCivics: ['a', 'b', 'c', 'd', 'e'],
+          totalCareerLegacyPoints: 100,
+        })],
+        ['p2', createTestPlayer({
+          id: 'p2',
+          culture: 300,
+          researchedCivics: ['a', 'b', 'c', 'd', 'e'],
+          totalCareerLegacyPoints: 50,
+        })],
+      ]);
+      // Both have cities so domination doesn't trigger
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        currentPlayerId: 'p2',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      // p1 has higher career legacy → p1 wins
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.winType).toBe('culture');
+      expect(next.victory.tied).toBe(true);
+    });
+
+    it('falls back to insertion order when totalCareerLegacyPoints are equal', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          culture: 300,
+          researchedCivics: ['a', 'b', 'c', 'd', 'e'],
+          totalCareerLegacyPoints: 50,
+        })],
+        ['p2', createTestPlayer({
+          id: 'p2',
+          culture: 300,
+          researchedCivics: ['a', 'b', 'c', 'd', 'e'],
+          totalCareerLegacyPoints: 50,
+        })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        currentPlayerId: 'p2',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      // Insertion order: p1 was iterated first → p1 wins
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.tied).toBe(true);
+    });
+
+    it('single winner does not set tied flag', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1')],
+      ]);
+      const state = createTestState({ players, cities, currentPlayerId: 'p2' });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.tied).toBeFalsy();
+    });
+  });
 });

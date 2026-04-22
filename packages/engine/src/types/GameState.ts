@@ -651,6 +651,13 @@ export interface VictoryState {
   readonly winner: PlayerId | null;
   readonly winType: VictoryType | null;
   readonly progress: ReadonlyMap<PlayerId, ReadonlyArray<VictoryProgress>>;
+  /**
+   * F-11: True when multiple players achieved a victory condition in the
+   * same turn and the winner was resolved by tiebreak (highest
+   * totalCareerLegacyPoints; insertion order on further ties).
+   * Undefined / false for the common single-winner case.
+   */
+  readonly tied?: boolean;
 
   /**
    * ── M18: Legacy Path progress (optional) ──

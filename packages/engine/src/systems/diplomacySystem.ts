@@ -234,7 +234,7 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         hasDenounced: true,
         hasAlliance: false, // denounce breaks alliance
         hasFriendship: false, // denounce breaks friendship
-        relationship: clampRelationship(currentRelation.relationship - 25),
+        relationship: clampRelationship(currentRelation.relationship - 60),
       };
       newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
       logMessage = `Denounced ${targetId}`;

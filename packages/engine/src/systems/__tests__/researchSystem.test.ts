@@ -621,5 +621,37 @@ describe('researchSystem', () => {
       // researchProgress should be 7
       expect(next.players.get('p1')!.researchProgress).toBe(7);
     });
+
+    it('F-05: slotted policies with MODIFY_YIELD science contribute to science per turn', () => {
+      // Slot 'records_office' which grants +1 science (empire target)
+      const player = createTestPlayer({
+        currentResearch: 'writing',
+        researchProgress: 0,
+        slottedPolicies: ['records_office'],
+      });
+      // City with pop=1. Science = 1(min) + 1(pop) + 1(policy) = 3
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.researchProgress).toBe(3);
+    });
+
+    it('F-05: null policy slots are ignored', () => {
+      const player = createTestPlayer({
+        currentResearch: 'pottery',
+        researchProgress: 0,
+        slottedPolicies: [null, null],
+      });
+      const city = createTestCity({ population: 1 }); // 1(min) + 1(pop) = 2
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, { type: 'END_TURN' });
+      expect(next.players.get('p1')!.researchProgress).toBe(2);
+    });
   });
 });
