@@ -249,11 +249,14 @@ function handleFoundReligion(
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);
 
+  // U2: If player has a pantheon, carry its belief forward for flavor continuity
+  const effectiveFounderBelief = player.pantheonId ?? founderBelief;
+
   const newRecord: ReligionRecord = {
     id: `religion.${playerId}.${founderBelief}`,
     name: religionName,
     founderPlayerId: playerId,
-    founderBeliefId: founderBelief,
+    founderBeliefId: effectiveFounderBelief,
     followerBeliefId: followerBelief,
     holyCityId: cityId,
     foundedOnTurn: state.turn,

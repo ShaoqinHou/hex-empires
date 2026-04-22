@@ -198,17 +198,13 @@ function handleEndTurn(state: GameState): GameState {
     const goldRate = goldRateForAge(age);
     const seaMultiplier = route.isSea ? 2 : 1;
 
-    // F-01: Origin player receives destination's slotted resources
-    // We copy resource IDs to the player's ownedResources; since PlayerState
-    // doesn't yet have an ownedResources field we emit a log entry instead.
-    // (The resource-assignment system owns that field; this is the correct
-    // integration point for when it lands.)
+    // U2: Origin player receives destination's slotted resources
     if (route.resources.length > 0) {
       const originPlayer = updatedPlayers.get(route.owner);
       if (originPlayer) {
-        // No-op write (field not yet in PlayerState): the log event below
-        // serves as the production signal for downstream systems.
-        void originPlayer; // silence unused-variable check
+        const existing = originPlayer.ownedResources ?? [];
+        const merged = [...new Set([...existing, ...route.resources])];
+        updatedPlayers.set(originPlayer.id, { ...originPlayer, ownedResources: merged });
       }
     }
 

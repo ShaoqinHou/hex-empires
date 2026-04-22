@@ -565,10 +565,12 @@ function handleAttackCity(
   // Update city
   if (newCityHP <= 0 && isMelee && newAttackerHealth > 0) {
     // City conquered — transfer ownership
+    // U2: track originalOwner (first non-founder owner) for provenance
     const previousOwner = city.owner;
     updatedCities.set(city.id, {
       ...city,
       owner: attacker.owner,
+      originalOwner: city.originalOwner ?? city.owner,
       defenseHP: 0,
     });
 

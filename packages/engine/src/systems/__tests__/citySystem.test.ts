@@ -27,7 +27,7 @@ describe('citySystem', () => {
       // First city is always a City (capital)
       expect(city.settlementType).toBe('city');
       expect(city.isCapital).toBe(true);
-      expect(city.happiness).toBe(15); // capital gets +5 from Palace
+      expect(city.happiness).toBe(10); // capital +5 Palace −5 no fresh water (U2)
       expect(city.buildings).toContain('palace');
     });
 
@@ -328,7 +328,7 @@ describe('citySystem', () => {
       expect(newCity).toBeDefined();
       expect(newCity!.settlementType).toBe('town');
       expect(newCity!.isCapital).toBe(false);
-      expect(newCity!.happiness).toBe(5);
+      expect(newCity!.happiness).toBe(0); // town base 5 −5 no fresh water (U2)
     });
   });
 

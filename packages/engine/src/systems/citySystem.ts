@@ -98,6 +98,10 @@ function handleFoundCity(
     adjacencyBonus: 0,
   };
 
+  // U2: Fresh water happiness bonus (+5 on fresh water, -5 without)
+  const baseHappiness = isFirstCity ? 15 : (settlementType === 'city' ? 10 : 5); // Palace adds +5 happiness
+  const freshWaterBonus = tile.hasFreshWater ? 5 : -5;
+
   const newCity: CityState = {
     id: cityId,
     name: cityName,
@@ -110,12 +114,14 @@ function handleFoundCity(
     buildings: isFirstCity ? ['palace'] : [], // Capital gets Palace auto-built
     territory,
     settlementType,
-    happiness: isFirstCity ? 15 : (settlementType === 'city' ? 10 : 5), // Palace adds +5 happiness
+    happiness: baseHappiness + freshWaterBonus,
     isCapital: isFirstCity,
     defenseHP: 100, // base defense; walls add +100 when built
     specialization: null,
     specialists: 0,
     districts: [districtId], // Start with city center district
+    foundedBy: unit.owner,
+    originalOwner: undefined,
   };
 
   // Remove settler unit
