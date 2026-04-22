@@ -6,5 +6,5 @@ export {
   SACRED_TOOTH,
   STAFF_OF_MOSES,
   SPEAR_OF_DESTINY,
-  HOLY_GRAIL,
+  HOLY_GRAIL_RELIC,
 } from './relics';

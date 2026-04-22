@@ -40,7 +40,7 @@ export const SPEAR_OF_DESTINY: RelicDef = {
   culturePerTurn: 3,
 } as const;
 
-export const HOLY_GRAIL: RelicDef = {
+export const HOLY_GRAIL_RELIC: RelicDef = {
   id: 'holy_grail',
   name: 'Holy Grail',
   description: 'The sacred cup used at the Last Supper, sought by knights for centuries.',
@@ -54,5 +54,5 @@ export const ALL_RELICS: ReadonlyArray<RelicDef> = [
   SACRED_TOOTH,
   STAFF_OF_MOSES,
   SPEAR_OF_DESTINY,
-  HOLY_GRAIL,
+  HOLY_GRAIL_RELIC,
 ] as const;

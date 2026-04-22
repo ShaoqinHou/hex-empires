@@ -346,4 +346,4 @@ export { treatySystem } from './systems/treatySystem';
 
 // F-08/F-09 — Missionary + Relic subsystems (Z3)
 export type { RelicId, RelicDef } from './types/Relic';
-export { ALL_RELICS, ARK_OF_COVENANT, SHROUD, SACRED_TOOTH, STAFF_OF_MOSES, SPEAR_OF_DESTINY, HOLY_GRAIL } from './data/relics';
+export { ALL_RELICS, ARK_OF_COVENANT, SHROUD, SACRED_TOOTH, STAFF_OF_MOSES, SPEAR_OF_DESTINY, HOLY_GRAIL_RELIC } from './data/relics';
