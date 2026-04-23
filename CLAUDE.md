@@ -43,9 +43,23 @@ Anti-pattern: stopping mid-list with "Phase 1 done — should I continue?" when 
 Model selection:
 - **Parent session**: prefer Sonnet (`claude --model sonnet`). Orchestration — spawning, cherry-picking, test runs, push, status writeups — is Sonnet-grade work. An Opus parent doing orchestration burns ~5× the tokens with no quality gain.
 - **Design + architecture subagents**: Opus. `designer.md` is Opus-backed and should be invoked for specs that involve real design judgment (palette systems, grid rules, interaction model, crisis-response choice design). This is where Opus earns its keep.
-- **Implementation / fix / review subagents**: Sonnet. `implementer.md`, `fixer.md`, `reviewer.md` are Sonnet-backed. Bulk mechanical or rule-bounded work.
+- **Implementation / fix / review subagents (primary)**: **GLM via `claude-glm`** — see `~/.claude/docs/glm-delegation.md`. Runs on Z.ai subscription (separate budget pool from Anthropic). Self-contained Bash invocation: `claude-glm --add-dir /absolute/path -p '<prompt>'`. Use `run_in_background: true` for parallel fan-out. GLM can edit files + commit + run tests. Saves Anthropic budget on mechanical workpack execution.
+- **Implementation / fix / review subagents (fallback)**: Sonnet via `Agent({ subagent_type: "implementer", model: "sonnet" })` — use when GLM hits its own limits, or when the task needs Anthropic-only server tools (web_search, advisor).
 - **Dispute resolution**: Opus. `arbiter.md` handles reviewer/fixer conflicts.
-- Rule of thumb: Opus enters only when a decision is genuinely hard and the output will be used for several later phases. Never Opus for work Sonnet handles equally.
+- Rule of thumb: Opus enters only when a decision is genuinely hard and the output will be used for several later phases. Never Opus for work Sonnet handles equally. **Prefer GLM over Sonnet** for bulk implementation if the task is well-scoped and mechanical — it's a cheaper budget pool.
+
+### GLM delegation (confirmed 2026-04-20)
+
+Validated pattern: fire 5 implementer workpacks in parallel via `claude-glm` in background Bash jobs. Each GLM process is one-shot (zero memory), accepts self-contained briefs, can write files + commit. Return via stdout at end.
+
+Spawn shape:
+```bash
+claude-glm --add-dir /c/Users/housh/Documents/monoWeb/hex-empires -p '<SELF_CONTAINED_BRIEF>' 2>&1 | tail -30
+```
+Use `run_in_background: true` for parallelism. No task-notification system (unlike Anthropic Agent); poll output file or wait for Bash completion event.
+
+Good fit: 90% of W1–Y5 workpacks (typed refactors, action additions, data cleanup, UI scaffolds).
+Bad fit: tasks requiring access to this conversation's memory, web_search, or the PanelManager/HUDManager hot-reload magic.
 
 ### Subagent workflow gotchas (confirmed 2026-04-18)
 
