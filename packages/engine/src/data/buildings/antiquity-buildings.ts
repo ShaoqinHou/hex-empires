@@ -357,10 +357,38 @@ export const GREAT_LIBRARY: BuildingDef = {
   codexSlots: 4,
 } as const;
 
+export const STOREHOUSE: BuildingDef = {
+  id: 'storehouse',
+  name: 'Storehouse',
+  age: 'antiquity',
+  cost: 85,
+  maintenance: 0,
+  yields: { food: 2, gold: 1 },
+  effects: ['+1 Housing', '+5% Growth Rate'],
+  requiredTech: 'pottery',
+  growthRateBonus: 0.05,
+  category: 'food',
+  happinessCost: 0,
+} as const;
+
+export const DOCKYARD: BuildingDef = {
+  id: 'dockyard',
+  name: 'Dockyard',
+  age: 'antiquity',
+  cost: 95,
+  maintenance: 1,
+  yields: { gold: 2, food: 1 },
+  effects: ['+1 trade route capacity'],
+  requiredTech: 'sailing',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
   BATH, ARENA, ALTAR, VILLA, AMPHITHEATRE, GARDEN, BLACKSMITH, AQUEDUCT,
+  STOREHOUSE, DOCKYARD,
   PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
   GIZA, GREAT_LIBRARY,
 ] as const;

@@ -211,7 +211,27 @@ export const PHOENICIA: CivilizationDef = {
   historicalPair: [],
 };
 
+export const KOREA: CivilizationDef = {
+  id: 'korea',
+  name: 'Korea',
+  age: 'antiquity',
+  description: 'Scholarly kingdom whose seowon academies produced pioneering advances in science and metal movable type.',
+  uniqueAbility: {
+    name: 'Three Kingdoms',
+    description: '+2 science per campus district. Farms adjacent to a campus provide +1 science.',
+    effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 }],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Korean Scholarship',
+    description: '+3 science in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  },
+  color: '#0277bd',
+};
+
 export const ALL_ANTIQUITY_CIVS: ReadonlyArray<CivilizationDef> = [
   ROME, EGYPT, GREECE, PERSIA, INDIA, CHINA, VIKINGS,
-  ASSYRIA, HITTITES, PHOENICIA,
+  ASSYRIA, HITTITES, PHOENICIA, KOREA,
 ];

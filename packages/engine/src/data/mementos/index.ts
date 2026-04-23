@@ -95,6 +95,60 @@ export const HOLY_GRAIL: MementoDef = {
   unlockCondition: { type: 'challenge', challengeId: 'COMPLETE_EXPLORATION' },
 };
 
+export const DEAD_SEA_SCROLLS: MementoDef = {
+  id: 'dead-sea-scrolls',
+  name: 'Dead Sea Scrolls',
+  description: '+2 Faith per turn — ancient scriptures inspire devotion.',
+  age: 'antiquity',
+  effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 2 },
+  unlockCondition: { type: 'foundation_level', level: 3 },
+};
+
+export const TERRACOTTA_WARRIOR: MementoDef = {
+  id: 'terracotta-warrior',
+  name: 'Terracotta Warrior',
+  description: '+3 Combat Strength for all melee units — an eternal guardian.',
+  age: 'antiquity',
+  effect: { type: 'MODIFY_COMBAT', target: 'melee', value: 3 },
+  unlockCondition: { type: 'challenge', challengeId: 'FIRST_COMBAT_VICTORY' },
+};
+
+export const COMPASS: MementoDef = {
+  id: 'compass',
+  name: 'Compass',
+  description: '+1 Movement for naval units — never lose your bearing.',
+  age: 'exploration',
+  effect: { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+  unlockCondition: { type: 'foundation_level', level: 4 },
+};
+
+export const VIKING_LONGSHIP: MementoDef = {
+  id: 'viking-longship',
+  name: 'Viking Longship',
+  description: '+2 Combat Strength for naval units — the dragon prow strikes fear.',
+  age: 'exploration',
+  effect: { type: 'MODIFY_COMBAT', target: 'naval', value: 2 },
+  unlockCondition: { type: 'challenge', challengeId: 'COMPLETE_ANTIQUITY' },
+};
+
+export const SPACE_SHUTTLE: MementoDef = {
+  id: 'space-shuttle',
+  name: 'Space Shuttle',
+  description: '+4 Science per turn — reach for the stars.',
+  age: 'modern',
+  effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 4 },
+  unlockCondition: { type: 'challenge', challengeId: 'FIRST_SCIENCE_VICTORY' },
+};
+
+export const PEACE_MEDAL: MementoDef = {
+  id: 'peace-medal',
+  name: 'Peace Medal',
+  description: '+2 Food per turn — diplomacy feeds your people.',
+  age: 'modern',
+  effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 2 },
+  unlockCondition: { type: 'foundation_level', level: 6 },
+};
+
 export const ALL_MEMENTOS: ReadonlyArray<MementoDef> = [
   COMPLAINT_TO_EA_NASIR,
   ROSETTA_STONE,
@@ -106,4 +160,10 @@ export const ALL_MEMENTOS: ReadonlyArray<MementoDef> = [
   NAPOLEON_HAT,
   NEWTON_APPLE,
   HOLY_GRAIL,
+  DEAD_SEA_SCROLLS,
+  TERRACOTTA_WARRIOR,
+  COMPASS,
+  VIKING_LONGSHIP,
+  SPACE_SHUTTLE,
+  PEACE_MEDAL,
 ];

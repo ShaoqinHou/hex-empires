@@ -110,7 +110,56 @@ export const MEXICO: CivilizationDef = {
   historicalPair: ['maya', 'spain'],
 };
 
+export const SWEDEN: CivilizationDef = {
+  id: 'sweden',
+  name: 'Sweden',
+  age: 'modern',
+  description: 'Nordic innovators whose Nobel Prize legacy and engineering prowess shaped the modern world.',
+  uniqueAbility: {
+    name: 'Nobel Prize',
+    description: '+2 science and +1 culture per city. Great People cost 10% less.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Swedish Innovation',
+    description: '+3 science in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 },
+  },
+  color: '#1565c0',
+  historicalPair: [],
+};
+
+export const AUSTRALIA: CivilizationDef = {
+  id: 'australia',
+  name: 'Australia',
+  age: 'modern',
+  description: 'Continent-nation whose vast landscapes and vibrant cities embody resilience and opportunity.',
+  uniqueAbility: {
+    name: 'Land Down Under',
+    description: '+3 production in coastal cities. +1 culture per district.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 3 },
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Australian Grit',
+    description: '+2 production and +1 culture in all cities in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+  },
+  color: '#ffd600',
+  startingBias: 'coastal',
+  historicalPair: ['england'],
+};
+
 export const ALL_MODERN_CIVS: ReadonlyArray<CivilizationDef> = [
   AMERICA, GERMANY, RUSSIA, BRAZIL,
-  MEXICO,
+  MEXICO, SWEDEN, AUSTRALIA,
 ];

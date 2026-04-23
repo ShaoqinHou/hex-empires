@@ -508,9 +508,23 @@ export const WORLDS_FAIR_EXTRA: BuildingDef = {
   greatPersonPoints: { type: 'merchant', amount: 2 },
 } as const;
 
+export const SOLAR_FARM: BuildingDef = {
+  id: 'solar_farm',
+  name: 'Solar Farm',
+  age: 'modern',
+  cost: 360,
+  maintenance: 3,
+  yields: { production: 5, science: 2 },
+  effects: ['+10% science from campus buildings'],
+  requiredTech: 'electricity',
+  category: 'science',
+  happinessCost: 2,
+} as const;
+
 export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   FACTORY, RESEARCH_LAB, POWER_PLANT, NUCLEAR_PLANT, BROADCAST_TOWER, HOSPITAL, AIRPORT, MALL, STADIUM, MILITARY_BASE,
   MILITARY_ACADEMY, AERODROME, CITY_PARK, DEPARTMENT_STORE, RADIO_STATION, MUSEUM, OPERA_HOUSE, SCHOOLHOUSE, RAIL_STATION, TENEMENT,
+  SOLAR_FARM,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
   BRANDENBURG_GATE, SYDNEY_OPERA_HOUSE, PANAMA_CANAL, BROADWAY, CRISTO_REDENTOR,
   WORLDS_FAIR, MANHATTAN_PROJECT, WORLDS_FAIR_EXTRA,

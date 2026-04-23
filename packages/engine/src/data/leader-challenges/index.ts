@@ -397,4 +397,156 @@ export const ALL_LEADER_CHALLENGES: ReadonlyArray<LeaderChallengeDef> = [
     xp: 200,
     condition: { type: 'cities_at_least', count: 6 },
   },
+
+  // ── Tier 3 / Mastery challenges ──
+
+  // ── Augustus Tier 3 ──
+  {
+    id: 'augustus_magnate',
+    leaderId: 'augustus',
+    name: 'Imperium Maius: Magnate',
+    description: 'As Augustus, build 20 buildings.',
+    xp: 400,
+    condition: { type: 'buildings_built_at_least', count: 20 },
+  },
+
+  // ── Cleopatra Tier 3 ──
+  {
+    id: 'cleopatra_pharaoh',
+    leaderId: 'cleopatra',
+    name: 'Mediterranean Bride: Pharaoh',
+    description: 'As Cleopatra, found 7 cities.',
+    xp: 400,
+    condition: { type: 'cities_at_least', count: 7 },
+  },
+
+  // ── Pericles Tier 3 ──
+  {
+    id: 'pericles_statesman',
+    leaderId: 'pericles',
+    name: 'Surrounded by Glory: Statesman',
+    description: 'As Pericles, build 15 buildings and found 5 cities.',
+    xp: 400,
+    condition: { type: 'buildings_built_at_least', count: 15 },
+  },
+
+  // ── Cyrus Tier 3 ──
+  {
+    id: 'cyrus_liberator',
+    leaderId: 'cyrus',
+    name: 'Fall of Babylon: Liberator',
+    description: 'As Cyrus, win 15 combats.',
+    xp: 400,
+    condition: { type: 'combat_wins_at_least', count: 15 },
+  },
+
+  // ── Gandhi Tier 3 ──
+  {
+    id: 'gandhi_mahatma',
+    leaderId: 'gandhi',
+    name: 'Satyagraha: Mahatma',
+    description: 'As Gandhi, research 20 technologies.',
+    xp: 400,
+    condition: { type: 'techs_researched_at_least', count: 20 },
+  },
+
+  // ── Qin Shi Huang Tier 3 ──
+  {
+    id: 'qin_mason',
+    leaderId: 'qin_shi_huang',
+    name: 'First Emperor: Grand Mason',
+    description: 'As Qin Shi Huang, build 25 buildings.',
+    xp: 400,
+    condition: { type: 'buildings_built_at_least', count: 25 },
+  },
+
+  // ── Alexander Tier 3 ──
+  {
+    id: 'alexander_titan',
+    leaderId: 'alexander',
+    name: "World's End: Titan",
+    description: 'As Alexander, win 20 combats.',
+    xp: 400,
+    condition: { type: 'combat_wins_at_least', count: 20 },
+  },
+
+  // ── Hatshepsut Tier 3 ──
+  {
+    id: 'hatshepsut_pharaoh',
+    leaderId: 'hatshepsut',
+    name: 'Gods Wife of Amun: Pharaoh',
+    description: 'As Hatshepsut, research 15 technologies.',
+    xp: 400,
+    condition: { type: 'techs_researched_at_least', count: 15 },
+  },
+
+  // ── Genghis Khan Tier 3 ──
+  {
+    id: 'genghis_khanate',
+    leaderId: 'genghis_khan',
+    name: 'Mongol Horde: Khanate',
+    description: 'As Genghis Khan, win 25 combats.',
+    xp: 400,
+    condition: { type: 'combat_wins_at_least', count: 25 },
+  },
+
+  // ── Confucius Tier 3 ──
+  {
+    id: 'confucius_sage',
+    leaderId: 'confucius',
+    name: 'Great Teacher: Sage',
+    description: 'As Confucius, research 18 technologies.',
+    xp: 400,
+    condition: { type: 'techs_researched_at_least', count: 18 },
+  },
+
+  // ── Ibn Battuta Tier 3 ──
+  {
+    id: 'ibn_battuta_cosmopolitan',
+    leaderId: 'ibn_battuta',
+    name: 'Travels: Cosmopolitan',
+    description: 'As Ibn Battuta, found 8 cities.',
+    xp: 400,
+    condition: { type: 'cities_at_least', count: 8 },
+  },
+
+  // ── Harriet Tubman Tier 3 ──
+  {
+    id: 'harriet_tubman_conductor',
+    leaderId: 'harriet_tubman',
+    name: 'Underground Railroad: Conductor',
+    description: 'As Harriet Tubman, found 7 cities.',
+    xp: 400,
+    condition: { type: 'cities_at_least', count: 7 },
+  },
+
+  // ── Napoleon Tier 3 ──
+  {
+    id: 'napoleon_emperor',
+    leaderId: 'napoleon',
+    name: 'Empereur: Emperor',
+    description: 'As Napoleon, win 15 combats.',
+    xp: 400,
+    condition: { type: 'combat_wins_at_least', count: 15 },
+  },
+
+  // ── Tecumseh Tier 3 ──
+  {
+    id: 'tecumseh_chief',
+    leaderId: 'tecumseh',
+    name: 'Pan-Confederacy: Chief',
+    description: 'As Tecumseh, win 12 combats.',
+    xp: 400,
+    condition: { type: 'combat_wins_at_least', count: 12 },
+  },
+
+  // ── Napoleon (Revolutionary) Tier 3 ──
+  {
+    id: 'napoleon_revolutionary_dictator',
+    leaderId: 'napoleon_revolutionary',
+    name: 'Revolutionary Zeal: Consul',
+    description: 'As Napoleon (Revolutionary), found 8 cities.',
+    xp: 400,
+    condition: { type: 'cities_at_least', count: 8 },
+  },
 ];

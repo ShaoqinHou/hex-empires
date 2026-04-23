@@ -149,6 +149,62 @@ export const TERRACE_FARM: ImprovementDef = {
   civId: 'inca',
 } as const;
 
+export const SEOWON: ImprovementDef = {
+  id: 'seowon',
+  name: 'Seowon',
+  category: 'basic',
+  requiredTech: 'writing',
+  prerequisites: {
+    terrain: ['hills', 'plains', 'grassland'],
+  },
+  yields: { science: 3 },
+  modifier: {},
+  ageless: true,
+  civId: 'korea',
+} as const;
+
+export const FEITORIA: ImprovementDef = {
+  id: 'feitoria',
+  name: 'Feitoria',
+  category: 'infrastructure',
+  requiredTech: 'cartography',
+  prerequisites: {
+    terrain: ['plains', 'grassland', 'desert'],
+  },
+  yields: { gold: 3 },
+  modifier: {},
+  ageless: true,
+  civId: 'portugal',
+} as const;
+
+export const OPEN_AIR_MUSEUM: ImprovementDef = {
+  id: 'open_air_museum',
+  name: 'Open Air Museum',
+  category: 'basic',
+  requiredTech: 'flight',
+  prerequisites: {
+    terrain: ['grassland', 'plains', 'tundra'],
+  },
+  yields: { culture: 3 },
+  modifier: {},
+  ageless: true,
+  civId: 'sweden',
+} as const;
+
+export const OUTBACK_STATION: ImprovementDef = {
+  id: 'outback_station',
+  name: 'Outback Station',
+  category: 'basic',
+  requiredTech: 'steam_power',
+  prerequisites: {
+    terrain: ['desert', 'plains', 'grassland'],
+  },
+  yields: { food: 2, production: 1 },
+  modifier: {},
+  ageless: true,
+  civId: 'australia',
+} as const;
+
 export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   FARM,
   MINE,
@@ -161,4 +217,8 @@ export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   PAIRIDAEZA,
   POTKOP,
   TERRACE_FARM,
+  SEOWON,
+  FEITORIA,
+  OPEN_AIR_MUSEUM,
+  OUTBACK_STATION,
 ] as const;

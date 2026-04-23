@@ -1,0 +1,6 @@
+- [Mock state needs state.config](feedback_mock_state_config.md) — test fixtures for panels using state.config must include createGameConfig()
+- [Write tool reads may be stale](feedback_write_reads_stale.md) — after Write, use bash head/cat to confirm actual file state; Read may show cached old content
+- [git stash danger in parallel agent workflows](feedback_git_stash_danger.md) — never git stash to test baseline; captures other agents' unstaged changes
+- [No-isolation concurrent agent collision](feedback_no_isolation_concurrent.md) — parallel agents can pick up each other's uncommitted working-tree edits; verify with git show <sha>
+- [In-flight work collision pattern](project_in_flight_work_collision.md) — failing tests from unrelated WIP (other work packages) are not scope regressions; GameState.ts may already have been committed by another agent
+- [Prior session may have already committed brief work](feedback_prior_session_committed.md) — check git show HEAD --stat before implementing; a prior agent may have committed the same files

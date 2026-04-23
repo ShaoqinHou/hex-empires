@@ -450,10 +450,38 @@ export const DUNGEON: BuildingDef = {
   happinessCost: 3,
 } as const;
 
+export const PRINTING_PRESS: BuildingDef = {
+  id: 'printing_press',
+  name: 'Printing Press',
+  age: 'exploration',
+  cost: 200,
+  maintenance: 2,
+  yields: { culture: 4, science: 1 },
+  effects: ['+1 Great Writer point per turn'],
+  requiredTech: 'printing',
+  category: 'culture',
+  happinessCost: 2,
+  greatPersonPoints: { type: 'writer', amount: 1 },
+} as const;
+
+export const TRADING_POST: BuildingDef = {
+  id: 'trading_post',
+  name: 'Trading Post',
+  age: 'exploration',
+  cost: 170,
+  maintenance: 1,
+  yields: { gold: 5 },
+  effects: ['+1 trade route capacity', '+2 gold from trade routes'],
+  requiredTech: 'banking',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
   MARKET, WORKSHOP, MONASTERY, UNIVERSITY, OBSERVATORY,
   BANK, STOCK_EXCHANGE, BARRACKS, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
   GRISTMILL, SAWMILL, STONECUTTER, WHARF, INN, TEMPLE, MENAGERIE, BAZAAR, GUILDHALL, DUNGEON,
+  PRINTING_PRESS, TRADING_POST,
   NOTRE_DAME, VENETIAN_ARSENAL, ALHAMBRA, TAJ_MAHAL, FORBIDDEN_CITY,
   ANGKOR_WAT, HAGIA_SOPHIA, GREAT_WALL, TERRACOTTA_ARMY, ST_BASILS_CATHEDRAL,
 ] as const;

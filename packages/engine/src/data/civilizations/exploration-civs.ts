@@ -163,7 +163,32 @@ export const NORMANS: CivilizationDef = {
   historicalPair: ['vikings'],
 };
 
+export const PORTUGAL: CivilizationDef = {
+  id: 'portugal',
+  name: 'Portugal',
+  age: 'exploration',
+  description: 'Seafaring empire whose caravels charted new trade routes spanning four continents.',
+  uniqueAbility: {
+    name: 'Casa da Índia',
+    description: '+3 gold from international trade routes. Naval units gain +1 movement.',
+    effects: [
+      { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+      { type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 },
+    ],
+  },
+  uniqueUnit: null,
+  uniqueBuilding: null,
+  legacyBonus: {
+    name: 'Portuguese Navigation',
+    description: '+3 gold and +1 movement for naval units in future ages',
+    effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  },
+  color: '#2e7d32',
+  startingBias: 'coastal',
+  historicalPair: [],
+};
+
 export const ALL_EXPLORATION_CIVS: ReadonlyArray<CivilizationDef> = [
   SPAIN, ENGLAND, FRANCE, OTTOMAN, JAPAN, MONGOLIA,
-  MAYA, NORMANS,
+  MAYA, NORMANS, PORTUGAL,
 ];
