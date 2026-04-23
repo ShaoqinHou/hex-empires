@@ -916,3 +916,137 @@ describe('combatSystem — W4-03: ATTACK_DISTRICT', () => {
     expect(next.lastValidation).toMatchObject({ valid: false });
   });
 });
+
+// ── Commander Aura bonus in combat ──
+
+describe('combatSystem — commander aura', () => {
+  it('attacker near friendly commander deals more damage (aura bonus)', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    // Baseline: no commander
+    const unitsBaseline = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const stateBaseline = createTestState({ units: unitsBaseline, players });
+
+    // With commander at distance 2 from attacker (3,3) → commander at (3,5), distance = 2 (within aura range)
+    const commanderState: import('../../types/Commander').CommanderState = {
+      unitId: 'cmd1', xp: 0, commanderLevel: 1, unspentPromotionPicks: 0,
+      promotions: [], tree: null, attachedUnits: [], packed: false,
+    };
+    const unitsWithCmd = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 5 }, health: 100 })],
+    ]);
+    const stateWithCmd = createTestState({
+      units: unitsWithCmd,
+      players: new Map(players),
+      commanders: new Map([['cmd1', commanderState]]),
+    });
+
+    // Use same RNG seed for deterministic comparison
+    const rng = { seed: 42, counter: 0 };
+    const nextBaseline = combatSystem({ ...stateBaseline, rng }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithCmd = combatSystem({ ...stateWithCmd, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defBaseline = nextBaseline.units.get('d1');
+    const defWithCmd = nextWithCmd.units.get('d1');
+    if (defBaseline && defWithCmd) {
+      // With +3 CS aura, attacker deals more damage → defender has lower HP
+      expect(defWithCmd.health).toBeLessThan(defBaseline.health);
+    }
+  });
+
+  it('commander aura does not apply when commander belongs to enemy', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    const rng = { seed: 42, counter: 0 };
+
+    // Baseline — no commanders
+    const unitsBaseline = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const stateBaseline = createTestState({ units: unitsBaseline, players });
+
+    // Enemy commander near the attacker but far from the defender — should NOT grant bonus to attacker
+    // Place enemy commander at (2,3) — distance to attacker (3,3) = 1, distance to defender (4,3) = 2
+    // The commander belongs to p2, so it should help p2's defender, not p1's attacker.
+    // To avoid helping the defender too, place it far: (0,3), distance to attacker=3, to defender=4
+    const commanderState: import('../../types/Commander').CommanderState = {
+      unitId: 'cmd_enemy', xp: 0, commanderLevel: 1, unspentPromotionPicks: 0,
+      promotions: [], tree: null, attachedUnits: [], packed: false,
+    };
+    const unitsWithEnemyCmd = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd_enemy', createTestUnit({ id: 'cmd_enemy', owner: 'p2', typeId: 'captain', position: { q: 0, r: 3 }, health: 100 })],
+    ]);
+    const stateWithEnemyCmd = createTestState({
+      units: unitsWithEnemyCmd,
+      players: new Map(players),
+      commanders: new Map([['cmd_enemy', commanderState]]),
+    });
+
+    const nextBaseline = combatSystem({ ...stateBaseline, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithEnemyCmd = combatSystem({ ...stateWithEnemyCmd, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Enemy commander should not help the attacker — same damage
+    const defBaseline = nextBaseline.units.get('d1');
+    const defEnemy = nextWithEnemyCmd.units.get('d1');
+    if (defBaseline && defEnemy) {
+      expect(defEnemy.health).toBe(defBaseline.health);
+    }
+  });
+
+  it('commander aura does not apply when commander is out of range (distance > 2)', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+
+    const rng = { seed: 42, counter: 0 };
+
+    // Baseline — no commanders
+    const unitsBaseline = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const stateBaseline = createTestState({ units: unitsBaseline, players });
+
+    // Commander at distance 3 from attacker — out of aura range
+    const commanderState: import('../../types/Commander').CommanderState = {
+      unitId: 'cmd_far', xp: 0, commanderLevel: 1, unspentPromotionPicks: 0,
+      promotions: [], tree: null, attachedUnits: [], packed: false,
+    };
+    // Attacker at (3,3), commander at (3,6) — distance = 3 (out of range)
+    const unitsWithFarCmd = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd_far', createTestUnit({ id: 'cmd_far', owner: 'p1', typeId: 'captain', position: { q: 3, r: 6 }, health: 100 })],
+    ]);
+    const stateWithFarCmd = createTestState({
+      units: unitsWithFarCmd,
+      players: new Map(players),
+      commanders: new Map([['cmd_far', commanderState]]),
+    });
+
+    const nextBaseline = combatSystem({ ...stateBaseline, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithFarCmd = combatSystem({ ...stateWithFarCmd, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Out-of-range commander should not grant bonus — same damage
+    const defBaseline = nextBaseline.units.get('d1');
+    const defFar = nextWithFarCmd.units.get('d1');
+    if (defBaseline && defFar) {
+      expect(defFar.health).toBe(defBaseline.health);
+    }
+  });
+});

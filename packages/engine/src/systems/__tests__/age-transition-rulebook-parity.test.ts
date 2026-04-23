@@ -369,14 +369,16 @@ describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_A
     expect(p.researchedCivics).toEqual([]);
     expect(p.currentCivic).toBeNull();
     expect(p.civicProgress).toBe(0);
-    expect(p.masteredCivics).toEqual([]);
+    // F-14: masteredCivics persist across age transitions (permanent knowledge)
+    expect(p.masteredCivics).toEqual(['code_of_laws']);
     expect(p.currentCivicMastery).toBeNull();
     expect(p.civicMasteryProgress).toBe(0);
 
-    // Tech tree resets (research + mastery)
+    // Tech tree resets (research clears, but F-14: masteries persist)
     expect(p.currentResearch).toBeNull();
     expect(p.researchProgress).toBe(0);
-    expect(p.masteredTechs).toEqual([]);
+    // F-14: masteredTechs persist across age transitions (permanent knowledge)
+    expect(p.masteredTechs).toEqual(['animal_husbandry']);
     expect(p.currentMastery).toBeNull();
     expect(p.masteryProgress).toBe(0);
 

@@ -3,6 +3,12 @@ import type { PlayerId } from '../types/Ids';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
 
 /**
+ * F-08: Number of relics required for the relic-based cultural victory threshold.
+ * Relics contribute to cultural victory alongside artifacts and World's Fair.
+ */
+export const CULTURAL_VICTORY_RELIC_COUNT = 8;
+
+/**
  * VictorySystem checks win conditions at the end of each turn.
  *
  * Victory types:
@@ -177,7 +183,7 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
     // F-09: Relics contribute to cultural victory alongside artifacts.
     // Progress: 50% from artifacts, 20% from relics, 30% from World's Fair
     const artifactProgress = Math.min(1, artifactsCollected / ARTIFACTS_REQUIRED);
-    const relicProgress = Math.min(1, relicCount / 6);
+    const relicProgress = Math.min(1, relicCount / CULTURAL_VICTORY_RELIC_COUNT);
     const wonderProgress = worldsFairOwnedByPlayer ? 1 : 0;
     const progress = artifactProgress * 0.5 + relicProgress * 0.2 + wonderProgress * 0.3;
 
@@ -197,7 +203,7 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
 
     const cultureProgress = Math.min(1, player.culture / cultureThreshold);
     const civicsProgress = Math.min(1, civicsCount / civicsRequired);
-    const relicProgress = Math.min(1, relicCount / 6);
+    const relicProgress = Math.min(1, relicCount / CULTURAL_VICTORY_RELIC_COUNT);
     const progress = cultureProgress * 0.4 + civicsProgress * 0.3 + relicProgress * 0.3;
 
     const meetsRequirements = player.culture >= cultureThreshold && civicsCount >= civicsRequired;

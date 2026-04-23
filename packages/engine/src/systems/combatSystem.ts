@@ -5,6 +5,7 @@ import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBon
 import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus } from '../state/EffectUtils';
 import { computeEffectiveCS } from '../state/CombatAnalytics';
+import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
@@ -255,7 +256,9 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const effectBonus = getCombatBonus(state, unit.owner, category);
   // F-03 (W4-05): Empire resource combat strength modifiers
   const resourceBonus = calculateResourceCombatBonus(state, unit.owner, category, defenderUnit);
-  return effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus - riverPenalty - warSupportPenalty;
+  // Commander aura: +3 CS per friendly commander within 2 hexes (F-04 base + promotion stacks)
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  return effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus - riverPenalty - warSupportPenalty;
 }
 
 /**
@@ -313,6 +316,10 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   if (unit.fortified) {
     strength += 5;
   }
+
+  // Commander aura: +3 CS per friendly commander within 2 hexes
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  strength += commanderAuraBonus;
 
   return strength;
 }

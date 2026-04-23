@@ -21,7 +21,7 @@ import { distance } from '../hex/HexMath';
 const BASE_AURA_RADIUS = 2;
 
 /** Base combat bonus projected by every commander. */
-const BASE_COMBAT_BONUS = 1;
+const BASE_COMBAT_BONUS = 3;
 
 /**
  * Returns the total commander aura combat bonus for a unit at the given

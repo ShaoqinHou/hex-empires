@@ -140,7 +140,7 @@ export { improvementSystem } from './systems/improvementSystem';
 export { buildingPlacementSystem } from './systems/buildingPlacementSystem';
 export { districtSystem } from './systems/districtSystem';
 export { generateAIActions } from './systems/aiSystem';
-export { victorySystem } from './systems/victorySystem';
+export { victorySystem, CULTURAL_VICTORY_RELIC_COUNT } from './systems/victorySystem';
 export { effectSystem, getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
 export { crisisSystem } from './systems/crisisSystem';

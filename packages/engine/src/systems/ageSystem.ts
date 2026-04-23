@@ -121,14 +121,18 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     researchedTechs: player.researchedTechs,
     currentResearch: null,
     researchProgress: 0,
-    masteredTechs: [],
+    // F-14: Mastered techs persist across age transitions — they represent
+    // permanent knowledge, not per-age progress. Only active mastery
+    // progress resets (the in-progress research, not the completed masteries).
+    masteredTechs: player.masteredTechs,
     currentMastery: null,
     masteryProgress: 0,
     // ── Civic tree reset (§16.1 #9) ──
     researchedCivics: [],
     currentCivic: null,
     civicProgress: 0,
-    masteredCivics: [],
+    // F-14: Mastered civics persist across age transitions (same rationale as masteredTechs).
+    masteredCivics: player.masteredCivics,
     currentCivicMastery: null,
     civicMasteryProgress: 0,
     // ── Government reset — require re-selection in new age ──

@@ -1010,3 +1010,53 @@ describe('F-01: simultaneous global age transition', () => {
     expect(next2).toBe(next1); // same reference, no change
   });
 });
+
+// ── F-14: Mastery persistence across age transitions ──
+
+describe('F-14: mastered techs and civics persist across age transitions', () => {
+  it('masteredTechs survives TRANSITION_AGE', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      masteredTechs: ['pottery', 'mining'],
+      currentMastery: 'agriculture',
+      masteryProgress: 30,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    // Mastered techs persist
+    expect(updated.masteredTechs).toEqual(['pottery', 'mining']);
+    // Active mastery progress resets (new age)
+    expect(updated.currentMastery).toBeNull();
+    expect(updated.masteryProgress).toBe(0);
+  });
+
+  it('masteredCivics survives TRANSITION_AGE', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      masteredCivics: ['early_empire', 'craftsmanship'],
+      currentCivicMastery: 'mysticism',
+      civicMasteryProgress: 20,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    // Mastered civics persist
+    expect(updated.masteredCivics).toEqual(['early_empire', 'craftsmanship']);
+    // Active civic mastery progress resets (new age)
+    expect(updated.currentCivicMastery).toBeNull();
+    expect(updated.civicMasteryProgress).toBe(0);
+  });
+});
