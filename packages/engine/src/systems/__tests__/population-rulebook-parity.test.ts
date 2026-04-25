@@ -105,7 +105,8 @@ describe('§3.1 — Growth threshold formula (quadratic post-patch)', () => {
     const tick1 = growthSystem(state, { type: 'END_TURN' });
     const c1 = tick1.cities.get('c1')!;
     expect(c1.population).toBe(1);
-    expect(c1.food).toBeGreaterThan(0);
+    // Per docstring above: yield=11, consumption=2 → surplus=9. After tick1: food = 0 + 9 = 9.
+    expect(c1.food).toBe(9);
     const foodAfterTick1 = c1.food;
 
     // Run the second tick with the state from the first.
@@ -225,9 +226,11 @@ describe('§3.2 — Growth rate modifiers', () => {
     const happyFood = happyNext.cities.get('c1')!.food;
     const unhappyFood = unhappyNext.cities.get('c1')!.food;
 
-    // Rulebook: unhappiness of -6 → -12% yield. Expect strictly less food, but not zero.
+    // Rulebook: unhappiness of -6 → multiplier=max(0,1+(-6)*0.02)=0.88 → 12% yield reduction.
+    // happyCity (happiness=10): Math.floor(11*1.2)=13 food, consumption=2, surplus=11 → food=11.
+    // unhappyCity (happiness=-6): Math.floor(11*0.88)=9 food, consumption=2, surplus=7 → food=7.
     expect(unhappyFood).toBeLessThan(happyFood);
-    expect(unhappyFood).toBeGreaterThan(0);
+    expect(unhappyFood).toBe(7);
   });
 });
 

@@ -1094,8 +1094,8 @@ describe('X5.3 — legacy path reconciliation: ageSystem mirrors scoreLegacyPath
     const updatedPlayer = next.players.get('p1')!;
     // legacyPaths.science should reflect the tier completed (1 or more)
     expect(updatedPlayer.legacyPaths.science).toBeGreaterThanOrEqual(antiquitySciencePath?.tiersCompleted ?? 0);
-    // legacyPoints must be positive (at least one tier gained)
-    expect(updatedPlayer.legacyPoints).toBeGreaterThan(0);
+    // legacyPoints must be 1 (exactly one science tier gained from 4 techs)
+    expect(updatedPlayer.legacyPoints).toBe(1);
   });
 
   it('X5.3 TRANSITION_AGE correctly carries legacyPaths into totalCareerLegacyPoints', () => {

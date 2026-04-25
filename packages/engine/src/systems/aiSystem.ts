@@ -8,6 +8,45 @@ import { PROMOTION_THRESHOLDS } from '../data/units/promotions';
 /** Faith threshold for adopting a pantheon (mirrors PANTHEON_DEFAULT_FAITH_COST). */
 const AI_PANTHEON_FAITH_COST = 25;
 
+// ── Commander helpers (mirrored to avoid cross-system imports) ──────────────
+
+/**
+ * Cumulative XP thresholds for commander levels 1–5.
+ * Mirrors LEVEL_THRESHOLDS in commanderPromotionSystem to avoid cross-system
+ * imports (import-boundaries.md: systems cannot import from each other).
+ */
+const COMMANDER_LEVEL_THRESHOLDS = [0, 50, 150, 300, 500] as const;
+
+/** Derive commander level from XP, capped at 5. */
+function aiCommanderLevelForXp(xp: number): number {
+  let level = 1;
+  for (let i = 1; i < COMMANDER_LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= COMMANDER_LEVEL_THRESHOLDS[i]) {
+      level = i + 1;
+    } else {
+      break;
+    }
+  }
+  return Math.min(level, 5);
+}
+
+/**
+ * True iff unit.typeId is a registered commander archetype.
+ * Uses state.config.commanders when available; falls back to the well-known
+ * id set to stay consistent with commanderPromotionSystem behaviour.
+ */
+const KNOWN_COMMANDER_IDS: ReadonlySet<string> = new Set([
+  'air_general', 'captain', 'general', 'admiral', 'marshal',
+  'fleet_admiral', 'partisan_leader',
+]);
+
+function aiIsCommander(unit: UnitState, state: GameState): boolean {
+  if (state.config.commanders !== undefined) {
+    return state.config.commanders.has(unit.typeId);
+  }
+  return KNOWN_COMMANDER_IDS.has(unit.typeId);
+}
+
 /** Diplomacy helpers (mirrored locally to avoid cross-system imports) */
 function aiRelationKey(a: string, b: string): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
@@ -475,11 +514,91 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
   // TODO: PURCHASE_TILE — AI territorial expansion is complex to prioritize correctly
 
   // 9. Civ VII parity emissions (low priority — at most ONE per turn).
-  //    Order: pantheon → government → policy. Each guarded by its own
+  //    Order: pantheon → religion → government → policy. Each guarded by its own
   //    prerequisites. These never block the existing core AI flow above.
-  const parityAction = pickCivVIIParityAction(state, player);
+  const parityAction = pickCivVIIParityAction(state, player, ourCities);
   if (parityAction) {
-    actions.push(parityAction);
+    actions.push(parityAction as GameAction);
+  }
+
+  // 10. PROMOTE_COMMANDER — promote any commander unit with unspent promotion picks.
+  for (const unit of ourUnits) {
+    if (!aiIsCommander(unit, state)) continue;
+    const level = aiCommanderLevelForXp(unit.experience);
+    const unspent = level - unit.promotions.length;
+    if (unspent <= 0) continue;
+    // Pick first available promotion: tier 1 with no prerequisites, or any with met prereqs.
+    let chosenPromotion: string | null = null;
+    if (state.config.commanderPromotions) {
+      for (const [promoId, promo] of state.config.commanderPromotions) {
+        if (unit.promotions.includes(promoId)) continue;
+        const prereqsMet = promo.prerequisites.every(p => unit.promotions.includes(p));
+        if (!prereqsMet) continue;
+        chosenPromotion = promoId;
+        break; // pick first eligible
+      }
+    }
+    if (chosenPromotion) {
+      actions.push({ type: 'PROMOTE_COMMANDER', commanderId: unit.id, promotionId: chosenPromotion });
+    }
+  }
+
+  // 11. ASSIGN_RESOURCE — assign any unassigned owned resources to cities with capacity.
+  const ownedResources = (player as PlayerState & { ownedResources?: ReadonlyArray<string> }).ownedResources;
+  if (ownedResources && ownedResources.length > 0) {
+    // Collect resources already assigned to any city
+    const alreadyAssigned = new Set<string>();
+    for (const city of ourCities) {
+      const assigned = (city as CityState & { assignedResources?: ReadonlyArray<string> }).assignedResources;
+      if (assigned) {
+        for (const r of assigned) alreadyAssigned.add(r);
+      }
+    }
+    // Sort cities by population descending (assign to largest first)
+    const sortedCities = [...ourCities].sort((a, b) => b.population - a.population);
+    for (const resourceId of ownedResources) {
+      if (alreadyAssigned.has(resourceId)) continue;
+      // Find first city with spare slot
+      for (const city of sortedCities) {
+        const assigned = (city as CityState & { assignedResources?: ReadonlyArray<string> }).assignedResources ?? [];
+        const cap = city.settlementType === 'city' ? 2 : 1;
+        if (assigned.length < cap) {
+          actions.push({ type: 'ASSIGN_RESOURCE', resourceId, cityId: city.id, playerId: player.id });
+          alreadyAssigned.add(resourceId);
+          break;
+        }
+      }
+    }
+  }
+
+  // 12. PLACE_CODEX — place any unplaced codices into buildings with spare codex slots.
+  if (state.codices) {
+    for (const [codexId, codex] of state.codices) {
+      if (codex.playerId !== player.id) continue;
+      if (codex.placedInCityId !== undefined) continue; // already placed
+      // Find a city + building with spare codex slots
+      let placed = false;
+      for (const city of ourCities) {
+        for (const buildingId of city.buildings) {
+          const buildingDef = state.config.buildings.get(buildingId);
+          const slots = buildingDef?.codexSlots ?? 0;
+          if (slots <= 0) continue;
+          // Count codices already placed in this building
+          let usedSlots = 0;
+          for (const c of state.codices.values()) {
+            if (c.placedInCityId === city.id && c.placedInBuildingId === buildingId) {
+              usedSlots++;
+            }
+          }
+          if (usedSlots < slots) {
+            actions.push({ type: 'PLACE_CODEX', codexId, buildingId, cityId: city.id });
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
+      }
+    }
   }
 
   actions.push({ type: 'END_TURN' });
@@ -487,24 +606,34 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
 }
 
 /**
- * Pick exactly one Civ VII parity action (ADOPT_PANTHEON, SET_GOVERNMENT,
- * or SLOT_POLICY) for the current AI player, or null if none apply.
+ * Pick exactly one Civ VII parity action (ADOPT_PANTHEON, FOUND_RELIGION,
+ * SET_GOVERNMENT, or SLOT_POLICY) for the current AI player, or null if none
+ * apply.
  *
  * Priority order:
  *   1. Adopt a pantheon when the player has none AND has enough faith AND
- *      at least one pantheon entry is not yet claimed by any player.
- *   2. Set a government when the player has none AND has researched the
+ *      at least one city with Temple AND at least one pantheon entry is not
+ *      yet claimed by any player.
+ *   2. Found a religion when player has adopted a pantheon AND has researched
+ *      the Piety civic AND has at least one city with Temple.
+ *   3. Set a government when the player has none AND has researched the
  *      unlock civic for at least one GovernmentDef.
- *   3. Slot a policy when the player HAS a government AND has at least
+ *   4. Slot a policy when the player HAS a government AND has at least
  *      one empty (null) slot in the flat wildcard array AND a PolicyDef
  *      whose unlockCivic is researched exists (W2-03 flat wildcard model).
  */
 function pickCivVIIParityAction(
   state: GameState,
   player: { readonly id: string; readonly faith: number; readonly researchedCivics: ReadonlyArray<string>; readonly pantheonId?: string | null; readonly governmentId?: string | null; readonly slottedPolicies?: ReadonlyArray<string | null> },
+  ourCities: ReadonlyArray<CityState>,
 ): GameAction | null {
-  // 1. Pantheon
-  if (!player.pantheonId && player.faith >= AI_PANTHEON_FAITH_COST) {
+  // Shared helper: does the player have any city with a Temple?
+  const hasTempleCity = ourCities.some(c =>
+    (c.buildings as ReadonlyArray<string>).includes('temple'),
+  );
+
+  // 1. Pantheon — requires Temple + sufficient faith
+  if (!player.pantheonId && player.faith >= AI_PANTHEON_FAITH_COST && hasTempleCity) {
     const claimedByAny = new Set<string>();
     for (const p of state.players.values()) {
       if (p.pantheonId) claimedByAny.add(p.pantheonId);
@@ -526,7 +655,45 @@ function pickCivVIIParityAction(
     }
   }
 
-  // 2. Government
+  // 2. Found Religion — requires pantheon + Piety civic + Temple city
+  if (
+    player.pantheonId &&
+    (player.researchedCivics as ReadonlyArray<string>).includes('piety') &&
+    hasTempleCity
+  ) {
+    // Only found if player doesn't already have a religion
+    const existingReligions = state.religion?.religions ?? [];
+    const alreadyFounded = existingReligions.some(r => r.founderPlayerId === player.id);
+    if (!alreadyFounded) {
+      // Pick the first city with a Temple as the holy city
+      const holyCity = ourCities.find(c =>
+        (c.buildings as ReadonlyArray<string>).includes('temple'),
+      );
+      // Pick beliefs not already taken by other religions
+      const takenFounderBeliefs = new Set(existingReligions.map(r => r.founderBeliefId));
+      const takenFollowerBeliefs = new Set(existingReligions.map(r => r.followerBeliefId));
+      const founderBelief = [...state.config.founderBeliefs.keys()].find(
+        b => !takenFounderBeliefs.has(b),
+      );
+      const followerBelief = [...state.config.followerBeliefs.keys()].find(
+        b => !takenFollowerBeliefs.has(b),
+      );
+      if (holyCity && founderBelief && followerBelief) {
+        // FOUND_RELIGION is in ReligionAction (not GameAction yet); cast through unknown.
+        // The GameEngine's adaptReligion adapter handles it at runtime.
+        return {
+          type: 'FOUND_RELIGION',
+          playerId: player.id,
+          cityId: holyCity.id,
+          religionName: `Religion of ${player.id}`,
+          founderBelief,
+          followerBelief,
+        } as unknown as GameAction;
+      }
+    }
+  }
+
+  // 3. Government
   if (!player.governmentId) {
     const researched = new Set(player.researchedCivics);
     const candidate = [...state.config.governments.values()].find(g => researched.has(g.unlockCivic));
@@ -539,7 +706,7 @@ function pickCivVIIParityAction(
     }
   }
 
-  // 3. Slot a policy — W2-03 flat wildcard model: slottedPolicies is a
+  // 4. Slot a policy — W2-03 flat wildcard model: slottedPolicies is a
   //    flat ReadonlyArray<string | null>; any null entry is an open slot.
   if (player.governmentId && player.slottedPolicies) {
     const researched = new Set(player.researchedCivics);

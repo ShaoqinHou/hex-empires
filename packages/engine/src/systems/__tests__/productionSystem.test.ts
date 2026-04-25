@@ -108,7 +108,9 @@ describe('productionSystem', () => {
       });
       const state = createTestState({ cities: new Map([['c1', city]]) });
       const next = productionSystem(state, { type: 'END_TURN' });
-      expect(next.cities.get('c1')!.productionProgress).toBeGreaterThan(0);
+      // Default city has territory:[] → city-center production yield 2 (verified empirically).
+      // productionProgress = 0 + 2 = 2.
+      expect(next.cities.get('c1')!.productionProgress).toBe(2);
     });
 
     it('creates unit when production completes', () => {

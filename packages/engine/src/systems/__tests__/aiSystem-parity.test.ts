@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { generateAIActions } from '../aiSystem';
-import { createTestState, createTestPlayer } from './helpers';
+import { createTestState, createTestPlayer, createTestCity } from './helpers';
 import { ALL_PANTHEONS } from '../../data/religion';
 import { ALL_GOVERNMENTS, ALL_POLICIES } from '../../data/governments';
+import { ALL_FOUNDER_BELIEFS, ALL_FOLLOWER_BELIEFS } from '../../data/religion';
 import type { GameAction, GameState, PlayerState } from '../../types/GameState';
 
 /**
  * Tests for the Civ VII parity emissions added to generateAIActions:
- *   - ADOPT_PANTHEON
+ *   - ADOPT_PANTHEON   (CC2.1) — requires Temple city + faith
+ *   - FOUND_RELIGION   (CC2.2) — requires pantheon + Piety + Temple city
  *   - SET_GOVERNMENT
  *   - SLOT_POLICY
  *
@@ -24,9 +26,16 @@ function findAction<T extends GameAction['type']>(
     | undefined;
 }
 
-/** Build an AI-owned state where the given overrides apply to the lone player. */
+/** A city with a Temple owned by 'p1'. */
+const TEMPLE_CITY = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+
+/**
+ * Build an AI-owned state where the given overrides apply to the lone player.
+ * By default includes a city with Temple so pantheon/religion triggers can fire.
+ */
 function aiStateWith(
   overrides: Partial<ReturnType<typeof createTestPlayer>>,
+  withTempleCity = true,
 ): GameState {
   const p1 = createTestPlayer({
     id: 'p1',
@@ -37,11 +46,16 @@ function aiStateWith(
   return createTestState({
     currentPlayerId: 'p1',
     players: new Map([['p1', p1]]),
+    cities: withTempleCity
+      ? new Map([['c1', TEMPLE_CITY]])
+      : new Map(),
   });
 }
 
 describe('aiSystem — Civ VII parity emissions', () => {
-  it('AI with no pantheon and >=25 faith emits ADOPT_PANTHEON', () => {
+  // ── CC2.1: ADOPT_PANTHEON (Temple-gated) ──────────────────────────────
+
+  it('AI with no pantheon, >=25 faith, and a Temple city emits ADOPT_PANTHEON (CC2.1)', () => {
     const state = aiStateWith({ faith: 25, pantheonId: null });
     const actions = generateAIActions(state);
     const adopt = findAction(actions, 'ADOPT_PANTHEON');
@@ -61,6 +75,12 @@ describe('aiSystem — Civ VII parity emissions', () => {
 
   it('AI with insufficient faith does NOT emit ADOPT_PANTHEON', () => {
     const state = aiStateWith({ faith: 24, pantheonId: null });
+    const actions = generateAIActions(state);
+    expect(findAction(actions, 'ADOPT_PANTHEON')).toBeUndefined();
+  });
+
+  it('AI without a Temple city does NOT emit ADOPT_PANTHEON (CC2.1 new gate)', () => {
+    const state = aiStateWith({ faith: 100, pantheonId: null }, /* withTempleCity */ false);
     const actions = generateAIActions(state);
     expect(findAction(actions, 'ADOPT_PANTHEON')).toBeUndefined();
   });
@@ -86,6 +106,7 @@ describe('aiSystem — Civ VII parity emissions', () => {
         ['p1', p1],
         ['p2', p2],
       ]),
+      cities: new Map([['c1', TEMPLE_CITY]]),
     });
     const actions = generateAIActions(state);
     const adopt = findAction(actions, 'ADOPT_PANTHEON');
@@ -93,6 +114,48 @@ describe('aiSystem — Civ VII parity emissions', () => {
     expect(adopt!.pantheonId).not.toBe(firstClaimed);
     expect(adopt!.pantheonId).toBe(ALL_PANTHEONS[1].id);
   });
+
+  // ── CC2.2: FOUND_RELIGION ──────────────────────────────────────────
+
+  it('AI with pantheon + Piety civic + Temple city emits FOUND_RELIGION (CC2.2)', () => {
+    const state = aiStateWith({
+      faith: 200,
+      pantheonId: ALL_PANTHEONS[0].id,
+      researchedCivics: ['piety'],
+    });
+    // Use a type-safe cast because FOUND_RELIGION is in ReligionAction, not GameAction yet
+    const actions = generateAIActions(state) as ReadonlyArray<GameAction & { type: string }>;
+    const found = actions.find(a => a.type === 'FOUND_RELIGION') as
+      | { type: 'FOUND_RELIGION'; playerId: string; cityId: string; founderBelief: string; followerBelief: string }
+      | undefined;
+    expect(found).toBeDefined();
+    expect(found!.playerId).toBe('p1');
+    expect(found!.cityId).toBe('c1');
+    expect(ALL_FOUNDER_BELIEFS.some(b => b.id === found!.founderBelief)).toBe(true);
+    expect(ALL_FOLLOWER_BELIEFS.some(b => b.id === found!.followerBelief)).toBe(true);
+  });
+
+  it('AI without Piety civic does NOT emit FOUND_RELIGION (CC2.2)', () => {
+    const state = aiStateWith({
+      faith: 200,
+      pantheonId: ALL_PANTHEONS[0].id,
+      researchedCivics: [],
+    });
+    const actions = generateAIActions(state) as ReadonlyArray<GameAction & { type: string }>;
+    expect(actions.find(a => a.type === 'FOUND_RELIGION')).toBeUndefined();
+  });
+
+  it('AI without pantheon does NOT emit FOUND_RELIGION (CC2.2)', () => {
+    const state = aiStateWith({
+      faith: 200,
+      pantheonId: null,
+      researchedCivics: ['piety'],
+    });
+    const actions = generateAIActions(state) as ReadonlyArray<GameAction & { type: string }>;
+    expect(actions.find(a => a.type === 'FOUND_RELIGION')).toBeUndefined();
+  });
+
+  // ── Government / policy tests (unchanged) ─────────────────────────
 
   it('AI with no government and researched unlock civic emits SET_GOVERNMENT', () => {
     // pantheon is already set so it cannot emit ADOPT_PANTHEON (one per turn).
@@ -151,12 +214,13 @@ describe('aiSystem — Civ VII parity emissions', () => {
       slottedPolicies: [null, null] as unknown as PlayerState['slottedPolicies'],
     });
     const actions = generateAIActions(state);
-    const parityTypes = new Set<GameAction['type']>([
+    const parityTypes = new Set<string>([
       'ADOPT_PANTHEON',
       'SET_GOVERNMENT',
       'SLOT_POLICY',
+      'FOUND_RELIGION',
     ]);
-    const parityActions = actions.filter(a => parityTypes.has(a.type));
+    const parityActions = (actions as ReadonlyArray<{ type: string }>).filter(a => parityTypes.has(a.type));
     expect(parityActions.length).toBe(1);
     expect(parityActions[0].type).toBe('ADOPT_PANTHEON');
   });

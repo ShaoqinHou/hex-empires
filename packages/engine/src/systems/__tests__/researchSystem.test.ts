@@ -244,7 +244,8 @@ describe('researchSystem', () => {
         cities: new Map([['c1', city]]),
       });
       const next = researchSystem(state, { type: 'END_TURN' });
-      expect(next.players.get('p1')!.masteryProgress).toBeGreaterThan(0);
+      // sciencePerTurn: min1(science==0) + pop3 = 4; masteryProgress = 0 + max(1,4) = 4
+      expect(next.players.get('p1')!.masteryProgress).toBe(4);
     });
 
     it('mastery costs 80% of the original tech cost', () => {

@@ -70,7 +70,8 @@ describe('civicSystem', () => {
         cities: new Map([['c1', city]]),
       });
       const next = civicSystem(state, { type: 'END_TURN' });
-      expect(next.players.get('p1')!.civicProgress).toBeGreaterThan(0);
+      // Base culture per city = 1; no buildings; civicProgress = 0 + 1 = 1
+      expect(next.players.get('p1')!.civicProgress).toBe(1);
     });
 
     it('completes civic when progress reaches cost', () => {

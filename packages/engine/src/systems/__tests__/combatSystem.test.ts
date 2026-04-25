@@ -161,7 +161,8 @@ describe('combatSystem', () => {
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const attacker = next.units.get('a1');
     expect(attacker).toBeDefined();
-    expect(attacker!.experience).toBeGreaterThan(0);
+    // combatSystem grants 5 XP to attacker per ATTACK_UNIT (combatSystem.ts line 138)
+    expect(attacker!.experience).toBe(5);
   });
 
   it('adds combat log entry', () => {

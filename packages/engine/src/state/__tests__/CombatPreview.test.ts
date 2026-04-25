@@ -92,10 +92,13 @@ describe('calculateCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(false);
-    expect(preview.attackerStrength).toBeGreaterThan(0);
-    expect(preview.defenderStrength).toBeGreaterThan(0);
-    expect(preview.expectedDamageToDefender).toBeGreaterThan(0);
-    expect(preview.expectedDamageToAttacker).toBeGreaterThan(0); // Melee takes retaliation
+    // warrior combat=20, health=100 → effectiveCS=floor(20*(100/100))=20; no modifiers
+    expect(preview.attackerStrength).toBe(20);
+    expect(preview.defenderStrength).toBe(20);
+    // strengthDiff=0 → min=round(30*exp(0)*0.75)=round(22.5)=23, max=round(30*exp(0)*1.25)=round(37.5)=38
+    // expected = round((23+38)/2) = round(30.5) = 31
+    expect(preview.expectedDamageToDefender).toBe(31);
+    expect(preview.expectedDamageToAttacker).toBe(31); // Melee takes retaliation, equal CS → symmetric
     expect(preview.strengthDifference).toEqual(preview.attackerStrength - preview.defenderStrength);
   });
 
@@ -113,7 +116,9 @@ describe('calculateCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(true);
-    expect(preview.expectedDamageToDefender).toBeGreaterThan(0);
+    // archer rangedCombat=20, warrior defense=20; effectiveCS both=20; strengthDiff=0
+    // min=23, max=38, expected=31
+    expect(preview.expectedDamageToDefender).toBe(31);
     expect(preview.expectedDamageToAttacker).toBe(0); // Ranged takes no retaliation
     expect(preview.minDamageToAttacker).toBe(0);
     expect(preview.maxDamageToAttacker).toBe(0);
@@ -359,8 +364,11 @@ describe('calculateCityCombatPreview', () => {
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(false);
     expect(preview.target).toEqual({ type: 'city', cityId: 'c1' });
-    expect(preview.expectedDamageToDefender).toBeGreaterThan(0);
-    expect(preview.expectedDamageToAttacker).toBeGreaterThan(0); // Melee takes retaliation
+    // warrior effectiveCS=20, cityDefense=10(base)+0(no walls); strengthDiff=10
+    // atk min=round(30*exp(10/25)*0.75)=34, max=round(30*exp(10/25)*1.25)=56, exp=round((34+56)/2)=45
+    // def min=round(30*exp(-10/25)*0.75)=15, max=round(30*exp(-10/25)*1.25)=25, exp=round((15+25)/2)=20
+    expect(preview.expectedDamageToDefender).toBe(45);
+    expect(preview.expectedDamageToAttacker).toBe(20); // Melee takes retaliation
   });
 
   it('calculates preview for valid ranged attack on city', () => {
@@ -373,7 +381,9 @@ describe('calculateCityCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(true);
-    expect(preview.expectedDamageToDefender).toBeGreaterThan(0);
+    // archer rangedCombat=20, cityDefense=10; strengthDiff=10
+    // min=34, max=56, expected=45; no retaliation for ranged
+    expect(preview.expectedDamageToDefender).toBe(45);
     expect(preview.expectedDamageToAttacker).toBe(0); // Ranged takes no retaliation
   });
 
