@@ -106,19 +106,21 @@ describe('AA5.1: Codex generation on tech research', () => {
   });
 });
 
-describe('AA5.1: Antiquity science legacy predicate uses codicesCount', () => {
-  it('tier 1 satisfied with 1 codex when state.codices is present', () => {
+describe('BB5.4: Antiquity science legacy predicate uses placedCodicesCount', () => {
+  it('tier 1 satisfied with 1 PLACED codex when state.codices is present', () => {
     const player = createTestPlayer({
       id: 'p1',
       age: 'antiquity',
     });
-    // Manually inject state.codices with 1 codex for player p1
+    // Manually inject state.codices with 1 PLACED codex for player p1
     const codex = {
       id: 'codex-pottery-p1-1',
       playerId: 'p1',
       cityId: 'c1',
       buildingId: 'library',
       addedTurn: 1,
+      placedInCityId: 'c1',        // BB5.4: must be placed
+      placedInBuildingId: 'library',
     };
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -131,6 +133,32 @@ describe('AA5.1: Antiquity science legacy predicate uses codicesCount', () => {
     );
     expect(antiquityScience).toBeDefined();
     expect(antiquityScience!.tiersCompleted).toBeGreaterThanOrEqual(1);
+  });
+
+  it('tier 1 NOT satisfied with 1 UNPLACED codex when state.codices is present', () => {
+    const player = createTestPlayer({
+      id: 'p1',
+      age: 'antiquity',
+    });
+    // Codex earned but not placed (no placedInCityId)
+    const codex = {
+      id: 'codex-pottery-p1-1',
+      playerId: 'p1',
+      cityId: 'c1',
+      buildingId: 'library',
+      addedTurn: 1,
+      // placedInCityId intentionally absent
+    };
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      codices: new Map([['codex-pottery-p1-1', codex]]),
+    });
+
+    const progress = scoreLegacyPaths('p1', state);
+    const antiquityScience = progress.find(
+      (p) => p.age === 'antiquity' && p.axis === 'science',
+    );
+    expect(antiquityScience!.tiersCompleted).toBe(0);
   });
 
   it('tier 1 NOT satisfied with 0 codices when state.codices is present', () => {

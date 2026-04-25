@@ -225,6 +225,41 @@ describe('scoreLegacyPaths — milestone satisfaction', () => {
     expect(progressFor(stateWithPlayer({ culture: 600 }), 'exploration', 'culture')).toBe(3);
   });
 
+  it('BB5.4: antiquity science tier 1 requires PLACED codices (unplaced do NOT count)', () => {
+    // 5 unplaced codices — none have placedInCityId → predicate should fail
+    const codicesUnplaced = new Map([
+      ['cx1', { id: 'cx1', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 }],
+      ['cx2', { id: 'cx2', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 }],
+      ['cx3', { id: 'cx3', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 }],
+      ['cx4', { id: 'cx4', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 }],
+      ['cx5', { id: 'cx5', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 }],
+    ]);
+    const stateUnplaced = createTestState({
+      players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      codices: codicesUnplaced,
+    });
+    const progressUnplaced = scoreLegacyPaths('p1', stateUnplaced);
+    const sciUnplaced = progressUnplaced.find((e) => e.age === 'antiquity' && e.axis === 'science');
+    expect(sciUnplaced!.tiersCompleted).toBe(0);
+
+    // 5 placed codices — placedInCityId is set → tier 1 (1 placed) and tier 2 (3 placed) should pass
+    const codicesPlaced = new Map([
+      ['cx1', { id: 'cx1', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' }],
+      ['cx2', { id: 'cx2', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' }],
+      ['cx3', { id: 'cx3', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' }],
+      ['cx4', { id: 'cx4', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' }],
+      ['cx5', { id: 'cx5', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' }],
+    ]);
+    const statePlaced = createTestState({
+      players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      codices: codicesPlaced,
+    });
+    const progressPlaced = scoreLegacyPaths('p1', statePlaced);
+    const sciPlaced = progressPlaced.find((e) => e.age === 'antiquity' && e.axis === 'science');
+    // 5 placed: satisfies tier1 (>=1) and tier2 (>=3), not tier3 (>=6)
+    expect(sciPlaced!.tiersCompleted).toBe(2);
+  });
+
   it('only counts cities owned by the given player for library check', () => {
     const p1City = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
     const p2City = cityWith({ id: 'c2', owner: 'p2', buildings: [] });

@@ -140,6 +140,16 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     }
   }
 
+  // BB5.3: Placed codex science yield — each codex with placedInCityId === city.id
+  // contributes +2 science per turn to that city.
+  if (state.codices) {
+    for (const codex of state.codices.values()) {
+      if (codex.placedInCityId === city.id) {
+        total = addYields(total, { science: 2 });
+      }
+    }
+  }
+
   // Y2.4: localHappiness penalty — each unit of negative happiness reduces
   // all yields by 2% (i.e. multiplier = 1 + localHappiness * 0.02, clamped to [0, 1]).
   // city.happiness holds the current local happiness value.

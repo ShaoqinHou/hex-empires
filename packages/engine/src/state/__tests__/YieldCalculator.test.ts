@@ -361,3 +361,41 @@ describe('Y2.4: localHappiness penalty in YieldCalculator', () => {
     expect(yieldsHappy.gold).toBe(yieldsNeutral.gold);
   });
 });
+
+describe('BB5.3: placed-codex science yield in calculateCityYields', () => {
+  it('city with 3 placed codices gets +6 science from codices', () => {
+    const city = makeCity({ id: 'c1', owner: 'p1' });
+    const codex1 = { id: 'cx1', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' };
+    const codex2 = { id: 'cx2', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' };
+    const codex3 = { id: 'cx3', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1, placedInCityId: 'c1', placedInBuildingId: 'library' };
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      codices: new Map([['cx1', codex1], ['cx2', codex2], ['cx3', codex3]]),
+    });
+    const baseCity = makeCity({ id: 'c1', owner: 'p1' });
+    const stateNoCodex = createTestState({ cities: new Map([['c1', baseCity]]) });
+
+    const yieldsWithCodex = calculateCityYields(city, state);
+    const yieldsNoCodex = calculateCityYields(baseCity, stateNoCodex);
+
+    // 3 placed codices → +6 science
+    expect(yieldsWithCodex.science - yieldsNoCodex.science).toBe(6);
+  });
+
+  it('city with 0 placed codices gets +0 science from codices', () => {
+    const city = makeCity({ id: 'c1', owner: 'p1' });
+    // Codex earned (not placed — no placedInCityId) should not contribute
+    const codexUnplaced = { id: 'cx1', playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1 };
+    const stateWithUnplaced = createTestState({
+      cities: new Map([['c1', city]]),
+      codices: new Map([['cx1', codexUnplaced]]),
+    });
+    const stateNoCodex = createTestState({ cities: new Map([['c1', city]]) });
+
+    const yieldsWithUnplaced = calculateCityYields(city, stateWithUnplaced);
+    const yieldsNoCodex = calculateCityYields(city, stateNoCodex);
+
+    // Unplaced codex should not add science
+    expect(yieldsWithUnplaced.science).toBe(yieldsNoCodex.science);
+  });
+});
