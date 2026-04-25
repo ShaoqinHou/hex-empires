@@ -384,11 +384,54 @@ export const DOCKYARD: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+export const LIGHTHOUSE: BuildingDef = {
+  id: 'lighthouse',
+  name: 'Lighthouse',
+  age: 'antiquity',
+  cost: 80,
+  maintenance: 1,
+  yields: { gold: 3 },
+  effects: ['+1 trade route capacity for coastal cities', '+1 sight range for naval units'],
+  requiredTech: 'sailing',
+  category: 'gold',
+  happinessCost: 0,
+} as const;
+
+export const FORUM: BuildingDef = {
+  id: 'forum',
+  name: 'Forum',
+  age: 'antiquity',
+  cost: 100,
+  maintenance: 1,
+  yields: { gold: 2, culture: 1 },
+  effects: ['+25% culture policy generation', '+1 civic research slot'],
+  requiredTech: 'currency',
+  category: 'culture',
+  happinessCost: 2,
+} as const;
+
+export const TEMPLE_OF_ARTEMIS: BuildingDef = {
+  id: 'temple_of_artemis',
+  name: 'Temple of Artemis',
+  age: 'antiquity',
+  cost: 360,
+  maintenance: 0,
+  yields: { food: 4, faith: 2 },
+  effects: ['+1 Food per Forest or Jungle tile in this city', '+1 Great Prophet point per turn', '+1 Housing in all cities'],
+  requiredTech: 'archery',
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'prophet', amount: 1 },
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
   BATH, ARENA, ALTAR, VILLA, AMPHITHEATRE, GARDEN, BLACKSMITH, AQUEDUCT,
   STOREHOUSE, DOCKYARD,
+  LIGHTHOUSE, FORUM,
   PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
-  GIZA, GREAT_LIBRARY,
+  GIZA, GREAT_LIBRARY, TEMPLE_OF_ARTEMIS,
 ] as const;
