@@ -109,8 +109,9 @@ describe('R61: Core Stats — CS stat drives melee damage, rangedCombat drives r
 
   it('ranged archer uses rangedCombat (20) not combat (10) when attacking', () => {
     // Archer CS=10 but rangedCombat=20. Against warrior CS=20 defender, if ranged stat
-    // is used, damage ≈ 30 (equal strengths) + 5 CS first-strike bonus → avg ≈ 36.6.
-    // If CS=10 were used instead, damage would be much lower (~16 even with first strike).
+    // is used, damage ≈ 30 (equal strengths, base damage formula at parity).
+    // If CS=10 were used instead, damage would be much lower (~20).
+    // The threshold is 25 — clearly above the CS=10 regime (~20) and below CS=20 (~30).
     const avg = averageDefenderDamage((seed) => {
       const units = new Map<string, UnitState>([
         ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'archer', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
@@ -122,16 +123,17 @@ describe('R61: Core Stats — CS stat drives melee damage, rangedCombat drives r
       ]);
       return createTestState({ units, players, currentPlayerId: 'p1', rng: { seed, counter: 0 } });
     });
-    // Expect ≥30: ranged stat in use. If melee CS=10 were used, avg would be <25.
-    expect(avg).toBeGreaterThan(30);
+    // Expect ≥25: ranged stat in use (avg ~30). If melee CS=10 were used, avg would be ~20.
+    expect(avg).toBeGreaterThan(25);
   });
 });
 
 // ── §6.2 Damage Formula ──
 
 describe('R62: Damage formula — base 30 at equal CS, ~+4% exponential per CS point', () => {
-  // All R62 tests use attacker health=99 to avoid the +5 First-Strike bonus that
-  // would otherwise skew expected damage (rulebook formula is measured without modifiers).
+  // All R62 tests use attacker health=99 (slightly below 100) — historically this
+  // was to avoid a first-strike bonus, which has since been removed (Z2.2). Using
+  // 99 HP still avoids any HP-scaling discrepancy in edge-case future modifiers.
   it('equal CS (warrior vs warrior, no first strike) averages ~30 damage to defender', () => {
     const avg = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, attacker: { health: 99 }, defender: { typeId: 'warrior' } }),
