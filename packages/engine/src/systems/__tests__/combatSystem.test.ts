@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatSystem } from '../combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, createTestCity, setTile } from './helpers';
+import { coordToKey } from '../../hex/HexMath';
 
 describe('combatSystem', () => {
   it('deals damage to defender on melee attack', () => {
@@ -1127,5 +1128,73 @@ describe('AA1.2: wasConquered provenance on city capture', () => {
     const capturedCity = next.cities.get('c1')!;
     expect(capturedCity.owner).toBe('p1');   // ownership transferred
     expect(capturedCity.wasConquered).toBe(true); // AA1.2 flag set
+  });
+});
+
+describe('combatSystem — BB1.3: river-crossing penalty (Y5.2)', () => {
+  /**
+   * Attacker at (3,3), defender at (4,3) — East edge (direction index 0).
+   * River on ATTACKER tile edge 0 means attacker is crossing the river.
+   * River on DEFENDER tile edge 3 (West, the mirror edge) does NOT penalise.
+   *
+   * HEX_DIRECTIONS: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE
+   */
+  function buildRiverState(
+    riverOn: 'attacker-edge' | 'defender-edge' | 'none',
+  ) {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const base = createTestState({ units, players, currentPlayerId: 'p1' });
+
+    const tiles = new Map(base.map.tiles);
+
+    if (riverOn === 'attacker-edge') {
+      // Place river on attacker's tile edge facing East (index 0 = toward defender)
+      const attackerKey = coordToKey({ q: 3, r: 3 });
+      const attackerTile = tiles.get(attackerKey)!;
+      tiles.set(attackerKey, { ...attackerTile, river: [0] });
+    } else if (riverOn === 'defender-edge') {
+      // Place river on defender's tile edge facing West (index 3, the mirror),
+      // but NOT on the attacker's tile — attacker is not crossing from its side.
+      const defenderKey = coordToKey({ q: 4, r: 3 });
+      const defenderTile = tiles.get(defenderKey)!;
+      tiles.set(defenderKey, { ...defenderTile, river: [3] });
+    }
+
+    return { ...base, map: { ...base.map, tiles } };
+  }
+
+  it('attacker crossing a river edge takes -25% CS penalty (deals less damage than no-river)', () => {
+    const stateNoRiver = buildRiverState('none');
+    const stateRiver = buildRiverState('attacker-edge');
+
+    const nextNoRiver = combatSystem(stateNoRiver, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextRiver = combatSystem(stateRiver, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHPNoRiver = nextNoRiver.units.get('d1')?.health ?? 0;
+    const defHPRiver = nextRiver.units.get('d1')?.health ?? 0;
+
+    // With river-crossing penalty attacker deals less damage → defender has MORE HP remaining
+    expect(defHPRiver).toBeGreaterThan(defHPNoRiver);
+  });
+
+  it('defender behind a river (river on defender tile, not attacker) does NOT penalise the attacker', () => {
+    const stateNoRiver = buildRiverState('none');
+    const stateDefenderRiver = buildRiverState('defender-edge');
+
+    const nextNoRiver = combatSystem(stateNoRiver, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextDefRiver = combatSystem(stateDefenderRiver, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const defHPNoRiver = nextNoRiver.units.get('d1')?.health ?? 0;
+    const defHPDefRiver = nextDefRiver.units.get('d1')?.health ?? 0;
+
+    // No penalty applied — damage is identical to baseline
+    expect(defHPDefRiver).toBe(defHPNoRiver);
   });
 });
