@@ -199,20 +199,18 @@ function handleEndTurn(state: GameState): GameState {
     const goldRate = goldRateForAge(age);
     const seaMultiplier = route.isSea ? 2 : 1;
 
-    // U2: Origin player receives destination's slotted resources
-    if (route.resources.length > 0) {
-      const originPlayer = updatedPlayers.get(route.owner);
-      if (originPlayer) {
-        const existing = originPlayer.ownedResources ?? [];
-        const merged = [...new Set([...existing, ...route.resources])];
-        updatedPlayers.set(originPlayer.id, { ...originPlayer, ownedResources: merged });
-      }
+    // U2: Origin player receives destination's slotted resources (copied into ownedResources)
+    const originPlayer = updatedPlayers.get(route.owner);
+    if (route.resources.length > 0 && originPlayer) {
+      const existing = originPlayer.ownedResources ?? [];
+      const merged = [...new Set([...existing, ...route.resources])];
+      updatedPlayers.set(originPlayer.id, { ...originPlayer, ownedResources: merged });
     }
 
-    // F-01 (asymmetric yields — W8):
-    //   - Destination city owner earns gold per resource slot x rate x sea multiplier
-    //   - Origin player's home city earns +2 food per turn (Civ VII: origin gets
-    //     resources/food; destination gets gold — GDD audit §F-01)
+    // F-01 (asymmetric yields — Y1.3):
+    //   - Destination city owner earns gold per resource slot × rate × sea multiplier
+    //   - Origin city gets +1 food per resource slot from destination (VII: origin gets
+    //     yield-equivalent of destination's resources, not flat food)
     const resourceSlots = targetCity.assignedResources
       ? targetCity.assignedResources.length
       : 0;
@@ -220,13 +218,30 @@ function handleEndTurn(state: GameState): GameState {
     const goldToDestination = Math.max(1, resourceSlots) * goldRate * seaMultiplier;
     addGold(updatedPlayers, targetCity.owner, goldToDestination);
 
-    // Food yield to origin city (home city of the trade-route owner)
+    // F-01 origin yield: +1 food per resource slot (at minimum 1) — replaces flat +2 placeholder
     const originCity = updatedCities.get(route.from);
     if (originCity) {
-      const FOOD_PER_TRADE_ROUTE = 2;
+      const FOOD_PER_RESOURCE_SLOT = 1;
+      const foodYield = Math.max(1, resourceSlots) * FOOD_PER_RESOURCE_SLOT;
       updatedCities.set(route.from, {
         ...originCity,
-        food: originCity.food + FOOD_PER_TRADE_ROUTE,
+        food: originCity.food + foodYield,
+      });
+    }
+
+    // Y1.2: railroadTycoonPoints — 1 per route per turn, +2 bonus for age-crossing routes
+    // Age-crossing: origin player is Modern while destination city's owner is in an earlier age
+    const latestOriginPlayer = updatedPlayers.get(route.owner);
+    if (latestOriginPlayer) {
+      const destPlayer = state.players.get(targetCity.owner);
+      const isAgeCrossing =
+        latestOriginPlayer.age === 'modern' &&
+        destPlayer != null &&
+        destPlayer.age !== 'modern';
+      const points = isAgeCrossing ? 3 : 1; // base 1 + bonus 2 = 3 for cross-age
+      updatedPlayers.set(route.owner, {
+        ...latestOriginPlayer,
+        railroadTycoonPoints: (latestOriginPlayer.railroadTycoonPoints ?? 0) + points,
       });
     }
   }

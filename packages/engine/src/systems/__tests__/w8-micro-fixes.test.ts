@@ -79,7 +79,7 @@ describe('trade F-01 — origin city earns food per END_TURN', () => {
     const afterTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
 
     const originCity = afterTurn.cities.get('city1')!;
-    expect(originCity.food).toBe(2); // +2 food from trade route
+    expect(originCity.food).toBe(1); // Y1.3: +1 food/resource slot (min 1 slot) from trade route
   });
 
   it('destination city owner still receives gold on same END_TURN', () => {

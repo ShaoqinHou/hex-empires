@@ -588,4 +588,100 @@ describe('tradeSystem', () => {
       expect(next).toBe(state);
     });
   });
+
+  // -- Y1.2: railroadTycoonPoints accumulation --
+  describe('END_TURN -- railroadTycoonPoints accumulation (Y1.2)', () => {
+    it('1 route x 50 END_TURN ticks = 50 railroadTycoonPoints', () => {
+      const state = stateWithMerchantAndCities({ assignedResources: [] });
+      let s = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      for (let i = 0; i < 50; i++) {
+        s = tradeSystem(s, { type: 'END_TURN' });
+      }
+      expect(s.players.get('p1')!.railroadTycoonPoints).toBe(50);
+    });
+
+    it('age-crossing route (Modern origin, Antiquity dest) earns 3/turn -> 102 at 34 turns', () => {
+      const homeCity: CityState = {
+        id: 'city1', name: 'Rome', owner: 'p1', position: { q: 0, r: 0 },
+        population: 2, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: [], settlementType: 'city', happiness: 10,
+        isCapital: true, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+      };
+      const foreignCity: CityState = {
+        id: 'city2', name: 'Athens', owner: 'p2', position: { q: 2, r: 0 },
+        population: 2, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: [], settlementType: 'city', happiness: 10,
+        isCapital: false, defenseHP: 100, specialization: null, specialists: 0, districts: [],
+        assignedResources: [],
+      };
+      const merchant = createTestUnit({ id: 'm1', typeId: 'merchant', owner: 'p1', position: { q: 1, r: 0 } });
+      // p1 is Modern, p2 is Antiquity -> cross-age -> 3 pts/turn
+      const p1 = createTestPlayer({ id: 'p1', age: 'modern' });
+      const p2 = createTestPlayer({ id: 'p2', age: 'antiquity' });
+      let s = createTestState({
+        players: new Map([['p1', p1], ['p2', p2]]),
+        units: new Map([['m1', merchant]]),
+        cities: new Map([['city1', homeCity], ['city2', foreignCity]]),
+        tradeRoutes: new Map(),
+      });
+      s = tradeSystem(s, { type: 'CREATE_TRADE_ROUTE', merchantId: 'm1', targetCityId: 'city2' });
+      for (let i = 0; i < 34; i++) {
+        s = tradeSystem(s, { type: 'END_TURN' });
+      }
+      // 3 pts/turn x 34 turns = 102
+      expect(s.players.get('p1')!.railroadTycoonPoints).toBe(102);
+    });
+  });
+
+  // -- Y1.3: permanent routes, asymmetric yields fix --
+  describe('Y1.3 -- permanent routes, correct asymmetric yields', () => {
+    it('route persists for 30 turns with no expiry', () => {
+      const state = stateWithMerchantAndCities({ assignedResources: [] });
+      let s = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      for (let i = 0; i < 30; i++) {
+        s = tradeSystem(s, { type: 'END_TURN' });
+      }
+      expect(s.tradeRoutes.size).toBe(1);
+    });
+
+    it('war declaration cancels routes between belligerents', () => {
+      const state = stateWithMerchantAndCities({ assignedResources: [] });
+      const afterCreate = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      expect(afterCreate.tradeRoutes.size).toBe(1);
+
+      const afterWar = tradeSystem(afterCreate, {
+        type: 'PROPOSE_DIPLOMACY',
+        targetId: 'p2',
+        proposal: { type: 'DECLARE_WAR', warType: 'formal' },
+      });
+      expect(afterWar.tradeRoutes.size).toBe(0);
+    });
+
+    it('trade route persists across 30 regular END_TURN calls (no age transition)', () => {
+      const state = stateWithMerchantAndCities({ assignedResources: [] });
+      let s = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      for (let i = 0; i < 30; i++) {
+        s = tradeSystem(s, { type: 'END_TURN' });
+      }
+      // Route still active after 30 non-age-transition turns
+      expect(s.tradeRoutes.size).toBe(1);
+    });
+  });
+
 });
