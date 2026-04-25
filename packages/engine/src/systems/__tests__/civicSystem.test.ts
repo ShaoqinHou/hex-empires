@@ -435,3 +435,79 @@ describe('civicSystem', () => {
     });
   });
 });
+
+// ── Y2.1: Civic completion GRANT_POLICY_SLOT ──
+
+describe('Y2.1: civic completion grants typed policy slots', () => {
+  it('completing code_of_laws (economic GRANT_POLICY_SLOT) sets policySlotCounts.economic = 1', () => {
+    // code_of_laws has effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'economic' }]
+    const player = createTestPlayer({ currentCivic: 'code_of_laws', civicProgress: 24 });
+    const city = createTestCity({ buildings: ['monument'] }); // gives culture, cost=25, progress reaches 25+
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.researchedCivics).toContain('code_of_laws');
+    expect(nextPlayer.policySlotCounts?.economic).toBe(1);
+    expect(nextPlayer.policySlotCounts?.military).toBe(0);
+    expect(nextPlayer.policySlotCounts?.diplomatic).toBe(0);
+  });
+
+  it('completing a civic without GRANT_POLICY_SLOT does not modify policySlotCounts', () => {
+    // craftsmanship has no effects — only masteryUnlocks
+    const player = createTestPlayer({
+      currentCivic: 'craftsmanship',
+      civicProgress: 39,
+      researchedCivics: ['code_of_laws'],
+    });
+    const city = createTestCity(); // 1 base culture
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.researchedCivics).toContain('craftsmanship');
+    // policySlotCounts should be absent (no slot effects on craftsmanship)
+    expect(nextPlayer.policySlotCounts).toBeUndefined();
+  });
+
+  it('completing military_tradition grants a military slot', () => {
+    // military_tradition has effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }]
+    const player = createTestPlayer({
+      currentCivic: 'military_tradition',
+      civicProgress: 79,
+      researchedCivics: ['code_of_laws', 'early_empire'],
+    });
+    const city = createTestCity();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.researchedCivics).toContain('military_tradition');
+    expect(nextPlayer.policySlotCounts?.military).toBe(1);
+  });
+
+  it('policySlotCounts accumulate across multiple civics', () => {
+    // Start with code_of_laws already completed (1 economic slot)
+    const player = createTestPlayer({
+      currentCivic: 'foreign_trade',
+      civicProgress: 39,
+      policySlotCounts: { military: 0, economic: 1, diplomatic: 0, wildcard: 0 },
+    });
+    const city = createTestCity();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    // foreign_trade adds diplomatic slot
+    expect(nextPlayer.policySlotCounts?.economic).toBe(1);  // unchanged
+    expect(nextPlayer.policySlotCounts?.diplomatic).toBe(1); // incremented
+  });
+});

@@ -260,3 +260,36 @@ describe('isCommander', () => {
     expect(isCommander(createTestUnit({ typeId: 'settler' }))).toBe(false);
   });
 });
+
+describe('Y3.2 — state.config.commanders fixture isolation', () => {
+  it('uses state.config.commanders when present — fixture with one commander is respected', () => {
+    // Build a state whose config.commanders contains only 'mock_commander'.
+    // A unit with typeId 'captain' (real commander) must NOT be treated as a
+    // commander when the fixture excludes it — proving the system reads from
+    // state.config rather than ALL_COMMANDERS.
+    const mockCommanderMap = new Map([
+      ['mock_commander', { id: 'mock_commander', name: 'Mock', age: 'antiquity' as const,
+        role: 'ground' as const, category: 'melee' as const, cost: 0, combat: 0,
+        movement: 2, auraRadius: 1, initialLevel: 1 }],
+    ]);
+    const units = new Map([
+      ['c1', createTestUnit({ id: 'c1', typeId: 'captain', experience: 0 })],
+      ['c2', createTestUnit({ id: 'c2', typeId: 'mock_commander', experience: 0 })],
+    ]);
+    const baseConfig = createTestState().config;
+    const state = createTestState({
+      units,
+      config: { ...baseConfig, commanders: mockCommanderMap },
+    });
+
+    // 'captain' is absent from the fixture — isCommander must return false
+    expect(isCommander(state.units.get('c1')!, state)).toBe(false);
+    // 'mock_commander' is present — isCommander must return true
+    expect(isCommander(state.units.get('c2')!, state)).toBe(true);
+
+    // commanderPromotionSystem also respects the fixture:
+    // XP gain on 'captain' should be a no-op since it is not a commander in this fixture
+    const action: GainCommanderXpAction = { type: 'GAIN_COMMANDER_XP', commanderId: 'c1', amount: 50 };
+    expect(commanderPromotionSystem(state, action)).toBe(state);
+  });
+});

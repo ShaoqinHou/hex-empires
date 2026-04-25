@@ -370,6 +370,17 @@ export interface PlayerState {
   readonly traditions?: ReadonlyArray<string>;
   /** Modern-age ideology choice for the civic tree */
   readonly ideology?: 'democracy' | 'fascism' | 'communism' | null;
+  /**
+   * Y2.1: Typed policy slot counts granted by completed civic GRANT_POLICY_SLOT effects.
+   * Additive on top of government slots. Optional so existing PlayerState
+   * construction keeps compiling unchanged.
+   */
+  readonly policySlotCounts?: {
+    readonly military: number;
+    readonly economic: number;
+    readonly diplomatic: number;
+    readonly wildcard: number;
+  };
 
   // ── Independent Powers ──
   /** IDs of city-states / independent powers this player has suzerainty over */
@@ -625,6 +636,12 @@ export interface DiplomacyRelation {
   readonly isSurpriseWar: boolean;       // true if war was declared without hostile relationship
   readonly activeEndeavors: ReadonlyArray<DiplomaticEndeavor>;
   readonly activeSanctions: ReadonlyArray<DiplomaticSanction>;
+  /**
+   * Y4.5 -- True when IMPOSE_EMBARGO has been dispatched by either party.
+   * Blocks trade route creation regardless of relationship tier.
+   * Optional so existing DiplomacyRelation construction keeps compiling.
+   */
+  readonly hasEmbargo?: boolean;
 }
 
 /**
@@ -675,6 +692,9 @@ export interface DiplomacyState {
 
 export type EffectTarget = 'city' | 'empire' | 'unit' | 'tile';
 
+/** Y2.1: Type of policy slot granted by a GRANT_POLICY_SLOT effect. */
+export type PolicySlotType = 'military' | 'economic' | 'diplomatic' | 'wildcard';
+
 export type EffectDef =
   | { readonly type: 'MODIFY_YIELD'; readonly target: EffectTarget; readonly yield: YieldType; readonly value: number }
   | { readonly type: 'MODIFY_COMBAT'; readonly target: UnitCategory | 'all'; readonly value: number }
@@ -683,7 +703,8 @@ export type EffectDef =
   | { readonly type: 'DISCOUNT_PRODUCTION'; readonly target: string; readonly percent: number }
   | { readonly type: 'MODIFY_MOVEMENT'; readonly target: UnitCategory | 'all'; readonly value: number }
   | { readonly type: 'FREE_TECH'; readonly techId: TechnologyId }
-  | { readonly type: 'CULTURE_BOMB'; readonly range: number };
+  | { readonly type: 'CULTURE_BOMB'; readonly range: number }
+  | { readonly type: 'GRANT_POLICY_SLOT'; readonly slotType: PolicySlotType };
 
 export interface ActiveEffect {
   readonly source: string; // e.g., "civ:rome", "leader:augustus"
@@ -1280,7 +1301,20 @@ export type GameAction =
    */
   | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId }
   // ── F-06: Dark Age opt-in ──
-  | { readonly type: 'CHOOSE_DARK_AGE'; readonly optIn: boolean };
+  | { readonly type: 'CHOOSE_DARK_AGE'; readonly optIn: boolean }
+  // ── Y4: Influence-cost diplomatic actions ──
+  /**
+   * Y4.5 -- Denounce a player: costs 5 Influence, relationship -20.
+   */
+  | { readonly type: 'DENOUNCE_PLAYER'; readonly targetPlayerId: PlayerId }
+  /**
+   * Y4.5 -- Declare friendship: costs 5 Influence, relationship +10.
+   */
+  | { readonly type: 'DECLARE_FRIENDSHIP'; readonly targetPlayerId: PlayerId }
+  /**
+   * Y4.5 -- Impose embargo: costs 10 Influence, blocks trade routes.
+   */
+  | { readonly type: 'IMPOSE_EMBARGO'; readonly targetPlayerId: PlayerId };
 
 // ── Events ──
 

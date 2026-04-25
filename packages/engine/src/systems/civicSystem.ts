@@ -1,4 +1,4 @@
-import type { GameState, GameAction, ActiveEffect } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, PlayerState, PolicySlotType, EffectDef } from '../types/GameState';
 
 /**
  * CivicSystem handles civic research (parallel to tech tree, uses culture).
@@ -139,6 +139,11 @@ function processNormalCivicResearch(state: GameState): GameState {
     // F-02: Carry overflow culture forward instead of discarding it.
     const overflow = newProgress - civicCost;
     const completedCivicId = player.currentCivic;
+
+    // Y2.1: Apply on-completion effects (e.g. GRANT_POLICY_SLOT)
+    const completedCivicDef = state.config.civics.get(completedCivicId);
+    const updatedSlotCounts = applyCompletionEffects(player, completedCivicDef?.effects);
+
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
@@ -150,6 +155,8 @@ function processNormalCivicResearch(state: GameState): GameState {
       // F-13: Removed ageProgress +5 per civic — age progress comes from
       // ageSystem's END_TURN milestone check only.
       policySwapWindowOpen: true,
+      // Y2.1: Conditionally update policySlotCounts if civic grants slots
+      ...(updatedSlotCounts !== null ? { policySlotCounts: updatedSlotCounts } : {}),
     });
 
     return {
@@ -262,4 +269,37 @@ function processCivicMasteryResearch(state: GameState): GameState {
   });
 
   return { ...state, players: updatedPlayers };
+}
+
+/**
+ * Y2.1: Apply on-completion civic effects to a player's policy slot counts.
+ * Returns updated policySlotCounts if any GRANT_POLICY_SLOT effects are
+ * present; null if no slot-granting effects exist (caller omits the field).
+ */
+function applyCompletionEffects(
+  player: PlayerState,
+  effects?: ReadonlyArray<EffectDef>,
+): { readonly military: number; readonly economic: number; readonly diplomatic: number; readonly wildcard: number } | null {
+  if (!effects || effects.length === 0) return null;
+
+  let hasSlotEffect = false;
+  const current = player.policySlotCounts ?? { military: 0, economic: 0, diplomatic: 0, wildcard: 0 };
+  let military = current.military;
+  let economic = current.economic;
+  let diplomatic = current.diplomatic;
+  let wildcard = current.wildcard;
+
+  for (const effect of effects) {
+    if (effect.type === 'GRANT_POLICY_SLOT') {
+      hasSlotEffect = true;
+      const slotType = effect.slotType as PolicySlotType;
+      if (slotType === 'military') military++;
+      else if (slotType === 'economic') economic++;
+      else if (slotType === 'diplomatic') diplomatic++;
+      else if (slotType === 'wildcard') wildcard++;
+    }
+  }
+
+  if (!hasSlotEffect) return null;
+  return { military, economic, diplomatic, wildcard };
 }

@@ -24,4 +24,10 @@ export interface CivicDef {
    * generic +1 culture/turn. Undefined falls back to MODIFY_YIELD/culture/+1.
    */
   readonly masteryUnlocks?: ReadonlyArray<EffectDef>;
+  /**
+   * Y2.1: On-completion effects applied when this civic is researched.
+   * GRANT_POLICY_SLOT effects increment the player's policySlotCounts.
+   * Optional so existing CivicDef construction keeps compiling unchanged.
+   */
+  readonly effects?: ReadonlyArray<EffectDef>;
 }

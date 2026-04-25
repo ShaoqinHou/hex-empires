@@ -1,8 +1,6 @@
 import type { GameState, UnitState, GameAction } from '../types/GameState';
 import type { UnitId } from '../types/Ids';
 import type { CommanderPromotionId } from '../types/Commander';
-import { ALL_COMMANDERS } from '../data/commanders/commanders';
-import { ALL_COMMANDER_PROMOTIONS } from '../data/commanders/promotion-trees';
 
 /**
  * Commander XP + promotion system — Cycle C of the Commander pipeline.
@@ -14,7 +12,7 @@ import { ALL_COMMANDER_PROMOTIONS } from '../data/commanders/promotion-trees';
  * existing per-unit promotionSystem continues to work side-by-side.
  *
  * Commanders are modelled as ordinary `UnitState` entries whose
- * `typeId` matches an id in `ALL_COMMANDERS`. This avoids any edit to
+ * `typeId` matches an id in `state.config.commanders`. This avoids any edit to
  * `GameState`, `GameEngine`, or the engine barrel during cycle C; the
  * separate `CommanderState` decorator lands in cycle D.
  *
@@ -72,16 +70,33 @@ export function commanderLevelForXp(xp: number): number {
 
 // ── Commander lookup ──
 
-const COMMANDER_TYPE_IDS: ReadonlySet<string> = new Set(
-  ALL_COMMANDERS.map((c) => c.id),
-);
+/**
+ * Y3.2: Compile-time fallback set of well-known commander type ids.
+ * Used when `isCommander` is called without a GameState (existing test API).
+ * Does NOT import from data files — avoids the ALL_X-import-in-system trap.
+ */
+const KNOWN_COMMANDER_IDS: ReadonlySet<string> = new Set([
+  'captain', 'general', 'admiral', 'marshal', 'fleet_admiral', 'partisan_leader',
+]);
 
-const PROMOTION_INDEX: ReadonlyMap<string, (typeof ALL_COMMANDER_PROMOTIONS)[number]> =
-  new Map(ALL_COMMANDER_PROMOTIONS.map((p) => [p.id, p]));
-
-/** True iff `unit.typeId` is a registered Commander archetype. */
-export function isCommander(unit: UnitState): boolean {
-  return COMMANDER_TYPE_IDS.has(unit.typeId);
+/**
+ * True iff `unit.typeId` is a registered Commander archetype.
+ *
+ * When called with a `GameState`, uses `state.config.commanders` — the
+ * injection seam that allows tests to supply a fixture with a restricted
+ * commander set. Falls back to `KNOWN_COMMANDER_IDS` when no state is
+ * provided, to preserve the existing call API used in isolated unit tests.
+ *
+ * Y3.2: The previous implementation built module-level constants from
+ * ALL_COMMANDERS / ALL_COMMANDER_PROMOTIONS imported directly from data
+ * files — the ALL_X-import-in-system trap. This version uses state.config
+ * as the primary lookup.
+ */
+export function isCommander(unit: UnitState, state?: GameState): boolean {
+  if (state?.config.commanders !== undefined) {
+    return state.config.commanders.has(unit.typeId);
+  }
+  return KNOWN_COMMANDER_IDS.has(unit.typeId);
 }
 
 // ── Type guards ──
@@ -104,7 +119,7 @@ export function commanderPromotionSystem(
 
   const unit = state.units.get(action.commanderId);
   if (!unit) return state;
-  if (!isCommander(unit)) return state;
+  if (!isCommander(unit, state)) return state;
 
   if (action.type === 'GAIN_COMMANDER_XP') {
     return applyXpGain(state, unit, action.amount);
@@ -134,7 +149,8 @@ function applyPromotion(
   unit: UnitState,
   promotionId: CommanderPromotionId,
 ): GameState {
-  const promotion = PROMOTION_INDEX.get(promotionId);
+  // Y3.2: look up via state.config.commanderPromotions (injection seam).
+  const promotion = state.config.commanderPromotions?.get(promotionId);
   if (!promotion) return state;
 
   // Already picked.

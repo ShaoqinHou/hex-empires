@@ -10,6 +10,7 @@ export const CODE_OF_LAWS: CivicDef = {
   description: 'Establishes foundational governance. Unlocks Monument.',
   treePosition: { row: 0, col: 0 },
   masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'economic' }],
 };
 
 export const CRAFTSMANSHIP: CivicDef = {
@@ -33,6 +34,7 @@ export const FOREIGN_TRADE: CivicDef = {
   unlocks: [],
   description: '+1 gold from trade routes',
   treePosition: { row: 2, col: 0 },
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'diplomatic' }],
 };
 
 export const EARLY_EMPIRE: CivicDef = {
@@ -79,6 +81,7 @@ export const MILITARY_TRADITION: CivicDef = {
   description: '+25% combat XP gain',
   treePosition: { row: 1, col: 3 },
   masteryUnlocks: [{ type: 'MODIFY_COMBAT', target: 'melee', value: 2 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
 };
 
 export const RECORDED_HISTORY: CivicDef = {

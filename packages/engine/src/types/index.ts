@@ -35,6 +35,7 @@ export type {
   PendingEndeavor,
   EffectTarget,
   EffectDef,
+  PolicySlotType,
   ActiveEffect,
   VictoryType,
   VictoryProgress,

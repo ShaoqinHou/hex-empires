@@ -29,6 +29,8 @@ import type { NaturalWonderDef } from './NaturalWonder';
 import type { EspionageActionDef } from './Espionage';
 import type { TreatyDef } from './Treaty';
 import type { RelicDef } from './Relic';
+import type { CommanderUnitDef } from '../data/commanders/commanders';
+import type { CommanderPromotionDef } from './Commander';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -144,4 +146,19 @@ export interface GameConfig {
    * construction compiles unchanged. Systems treat absence as an empty Map.
    */
   readonly relics?: ReadonlyMap<string, RelicDef>;
+
+  /**
+   * Y3.2 — Commander unit archetypes (CommanderUnitDef). Optional so
+   * existing GameConfig construction compiles unchanged. commanderPromotionSystem
+   * uses this map (instead of ALL_COMMANDERS) to determine if a unit type
+   * is a commander — enabling fixture override in tests.
+   */
+  readonly commanders?: ReadonlyMap<string, CommanderUnitDef>;
+
+  /**
+   * Y3.2 — Commander promotion definitions. Optional so existing GameConfig
+   * construction compiles unchanged. commanderPromotionSystem uses this map
+   * (instead of ALL_COMMANDER_PROMOTIONS) to look up promotion definitions.
+   */
+  readonly commanderPromotions?: ReadonlyMap<string, CommanderPromotionDef>;
 }
