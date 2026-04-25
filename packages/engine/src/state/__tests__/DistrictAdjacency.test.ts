@@ -193,6 +193,59 @@ describe('DistrictAdjacency', () => {
       expect(bonus.science).toBe(1);
     });
 
+    it('F-02: adds +1 Food +1 Gold when a neighbour tile is ocean (coastal adjacency)', () => {
+      // Ocean terrain has isWater: true in the real config.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'ocean' }),
+      ]);
+      const city = makeCity('c1');
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.food).toBe(1);
+      expect(bonus.gold).toBe(1);
+      expect(bonus.production).toBe(0);
+      expect(bonus.science).toBe(0);
+    });
+
+    it('F-02: coastal adjacency returns zero for a non-water neighbour tile (grassland)', () => {
+      // Grassland isWater: false — no coastal bonus.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, terrain: 'grassland' }),
+      ]);
+      const city = makeCity('c1');
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.food).toBe(0);
+      expect(bonus.gold).toBe(0);
+    });
+
+    it('F-02: adds +1 Production +1 Science when a neighbour tile has a resource', () => {
+      // Copper resource tile adjacent to the district.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, resource: 'copper' }),
+      ]);
+      const city = makeCity('c1');
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.production).toBe(1);
+      expect(bonus.science).toBe(1);
+      expect(bonus.food).toBe(0);
+      expect(bonus.gold).toBe(0);
+    });
+
+    it('F-02: adds +2 Culture +1 Science when a neighbour tile is a natural wonder', () => {
+      // Tile with naturalWonderId set triggers the natural wonder adjacency rule.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        { ...makeTile({ coord: { q: 1, r: 0 } }), naturalWonderId: 'krakatoa', isNaturalWonder: true },
+      ]);
+      const city = makeCity('c1');
+      const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
+      expect(bonus.culture).toBe(2);
+      expect(bonus.science).toBe(1);
+      expect(bonus.production).toBe(0);
+    });
+
     it('ignores urban tiles that belong to the same city but have no matching buildings', () => {
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),

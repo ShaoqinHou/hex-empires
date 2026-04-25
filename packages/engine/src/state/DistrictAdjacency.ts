@@ -5,7 +5,13 @@ import type { BuildingId } from '../types/Ids';
 import type { UrbanTileV2 } from '../types/DistrictOverhaul';
 import { EMPTY_YIELDS, addYields } from '../types/Yields';
 import { neighbors, coordToKey } from '../hex/HexMath';
-import { SPECIALIST_AMPLIFIER, WONDER_ADJACENCY_PER_NEIGHBOR } from './AdjacencyConstants';
+import {
+  SPECIALIST_AMPLIFIER,
+  WONDER_ADJACENCY_PER_NEIGHBOR,
+  NATURAL_WONDER_ADJACENCY_PER_NEIGHBOR,
+  COASTAL_ADJACENCY_PER_NEIGHBOR,
+  RESOURCE_ADJACENCY_PER_NEIGHBOR,
+} from './AdjacencyConstants';
 
 /**
  * Pure adjacency + Quarter yield helpers for the Districts Overhaul (Cycle D).
@@ -142,6 +148,27 @@ export function computeAdjacencyBonus(
       bonus = addYields(bonus, { food: 1 });
     }
 
+    // F-02: Coastal adjacency — +1 Food, +1 Gold per adjacent water tile.
+    if (terrainTile !== undefined) {
+      const terrainDef = state.config.terrains.get(terrainTile.terrain);
+      if (terrainDef?.isWater === true) {
+        bonus = addYields(bonus, COASTAL_ADJACENCY_PER_NEIGHBOR);
+      }
+    }
+
+    // F-02: Natural wonder adjacency — +2 Culture, +1 Science per adjacent
+    // tile that contains a natural wonder (distinct from player-built wonders
+    // on urban tiles, which are handled in the urban-neighbour block below).
+    if (terrainTile !== undefined && terrainTile.naturalWonderId) {
+      bonus = addYields(bonus, NATURAL_WONDER_ADJACENCY_PER_NEIGHBOR);
+    }
+
+    // F-02: Resource adjacency — +1 Production, +1 Science per adjacent tile
+    // that has a resource assigned (whether or not the player has worked it).
+    if (terrainTile !== undefined && terrainTile.resource !== null) {
+      bonus = addYields(bonus, RESOURCE_ADJACENCY_PER_NEIGHBOR);
+    }
+
     // Same-city urban-neighbour rules: campus/theater/commercial.
     const neighbourUrban = urbanTileAt(city, neighbourCoord);
     if (neighbourUrban !== undefined) {
@@ -154,7 +181,7 @@ export function computeAdjacencyBonus(
       if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
-      // F-06: Wonder adjacency — +2 culture, +1 science per neighbor urban tile with a wonder
+      // F-06: Wonder adjacency — +2 culture, +1 science per neighbor urban tile with a player-built wonder
       for (const bid of neighbourUrban.buildings) {
         const bDef = state.config.buildings.get(bid);
         if (bDef?.isWonder) {
@@ -282,6 +309,24 @@ function computeBaseAdjacencyWithoutSpecialist(
     }
     if (terrainTile !== undefined && terrainTile.river.length > 0) {
       bonus = addYields(bonus, { food: 1 });
+    }
+
+    // F-02: Coastal adjacency (same rule as computeAdjacencyBonus)
+    if (terrainTile !== undefined) {
+      const terrainDef = state.config.terrains.get(terrainTile.terrain);
+      if (terrainDef?.isWater === true) {
+        bonus = addYields(bonus, COASTAL_ADJACENCY_PER_NEIGHBOR);
+      }
+    }
+
+    // F-02: Natural wonder adjacency (same rule as computeAdjacencyBonus)
+    if (terrainTile !== undefined && terrainTile.naturalWonderId) {
+      bonus = addYields(bonus, NATURAL_WONDER_ADJACENCY_PER_NEIGHBOR);
+    }
+
+    // F-02: Resource adjacency (same rule as computeAdjacencyBonus)
+    if (terrainTile !== undefined && terrainTile.resource !== null) {
+      bonus = addYields(bonus, RESOURCE_ADJACENCY_PER_NEIGHBOR);
     }
 
     const neighbourUrban = urbanTileAt(city, neighbourCoord);
