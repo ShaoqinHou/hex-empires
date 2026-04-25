@@ -1185,6 +1185,60 @@ describe('AA1.1: building obsolescence on age transition', () => {
   });
 });
 
+describe('AA1.3: legacyPointsByAxis typed breakdown', () => {
+  it('military milestone increments only the military axis counter', () => {
+    // totalKills: 3 triggers antiquity_military_t1 (killsThisAge >= 3 check)
+    const player = createTestPlayer({
+      totalKills: 3,
+      killsThisAge: 3,
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 },
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    const byAxis = next.players.get('p1')!.legacyPointsByAxis!;
+    expect(byAxis.military).toBe(1);
+    expect(byAxis.economic).toBe(0);
+    expect(byAxis.science).toBe(0);
+    expect(byAxis.culture).toBe(0);
+  });
+
+  it('total legacyPoints equals sum of all axis values', () => {
+    // Set up a player who has earned 1 military + 1 economic milestone
+    const player = createTestPlayer({
+      totalKills: 3,
+      killsThisAge: 3,
+      totalGoldEarned: 200,
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 },
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    const p = next.players.get('p1')!;
+    const byAxis = p.legacyPointsByAxis!;
+    const axisSum = byAxis.military + byAxis.economic + byAxis.science + byAxis.culture;
+    // legacyPoints is always the running total; axisSum includes all gains this turn
+    expect(axisSum).toBe(p.legacyPoints);
+  });
+
+  it('cultural points do not affect the military axis', () => {
+    // culture: 100 triggers antiquity_culture_t1 (culture >= 100 fallback proxy)
+    const player = createTestPlayer({
+      culture: 100,
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 },
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    const byAxis = next.players.get('p1')!.legacyPointsByAxis!;
+    expect(byAxis.culture).toBeGreaterThan(0); // culture gained
+    expect(byAxis.military).toBe(0);           // military unaffected
+  });
+});
+
 describe("X1.5: totalCareerLegacyPoints accumulation",function(){it("two transitions accumulate total (5+3=8)",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,legacyPoints:5,totalCareerLegacyPoints:5,legacyPaths:{military:1,economic:1,science:1,culture:1}});var s1=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var a1=ageSystem(s1,{type:"TRANSITION_AGE",newCivId:"spain"});expect(a1.players.get("p1").legacyPoints).toBe(0);expect(a1.players.get("p1").totalCareerLegacyPoints).toBe(5);var m2=new Map(a1.players);m2.set("p1",Object.assign({},a1.players.get("p1"),{ageProgress:200,legacyPoints:3,totalCareerLegacyPoints:8,legacyPaths:{military:1,economic:1,science:1,culture:1}}));var s2=Object.assign({},a1,{players:m2,age:{currentAge:"exploration",ageThresholds:{exploration:0,modern:100}}});var a2=ageSystem(s2,{type:"TRANSITION_AGE",newCivId:"america"});expect(a2.players.get("p1").legacyPoints).toBe(0);expect(a2.players.get("p1").totalCareerLegacyPoints).toBe(8);});});
 
 // ── AA3.1: Production queue cleared on age transition ──
