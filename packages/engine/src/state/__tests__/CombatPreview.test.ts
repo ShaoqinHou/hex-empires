@@ -163,7 +163,7 @@ describe('calculateCombatPreview', () => {
     const preview = calculateCombatPreview(stateJungle, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);
-    expect(preview.modifiers.terrainDefenseBonus).toBeGreaterThan(0);
+    expect(preview.modifiers.terrainDefenseBonus).toBe(2); // jungle flatDefenseBonus=2; percent=0 → Math.round(0*100)+2=2
   });
 
   it('includes river penalty in modifiers', () => {
