@@ -79,7 +79,7 @@ export const PRESERVE_DISTRICT: DistrictDef = {
   type: 'preserve',
   age: 'exploration',
   cost: 180,
-  // TODO(content): add requiredCivic: 'naturalism' when civic is defined
+  requiredCivic: 'naturalism',
   populationCost: 1,
   yields: Y(2, 0, 1, 0, 2, 0, 0, 0),
   adjacencyYields: Y(1, 0, 0, 0, 1, 0, 0, 0),
@@ -188,7 +188,7 @@ export const EXPANDED_HOLY_SITE_DISTRICT: DistrictDef = {
   type: 'holy_site',
   age: 'exploration',
   cost: 200,
-  // TODO(content): add requiredCivic: 'medieval_faires' when civic is defined
+  requiredCivic: 'medieval_faires',
   populationCost: 2,
   yields: Y(0, 0, 1, 0, 1, 4, 0, 2),
   adjacencyYields: Y(0, 0, 0, 0, 0, 1, 0, 0),

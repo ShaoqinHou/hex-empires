@@ -112,6 +112,45 @@ export const STATE_SERVICE: CivicDef = {
   treePosition: { row: 1, col: 4 },
 };
 
+/** Drama and Poetry — unlocks the Theater Square district. */
+export const DRAMA_POETRY: CivicDef = {
+  id: 'drama_poetry',
+  name: 'Drama and Poetry',
+  age: 'antiquity',
+  cost: 70,
+  prerequisites: ['code_of_laws'],
+  unlocks: ['theater'],
+  description: 'Expressive arts flourish in city life. Unlocks the Theater Square district.',
+  treePosition: { row: 3, col: 1 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 1 }],
+};
+
+/** Theology — unlocks the Holy Site district. */
+export const THEOLOGY: CivicDef = {
+  id: 'theology',
+  name: 'Theology',
+  age: 'antiquity',
+  cost: 80,
+  prerequisites: ['mysticism'],
+  unlocks: ['holy_site'],
+  description: 'Systematic religious doctrine drives faith construction. Unlocks the Holy Site district.',
+  treePosition: { row: 2, col: 2 },
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
+};
+
+/** Games and Recreation — unlocks the Entertainment Complex district. */
+export const GAMES_RECREATION: CivicDef = {
+  id: 'games_recreation',
+  name: 'Games and Recreation',
+  age: 'antiquity',
+  cost: 90,
+  prerequisites: ['code_of_laws'],
+  unlocks: ['entertainment'],
+  description: 'Public games and spectacles keep citizens content. Unlocks the Entertainment Complex district.',
+  treePosition: { row: 0, col: 3 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'food', value: 1 }],
+};
+
 // ── Civ-Unique Civics ──
 
 /** Rome-only: Reflects Roman senatorial government — unique to the Roman civilization. */
@@ -159,5 +198,6 @@ export const ALL_ANTIQUITY_CIVICS: ReadonlyArray<CivicDef> = [
   CODE_OF_LAWS, CRAFTSMANSHIP, FOREIGN_TRADE, EARLY_EMPIRE,
   MYSTICISM, STATE_WORKFORCE, MILITARY_TRADITION, RECORDED_HISTORY,
   STATE_SERVICE,
+  DRAMA_POETRY, THEOLOGY, GAMES_RECREATION,
   ROMAN_SENATE, DIVINE_KINGSHIP, ATHENIAN_DEMOCRACY,
 ];

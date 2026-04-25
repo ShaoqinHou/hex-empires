@@ -101,7 +101,7 @@ export const THEATER_DISTRICT: DistrictDef = {
   type: 'theater',
   age: 'antiquity',
   cost: 100,
-  // TODO(content): add requiredCivic: 'drama_poetry' when civic is defined
+  requiredCivic: 'drama_poetry',
   populationCost: 1,
   yields: Y(0, 1, 0, 0, 2, 0, 0, 1),
   adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0), // +1 culture per adjacency
@@ -182,7 +182,7 @@ export const HOLY_SITE_DISTRICT: DistrictDef = {
   type: 'holy_site',
   age: 'antiquity',
   cost: 100,
-  // TODO(content): add requiredCivic: 'theology' when civic is defined
+  requiredCivic: 'theology',
   populationCost: 1,
   yields: Y(0, 0, 0, 0, 0, 2, 0, 1),
   adjacencyYields: Y(0, 0, 0, 0, 0, 1, 0, 0), // +1 faith per adjacency
@@ -236,7 +236,7 @@ export const ENTERTAINMENT_DISTRICT: DistrictDef = {
   type: 'entertainment',
   age: 'antiquity',
   cost: 100,
-  // TODO(content): add requiredCivic: 'games_recreation' when civic is defined
+  requiredCivic: 'games_recreation',
   populationCost: 1,
   yields: Y(0, 1, 1, 0, 1, 0, 0, 2),
   adjacencyYields: Y(0, 0, 0, 0, 1, 0, 0, 0), // +1 culture per adjacency

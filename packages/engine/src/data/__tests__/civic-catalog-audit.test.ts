@@ -61,6 +61,19 @@ const NEWLY_ADDED_IDS: ReadonlyArray<string> = [
   'class_struggle',
 ];
 
+// Civics added by CC4.2 (missing civics referenced by districts/buildings).
+const CC4_2_NEW_IDS: ReadonlyArray<string> = [
+  'drama_poetry',
+  'theology',
+  'games_recreation',
+  'naturalism',
+  'medieval_faires',
+  'natural_history',
+  'ideology_unlock',
+  'diplomacy',
+  'religious_tolerance',
+];
+
 // ── Helpers ──
 
 function byAge(age: CivicDef['age']): ReadonlyArray<CivicDef> {
@@ -76,11 +89,14 @@ function ids(list: ReadonlyArray<CivicDef>): ReadonlySet<string> {
 describe('Civic catalog audit — rulebook §9.3 / §14 / §12', () => {
   it('1. Catalog totals per age match post-audit expectations', () => {
     // Pre-audit counts: antiquity=11, exploration=8, modern=6.
-    // This audit adds: antiquity +1, exploration +2, modern +3.
-    expect(ALL_ANTIQUITY_CIVICS).toHaveLength(12);
-    expect(ALL_EXPLORATION_CIVICS).toHaveLength(10);
-    expect(ALL_MODERN_CIVICS).toHaveLength(9);
-    expect(ALL_CIVICS).toHaveLength(31);
+    // Audit batch 1 adds: antiquity +1, exploration +2, modern +3 → totals 12/10/9 = 31.
+    // CC4.2 adds: antiquity +3 (drama_poetry, theology, games_recreation),
+    //             exploration +2 (naturalism, medieval_faires),
+    //             modern +4 (natural_history, ideology_unlock, diplomacy, religious_tolerance).
+    expect(ALL_ANTIQUITY_CIVICS).toHaveLength(15);
+    expect(ALL_EXPLORATION_CIVICS).toHaveLength(12);
+    expect(ALL_MODERN_CIVICS).toHaveLength(13);
+    expect(ALL_CIVICS).toHaveLength(40);
   });
 
   it('2. Every rulebook-named civic appears in the correct age', () => {
@@ -176,6 +192,30 @@ describe('Civic catalog audit — rulebook §9.3 / §14 / §12', () => {
     for (const id of NEWLY_ADDED_IDS) {
       const c = ALL_CIVICS.find((x) => x.id === id);
       expect(c?.civId, `${id} should be universal`).toBeUndefined();
+    }
+  });
+
+  it('10. CC4.2 civics: all present with correct age, non-empty name and description', () => {
+    const byId = new Map(ALL_CIVICS.map((c) => [c.id, c]));
+    const ageMap: Readonly<Record<string, CivicDef['age']>> = {
+      drama_poetry:        'antiquity',
+      theology:            'antiquity',
+      games_recreation:    'antiquity',
+      naturalism:          'exploration',
+      medieval_faires:     'exploration',
+      natural_history:     'modern',
+      ideology_unlock:     'modern',
+      diplomacy:           'modern',
+      religious_tolerance: 'modern',
+    };
+    for (const [id, expectedAge] of Object.entries(ageMap)) {
+      const c = byId.get(id);
+      expect(c, `CC4.2 civic missing: ${id}`).toBeDefined();
+      if (!c) continue;
+      expect(c.age, `${id} age`).toBe(expectedAge);
+      expect(c.name.length, `${id} name non-empty`).toBeGreaterThan(0);
+      expect(c.description.length, `${id} description non-empty`).toBeGreaterThan(0);
+      expect(c.cost, `${id} cost positive`).toBeGreaterThan(0);
     }
   });
 

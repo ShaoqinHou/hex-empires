@@ -129,8 +129,36 @@ export const SCHOLASTICISM: CivicDef = {
   effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'diplomatic' }],
 };
 
+/** Naturalism — unlocks the Natural Park district (Exploration age). */
+export const NATURALISM: CivicDef = {
+  id: 'naturalism',
+  name: 'Naturalism',
+  age: 'exploration',
+  cost: 160,
+  prerequisites: ['humanism'],
+  unlocks: ['natural_park'],
+  description: 'Study of the natural world inspires conservation. Unlocks the Natural Park district.',
+  treePosition: { row: 0, col: 2 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
+};
+
+/** Medieval Faires — unlocks the Market district (Exploration age). */
+export const MEDIEVAL_FAIRES: CivicDef = {
+  id: 'medieval_faires',
+  name: 'Medieval Faires',
+  age: 'exploration',
+  cost: 140,
+  prerequisites: ['mercantilism'],
+  unlocks: [],
+  description: 'Trade fairs spread goods and culture across regions. +1 gold per market building.',
+  treePosition: { row: 2, col: 3 },
+  masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 1 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'economic' }],
+};
+
 export const ALL_EXPLORATION_CIVICS: ReadonlyArray<CivicDef> = [
   HUMANISM, MERCANTILISM, DIVINE_RIGHT, EXPLORATION_CIVIC,
   REFORMED_CHURCH, COLONIALISM, CIVIL_ENGINEERING, NATIONALISM,
   FEUDALISM, SCHOLASTICISM,
+  NATURALISM, MEDIEVAL_FAIRES,
 ];
