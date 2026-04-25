@@ -482,3 +482,75 @@ describe('movementSystem', () => {
     });
   });
 });
+
+// ── AA2.3 (F-11): Civilian capture ──
+
+describe('AA2.3 civilian capture', () => {
+  it('settler is captured when enemy melee unit moves onto its hex', () => {
+    const warrior = createTestUnit({ id: 'warrior1', typeId: 'warrior', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 2 });
+    const settler = createTestUnit({ id: 'settler1', typeId: 'settler', owner: 'p2', position: { q: 1, r: 0 } });
+
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', { ...createTestPlayer({ id: 'p1' }) }],
+        ['p2', { ...createTestPlayer({ id: 'p2' }) }],
+      ]),
+      units: new Map([['warrior1', warrior], ['settler1', settler]]),
+    });
+
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'warrior1', path: [{ q: 1, r: 0 }] });
+
+    // Warrior moved successfully
+    expect(next.units.get('warrior1')!.position).toEqual({ q: 1, r: 0 });
+    // Settler ownership transferred to p1 (captured)
+    expect(next.units.get('settler1')!.owner).toBe('p1');
+    // Captured settler has no movement left this turn
+    expect(next.units.get('settler1')!.movementLeft).toBe(0);
+    // Capture logged
+    expect(next.log.some(e => e.message.includes('captured') && e.message.includes('settler'))).toBe(true);
+  });
+
+  it('merchant (civilian) is captured by enemy combat unit moving onto its hex', () => {
+    // Using 'archer' (ranged/combat) and 'merchant' (civilian) — both known unit types
+    const archer = createTestUnit({ id: 'archer1', typeId: 'archer', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 2 });
+    const merchant = createTestUnit({ id: 'merchant1', typeId: 'merchant', owner: 'p2', position: { q: 1, r: 0 } });
+
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      units: new Map([['archer1', archer], ['merchant1', merchant]]),
+    });
+
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'archer1', path: [{ q: 1, r: 0 }] });
+
+    // Merchant ownership transferred to p1
+    expect(next.units.get('merchant1')!.owner).toBe('p1');
+    expect(next.units.get('merchant1')!.movementLeft).toBe(0);
+  });
+
+  it('missionary is captured (not pass-through) per simpler GDD interpretation', () => {
+    // Decision: missionaries are capturable (ownership transfer), same as civilians.
+    const warrior = createTestUnit({ id: 'warrior1', typeId: 'warrior', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 2 });
+    const missionary = createTestUnit({ id: 'missionary1', typeId: 'missionary', owner: 'p2', position: { q: 1, r: 0 } });
+
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      units: new Map([['warrior1', warrior], ['missionary1', missionary]]),
+    });
+
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'warrior1', path: [{ q: 1, r: 0 }] });
+
+    // Missionary captured (ownership transfer) per the simpler GDD interpretation
+    expect(next.units.get('missionary1')!.owner).toBe('p1');
+    expect(next.units.get('missionary1')!.movementLeft).toBe(0);
+    expect(next.log.some(e => e.message.includes('captured'))).toBe(true);
+  });
+});

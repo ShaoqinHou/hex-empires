@@ -328,6 +328,14 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     }
   }
 
+  // F-11 (AA2.3): Civilian/religious unit capture — resolve AFTER movement is applied.
+  // The moving unit's updated position is already in nextState.units. Pass the
+  // final destination to check for enemy civilians at that position.
+  const movedUnit = nextState.units.get(unit.id);
+  if (movedUnit) {
+    nextState = applyCivilianCapture(nextState, movedUnit, currentPos);
+  }
+
   return nextState;
 }
 
@@ -343,6 +351,77 @@ function createInvalidResult(
     ...state,
     lastValidation: { valid: false, reason, category },
     log: state.log, // Keep log unchanged
+  };
+}
+
+/**
+ * F-11 (AA2.3): Civilian capture.
+ * When a combat unit (melee/ranged/siege/cavalry/naval) moves onto a hex occupied
+ * by an enemy civilian or religious unit, the civilian is captured — ownership
+ * transfers to the attacker. The captured unit loses its movementLeft for the turn.
+ *
+ * Religious units: treated as capturable (ownership transfer) per the simpler
+ * interpretation noted in GDD. Capture means the unit is now owned by the captor.
+ *
+ * Returns the updated state after capture resolution, or the same state if no
+ * capture occurred.
+ */
+function applyCivilianCapture(
+  state: GameState,
+  movingUnit: UnitState,
+  destPos: HexCoord,
+): GameState {
+  // Only combat units can capture civilians
+  const movingDef = state.config.units.get(movingUnit.typeId);
+  const movingCategory = movingDef?.category ?? 'melee';
+  const isCombatUnit =
+    movingCategory === 'melee' ||
+    movingCategory === 'ranged' ||
+    movingCategory === 'siege' ||
+    movingCategory === 'cavalry' ||
+    movingCategory === 'naval';
+  if (!isCombatUnit) return state;
+
+  const destKey = coordToKey(destPos);
+  let captured: UnitState | null = null;
+
+  for (const [, u] of state.units) {
+    if (u.id === movingUnit.id) continue;
+    if (u.owner === movingUnit.owner) continue;
+    if (coordToKey(u.position) !== destKey) continue;
+
+    // Check if the unit is civilian or religious
+    const uDef = state.config.units.get(u.typeId);
+    const uCategory = uDef?.category;
+    if (uCategory !== 'civilian' && uCategory !== 'religious') continue;
+
+    captured = u;
+    break;
+  }
+
+  if (!captured) return state;
+
+  // Transfer ownership of the captured unit to the moving unit's owner
+  const updatedUnits = new Map(state.units);
+  updatedUnits.set(captured.id, {
+    ...captured,
+    owner: movingUnit.owner,
+    movementLeft: 0, // captured unit cannot act this turn
+  });
+
+  return {
+    ...state,
+    units: updatedUnits,
+    log: [
+      ...state.log,
+      {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${movingUnit.typeId} captured ${captured.typeId} (was ${captured.owner}'s)`,
+        type: 'combat' as const,
+        severity: 'warning' as const,
+      },
+    ],
   };
 }
 
