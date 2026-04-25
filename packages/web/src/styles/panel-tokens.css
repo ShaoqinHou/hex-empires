@@ -190,6 +190,18 @@
   --panel-setup-resume-to:   #16a34a;   /* dark green end */
   --panel-setup-start-to:    #b87830;   /* warm amber-brown gradient end */
 
+  /* ─── Z5.4 — VictoryPanel civ-color palette cycle tokens ───────────────
+   * Replaces the 5 hardcoded rgba() literals in getCivColor().
+   * Warm-palette equivalents of the original amber/blue/purple/green hues. */
+  --panel-civ-color-1: rgba(120, 53, 15, 0.70);   /* amber-brown */
+  --panel-civ-color-2: rgba(30, 64, 175, 0.70);   /* deep blue */
+  --panel-civ-color-3: rgba(120, 27, 86, 0.70);   /* deep purple */
+  --panel-civ-color-4: rgba(6, 78, 59, 0.70);     /* deep green */
+  --panel-civ-color-5: rgba(120, 53, 15, 0.55);   /* lighter amber */
+
+  /* Text drop-shadow for hero names on colored backgrounds. */
+  --panel-shadow-text: 0 1px 4px rgba(0, 0, 0, 0.6);
+
   /* ─── Phase 4.5 — DramaModal tokens ────────────────────────────────────
    * Used by DramaModal.tsx for ceremony modals (AgeTransition, Crisis,
    * Victory, TurnSummary). Five new tokens + @media overrides below :root.

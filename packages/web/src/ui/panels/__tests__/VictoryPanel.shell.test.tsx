@@ -98,4 +98,24 @@ describe('VictoryPanel (DramaModal)', () => {
     const { getByText } = render(<VictoryPanel onResolve={() => {}} />);
     expect(getByText(/Science victory/i)).toBeTruthy();
   });
+
+  it('Z5.4 chrome trap — civ banner uses CSS var token, not raw rgba/hex literal', () => {
+    mockRef.state = makeWinningState();
+    const { getByTestId } = render(<VictoryPanel onResolve={() => {}} />);
+    const banner = getByTestId('victory-hero-banner');
+    // Collect inline style values from the hero banner and its children
+    const allElements = [banner, ...Array.from(banner.querySelectorAll('[style]'))];
+    const styleValues: string[] = [];
+    allElements.forEach(el => {
+      const style = (el as HTMLElement).style;
+      for (let i = 0; i < style.length; i++) {
+        const prop = style.item(i);
+        styleValues.push(style.getPropertyValue(prop));
+      }
+    });
+    const combined = styleValues.join(' ');
+    // backgroundColor and textShadow must use var() tokens, not raw rgba/hex
+    expect(combined).not.toMatch(/rgba\(\d/);
+    expect(combined).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
 });

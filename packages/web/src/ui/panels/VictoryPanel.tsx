@@ -28,6 +28,7 @@ export function VictoryPanel({ onResolve }: VictoryPanelProps) {
   const civColor = getCivColor(state.victory.winner);
   const heroNode = (
     <div
+      data-testid="victory-hero-banner"
       style={{
         width: '100%',
         height: '100%',
@@ -45,7 +46,7 @@ export function VictoryPanel({ onResolve }: VictoryPanelProps) {
           fontSize: '16px',
           fontWeight: 600,
           color: 'var(--panel-title-color)',
-          textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+          textShadow: 'var(--panel-shadow-text)',
         }}
       >
         {winner?.name ?? state.victory.winner}
@@ -122,17 +123,11 @@ function capitalize(s: string): string {
 }
 
 /**
- * Returns a warm-palette civ color for the victory banner.
- * Cycles through a palette since civ color strings are arbitrary.
+ * Returns a warm-palette civ color CSS variable for the victory banner.
+ * Cycles through a 5-token palette (--panel-civ-color-1..5) since
+ * civ color strings are arbitrary player ids.
  */
 function getCivColor(playerId: string): string {
-  // Use a deterministic palette cycle based on player id length.
-  const colors = [
-    'rgba(120, 53, 15, 0.70)',   // amber-brown
-    'rgba(30, 64, 175, 0.70)',   // deep blue
-    'rgba(120, 27, 86, 0.70)',   // deep purple
-    'rgba(6, 78, 59, 0.70)',     // deep green
-    'rgba(120, 53, 15, 0.55)',   // lighter amber
-  ];
-  return colors[playerId.length % colors.length];
+  const index = (playerId.length % 5) + 1;
+  return `var(--panel-civ-color-${index})`;
 }
