@@ -42,6 +42,7 @@ export type {
   VictoryType,
   VictoryProgress,
   VictoryState,
+  VictoryLegacyProgressEntry,
   TradeRoute,
   CrisisState,
   CrisisChoice,
