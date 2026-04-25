@@ -128,7 +128,9 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     currentMastery: null,
     masteryProgress: 0,
     // ── Civic tree reset (§16.1 #9) ──
-    researchedCivics: [],
+    // X1.3: researchedCivics is PRESERVED as a permanent historical record across ages.
+    // Only per-age progress fields (currentCivic, civicProgress, mastery) are reset.
+    researchedCivics: player.researchedCivics,
     currentCivic: null,
     civicProgress: 0,
     // F-14: Mastered civics persist across age transitions (same rationale as masteredTechs).
@@ -226,6 +228,8 @@ function handleTransition(state: GameState, newCivId: string): GameState {
       nextCities.set(cityId, {
         ...city,
         settlementType: 'town' as const,
+        isTown: true,
+        population: 1,
         productionQueue: [],
         productionProgress: 0,
         specialization: null,

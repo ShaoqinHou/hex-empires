@@ -342,7 +342,7 @@ describe('A10: previous age research is cleared on transition (§16.1 #9 — tre
 // ── A10b: civic/mastery/gov/policy/pantheon all wiped on transition (W1-B) ─
 
 describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_AGE (W1-B)', () => {
-  it('after Antiquity→Exploration: researchedCivics, masteredCivics, masteredTechs, governmentId, slottedPolicies, pantheonId all cleared', () => {
+  it('after Antiquity→Exploration: researchedCivics PRESERVED, masteredCivics/masteredTechs persist, governmentId/slottedPolicies/pantheonId cleared', () => {
     // W2-03: slottedPolicies is now a flat ReadonlyArray<string | null>, not a Map.
     const slotted: ReadonlyArray<string | null> = ['professional_army'];
     const player = readyToTransitionPlayer({
@@ -365,8 +365,9 @@ describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_A
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     const p = next.players.get('p1')!;
 
-    // Civic tree resets
-    expect(p.researchedCivics).toEqual([]);
+    // Civic tree: researchedCivics is a PERMANENT historical record -- persists across ages (X1.3).
+    // Only per-age progress fields reset.
+    expect(p.researchedCivics).toEqual(['code_of_laws', 'craftsmanship']);
     expect(p.currentCivic).toBeNull();
     expect(p.civicProgress).toBe(0);
     // F-14: masteredCivics persist across age transitions (permanent knowledge)
