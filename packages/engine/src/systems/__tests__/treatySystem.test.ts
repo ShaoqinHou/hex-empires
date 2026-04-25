@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { treatySystem } from '../treatySystem';
+import { treatySystem, canEstablishTrade, canCrossBorder } from '../treatySystem';
+import { getRelationshipTier, getRelationshipTierForPair } from '../../state/DiplomacyUtils';
 import { createTestState, createTestPlayer } from './helpers';
+import type { DiplomacyRelation } from '../../types/GameState';
+import { defaultRelation } from '../../state/DiplomacyUtils';
 
 function stateWithTwoPlayers(overrides: { p1Influence?: number; p2Influence?: number } = {}) {
   return createTestState({
@@ -177,5 +180,296 @@ describe('treatySystem', () => {
     const treaty = state.diplomacy.activeTreaties![0];
     expect(treaty.status).toBe('expired');
     expect(treaty.turnsRemaining).toBe(0);
+  });
+});
+
+// ---- Y4.1: Relationship tier tests ----
+
+describe('getRelationshipTier (Y4.1)', () => {
+  it('returns Friendly for score >= 50', () => {
+    expect(getRelationshipTier(50)).toBe('Friendly');
+    expect(getRelationshipTier(100)).toBe('Friendly');
+  });
+
+  it('returns Neutral for score 0 to 49', () => {
+    expect(getRelationshipTier(0)).toBe('Neutral');
+    expect(getRelationshipTier(49)).toBe('Neutral');
+  });
+
+  it('returns Unfriendly for score -1 to -49', () => {
+    expect(getRelationshipTier(-1)).toBe('Unfriendly');
+    expect(getRelationshipTier(-49)).toBe('Unfriendly');
+  });
+
+  it('returns Hostile for score -50 or lower', () => {
+    expect(getRelationshipTier(-50)).toBe('Hostile');
+    expect(getRelationshipTier(-100)).toBe('Hostile');
+  });
+
+  it('getRelationshipTierForPair returns Neutral for unknown pair', () => {
+    const relations = new Map<string, DiplomacyRelation>();
+    expect(getRelationshipTierForPair('p1', 'p2', relations)).toBe('Neutral');
+  });
+
+  it('getRelationshipTierForPair returns correct tier for known pair', () => {
+    const rel: DiplomacyRelation = { ...defaultRelation(), relationship: 60 };
+    const relations = new Map([['p1:p2', rel]]);
+    expect(getRelationshipTierForPair('p1', 'p2', relations)).toBe('Friendly');
+    expect(getRelationshipTierForPair('p2', 'p1', relations)).toBe('Friendly');
+  });
+});
+
+// ---- Y4.2: Influence accumulation tests ----
+
+describe('END_TURN influence accumulation (Y4.2)', () => {
+  it('baseline: +1 Influence per turn with no treaties or embassies', () => {
+    let state = stateWithTwoPlayers({ p1Influence: 0, p2Influence: 0 });
+    const initial = state.players.get('p1')!.influence;
+
+    for (let i = 0; i < 10; i++) {
+      state = treatySystem(state, { type: 'END_TURN' });
+    }
+
+    const final = state.players.get('p1')!.influence;
+    // 10 turns * +1 baseline = +10
+    expect(final - initial).toBe(10);
+  });
+
+  it('+0.5 per active treaty partner on top of baseline', () => {
+    // Set up an active treaty between p1 and p2
+    let state = stateWithTwoPlayers({ p1Influence: 50, p2Influence: 50 });
+    state = treatySystem(state, {
+      type: 'PROPOSE_TREATY',
+      targetPlayerId: 'p2',
+      treatyId: 'open_borders',
+      influenceSpent: 20,
+    });
+    const treatyId = state.diplomacy.activeTreaties![0].id;
+    state = { ...state, currentPlayerId: 'p2' };
+    state = treatySystem(state, { type: 'ACCEPT_TREATY', treatyId });
+    state = { ...state, currentPlayerId: 'p1' };
+
+    // Record post-treaty-setup influence
+    const p1Before = state.players.get('p1')!.influence;
+    const p2Before = state.players.get('p2')!.influence;
+
+    state = treatySystem(state, { type: 'END_TURN' });
+
+    const p1After = state.players.get('p1')!.influence;
+    const p2After = state.players.get('p2')!.influence;
+
+    // 1 baseline + 0.5 treaty partner = 1.5 per turn
+    expect(p1After - p1Before).toBe(1.5);
+    expect(p2After - p2Before).toBe(1.5);
+  });
+
+  it('spending (DENOUNCE_PLAYER) decreases Influence', () => {
+    const state = stateWithTwoPlayers({ p1Influence: 20, p2Influence: 0 });
+    const next = treatySystem(state, {
+      type: 'DENOUNCE_PLAYER',
+      targetPlayerId: 'p2',
+    });
+    // DENOUNCE_PLAYER costs 5
+    expect(next.players.get('p1')!.influence).toBe(15);
+  });
+});
+
+// ---- Y4.3: Alliance effects tests ----
+
+describe('Alliance effects on END_TURN (Y4.3)', () => {
+  function stateWithAlliance() {
+    return createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', science: 0, influence: 200 })],
+        ['p2', createTestPlayer({ id: 'p2', science: 0, influence: 200 })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), hasAlliance: true, relationship: 70, status: 'helpful' as const }],
+        ]),
+      },
+    });
+  }
+
+  it('both alliance partners gain +1 science per turn', () => {
+    const state = stateWithAlliance();
+    const next = treatySystem(state, { type: 'END_TURN' });
+
+    expect(next.players.get('p1')!.science).toBe(1);
+    expect(next.players.get('p2')!.science).toBe(1);
+  });
+
+  it('mutual war: ally of belligerent enters war with enemy', () => {
+    // p1 at war with p3; p2 allied with p1 -> p2 should enter war with p3
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 100 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 100 })],
+        ['p3', createTestPlayer({ id: 'p3', influence: 100 })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), hasAlliance: true, relationship: 70, status: 'helpful' as const }],
+          ['p1:p3', { ...defaultRelation(), status: 'war' as const, relationship: -50 }],
+        ]),
+      },
+    });
+
+    const next = treatySystem(state, { type: 'END_TURN' });
+
+    // p2 and p3 relation should now be at war
+    const key = 'p2:p3';
+    const rel = next.diplomacy.relations.get(key);
+    expect(rel?.status).toBe('war');
+
+    // Log should mention alliance obligation
+    expect(next.log.some(e => e.message.includes('Alliance obligation'))).toBe(true);
+  });
+});
+
+// ---- Y4.4: Trade/border permission tests ----
+
+describe('canEstablishTrade (Y4.4)', () => {
+  it('Neutral relation allows trade', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), relationship: 0, status: 'neutral' as const }],
+        ]),
+      },
+    });
+    expect(canEstablishTrade('p1', 'p2', state)).toBe(true);
+  });
+
+  it('Hostile relation blocks trade', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), relationship: -60, status: 'hostile' as const }],
+        ]),
+      },
+    });
+    expect(canEstablishTrade('p1', 'p2', state)).toBe(false);
+  });
+
+  it('embargo blocks trade even on Friendly tier', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), relationship: 80, status: 'helpful' as const, hasEmbargo: true }],
+        ]),
+      },
+    });
+    expect(canEstablishTrade('p1', 'p2', state)).toBe(false);
+  });
+
+  it('Open Borders treaty permits border crossing for Unfriendly players', () => {
+    // p1 and p2 are Unfriendly but have an active Open Borders treaty
+    let state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 100 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 100 })],
+      ]),
+      diplomacy: {
+        relations: new Map([
+          ['p1:p2', { ...defaultRelation(), relationship: -30, status: 'unfriendly' as const }],
+        ]),
+      },
+    });
+    // Propose and accept an open_borders treaty
+    state = treatySystem(state, {
+      type: 'PROPOSE_TREATY',
+      targetPlayerId: 'p2',
+      treatyId: 'open_borders',
+      influenceSpent: 20,
+    });
+    const tId = state.diplomacy.activeTreaties![0].id;
+    state = { ...state, currentPlayerId: 'p2' };
+    state = treatySystem(state, { type: 'ACCEPT_TREATY', treatyId: tId });
+
+    // Unfriendly tier but has open_borders treaty -> border crossing allowed
+    expect(canCrossBorder('p1', 'p2', state)).toBe(true);
+  });
+});
+
+// ---- Y4.5: Influence-cost diplomatic actions ----
+
+describe('DENOUNCE_PLAYER (Y4.5)', () => {
+  it('costs 5 Influence and reduces relationship by 20', () => {
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 20 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 0 })],
+      ]),
+      diplomacy: {
+        relations: new Map([['p1:p2', { ...defaultRelation(), relationship: 0 }]]),
+      },
+    });
+    const next = treatySystem(state, { type: 'DENOUNCE_PLAYER', targetPlayerId: 'p2' });
+    expect(next.players.get('p1')!.influence).toBe(15); // -5
+    expect(next.diplomacy.relations.get('p1:p2')!.relationship).toBe(-20);
+  });
+
+  it('no-ops when insufficient Influence', () => {
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 3 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 0 })],
+      ]),
+    });
+    const next = treatySystem(state, { type: 'DENOUNCE_PLAYER', targetPlayerId: 'p2' });
+    expect(next).toBe(state); // state reference unchanged
+  });
+});
+
+describe('DECLARE_FRIENDSHIP (Y4.5)', () => {
+  it('costs 5 Influence and raises relationship by 10', () => {
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 20 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 0 })],
+      ]),
+      diplomacy: {
+        relations: new Map([['p1:p2', { ...defaultRelation(), relationship: 0 }]]),
+      },
+    });
+    const next = treatySystem(state, { type: 'DECLARE_FRIENDSHIP', targetPlayerId: 'p2' });
+    expect(next.players.get('p1')!.influence).toBe(15); // -5
+    expect(next.diplomacy.relations.get('p1:p2')!.relationship).toBe(10);
+  });
+});
+
+describe('IMPOSE_EMBARGO (Y4.5)', () => {
+  it('costs 10 Influence and sets hasEmbargo, blocking trade', () => {
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 20 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 0 })],
+      ]),
+    });
+    const next = treatySystem(state, { type: 'IMPOSE_EMBARGO', targetPlayerId: 'p2' });
+    expect(next.players.get('p1')!.influence).toBe(10); // -10
+    expect(next.diplomacy.relations.get('p1:p2')!.hasEmbargo).toBe(true);
+    // Trade should now be blocked even though default tier is Neutral
+    expect(canEstablishTrade('p1', 'p2', next)).toBe(false);
   });
 });
