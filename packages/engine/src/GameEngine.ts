@@ -42,6 +42,7 @@ import { projectsSystem } from './systems/projectsSystem';
 import { espionageSystem } from './systems/espionageSystem';
 import { treatySystem } from './systems/treatySystem';
 import { wonderPlacementSystem } from './systems/wonderPlacementSystem';
+import { discoverySystem } from './systems/discoverySystem';
 
 /**
  * Default engine pipeline. Ordered to match the documented system
@@ -94,6 +95,7 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   adaptCommanderArmy,
   promotionSystem,
   fortifySystem,
+  discoverySystem,
   improvementSystem,
   // buildingPlacementSystem removed in Cycle F (W4-01) — retired in favour of
   // adaptUrbanBuilding (PLACE_URBAN_BUILDING). See ./systems/buildingPlacementSystem.ts.

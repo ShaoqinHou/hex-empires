@@ -1468,6 +1468,28 @@ export type GameAction =
   | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId }
   // ── F-06: Dark Age opt-in ──
   | { readonly type: 'CHOOSE_DARK_AGE'; readonly optIn: boolean }
+  // ── EE5.2: Discovery tile mechanic ──
+  /**
+   * A unit explicitly explores a discovery tile, applying its reward immediately
+   * and clearing the tile so it cannot be re-explored.
+   *
+   * Validates:
+   * - unitId exists and is owned by the current player
+   * - tile at (tileQ, tileR) has a discoveryId
+   * - the discoveryId maps to a DiscoveryDef in state.config.discoveries
+   * - the DiscoveryDef has a reward field
+   *
+   * On success:
+   * - reward is applied to the current player (gold/science/culture incremented,
+   *   or a unit is spawned at the tile for reward.type === 'unit')
+   * - tile.discoveryId is cleared (set to null)
+   */
+  | {
+      readonly type: 'EXPLORE_DISCOVERY';
+      readonly unitId: UnitId;
+      readonly tileQ: number;
+      readonly tileR: number;
+    }
   // ── Y4: Influence-cost diplomatic actions ──
   /**
    * Y4.5 -- Denounce a player: costs 5 Influence, relationship -20.

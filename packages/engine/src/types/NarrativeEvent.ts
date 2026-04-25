@@ -46,6 +46,11 @@ export interface NarrativeRequirements {
  * DiscoveryDef — metadata for a map discovery tile (replaces Goody Huts).
  * When a unit moves onto a tile with discoveryId == this def's id, the
  * movementSystem enqueues the associated narrativeEventId.
+ *
+ * EE5.2: Discoveries may optionally carry a direct `reward` field.
+ * When reward is present, EXPLORE_DISCOVERY applies the reward immediately
+ * and clears the tile's discoveryId (one-shot). Discoveries without a reward
+ * continue to fire the narrative event via movementSystem.
  */
 export interface DiscoveryDef {
   readonly id: string;
@@ -53,4 +58,15 @@ export interface DiscoveryDef {
   readonly narrativeEventId: string;
   /** Human-readable label for the discovery tile (shown on map tooltip) */
   readonly label: string;
+  /**
+   * EE5.2: Optional direct reward applied by discoverySystem on EXPLORE_DISCOVERY.
+   * type 'gold' | 'science' | 'culture': adds `amount` to the exploring player.
+   * type 'unit': grants a unit of `unitId` type at the explored tile.
+   * When present, the tile's discoveryId is cleared after exploration.
+   */
+  readonly reward?: {
+    readonly type: 'gold' | 'science' | 'culture' | 'unit';
+    readonly amount?: number;
+    readonly unitId?: string;
+  };
 }
