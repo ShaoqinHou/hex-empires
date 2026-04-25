@@ -488,4 +488,15 @@ describe('W2-02 settlement VII-parity', () => {
     expect(city.settlementType).toBe('town');
     expect(city.isCapital).toBe(false);
   });
+
+  describe('AA1.2: foundedBy + wasConquered provenance', () => {
+    it('FOUND_CITY sets foundedBy to the founding player and wasConquered to false', () => {
+      const settler = createTestUnit({ id: 's1', typeId: 'settler', position: { q: 3, r: 3 } });
+      const state = createTestState({ units: new Map([['s1', settler]]) });
+      const next = citySystem(state, { type: 'FOUND_CITY', unitId: 's1', name: 'Roma' });
+      const city = [...next.cities.values()][0];
+      expect(city.foundedBy).toBe('p1');
+      expect(city.wasConquered).toBe(false);
+    });
+  });
 });

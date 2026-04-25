@@ -122,6 +122,7 @@ function handleFoundCity(
     districts: [districtId], // Start with city center district
     foundedBy: unit.owner,
     originalOwner: undefined,
+    wasConquered: false,
   };
 
   // Z3.3: Increment distantLandPoints if founding on a Distant Lands tile

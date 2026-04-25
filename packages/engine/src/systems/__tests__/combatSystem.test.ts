@@ -1092,3 +1092,40 @@ describe('combatSystem — commander aura', () => {
     expect(next.players.get('p1')!.ideologyPoints).toBe(1);
   });
 });
+
+describe('AA1.2: wasConquered provenance on city capture', () => {
+  it('captured city has wasConquered set to true', () => {
+    // Set defenseHP to 1 so a single warrior attack captures it
+    const city: import('../../types/GameState').CityState = {
+      id: 'c1',
+      name: 'Enemy City',
+      owner: 'p2',
+      position: { q: 4, r: 3 },
+      population: 3,
+      food: 0,
+      productionQueue: [],
+      productionProgress: 0,
+      buildings: [],
+      territory: ['4,3'],
+      settlementType: 'city',
+      happiness: 10,
+      isCapital: false,
+      defenseHP: 1, // nearly dead — will be captured
+      specialization: null,
+      specialists: 0,
+      districts: [],
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
+    const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
+    const capturedCity = next.cities.get('c1')!;
+    expect(capturedCity.owner).toBe('p1');   // ownership transferred
+    expect(capturedCity.wasConquered).toBe(true); // AA1.2 flag set
+  });
+});

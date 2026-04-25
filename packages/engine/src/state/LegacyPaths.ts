@@ -54,17 +54,20 @@ export interface LegacyProgress {
 
 /**
  * Settlement points for the military legacy path.
- * Conquered cities (originalOwner !== undefined/null) count as 2 pts;
- * self-founded cities count as 1 pt.  Matches GDD §12.2 conquest multiplier.
+ * Conquered cities count as 2 pts; self-founded cities count as 1 pt.
+ * Matches GDD §12.2 conquest multiplier.
+ *
+ * AA1.2: prefer the explicit `wasConquered` boolean (set by combatSystem on city
+ * capture). Falls back to the originalOwner check for cities predating AA1.2.
  */
 function settlementPoints(state: GameState, playerId: PlayerId): number {
   let pts = 0;
   for (const city of state.cities.values()) {
     if (city.owner !== playerId) continue;
-    // If originalOwner is set and differs from the city's foundedBy owner,
-    // the city was conquered → 2 points; otherwise self-founded → 1 point.
-    const wasConquered = city.originalOwner != null && city.originalOwner !== playerId;
-    pts += wasConquered ? 2 : 1;
+    // AA1.2: prefer wasConquered flag; fall back to originalOwner check
+    const conquered = city.wasConquered ??
+      (city.originalOwner != null && city.originalOwner !== playerId);
+    pts += conquered ? 2 : 1;
   }
   return pts;
 }

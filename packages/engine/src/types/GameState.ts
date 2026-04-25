@@ -193,6 +193,14 @@ export interface CityState {
   readonly foundedBy?: string;
   /** PlayerId of the original owner before conquest (null = never conquered) */
   readonly originalOwner?: string;
+  /**
+   * AA1.2: True if this city has ever changed hands via combat (conquest).
+   * Set to false when FOUND_CITY; set to true when city capture occurs in
+   * combat. Provides a convenient boolean for systems that only need to
+   * distinguish founded vs. conquered cities without inspecting originalOwner.
+   * Optional so existing CityState construction keeps compiling unchanged.
+   */
+  readonly wasConquered?: boolean;
   /** True if this settlement occupies an Urban tile slot in the V2 district model */
   readonly isUrban?: boolean;
 
