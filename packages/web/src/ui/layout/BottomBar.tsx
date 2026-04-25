@@ -110,9 +110,9 @@ export function BottomBar() {
       style={{
         // Phase 4.3: warm olive gradient replaces surface/bg fallback.
         // Reversed direction (0deg = bottom-to-top) preserved for BottomBar.
-        background: 'linear-gradient(0deg, rgba(42, 37, 17, 0.98) 0%, rgba(67, 59, 28, 0.98) 100%)',
+        background: 'var(--chrome-bar-bg-bottom)',
         // border-top replaced by ::before gold rule in chrome-bars.css.
-        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: 'var(--chrome-bar-shadow-bottom)',
       }}
     >
       {/* ── Stack picker portrait strip (shown when 2+ entities on selected tile) ── */}
@@ -123,12 +123,12 @@ export function BottomBar() {
             // fixed: 32px = click-target minimum for portrait buttons;
             // no S-03 token for this sub-strip; intentional fixed value.
             height: '32px',
-            borderBottom: '1px solid rgba(139,148,158,0.2)',
-            background: 'rgba(0,0,0,0.2)',
+            borderBottom: '1px solid var(--chrome-stack-picker-border)',
+            background: 'var(--chrome-stack-picker-bg)',
             flexShrink: 0,
           }}
         >
-          <span className="text-[10px] font-mono shrink-0" style={{ color: 'rgba(139,148,158,0.5)' }}>
+          <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--chrome-stack-picker-label)' }}>
             On tile:
           </span>
           {tileContents.ownUnits.map(unit => (
@@ -167,7 +167,7 @@ export function BottomBar() {
         {selectedUnit && unitDef && (
           <>
             {/* Unit identity card */}
-            <InfoPill color="rgba(88,166,255,0.18)" border="rgba(88,166,255,0.35)">
+            <InfoPill color="var(--panel-infopill-unit-bg)" border="var(--panel-infopill-unit-border)">
               <span className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
                 {unitDef.name}
               </span>
@@ -193,7 +193,7 @@ export function BottomBar() {
 
             {/* Combat strength */}
             {!isCivilian && (
-              <InfoPill color="rgba(255,107,107,0.12)" border="rgba(255,107,107,0.3)">
+              <InfoPill color="var(--panel-infopill-combat-bg)" border="var(--panel-infopill-combat-border)">
                 <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
                   <span style={{ color: 'var(--color-production)' }}>⚔ {unitDef.combat}</span>
                   {unitDef.rangedCombat > 0 && (
@@ -205,7 +205,7 @@ export function BottomBar() {
 
             {/* Promotions */}
             {selectedUnit.promotions.length > 0 && (
-              <InfoPill color="rgba(255,213,79,0.1)" border="rgba(255,213,79,0.3)">
+              <InfoPill color="var(--panel-infopill-promo-bg)" border="var(--panel-infopill-promo-border)">
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   Promotions:{' '}
                   {selectedUnit.promotions.map(pid => {
@@ -215,9 +215,9 @@ export function BottomBar() {
                         key={pid}
                         className="inline-block px-1.5 py-0.5 rounded mr-1"
                         style={{
-                          background: 'rgba(255,213,79,0.15)',
+                          background: 'var(--panel-promo-badge-bg)',
                           color: 'var(--panel-button-age)',
-                          border: '1px solid rgba(255,213,79,0.25)',
+                          border: '1px solid var(--panel-promo-badge-border)',
                           fontSize: '11px',
                         }}
                         title={p?.description}
@@ -232,14 +232,14 @@ export function BottomBar() {
 
             {/* Builder improvement hints */}
             {isBuilder && selectedHex && availableImprovements.length > 0 && (
-              <InfoPill color="rgba(124,252,0,0.08)" border="rgba(124,252,0,0.3)">
+              <InfoPill color="var(--panel-infopill-builder-bg)" border="var(--panel-infopill-builder-border)">
                 <span className="text-xs" style={{ color: 'var(--color-accent)' }}>🏗 Build:</span>
                 <div className="flex gap-1 flex-wrap">
                   {availableImprovements.slice(0, 3).map(imp => (
                     <span
                       key={imp.id}
                       className="px-1.5 py-0.5 rounded text-[11px]"
-                      style={{ background: 'rgba(124,252,0,0.1)', color: 'var(--color-text)', border: 'var(--border-hairline) solid rgba(124,252,0,0.2)' }}
+                      style={{ background: 'var(--panel-builder-chip-bg)', color: 'var(--color-text)', border: 'var(--border-hairline) solid var(--panel-builder-chip-border)' }}
                     >
                       {imp.name}
                     </span>
@@ -329,7 +329,7 @@ export function BottomBar() {
         {!selectedUnit && !selectedHex && empireSummary && (
           <div className="flex items-center gap-3 flex-1 flex-wrap">
             {/* Cities */}
-            <InfoPill color="rgba(88,166,255,0.1)" border="rgba(88,166,255,0.25)">
+            <InfoPill color="var(--panel-infopill-cities-bg)" border="var(--panel-infopill-cities-border)">
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 🏙{' '}
                 <span className="font-bold" style={{ color: 'var(--color-accent)' }}>
@@ -343,7 +343,7 @@ export function BottomBar() {
             </InfoPill>
 
             {/* Units */}
-            <InfoPill color="rgba(255,107,107,0.1)" border="rgba(255,107,107,0.25)">
+            <InfoPill color="var(--panel-infopill-military-bg)" border="var(--panel-infopill-military-border)">
               <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 ⚔{' '}
                 <span className="font-bold" style={{ color: 'var(--color-production)' }}>
@@ -360,7 +360,7 @@ export function BottomBar() {
 
             {/* Research */}
             {empireSummary.researchTech ? (
-              <InfoPill color="rgba(77,171,247,0.1)" border="rgba(77,171,247,0.25)">
+              <InfoPill color="var(--panel-infopill-research-bg)" border="var(--panel-infopill-research-border)">
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   🔬{' '}
                   <span className="font-semibold" style={{ color: 'var(--color-science)' }}>
@@ -378,14 +378,14 @@ export function BottomBar() {
                 />
               </InfoPill>
             ) : (
-              <InfoPill color="rgba(77,171,247,0.08)" border="rgba(77,171,247,0.2)">
+              <InfoPill color="var(--panel-infopill-research-none-bg)" border="var(--panel-infopill-research-none-border)">
                 <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>🔬 No research</span>
               </InfoPill>
             )}
 
             {/* Civic */}
             {empireSummary.civicDef ? (
-              <InfoPill color="rgba(204,93,232,0.1)" border="rgba(204,93,232,0.25)">
+              <InfoPill color="var(--panel-infopill-civic-bg)" border="var(--panel-infopill-civic-border)">
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   🎭{' '}
                   <span className="font-semibold" style={{ color: 'var(--color-culture)' }}>
@@ -402,7 +402,7 @@ export function BottomBar() {
                 />
               </InfoPill>
             ) : (
-              <InfoPill color="rgba(204,93,232,0.08)" border="rgba(204,93,232,0.2)">
+              <InfoPill color="var(--panel-infopill-civic-none-bg)" border="var(--panel-infopill-civic-none-border)">
                 <span className="text-xs italic" style={{ color: 'var(--color-text-muted)' }}>🎭 No civic</span>
               </InfoPill>
             )}
@@ -417,8 +417,8 @@ export function BottomBar() {
           // fixed: 16px strip height — deliberately minimal; at 48px BottomBar
           // this strip consumes ~⅓ of the bar, which is intentional visual weight.
           height: '16px',
-          borderTop: '1px solid rgba(139,148,158,0.12)',
-          background: 'rgba(0,0,0,0.15)',
+          borderTop: '1px solid var(--chrome-shortcut-strip-border)',
+          background: 'var(--chrome-shortcut-strip-bg)',
         }}
       >
         <span
@@ -427,7 +427,7 @@ export function BottomBar() {
             // fixed: 10px intentionally below --type-label-size (11px) for
             // visual de-emphasis; shortcut strip is secondary chrome.
             fontSize: '10px',
-            color: 'rgba(139,148,158,0.55)',
+            color: 'var(--chrome-shortcut-strip-text)',
             letterSpacing: '0.03em',
           }}
         >
@@ -460,7 +460,7 @@ function InfoPill({ color, border, children }: { color: string; border: string; 
 const PROGRESS_TRACK_STYLE = {
   height: '3px',
   width: '64px',
-  background: 'rgba(255,255,255,0.1)',
+  background: 'var(--panel-progress-track)',
   marginTop: '2px',
 } as const;
 
@@ -489,8 +489,8 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
       style={{
         background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
         color: textColor ?? 'var(--panel-turn-badge-text)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+        border: '1px solid var(--chrome-button-border-highlight)',
+        boxShadow: 'var(--chrome-button-shadow)',
       }}
       onClick={onClick}
     >
@@ -499,9 +499,9 @@ function ActionButton({ label, shortcut, color, icon, textColor, onClick }: {
       <span
         className="text-[10px] px-1.5 py-0.5 rounded ml-1"
         style={{
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: 'var(--chrome-button-kbd-bg)',
           fontWeight: 'normal',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid var(--chrome-button-border-subtle)',
         }}
       >
         [{shortcut}]
@@ -532,13 +532,13 @@ function StackPortrait({
       aria-label={isSelected ? `${label} (selected)` : label}
       className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition-all hover:scale-105 shrink-0"
       style={{
-        background: isSelected ? 'rgba(88,166,255,0.25)' : 'rgba(255,255,255,0.06)',
+        background: isSelected ? 'var(--chrome-stack-portrait-selected-bg)' : 'var(--chrome-stack-portrait-unselected-bg)',
         border: isSelected
-          ? '1px solid rgba(88,166,255,0.6)'
-          : '1px solid rgba(139,148,158,0.2)',
+          ? '1px solid var(--chrome-stack-portrait-selected-border)'
+          : '1px solid var(--chrome-stack-portrait-unselected-border)',
         color: isSelected ? 'var(--color-accent)' : 'var(--color-text)',
         fontWeight: isSelected ? 700 : 400,
-        boxShadow: isSelected ? '0 0 6px rgba(88,166,255,0.3)' : 'none',
+        boxShadow: isSelected ? 'var(--chrome-stack-portrait-selected-glow)' : 'none',
       }}
     >
       <span>{icon}</span>
@@ -546,7 +546,7 @@ function StackPortrait({
         {label}
       </span>
       {isSelected && (
-        <span className="text-[8px] ml-px" style={{ color: 'rgba(88,166,255,0.8)' }}>●</span>
+        <span className="text-[8px] ml-px" style={{ color: 'var(--chrome-stack-portrait-indicator)' }}>●</span>
       )}
     </button>
   );

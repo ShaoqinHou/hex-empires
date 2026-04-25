@@ -31,9 +31,9 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
           backgroundColor: isActive
             ? 'var(--color-accent)'
             : isWonder
-            ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)'
+            ? 'var(--panel-building-wonder-gradient)'
             : isBuilt
-            ? 'rgba(66, 165, 245, 0.1)'
+            ? 'var(--panel-building-built-bg)'
             : 'var(--color-bg)',
           color: isActive
             ? 'var(--color-bg)'
@@ -44,7 +44,7 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
             ? '2px solid var(--panel-accent-gold)'
             : `1px solid ${isActive ? 'var(--color-accent)' : isBuilt ? 'var(--color-science)' : 'var(--color-border)'}`,
           opacity: isBuilt && !isActive ? 0.7 : 1,
-          boxShadow: isWonder ? '0 2px 8px rgba(251, 191, 36, 0.3)' : 'none',
+          boxShadow: isWonder ? 'var(--panel-building-wonder-shadow)' : 'none',
         }}
         onClick={onClick}
         disabled={isBuilt}
@@ -72,7 +72,7 @@ export function BuildingCard({ building, isActive, isBuilt, compact, onClick }: 
     <div
       className="rounded-lg p-3 cursor-pointer transition-all"
       style={{
-        backgroundColor: isActive ? 'var(--color-accent)' : isBuilt ? 'rgba(66, 165, 245, 0.1)' : 'var(--color-bg)',
+        backgroundColor: isActive ? 'var(--color-accent)' : isBuilt ? 'var(--panel-building-built-bg)' : 'var(--color-bg)',
         color: isActive ? 'var(--color-bg)' : 'var(--color-text)',
         border: `1px solid ${isActive ? 'var(--color-accent)' : isBuilt ? 'var(--color-science)' : 'var(--color-border)'}`,
       }}

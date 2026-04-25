@@ -98,7 +98,7 @@ export function TopBar() {
         // --chrome-bar-bg anchors both bars to the same warm-dark surface.
         background: 'var(--chrome-bar-bg)',
         // border-bottom replaced by ::after gold rule in chrome-bars.css.
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: 'var(--chrome-bar-shadow-top)',
       }}
     >
 
@@ -107,7 +107,7 @@ export function TopBar() {
         <div className="px-2.5 py-1 rounded flex flex-col items-center"
           style={{
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)',
-            boxShadow: '0 2px 4px rgba(88, 166, 255, 0.3)',
+            boxShadow: 'var(--panel-turn-badge-shadow)',
             border: '1px solid var(--panel-turn-badge-border)',
             minWidth: '4.5rem',
           }}>
@@ -133,7 +133,7 @@ export function TopBar() {
 
         {/* Research progress */}
         {currentResearchTech && (
-          <span className="text-xs px-2 py-0.5 rounded" style={{ color: 'var(--color-science)', backgroundColor: 'rgba(77, 171, 247, 0.1)' }}>
+          <span className="text-xs px-2 py-0.5 rounded" style={{ color: 'var(--color-science)', backgroundColor: 'var(--panel-research-indicator-bg)' }}>
             🔬 {currentResearchTech.name} ({player?.researchProgress ?? 0}/{currentResearchTech.cost})
           </span>
         )}
@@ -201,7 +201,7 @@ export function TopBar() {
             background: 'linear-gradient(135deg, var(--color-food) 0%, color-mix(in srgb, var(--color-food) 80%, transparent) 100%)',
             color: 'var(--color-text)',
             boxShadow: turnReady ? '0 2px 8px color-mix(in srgb, var(--panel-accent-gold) 40%, transparent)' : '0 2px 8px color-mix(in srgb, var(--color-food) 40%, transparent)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            border: '1px solid var(--chrome-button-border-highlight)',
             minHeight: '32px',
           }}
           onClick={() => dispatch({ type: 'END_TURN' })}

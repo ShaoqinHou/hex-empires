@@ -113,8 +113,8 @@ export function UnitCard({ unit, isActive, compact, onClick }: UnitCardProps) {
 function StatBadge({ label, value, color, active }: { label: string; value: number; color: string; active?: boolean }) {
   return (
     <div className="text-center rounded px-1 py-0.5"
-      style={{ backgroundColor: active ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)' }}>
-      <div className="text-[9px]" style={{ color: active ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>{label}</div>
+      style={{ backgroundColor: active ? 'var(--panel-stat-badge-active-bg)' : 'var(--panel-stat-badge-inactive-bg)' }}>
+      <div className="text-[9px]" style={{ color: active ? 'var(--panel-stat-badge-active-label)' : 'var(--color-text-muted)' }}>{label}</div>
       <div className="text-xs font-bold" style={{ color: active ? 'var(--panel-text-bright)' : color }}>{value}</div>
     </div>
   );

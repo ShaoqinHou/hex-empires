@@ -3,7 +3,7 @@
 interface ProgressBarProps {
   readonly value: number;       // 0–1
   readonly color?: string;      // CSS string, default var(--color-accent)
-  readonly trackColor?: string; // default rgba(255,255,255,0.08)
+  readonly trackColor?: string; // default var(--panel-progress-track)
   readonly height?: number;     // px, default 8
   readonly showLabel?: boolean; // show "N%" at right
   readonly label?: string;      // custom label text (overrides percentage)
@@ -12,7 +12,7 @@ interface ProgressBarProps {
 export function ProgressBar({
   value,
   color = 'var(--color-accent)',
-  trackColor = 'rgba(255,255,255,0.08)',
+  trackColor = 'var(--panel-progress-track)',
   height = 8,
   showLabel,
   label,

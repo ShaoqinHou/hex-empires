@@ -316,6 +316,89 @@
   }
 }
 
+/* ─── BB2 chrome-rgba sweep — new tokens for components/ + layout/ ─────────── */
+:root {
+  /* BuildingCard tokens */
+  --panel-building-wonder-gradient:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%);
+  --panel-building-built-bg: rgba(66, 165, 245, 0.1);
+  --panel-building-wonder-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+
+  /* UnitCard StatBadge tokens */
+  --panel-stat-badge-active-bg:    rgba(255, 255, 255, 0.15);
+  --panel-stat-badge-inactive-bg:  rgba(0, 0, 0, 0.2);
+  --panel-stat-badge-active-label: rgba(255, 255, 255, 0.7);
+
+  /* ProgressBar track */
+  --panel-progress-track: rgba(255, 255, 255, 0.08);
+
+  /* BottomBar chrome gradient (reversed direction for bottom bar) */
+  --chrome-bar-bg-bottom:
+    linear-gradient(0deg, rgba(42, 37, 17, 0.98) 0%, rgba(67, 59, 28, 0.98) 100%);
+
+  /* Chrome bar box-shadows */
+  --chrome-bar-shadow-top:    0 2px 8px rgba(0, 0, 0, 0.3);
+  --chrome-bar-shadow-bottom: 0 -2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Stack picker portrait strip */
+  --chrome-stack-picker-border: rgba(139, 148, 158, 0.2);
+  --chrome-stack-picker-bg:     rgba(0, 0, 0, 0.2);
+  --chrome-stack-picker-label:  rgba(139, 148, 158, 0.5);
+
+  /* StackPortrait selected/unselected state */
+  --chrome-stack-portrait-selected-bg:       rgba(88, 166, 255, 0.25);
+  --chrome-stack-portrait-unselected-bg:     rgba(255, 255, 255, 0.06);
+  --chrome-stack-portrait-selected-border:   rgba(88, 166, 255, 0.6);
+  --chrome-stack-portrait-unselected-border: rgba(139, 148, 158, 0.2);
+  --chrome-stack-portrait-selected-glow:     0 0 6px rgba(88, 166, 255, 0.3);
+  --chrome-stack-portrait-indicator:         rgba(88, 166, 255, 0.8);
+
+  /* Keyboard shortcut strip */
+  --chrome-shortcut-strip-border: rgba(139, 148, 158, 0.12);
+  --chrome-shortcut-strip-bg:     rgba(0, 0, 0, 0.15);
+  --chrome-shortcut-strip-text:   rgba(139, 148, 158, 0.55);
+
+  /* ActionButton / EndTurn chrome */
+  --chrome-button-border-highlight: rgba(255, 255, 255, 0.2);
+  --chrome-button-border-subtle:    rgba(255, 255, 255, 0.1);
+  --chrome-button-shadow:           0 2px 4px rgba(0, 0, 0, 0.2);
+  --chrome-button-kbd-bg:           rgba(0, 0, 0, 0.3);
+
+  /* InfoPill game-data semantic backgrounds (BottomBar) */
+  --panel-infopill-unit-bg:             rgba(88, 166, 255, 0.18);
+  --panel-infopill-unit-border:         rgba(88, 166, 255, 0.35);
+  --panel-infopill-combat-bg:           rgba(255, 107, 107, 0.12);
+  --panel-infopill-combat-border:       rgba(255, 107, 107, 0.3);
+  --panel-infopill-promo-bg:            rgba(255, 213, 79, 0.1);
+  --panel-infopill-promo-border:        rgba(255, 213, 79, 0.3);
+  --panel-infopill-builder-bg:          rgba(124, 252, 0, 0.08);
+  --panel-infopill-builder-border:      rgba(124, 252, 0, 0.3);
+  --panel-infopill-cities-bg:           rgba(88, 166, 255, 0.1);
+  --panel-infopill-cities-border:       rgba(88, 166, 255, 0.25);
+  --panel-infopill-military-bg:         rgba(255, 107, 107, 0.1);
+  --panel-infopill-military-border:     rgba(255, 107, 107, 0.25);
+  --panel-infopill-research-bg:         rgba(77, 171, 247, 0.1);
+  --panel-infopill-research-border:     rgba(77, 171, 247, 0.25);
+  --panel-infopill-research-none-bg:    rgba(77, 171, 247, 0.08);
+  --panel-infopill-research-none-border: rgba(77, 171, 247, 0.2);
+  --panel-infopill-civic-bg:            rgba(204, 93, 232, 0.1);
+  --panel-infopill-civic-border:        rgba(204, 93, 232, 0.25);
+  --panel-infopill-civic-none-bg:       rgba(204, 93, 232, 0.08);
+  --panel-infopill-civic-none-border:   rgba(204, 93, 232, 0.2);
+
+  /* Promotion badge pill */
+  --panel-promo-badge-bg:     rgba(255, 213, 79, 0.15);
+  --panel-promo-badge-border: rgba(255, 213, 79, 0.25);
+
+  /* Builder improvement chip */
+  --panel-builder-chip-bg:     rgba(124, 252, 0, 0.1);
+  --panel-builder-chip-border: rgba(124, 252, 0, 0.2);
+
+  /* TopBar tokens */
+  --panel-turn-badge-shadow:      0 2px 4px rgba(88, 166, 255, 0.3);
+  --panel-research-indicator-bg:  rgba(77, 171, 247, 0.1);
+}
+
 /* Layout chrome utility classes — SYS-D-12. */
 .layout-chrome-bar {
   z-index: var(--panel-z-chrome);

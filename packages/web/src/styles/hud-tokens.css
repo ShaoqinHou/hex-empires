@@ -137,4 +137,8 @@
   --hud-resource-type-city-bg:   rgba(251, 191, 36, 0.15);   /* gold tint for city resources */
   --hud-resource-type-empire-bg: rgba(147, 197, 253, 0.12);  /* blue tint for empire resources */
   --hud-resource-type-bonus-bg:  rgba(187, 247, 208, 0.10);  /* green tint for bonus/other resources */
+
+  /* ─── BB2 chrome-rgba sweep — Notifications pulse-border token ───────────────
+   * Used in @keyframes requiresActionPulse 50% keyframe (bright gold peak). */
+  --hud-notification-pulse-peak: rgba(251, 191, 36, 0.85);
 }

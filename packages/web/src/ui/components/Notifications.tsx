@@ -334,7 +334,7 @@ export function Notifications({ onCityClick }: NotificationsProps) {
 
         @keyframes requiresActionPulse {
           0%   { border-color: var(--hud-notification-requires-action-border); }
-          50%  { border-color: rgba(251, 191, 36, 0.85); }
+          50%  { border-color: var(--hud-notification-pulse-peak); }
           100% { border-color: var(--hud-notification-requires-action-border); }
         }
 
