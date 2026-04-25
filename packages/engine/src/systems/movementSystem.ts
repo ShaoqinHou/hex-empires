@@ -1,9 +1,36 @@
-import type { GameState, GameAction, UnitState } from '../types/GameState';
-import { coordToKey, distance, neighbors } from '../hex/HexMath';
+import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
+import { coordToKey, distance, neighbors, HEX_DIRECTIONS } from '../hex/HexMath';
 import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
 import type { MovementCostResult } from '../hex/TerrainCost';
 import { enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
+
+/**
+ * F-02: Navigable river movement bonus.
+ * When a unit moves between two adjacent tiles that share a river edge,
+ * halve the movement cost (minimum 0.5).
+ *
+ * River edges are stored as indices 0-5 (matching HEX_DIRECTIONS).
+ * If tile1 has edge direction d, its neighbor in direction d has the
+ * corresponding river on its opposite edge (d + 3) % 6.
+ */
+export function tilesShareRiverEdge(
+  tile1: HexTile,
+  tile2: HexTile,
+): boolean {
+  if (tile1.river.length === 0 && tile2.river.length === 0) return false;
+  // Find which HEX_DIRECTIONS index brings tile1.coord to tile2.coord
+  const dq = tile2.coord.q - tile1.coord.q;
+  const dr = tile2.coord.r - tile1.coord.r;
+  for (let d = 0; d < HEX_DIRECTIONS.length; d++) {
+    if (HEX_DIRECTIONS[d].q === dq && HEX_DIRECTIONS[d].r === dr) {
+      // tile1's edge d faces tile2; tile2's opposite edge is (d + 3) % 6
+      const opposite = (d + 3) % 6;
+      return tile1.river.includes(d) || tile2.river.includes(opposite);
+    }
+  }
+  return false;
+}
 
 /**
  * MovementSystem handles unit movement actions.
@@ -134,7 +161,16 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     const costResult = getMovementCost(tile);
     if (costResult === null) return createInvalidResult(state, 'Terrain is impassable', 'movement');
 
-    totalCost += costResult.cost;
+    // F-02: River movement bonus — halve cost for river-crossing steps (min 0.5).
+    let stepCost = costResult.cost;
+    if (!costResult.deplete && stepCost > 0.5) {
+      const prevTile = state.map.tiles.get(coordToKey(prevCoord));
+      if (prevTile && tilesShareRiverEdge(prevTile, tile)) {
+        stepCost = Math.max(0.5, stepCost / 2);
+      }
+    }
+
+    totalCost += stepCost;
     prevCoord = nextCoord;
 
     // F-03: binary deplete-all — entering depleting terrain ends movement;
@@ -194,7 +230,17 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
       stepResult = getMovementCost(tile!)!;
     }
 
-    movementSpent += stepResult.cost;
+    // F-02: River movement bonus — halve cost when crossing a shared river edge.
+    // Min cost is 0.5. Deplete-all tiles are not subject to the bonus.
+    let stepCost = stepResult.cost;
+    if (!stepResult.deplete && stepCost > 0.5) {
+      const prevTile = state.map.tiles.get(coordToKey(currentPos));
+      if (prevTile && tile && tilesShareRiverEdge(prevTile, tile)) {
+        stepCost = Math.max(0.5, stepCost / 2);
+      }
+    }
+
+    movementSpent += stepCost;
     currentPos = nextCoord;
 
     // F-03: binary deplete-all — entering depleting terrain consumes ALL remaining MP

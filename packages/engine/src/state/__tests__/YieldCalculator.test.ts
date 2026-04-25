@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCityYields } from '../YieldCalculator';
 import { createTestState } from '../../systems/__tests__/helpers';
-import type { CityState } from '../../types/GameState';
+import type { CityState, HexTile } from '../../types/GameState';
+import type { NaturalWonderDef } from '../../types/NaturalWonder';
 import { coordToKey } from '../../hex/HexMath';
 
 function makeCity(overrides: Partial<CityState> = {}): CityState {
@@ -46,5 +47,53 @@ describe('B3: specialist yields (food cost moved to growthSystem F-02)', () => {
     // 2 specialists: +4 science, +4 culture
     expect(yields2Spec.science - yieldsNoSpec.science).toBe(4);
     expect(yields2Spec.culture - yieldsNoSpec.culture).toBe(4);
+  });
+});
+
+describe('F-08: natural wonder tile yields', () => {
+  it('natural wonder tile adds its yields to a city that includes it in territory', () => {
+    const wonderId = 'aurora_borealis';
+    const wonderDef: NaturalWonderDef = {
+      id: wonderId,
+      name: 'Aurora Borealis',
+      type: 'scenic',
+      tileCount: 1,
+      firstSettleBonus: { type: 'GRANT_UNIT', unitId: 'scout', count: 1 },
+      description: 'Shimmering lights in the sky.',
+      yields: { food: 0, production: 0, gold: 0, science: 3, culture: 2, faith: 0, influence: 0, happiness: 0 },
+    };
+
+    const state = createTestState();
+    // Register the wonder in config
+    const naturalWonders = new Map([[wonderId, wonderDef]]);
+    const config = { ...state.config, naturalWonders };
+
+    // Place a wonder tile at the city position (3,3) which is already in territory
+    const tileKey = coordToKey({ q: 3, r: 3 });
+    const tiles = new Map(state.map.tiles);
+    const existingTile = tiles.get(tileKey)!;
+    const wonderTile: HexTile = {
+      ...existingTile,
+      isNaturalWonder: true,
+      naturalWonderId: wonderId,
+    };
+    tiles.set(tileKey, wonderTile);
+
+    const testState = { ...state, config, map: { ...state.map, tiles } };
+    const city = makeCity();
+    const yields = calculateCityYields(city, testState);
+
+    // Science should include the wonder's +3
+    // Base grassland tile (3,3) gives food=3; wonder adds science=3, culture=2
+    expect(yields.science).toBeGreaterThanOrEqual(3);
+    expect(yields.culture).toBeGreaterThanOrEqual(2);
+  });
+
+  it('tile without naturalWonderId contributes no wonder yields', () => {
+    const state = createTestState();
+    const city = makeCity();
+    const yieldsNormal = calculateCityYields(city, state);
+    // No wonder tile in the territory → science from yields only (zero from base grassland)
+    expect(yieldsNormal.science).toBe(0);
   });
 });

@@ -1,4 +1,5 @@
 import type { EffectDef } from './GameState';
+import type { YieldSet } from './Yields';
 
 export type NaturalWonderType = 'fresh-water' | 'volcano' | 'promotion' | 'scenic' | 'resource-bonus';
 
@@ -12,4 +13,10 @@ export interface NaturalWonderDef {
   readonly firstSettleBonus: EffectDef;
   /** Descriptive text for the wonder */
   readonly description: string;
+  /**
+   * F-08: Static per-tile yield bonus granted to any city territory containing this
+   * natural wonder tile. Added on top of the base terrain yields.
+   * Optional so existing NaturalWonderDef definitions compile unchanged.
+   */
+  readonly yields?: Partial<YieldSet>;
 }

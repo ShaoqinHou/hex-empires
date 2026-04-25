@@ -5,6 +5,7 @@ import {
 } from '../UrbanPlacementHints';
 import { createTestState } from '../../systems/__tests__/helpers';
 import type { GameState, CityState, HexTile } from '../../types/GameState';
+import type { TerrainId } from '../../types/Terrain';
 import type { HexCoord } from '../../types/HexCoord';
 import { coordToKey } from '../../hex/HexMath';
 
@@ -51,13 +52,27 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
 function withTerrain(
   state: GameState,
   coord: HexCoord,
-  terrain: string,
+  terrain: TerrainId,
 ): GameState {
   const tiles = new Map(state.map.tiles);
   const key = coordToKey(coord);
   const existing = tiles.get(key);
   if (!existing) return state;
   const next: HexTile = { ...existing, terrain };
+  tiles.set(key, next);
+  return { ...state, map: { ...state.map, tiles } };
+}
+
+function withFeature(
+  state: GameState,
+  coord: HexCoord,
+  feature: import('../../types/Terrain').FeatureId | null,
+): GameState {
+  const tiles = new Map(state.map.tiles);
+  const key = coordToKey(coord);
+  const existing = tiles.get(key);
+  if (!existing) return state;
+  const next: HexTile = { ...existing, feature };
   tiles.set(key, next);
   return { ...state, map: { ...state.map, tiles } };
 }
@@ -104,10 +119,10 @@ describe('scoreBuildingPlacement', () => {
   });
 
   it('adds +1 production when placed adjacent to a mountain tile', () => {
-    // (4,3) has (4,2) as a neighbour in axial coords. Set (4,2) = mountain.
+    // (4,3) has (4,2) as a neighbour in axial coords. Set (4,2) = mountain feature.
     const city = makeCity();
     let state = createTestState({ cities: new Map([['c1', city]]) });
-    state = withTerrain(state, { q: 4, r: 2 }, 'mountains');
+    state = withFeature(state, { q: 4, r: 2 }, 'mountains');
 
     const base = scoreBuildingPlacement('c1', { q: 4, r: 3 }, 'barracks', state);
     // Barracks base yields = { production: 2 }. With +1 mountain adjacency,
@@ -195,13 +210,13 @@ describe('rankBestPlacements', () => {
   });
 
   it('prefers mountain-adjacent tiles for production buildings', () => {
-    // Put a mountain next to (4,3). A barracks on (4,3) (base 2 +
+    // Put a mountain feature next to (4,3). A barracks on (4,3) (base 2 +
     // mountain +1 = 3) should score strictly higher than the same
     // barracks on a flat tile (base 2 + 0 = 2) — and the ranker should
     // order them accordingly when both are surfaced.
     const city = makeCity();
     let state = createTestState({ cities: new Map([['c1', city]]) });
-    state = withTerrain(state, { q: 4, r: 2 }, 'mountains');
+    state = withFeature(state, { q: 4, r: 2 }, 'mountains');
 
     const adjScore = scoreBuildingPlacement(
       'c1',

@@ -436,3 +436,26 @@ describe('W4-02 Distant Lands partition (F-04)', () => {
     expect(p.visibility.has(coordToKey({ q: 1, r: 0 }))).toBe(true);
   });
 });
+
+/**
+ * F-12: TerrainId is now a literal union of all actual terrain ids.
+ * This test verifies that all terrain data file ids are valid TerrainId values
+ * and that the union covers all registered terrains.
+ */
+describe('F-12: TerrainId literal union covers all base terrains', () => {
+  it('every base terrain id is assignable to TerrainId', () => {
+    // If a new terrain is added to base-terrains.ts without updating Terrain.ts,
+    // this test catches the mismatch at runtime by verifying the id set matches.
+    const expectedIds = [
+      'grassland', 'plains', 'desert', 'tundra', 'snow', 'coast', 'ocean',
+      'tropical', 'rainforest', 'mangrove', 'navigable_river', 'deep_ocean', 'lake',
+    ];
+    const actualIds = ALL_BASE_TERRAINS.map(t => t.id);
+    // Every expected id appears in the actual list
+    for (const id of expectedIds) {
+      expect(actualIds).toContain(id);
+    }
+    // No unexpected ids in the data (helps detect new terrains needing type update)
+    expect(actualIds.sort()).toEqual(expectedIds.sort());
+  });
+});

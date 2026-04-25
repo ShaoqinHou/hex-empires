@@ -1,4 +1,4 @@
-import type { GameState, GameAction, PlayerState, CityState, GameEvent } from '../types/GameState';
+import type { GameState, GameAction, CityState, GameEvent, UnitState } from '../types/GameState';
 import { coordToKey, distance } from '../hex/HexMath';
 import { getMovementBonus } from '../state/EffectUtils';
 
@@ -192,6 +192,48 @@ function getHealAmount(
   return base + bonus;
 }
 
+/**
+ * F-05: Deep Ocean attrition — apply 1 HP damage per turn to any unit owned
+ * by the current player that is resting on a deep ocean tile without
+ * Shipbuilding mastery. This runs at END_TURN (units that survive the turn
+ * in deep ocean are penalised). Cannot reduce HP below 1.
+ */
+function applyDeepOceanAttrition(state: GameState): GameState {
+  const currentPlayer = state.players.get(state.currentPlayerId);
+  const hasShipbuildingMastery = currentPlayer?.masteredTechs?.includes('shipbuilding') ?? false;
+  if (hasShipbuildingMastery) return state;
+
+  let updatedUnits: Map<string, UnitState> | null = null;
+  const attritionLog: GameEvent[] = [];
+
+  for (const [id, unit] of state.units) {
+    if (unit.owner !== state.currentPlayerId) continue;
+    const tile = state.map.tiles.get(coordToKey(unit.position));
+    if (!tile) continue;
+    const terrainDef = state.config.terrains.get(tile.terrain);
+    if (!terrainDef?.isDeepOcean) continue;
+
+    const newHp = Math.max(1, unit.health - 1);
+    if (newHp === unit.health) continue; // already at min (shouldn't happen with HP > 1 condition)
+
+    if (!updatedUnits) updatedUnits = new Map(state.units);
+    updatedUnits.set(id, { ...unit, health: newHp });
+    attritionLog.push({
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${unit.typeId} took 1 HP deep ocean attrition`,
+      type: 'move' as const,
+    });
+  }
+
+  if (!updatedUnits) return state;
+  return {
+    ...state,
+    units: updatedUnits,
+    log: [...state.log, ...attritionLog],
+  };
+}
+
 function handleEndTurn(state: GameState): GameState {
   // F-01: Block END_TURN if an age transition is in progress (waiting for all players)
   if (state.transitionPhase === 'pending' || state.transitionPhase === 'in-progress') {
@@ -245,16 +287,19 @@ function handleEndTurn(state: GameState): GameState {
     }
   }
 
-  const playerIds = [...state.players.keys()];
-  const currentIndex = playerIds.indexOf(state.currentPlayerId);
+  // F-05: Apply deep ocean attrition before advancing turn order.
+  const stateAfterAttrition = applyDeepOceanAttrition(state);
+
+  const playerIds = [...stateAfterAttrition.players.keys()];
+  const currentIndex = playerIds.indexOf(stateAfterAttrition.currentPlayerId);
   const isLastPlayer = currentIndex === playerIds.length - 1;
 
   if (isLastPlayer) {
     // All players have gone — advance to next turn (no log entry, it's just noise)
     const nextPlayerId = playerIds[0];
     return {
-      ...state,
-      turn: state.turn + 1,
+      ...stateAfterAttrition,
+      turn: stateAfterAttrition.turn + 1,
       currentPlayerId: nextPlayerId,
       phase: 'start',
     };
@@ -262,7 +307,7 @@ function handleEndTurn(state: GameState): GameState {
     // Advance to next player in the same turn
     const nextPlayerId = playerIds[currentIndex + 1];
     return {
-      ...state,
+      ...stateAfterAttrition,
       currentPlayerId: nextPlayerId,
       phase: 'start',
     };

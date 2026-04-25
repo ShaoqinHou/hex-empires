@@ -326,6 +326,65 @@ describe('visibilitySystem', () => {
     });
   });
 
+  describe('F-09: LOS occlusion by mountains and forest', () => {
+    it('mountain feature blocks LOS to tiles behind it', () => {
+      // Unit at (3,3), mountain at (4,3), target at (5,3) — all in a straight line
+      // The mountain is an intermediate tile; target should be hidden.
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units });
+      const tiles = new Map(state.map.tiles);
+      // Set mountains on the intermediate tile (4,3)
+      const midTile = tiles.get(coordToKey({ q: 4, r: 3 }))!;
+      tiles.set(coordToKey({ q: 4, r: 3 }), { ...midTile, feature: 'mountains' });
+      const testState = { ...state, map: { ...state.map, tiles } };
+      const next = visibilitySystem(testState, { type: 'START_TURN' });
+
+      const visibility = next.players.get('p1')!.visibility;
+      // (4,3) with mountains is visible (observer can see the mountain itself)
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+      // (5,3) behind the mountain is NOT visible (LOS blocked)
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+    });
+
+    it('forest feature blocks LOS to tiles behind it', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units });
+      const tiles = new Map(state.map.tiles);
+      const midTile = tiles.get(coordToKey({ q: 4, r: 3 }))!;
+      tiles.set(coordToKey({ q: 4, r: 3 }), { ...midTile, feature: 'forest' });
+      const testState = { ...state, map: { ...state.map, tiles } };
+      const next = visibilitySystem(testState, { type: 'START_TURN' });
+
+      const visibility = next.players.get('p1')!.visibility;
+      // The forest tile itself is visible
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+      // (5,3) behind the forest is NOT visible
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+    });
+
+    it('tiles adjacent to the observer are always visible regardless of blocking terrain', () => {
+      // Adjacent tiles (distance 1) have no intermediate tiles — always visible
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units });
+      const tiles = new Map(state.map.tiles);
+      // Put mountains directly adjacent to the observer
+      const adjTile = tiles.get(coordToKey({ q: 4, r: 3 }))!;
+      tiles.set(coordToKey({ q: 4, r: 3 }), { ...adjTile, feature: 'mountains' });
+      const testState = { ...state, map: { ...state.map, tiles } };
+      const next = visibilitySystem(testState, { type: 'START_TURN' });
+
+      const visibility = next.players.get('p1')!.visibility;
+      // The adjacent mountain tile is directly visible (no intermediates)
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+    });
+  });
+
   describe('edge cases', () => {
     it('no units and no cities results in empty visibility', () => {
       const state = createTestState({ units: new Map(), cities: new Map() });

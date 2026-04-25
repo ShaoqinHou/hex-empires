@@ -18,7 +18,8 @@ export const MINE: ImprovementDef = {
   category: 'resource',
   requiredTech: 'mining',
   prerequisites: {
-    terrain: ['plains', 'hills', 'mountains', 'desert', 'tundra'],
+    terrain: ['plains', 'desert', 'tundra'],
+    feature: ['hills', 'mountains'],
     resource: ['iron', 'copper', 'gold', 'silver', 'gems'],
   },
   yields: { production: 1 },
@@ -99,7 +100,8 @@ export const GREAT_WALL: ImprovementDef = {
   category: 'infrastructure',
   requiredTech: null,
   prerequisites: {
-    terrain: ['plains', 'hills', 'desert'],
+    terrain: ['plains', 'desert'],
+    feature: ['hills'],
   },
   yields: { gold: 1, culture: 1 },
   modifier: { defense: 0.5 },
@@ -141,7 +143,7 @@ export const TERRACE_FARM: ImprovementDef = {
   category: 'basic',
   requiredTech: null,
   prerequisites: {
-    terrain: ['hills', 'mountains'],
+    feature: ['hills', 'mountains'],
   },
   yields: { food: 2, production: 1 },
   modifier: {},
@@ -155,7 +157,8 @@ export const SEOWON: ImprovementDef = {
   category: 'basic',
   requiredTech: 'writing',
   prerequisites: {
-    terrain: ['hills', 'plains', 'grassland'],
+    terrain: ['plains', 'grassland'],
+    feature: ['hills'],
   },
   yields: { science: 3 },
   modifier: {},

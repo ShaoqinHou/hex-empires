@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { productionSystem } from '../productionSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState, GameState, HexTile } from '../../types/GameState';
+import type { TerrainId } from '../../types/Terrain';
 import { coordToKey } from '../../hex/HexMath';
 
 /**
@@ -59,7 +60,7 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
 
 /** Replace every tile in the map with the given terrain. Used to fabricate
  *  high-production scenarios (plains = 1 prod/tile). */
-function mapWithTerrain(state: GameState, terrain: string): GameState {
+function mapWithTerrain(state: GameState, terrain: TerrainId): GameState {
   const newTiles = new Map<string, HexTile>();
   for (const [key, tile] of state.map.tiles) {
     newTiles.set(key, { ...tile, terrain });

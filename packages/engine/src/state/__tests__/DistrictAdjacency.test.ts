@@ -97,7 +97,7 @@ describe('DistrictAdjacency', () => {
       // Centre at (0,0) with one Mountain neighbour at (1,0).
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const city = makeCity('c1');
       const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
@@ -109,9 +109,9 @@ describe('DistrictAdjacency', () => {
     it('stacks multiple mountain neighbours', () => {
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
-        makeTile({ coord: { q: -1, r: 0 }, terrain: 'mountains' }),
-        makeTile({ coord: { q: 0, r: 1 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+        makeTile({ coord: { q: -1, r: 0 }, feature: 'mountains' }),
+        makeTile({ coord: { q: 0, r: 1 }, feature: 'mountains' }),
       ]);
       const city = makeCity('c1');
       const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
@@ -180,7 +180,7 @@ describe('DistrictAdjacency', () => {
     it('combines mountain + river + urban neighbours in one evaluation', () => {
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
         makeTile({ coord: { q: -1, r: 0 }, river: [3] }),
         makeTile({ coord: { q: 0, r: 1 } }),
       ]);
@@ -213,7 +213,7 @@ describe('DistrictAdjacency', () => {
       // With 1 specialist: 1 * (1 + 0.5 * 1) = 1.5
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const urbanWithSpecialist: UrbanTileV2 = {
         ...makeUrban('c1', { q: 0, r: 0 }, []),
@@ -229,7 +229,7 @@ describe('DistrictAdjacency', () => {
       // With 2 specialists: 1 * (1 + 0.5 * 2) = 2.0
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const urbanWithTwoSpec: UrbanTileV2 = {
         ...makeUrban('c1', { q: 0, r: 0 }, []),
@@ -244,7 +244,7 @@ describe('DistrictAdjacency', () => {
     it('W3-02: tile with zero specialists has no amplification (baseline)', () => {
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const city = makeCity('c1', [makeUrban('c1', { q: 0, r: 0 }, [])]);
       const bonus = computeAdjacencyBonus(city, { q: 0, r: 0 }, state);
@@ -275,9 +275,9 @@ describe('DistrictAdjacency', () => {
       //   urban B at (0,2) with mountain at (1,2)  -> +1 production
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
         makeTile({ coord: { q: 0, r: 2 } }),
-        makeTile({ coord: { q: 1, r: 2 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 2 }, feature: 'mountains' }),
       ]);
       const city = makeCity('c1', [
         makeUrban('c1', { q: 0, r: 0 }, []),
@@ -299,7 +299,7 @@ describe('DistrictAdjacency', () => {
       // F-05 fix: Quarter amplification requires a specialist on the tile.
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const quarter: QuarterV2 = {
         cityId: 'c1',
@@ -321,8 +321,8 @@ describe('DistrictAdjacency', () => {
       // so quarter extra should be 2 * 0.5 = 1.
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
-        makeTile({ coord: { q: -1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+        makeTile({ coord: { q: -1, r: 0 }, feature: 'mountains' }),
       ]);
       const quarter: QuarterV2 = {
         cityId: 'c1',
@@ -348,7 +348,7 @@ describe('DistrictAdjacency', () => {
       // so extra should be 0.5.
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const quarter: QuarterV2 = {
         cityId: 'c1',
@@ -373,7 +373,7 @@ describe('DistrictAdjacency', () => {
       // on top is +0.5, so `quarterBonus` should return exactly 0.5, not 1.5.
       const state = stateWithTiles([
         makeTile({ coord: { q: 0, r: 0 } }),
-        makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       ]);
       const quarter: QuarterV2 = {
         cityId: 'c1',

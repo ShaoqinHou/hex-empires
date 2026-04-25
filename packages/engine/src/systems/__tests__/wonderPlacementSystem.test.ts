@@ -5,6 +5,7 @@ import { createTestState } from './helpers';
 import type { CityState, GameState, HexTile } from '../../types/GameState';
 import type { DistrictSlot } from '../../types/District';
 import type { HexCoord } from '../../types/HexCoord';
+import type { TerrainId } from '../../types/Terrain';
 import { coordToKey } from '../../hex/HexMath';
 
 /**
@@ -15,7 +16,7 @@ import { coordToKey } from '../../hex/HexMath';
 function withTiles(
   overrides: ReadonlyArray<{
     readonly coord: HexCoord;
-    readonly terrain?: string;
+    readonly terrain?: TerrainId;
     readonly feature?: string | null;
     readonly resource?: string | null;
     readonly river?: ReadonlyArray<number>;

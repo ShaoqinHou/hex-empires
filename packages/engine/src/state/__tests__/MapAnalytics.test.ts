@@ -107,7 +107,7 @@ describe('MapAnalytics', () => {
       const state = stateWithTiles([
         { coord: { q: 0, r: 0 }, terrain: 'ocean' },
         { coord: { q: 1, r: 0 }, terrain: 'coast' },
-        { coord: { q: 2, r: 0 }, terrain: 'reef' },
+        { coord: { q: 2, r: 0 }, terrain: 'ocean', feature: 'reef' },
       ]);
       expect(landRatio(state)).toBe(0);
     });
@@ -123,11 +123,11 @@ describe('MapAnalytics', () => {
     });
 
     it('returns exact fraction for a mixed map', () => {
-      // 3 land (grassland, plains, mountains) + 1 water (ocean) = 0.75
+      // 3 land (grassland, plains, plains+mountains feature) + 1 water (ocean) = 0.75
       const state = stateWithTiles([
         { coord: { q: 0, r: 0 }, terrain: 'grassland' },
         { coord: { q: 1, r: 0 }, terrain: 'plains' },
-        { coord: { q: 2, r: 0 }, terrain: 'mountains' },
+        { coord: { q: 2, r: 0 }, terrain: 'plains', feature: 'mountains' },
         { coord: { q: 0, r: 1 }, terrain: 'ocean' },
       ]);
       expect(landRatio(state)).toBe(0.75);
@@ -179,8 +179,8 @@ describe('MapAnalytics', () => {
         { coord: { q: 0, r: 0 }, terrain: 'grassland' },
         { coord: { q: 1, r: 0 }, terrain: 'plains' },
         { coord: { q: 2, r: 0 }, terrain: 'desert' },
-        { coord: { q: 0, r: 1 }, terrain: 'mountains' },
-        { coord: { q: 1, r: 1 }, terrain: 'mountains' },
+        { coord: { q: 0, r: 1 }, terrain: 'plains', feature: 'mountains' },
+        { coord: { q: 1, r: 1 }, terrain: 'plains', feature: 'mountains' },
         { coord: { q: 2, r: 1 }, terrain: 'ocean' },
         { coord: { q: 3, r: 1 }, terrain: 'coast' },
       ]);

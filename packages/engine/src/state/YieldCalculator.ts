@@ -47,6 +47,15 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     if (tile.river.length > 0) {
       total = addYields(total, { gold: 1 });
     }
+
+    // F-08: Natural wonder tile yields — if this tile is a natural wonder,
+    // look up its def via state.config.naturalWonders and add its yields.
+    if (tile.naturalWonderId) {
+      const wonderDef = state.config.naturalWonders.get(tile.naturalWonderId);
+      if (wonderDef?.yields) {
+        total = addYields(total, wonderDef.yields);
+      }
+    }
   }
 
   // City center always produces at least 2 food, 1 production

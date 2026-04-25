@@ -1,5 +1,6 @@
 import type { GameState, HexTile, PlayerState, UnitState, CityState } from '../../types/GameState';
 import type { HexCoord } from '../../types/HexCoord';
+import type { TerrainId, FeatureId } from '../../types/Terrain';
 import { coordToKey } from '../../hex/HexMath';
 import { createGameConfig } from '../../state/GameConfigFactory';
 
@@ -147,8 +148,8 @@ export function createTestCity(overrides: Partial<CityState> = {}): CityState {
 export function setTile(
   tiles: Map<string, HexTile>,
   coord: HexCoord,
-  terrain: string,
-  feature: string | null = null,
+  terrain: TerrainId,
+  feature: FeatureId | null = null,
 ): void {
   const key = coordToKey(coord);
   const existing = tiles.get(key);

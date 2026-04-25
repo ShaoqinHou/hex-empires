@@ -131,8 +131,8 @@ export function computeAdjacencyBonus(
   for (const neighbourCoord of neighbors(tile)) {
     const terrainTile = tileAt(state, neighbourCoord);
 
-    // +1 Production per adjacent Mountain terrain tile
-    if (terrainTile !== undefined && terrainTile.terrain === 'mountains') {
+    // +1 Production per adjacent Mountain feature tile
+    if (terrainTile !== undefined && terrainTile.feature === 'mountains') {
       bonus = addYields(bonus, { production: 1 });
     }
 
@@ -277,7 +277,7 @@ function computeBaseAdjacencyWithoutSpecialist(
   for (const neighbourCoord of neighbors(tile)) {
     const terrainTile = tileAt(state, neighbourCoord);
 
-    if (terrainTile !== undefined && terrainTile.terrain === 'mountains') {
+    if (terrainTile !== undefined && terrainTile.feature === 'mountains') {
       bonus = addYields(bonus, { production: 1 });
     }
     if (terrainTile !== undefined && terrainTile.river.length > 0) {

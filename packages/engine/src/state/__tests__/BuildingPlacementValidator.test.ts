@@ -6,6 +6,7 @@ import {
 } from '../BuildingPlacementValidator';
 import { createTestState } from '../../systems/__tests__/helpers';
 import type { GameState, CityState, HexTile } from '../../types/GameState';
+import type { TerrainId, FeatureId } from '../../types/Terrain';
 import type { UrbanTileV2 } from '../../types/DistrictOverhaul';
 import type { HexCoord } from '../../types/HexCoord';
 import { coordToKey } from '../../hex/HexMath';
@@ -49,8 +50,8 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
 function withTerrain(
   state: GameState,
   coord: HexCoord,
-  terrain: string,
-  feature: string | null = null,
+  terrain: TerrainId,
+  feature: FeatureId | null = null,
 ): GameState {
   const tiles = new Map(state.map.tiles);
   const key = coordToKey(coord);

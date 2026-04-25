@@ -1,6 +1,24 @@
 import type { YieldSet } from './Yields';
 
-export type TerrainId = string;
+/**
+ * F-12: Tightened TerrainId — literal union of all terrain ids defined in
+ * packages/engine/src/data/terrains/base-terrains.ts.
+ * Any new terrain data file must add its id here.
+ */
+export type TerrainId =
+  | 'grassland'
+  | 'plains'
+  | 'desert'
+  | 'tundra'
+  | 'snow'
+  | 'coast'
+  | 'ocean'
+  | 'tropical'
+  | 'rainforest'
+  | 'mangrove'
+  | 'navigable_river'
+  | 'deep_ocean'
+  | 'lake';
 
 /**
  * W4-02: Biome classification for compound terrain model.

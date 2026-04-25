@@ -107,7 +107,7 @@ export function passableLandTiles(state: GameState): number {
   let count = 0;
   for (const tile of tilesOf(state.map).values()) {
     if (WATER_TERRAINS.has(tile.terrain)) continue;
-    if (tile.terrain === 'mountains') continue;
+    if (tile.feature === 'mountains') continue;
     count += 1;
   }
   return count;

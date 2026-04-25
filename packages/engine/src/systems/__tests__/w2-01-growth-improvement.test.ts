@@ -75,7 +75,7 @@ describe('deriveImprovementType', () => {
 
   it('hills with no resource → mine', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'hills' });
+    const tile = makeTile({ q: 0, r: 0 }, { feature: 'hills' });
     expect(deriveImprovementType(tile, state)).toBe('mine');
   });
 
@@ -87,7 +87,7 @@ describe('deriveImprovementType', () => {
 
   it('marble resource → quarry', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'hills', resource: 'marble' });
+    const tile = makeTile({ q: 0, r: 0 }, { feature: 'hills', resource: 'marble' });
     expect(deriveImprovementType(tile, state)).toBe('quarry');
   });
 
@@ -129,7 +129,7 @@ describe('deriveImprovementType', () => {
 
   it('mountains without resource → null', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'mountains' });
+    const tile = makeTile({ q: 0, r: 0 }, { feature: 'mountains' });
     expect(deriveImprovementType(tile, state)).toBeNull();
   });
 });

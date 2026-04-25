@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { movementSystem } from '../movementSystem';
+import { movementSystem, tilesShareRiverEdge } from '../movementSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
+import type { HexTile } from '../../types/GameState';
 
 describe('movementSystem', () => {
   it('moves unit to adjacent hex', () => {
@@ -422,6 +423,62 @@ describe('movementSystem', () => {
       const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
 
       expect(next.units.get('u1')!.typeId).toBe('warrior');
+    });
+  });
+
+  describe('F-02: navigable river movement bonus', () => {
+    /**
+     * HEX_DIRECTIONS[0] = E (+q direction).
+     * If tile at (0,0) has river on edge 0, and tile at (1,0) has river on edge 3,
+     * they share a river edge — movement cost halved (1 → 0.5).
+     */
+    it('tilesShareRiverEdge detects shared river edge between E-adjacent tiles', () => {
+      const tile1: HexTile = {
+        coord: { q: 0, r: 0 },
+        terrain: 'grassland',
+        feature: null,
+        resource: null,
+        improvement: null,
+        building: null,
+        river: [0], // edge 0 = E direction facing (1,0)
+        elevation: 0.5,
+        continent: 1,
+      };
+      const tile2: HexTile = {
+        coord: { q: 1, r: 0 },
+        terrain: 'grassland',
+        feature: null,
+        resource: null,
+        improvement: null,
+        building: null,
+        river: [3], // edge 3 = W direction (opposite of E), facing back to (0,0)
+        elevation: 0.5,
+        continent: 1,
+      };
+      expect(tilesShareRiverEdge(tile1, tile2)).toBe(true);
+    });
+
+    it('movement cost is halved when crossing a shared river edge', () => {
+      const state = createTestState();
+      const tiles = new Map(state.map.tiles);
+      // Set (0,0) with river on east edge (0) and (1,0) with river on west edge (3)
+      const tile00 = tiles.get(coordToKey({ q: 0, r: 0 }))!;
+      const tile10 = tiles.get(coordToKey({ q: 1, r: 0 }))!;
+      tiles.set(coordToKey({ q: 0, r: 0 }), { ...tile00, river: [0] });
+      tiles.set(coordToKey({ q: 1, r: 0 }), { ...tile10, river: [3] });
+
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', position: { q: 0, r: 0 }, movementLeft: 1 })],
+      ]);
+      // Normal grassland cost is 1 MP; with river bonus it is 0.5 MP.
+      // A unit with only 1 MP can cross if cost = 0.5 (validated against movementLeft).
+      // But since we validate with totalCost > unit.movementLeft, 0.5 <= 1 → allowed.
+      const next = movementSystem(
+        { ...state, map: { ...state.map, tiles }, units },
+        { type: 'MOVE_UNIT', unitId: 'u1', path: [{ q: 1, r: 0 }] },
+      );
+      expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+      expect(next.units.get('u1')!.movementLeft).toBe(0.5);
     });
   });
 });

@@ -1,5 +1,6 @@
 import type { GameState, GameAction } from '../types/GameState';
-import { coordToKey, range } from '../hex/HexMath';
+import { coordToKey, range, lineDraw } from '../hex/HexMath';
+import type { HexCoord } from '../types/HexCoord';
 
 /**
  * VisibilitySystem recalculates fog of war.
@@ -53,6 +54,32 @@ export function visibilitySystem(state: GameState, action: GameAction): GameStat
   return state;
 }
 
+/**
+ * F-09: LOS occlusion check.
+ * Returns true if the line of sight from observer to target is clear.
+ * Tiles with feature 'mountains' or 'forest' occlude LOS for tiles BEHIND them
+ * (i.e. intermediate hex-line tiles that are occluding block the target).
+ * Observer tile and target tile themselves never block.
+ */
+function hasLineOfSight(
+  observer: HexCoord,
+  target: HexCoord,
+  state: GameState,
+): boolean {
+  const line = lineDraw(observer, target);
+  // line[0] = observer, line[line.length-1] = target
+  // Only intermediate tiles can block
+  for (let i = 1; i < line.length - 1; i++) {
+    const key = coordToKey(line[i]);
+    const tile = state.map.tiles.get(key);
+    if (!tile) continue;
+    if (tile.feature === 'mountains' || tile.feature === 'forest') {
+      return false; // LOS blocked
+    }
+  }
+  return true;
+}
+
 /** Full recalculation: rebuilds visible set from scratch, promotes old visible → explored. */
 function recalcFullVisibility(state: GameState, playerId: string): GameState {
   const player = state.players.get(playerId);
@@ -75,6 +102,8 @@ function recalcFullVisibility(state: GameState, playerId: string): GameState {
       if (!tile) continue;
       // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
       if (tile.isDistantLands && !player.distantLandsReachable) continue;
+      // F-09: LOS occlusion — skip tiles blocked by mountains or forests
+      if (!hasLineOfSight(unit.position, hex, state)) continue;
       visible.add(key);
       explored.add(key);
     }
@@ -88,6 +117,8 @@ function recalcFullVisibility(state: GameState, playerId: string): GameState {
       if (!tile) continue;
       // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
       if (tile.isDistantLands && !player.distantLandsReachable) continue;
+      // F-09: LOS occlusion — skip tiles blocked by mountains or forests
+      if (!hasLineOfSight(city.position, hex, state)) continue;
       visible.add(key);
       explored.add(key);
     }
@@ -112,7 +143,7 @@ function revealAllCities(state: GameState, playerId: string): GameState {
 function revealAroundCoord(
   state: GameState,
   playerId: string,
-  position: { q: number; r: number },
+  position: HexCoord,
   sightRange: number
 ): GameState {
   const player = state.players.get(playerId);
@@ -124,10 +155,11 @@ function revealAroundCoord(
 
   for (const hex of range(position, sightRange)) {
     const key = coordToKey(hex);
-    if (state.map.tiles.has(key)) {
-      if (!visible.has(key)) { visible.add(key); changed = true; }
-      if (!explored.has(key)) { explored.add(key); changed = true; }
-    }
+    if (!state.map.tiles.has(key)) continue;
+    // F-09: LOS occlusion — skip tiles blocked by mountains or forests
+    if (!hasLineOfSight(position, hex, state)) continue;
+    if (!visible.has(key)) { visible.add(key); changed = true; }
+    if (!explored.has(key)) { explored.add(key); changed = true; }
   }
 
   if (!changed) return state;

@@ -436,4 +436,41 @@ describe('turnSystem — END_TURN blocksTurn guard', () => {
       expect(next.phase).toBe('start');
     });
   });
+
+  describe('F-05: deep ocean attrition on END_TURN', () => {
+    it('unit on deep ocean tile loses 1 HP per END_TURN', () => {
+      // Place a unit on a deep_ocean tile
+      const tiles = new Map(createTestState().map.tiles);
+      const deepOceanTile = tiles.get(coordToKey({ q: 1, r: 0 }))!;
+      tiles.set(coordToKey({ q: 1, r: 0 }), { ...deepOceanTile, terrain: 'deep_ocean' });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, health: 50 })],
+      ]);
+      const state = createTestState({ units, map: { ...createTestState().map, tiles } });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      // HP should drop by 1 (50 → 49)
+      expect(next.units.get('u1')!.health).toBe(49);
+    });
+
+    it('deep ocean attrition cannot reduce HP below 1', () => {
+      const tiles = new Map(createTestState().map.tiles);
+      const deepOceanTile = tiles.get(coordToKey({ q: 1, r: 0 }))!;
+      tiles.set(coordToKey({ q: 1, r: 0 }), { ...deepOceanTile, terrain: 'deep_ocean' });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, health: 1 })],
+      ]);
+      const state = createTestState({ units, map: { ...createTestState().map, tiles } });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.units.get('u1')!.health).toBe(1);
+    });
+
+    it('unit on non-deep-ocean tile is unaffected by attrition', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, health: 50 })],
+      ]);
+      const state = createTestState({ units }); // (0,0) is grassland in the flat test map
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.units.get('u1')!.health).toBe(50);
+    });
+  });
 });

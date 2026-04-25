@@ -63,16 +63,20 @@ export function deriveImprovementType(
     return null;
   }
 
-  // ── 3. Terrain-driven fallback ──
+  // ── 3. Feature-driven fallback (hills/mountains) ──
+  if (tile.feature === 'hills') {
+    return 'mine';
+  }
+  if (tile.feature === 'mountains') {
+    // Mountains are rarely worked; treat as non-improvable for now.
+    return null;
+  }
+
+  // ── 4. Terrain-driven fallback ──
   switch (tile.terrain) {
     case 'grassland':
     case 'plains':
       return 'farm';
-    case 'hills':
-      return 'mine';
-    case 'mountains':
-      // Mountains are rarely worked; treat as non-improvable for now.
-      return null;
     default:
       // Desert, tundra, snow, ocean, coast without a resource → not improvable.
       return null;

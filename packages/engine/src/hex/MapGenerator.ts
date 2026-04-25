@@ -1,6 +1,6 @@
 import type { HexCoord, HexKey } from '../types/HexCoord';
 import type { HexMap, HexTile, RngState } from '../types/GameState';
-import type { TerrainDef, TerrainFeatureDef } from '../types/Terrain';
+import type { TerrainDef, TerrainFeatureDef, TerrainId, FeatureId } from '../types/Terrain';
 import type { ResourceDef } from '../data/resources';
 import { coordToKey } from './HexMath';
 import { fractalNoise2D, nextRandom, createRng } from '../state/SeededRng';
@@ -121,7 +121,7 @@ function pickTerrain(
   waterRatio: number,
   terrainReg: Registry<TerrainDef>,
   featureReg: Registry<TerrainFeatureDef>,
-): { terrain: string; feature: string | null } {
+): { terrain: TerrainId; feature: FeatureId | null } {
   // Water
   if (elevation < waterRatio - 0.1) {
     return { terrain: 'ocean', feature: elevation > waterRatio - 0.15 ? 'reef' : null };

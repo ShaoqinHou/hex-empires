@@ -122,7 +122,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
   it('adds +1 production for one Mountain-adjacent urban tile', () => {
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
     ]);
     const city = makeCity('c1', [], [makeUrban('c1', { q: 0, r: 0 }, [])]);
     const base = calculateCityYields(city, state);
@@ -145,8 +145,8 @@ describe('calculateCityYieldsWithAdjacency', () => {
     // Total stacked = base + (2 * 1.5) + 1 = base + 4.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
-      makeTile({ coord: { q: -1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+      makeTile({ coord: { q: -1, r: 0 }, feature: 'mountains' }),
     ]);
     const quarter: QuarterV2 = {
       cityId: 'c1',
@@ -177,8 +177,8 @@ describe('calculateCityYieldsWithAdjacency', () => {
     // Same setup but specialistCount = 0 → quarter extra = 0.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
-      makeTile({ coord: { q: -1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+      makeTile({ coord: { q: -1, r: 0 }, feature: 'mountains' }),
     ]);
     const quarter: QuarterV2 = {
       cityId: 'c1',
@@ -205,7 +205,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
     // Set up a rich-ish scenario: mountain + river + urban-science neighbour.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       makeTile({ coord: { q: -1, r: 0 }, river: [0, 1] }),
       makeTile({ coord: { q: 0, r: 1 } }),
     ]);
@@ -227,7 +227,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
   it('pure function: same inputs produce same outputs across repeated calls', () => {
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
     ]);
     const city = makeCity('c1', [], [makeUrban('c1', { q: 0, r: 0 }, [])]);
     const first = calculateCityYieldsWithAdjacency(city, state);
@@ -240,7 +240,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
   it('does not mutate the CityState passed in', () => {
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
     ]);
     const urbanTile = makeUrban('c1', { q: 0, r: 0 }, ['library']);
     const quarter: QuarterV2 = {
@@ -271,7 +271,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
   it('does not mutate the GameState passed in', () => {
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
     ]);
     const city = makeCity('c1', [], [makeUrban('c1', { q: 0, r: 0 }, [])]);
     const turnBefore = state.turn;
@@ -290,9 +290,9 @@ describe('calculateCityYieldsWithAdjacency', () => {
     // total stacked.production = base.production + 2.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       makeTile({ coord: { q: 0, r: 3 } }),
-      makeTile({ coord: { q: 1, r: 3 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 3 }, feature: 'mountains' }),
     ]);
     const city = makeCity(
       'c1',
@@ -320,7 +320,7 @@ describe('calculateCityYieldsWithAdjacency', () => {
     //     none of those are mountains, so B contributes no terrain bonus.
     const state = stateWithTiles([
       makeTile({ coord: { q: 0, r: 0 } }),
-      makeTile({ coord: { q: 1, r: 0 }, terrain: 'mountains' }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
       makeTile({ coord: { q: 0, r: -1 } }),
     ]);
     const city = makeCity(
