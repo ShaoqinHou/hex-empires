@@ -1,7 +1,7 @@
 /**
- * no-raw-hex-in-chrome.test.ts -- AA4.7 regression guard.
+ * no-raw-hex-in-chrome.test.ts -- AA4.7 regression guard (expanded BB2.1).
  *
- * Scans panel and HUD component source files for raw rgba() literals
+ * Scans panel, HUD, component, and layout source files for raw rgba() literals
  * inside inline style props, which violate the chrome-raw-hex-regression
  * trap documented in CLAUDE.md.
  *
@@ -9,8 +9,12 @@
  *   - Comment-only lines.
  *   - CSS var cascade fallbacks: var(--x, rgba(...)) stripped before check.
  *   - .css token files (rgba in token definitions is expected).
+ *   - ui/components/Minimap.tsx: Canvas 2D ctx.fillStyle/strokeStyle uses are
+ *     intentional (Canvas API, not chrome).
  *
  * Files scanned: ui/panels/*.tsx + ui/hud/*.tsx
+ *              + ui/components/*.tsx + ui/layout/*.tsx (BB2.1 expansion)
+ * Excluded:    canvas/ (Canvas 2D rgba is intentional)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,15 +27,26 @@ const __dirname  = path.dirname(__filename);
 
 // -- File collection ---------------------------------------------------
 
-const WEB_SRC   = path.resolve(__dirname, '..');
-const PANEL_DIR = path.join(WEB_SRC, 'ui', 'panels');
-const HUD_DIR   = path.join(WEB_SRC, 'ui', 'hud');
+const WEB_SRC        = path.resolve(__dirname, '..');
+const PANEL_DIR      = path.join(WEB_SRC, 'ui', 'panels');
+const HUD_DIR        = path.join(WEB_SRC, 'ui', 'hud');
+const COMPONENTS_DIR = path.join(WEB_SRC, 'ui', 'components');
+const LAYOUT_DIR     = path.join(WEB_SRC, 'ui', 'layout');
+
+/**
+ * Files that are exempt from the raw-rgba scan because they use the Canvas 2D
+ * API (ctx.fillStyle, ctx.strokeStyle) intentionally — not chrome inline styles.
+ */
+const CANVAS_EXEMPT = new Set([
+  path.join(COMPONENTS_DIR, 'Minimap.tsx'),
+]);
 
 function collectTsxFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
     .filter((f: string) => f.endsWith('.tsx') || (f.endsWith('.ts') && !f.endsWith('.test.ts')))
-    .map((f: string) => path.join(dir, f));
+    .map((f: string) => path.join(dir, f))
+    .filter((p: string) => !CANVAS_EXEMPT.has(p));
 }
 
 // -- Violation detection ------------------------------------------------
@@ -105,16 +120,18 @@ function scanFile(filePath: string): Violation[] {
 
 // -- Test ---------------------------------------------------------------
 
-describe('no-raw-hex-in-chrome (AA4.7)', () => {
-  const panelFiles = collectTsxFiles(PANEL_DIR);
-  const hudFiles   = collectTsxFiles(HUD_DIR);
-  const allFiles   = [...panelFiles, ...hudFiles];
+describe('no-raw-hex-in-chrome (AA4.7 + BB2.1)', () => {
+  const panelFiles     = collectTsxFiles(PANEL_DIR);
+  const hudFiles       = collectTsxFiles(HUD_DIR);
+  const componentFiles = collectTsxFiles(COMPONENTS_DIR);
+  const layoutFiles    = collectTsxFiles(LAYOUT_DIR);
+  const allFiles       = [...panelFiles, ...hudFiles, ...componentFiles, ...layoutFiles];
 
   it('finds .tsx source files to scan', () => {
     expect(allFiles.length).toBeGreaterThan(0);
   });
 
-  it('has zero raw rgba() literals in panel and HUD chrome files', () => {
+  it('has zero raw rgba() literals in panel, HUD, component, and layout chrome files', () => {
     const allViolations: Violation[] = [];
     for (const file of allFiles) {
       allViolations.push(...scanFile(file));
@@ -126,7 +143,7 @@ describe('no-raw-hex-in-chrome (AA4.7)', () => {
         return `  ${shortPath}:${v.line}` + '\n' + `    ${v.content.trimStart().slice(0, 100)}`;
       }).join('\n');
       throw new Error(
-        `Found ${allViolations.length} raw rgba() literal(s) in panel/HUD chrome files.\n` +
+        `Found ${allViolations.length} raw rgba() literal(s) in UI chrome files.\n` +
         `Replace each with a var(--panel-*) or var(--hud-*) token.\n\n` +
         report
       );
