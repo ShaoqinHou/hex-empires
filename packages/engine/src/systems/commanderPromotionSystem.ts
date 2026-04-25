@@ -76,7 +76,7 @@ export function commanderLevelForXp(xp: number): number {
  * Does NOT import from data files — avoids the ALL_X-import-in-system trap.
  */
 const KNOWN_COMMANDER_IDS: ReadonlySet<string> = new Set([
-  'captain', 'general', 'admiral', 'marshal', 'fleet_admiral', 'partisan_leader',
+  'air_general', 'captain', 'general', 'admiral', 'marshal', 'fleet_admiral', 'partisan_leader',
 ]);
 
 /**

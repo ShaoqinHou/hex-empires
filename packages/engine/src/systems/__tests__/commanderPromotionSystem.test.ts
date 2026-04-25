@@ -293,3 +293,26 @@ describe('Y3.2 — state.config.commanders fixture isolation', () => {
     expect(commanderPromotionSystem(state, action)).toBe(state);
   });
 });
+
+describe('commanderPromotionSystem — BB1.2: air_general fallback recognition', () => {
+  it('isCommander returns true for air_general unit without state context (KNOWN_COMMANDER_IDS fallback)', () => {
+    const unit = createTestUnit({ id: 'ag1', typeId: 'air_general' });
+    // Called without GameState — falls back to KNOWN_COMMANDER_IDS
+    expect(isCommander(unit)).toBe(true);
+  });
+
+  it('commanderPromotionSystem applies XP to air_general unit', () => {
+    const units = new Map([
+      ['ag1', createTestUnit({ id: 'ag1', typeId: 'air_general', experience: 0 })],
+    ]);
+    const state = createTestState({ units });
+    const action: GainCommanderXpAction = {
+      type: 'GAIN_COMMANDER_XP',
+      commanderId: 'ag1',
+      amount: 50,
+    };
+    const next = commanderPromotionSystem(state, action);
+    // air_general is recognized as a commander; XP should be applied
+    expect(next.units.get('ag1')!.experience).toBe(50);
+  });
+});
