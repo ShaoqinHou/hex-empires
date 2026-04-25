@@ -1131,6 +1131,68 @@ describe("X1.2: tech reset",function(){it("currentResearch and researchProgress 
 
 describe("X1.3: civic reset",function(){it("currentCivic and civicProgress clear",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,currentCivic:"craftsmanship",civicProgress:30,legacyPaths:{military:1,economic:1,science:1,culture:1}});var s=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.players.get("p1").currentCivic).toBeNull();expect(n.players.get("p1").civicProgress).toBe(0);});it("slottedPolicies clear",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,slottedPolicies:["discipline",null,"aristocracy"],legacyPaths:{military:1,economic:1,science:1,culture:1}});var s=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.players.get("p1").slottedPolicies).toEqual([]);});it("researchedCivics persists (historical record)",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,researchedCivics:["craftsmanship","early_empire","mysticism"],legacyPaths:{military:1,economic:1,science:1,culture:1}});var s=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.players.get("p1").researchedCivics).toEqual(["craftsmanship","early_empire","mysticism"]);});});
 
+// FF1 — Civic/Tech reset regression tests
+// These supplement the minified X1.2/X1.3 blocks above with readable assertions
+// for fields the brief identified as previously missing coverage.
+describe('FF1: TRANSITION_AGE — civic/tech in-progress state cleared, history preserved', () => {
+  it('clears currentCivicMastery and civicMasteryProgress on TRANSITION_AGE', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      currentCivicMastery: 'code_of_laws',
+      civicMasteryProgress: 22,
+      masteredCivics: [],
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    expect(updated.currentCivicMastery).toBeNull();
+    expect(updated.civicMasteryProgress).toBe(0);
+  });
+
+  it('preserves masteredCivics across TRANSITION_AGE (engine-patterns.md § 4)', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      masteredCivics: ['code_of_laws', 'craftsmanship'],
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    expect(updated.masteredCivics).toEqual(['code_of_laws', 'craftsmanship']);
+  });
+
+  it('preserves legacyBonuses across TRANSITION_AGE (spread-append invariant)', () => {
+    // Pre-existing bonuses from a previous age must survive into the next age
+    const priorBonus = { source: 'golden-age:military:antiquity', effect: { type: 'MODIFY_COMBAT' as const, target: 'all' as const, value: 5 } };
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyBonuses: [priorBonus],
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    // legacyBonuses from previous ages must be preserved (new ones may be appended via pendingLegacyBonuses)
+    expect(updated.legacyBonuses.some(b => b.source === 'golden-age:military:antiquity')).toBe(true);
+  });
+});
+
 describe("X1.4: data-driven civ legacy bonus",function(){it("each of 5 civs returns legacyBonus from state.config",function(){var civIds=["rome","egypt","greece","persia","india"];for(var i=0;i<civIds.length;i++){var civId=civIds[i];var p=createTestPlayer({age:"antiquity",civilizationId:civId,ageProgress:50,legacyBonuses:[],legacyPaths:{military:1,economic:1,science:1,culture:1}});var s=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});var pending=n.players.get("p1").pendingLegacyBonuses;expect(pending).toBeDefined();var civBonus=pending.find(function(b){return b.bonusId.includes(civId);});expect(civBonus).toBeDefined();var civDef=s.config.civilizations.get(civId);expect(civDef&&civDef.legacyBonus).toBeDefined();expect(civBonus.effect).toEqual(civDef.legacyBonus.effect);}});});
 
 describe('AA1.1: building obsolescence on age transition', () => {

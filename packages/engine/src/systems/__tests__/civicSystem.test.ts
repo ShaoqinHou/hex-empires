@@ -168,6 +168,21 @@ describe('civicSystem', () => {
       expect(nextPlayer.masteredCivics).toContain('craftsmanship');
     });
 
+    it('clears currentCivicMastery and civicMasteryProgress on TRANSITION_AGE', () => {
+      // Closes WARN F-1aa61055: prior test only checked currentCivic/civicProgress
+      const player = createTestPlayer({
+        currentCivicMastery: 'code_of_laws',
+        civicMasteryProgress: 18,
+        researchedCivics: ['code_of_laws'],
+        masteredCivics: [],
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const nextPlayer = next.players.get('p1')!;
+      expect(nextPlayer.currentCivicMastery).toBeNull();
+      expect(nextPlayer.civicMasteryProgress).toBe(0);
+    });
+
     it('TRANSITION_AGE is a no-op when no civic research is in progress', () => {
       const player = createTestPlayer({
         currentCivic: null,
