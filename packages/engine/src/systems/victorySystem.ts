@@ -14,11 +14,6 @@ export const CULTURAL_VICTORY_RELIC_COUNT = 8;
  */
 export const ARTIFACTS_FOR_CULTURAL_VICTORY = 10;
 
-/**
- * X5.1: Modern ideology civics -- any one of these counts as "has ideology" for
- * the Military (Operation Ivy) victory prerequisite.
- */
-export const IDEOLOGY_CIVICS: ReadonlyArray<string> = ['fascism', 'communism', 'democracy'];
 
 /**
  * VictorySystem checks win conditions at the end of each turn.
@@ -351,7 +346,7 @@ function checkMilitary(state: GameState, playerId: string): VictoryProgress {
   // X5.1 / W5-01: Operation Ivy terminal check -- project chain victory.
   // completedProjects.includes('operation_ivy') AND ideology civic researched -> Military Victory.
   const completedProjects = player.completedProjects ?? [];
-  const hasIdeologyCivic = IDEOLOGY_CIVICS.some(c => player.researchedCivics.includes(c));
+  const hasIdeologyCivic = player.ideology != null;
 
   if (completedProjects.includes('operation_ivy') && hasIdeologyCivic) {
     return {

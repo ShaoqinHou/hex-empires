@@ -198,7 +198,7 @@ describe('victorySystem', () => {
       ['c2', makeCity('c2', 'p2', { q: 8, r: 8 })], // p2 has a city so domination doesn't trigger
     ]);
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], researchedCivics: ['democracy'] })],
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], ideology: 'democracy' })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -233,7 +233,7 @@ describe('victorySystem', () => {
       ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
     ]);
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], researchedCivics: ['democracy'] })],
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], ideology: 'democracy' })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -498,7 +498,7 @@ describe('victorySystem', () => {
         ['p1', createTestPlayer({
           id: 'p1',
           completedProjects: ['manhattan_project', 'operation_ivy'],
-          researchedCivics: ['fascism'], // ideology civic satisfies the requirement
+          ideology: 'fascism', // ideology field satisfies the requirement
         })],
         ['p2', createTestPlayer({ id: 'p2' })],
       ]);

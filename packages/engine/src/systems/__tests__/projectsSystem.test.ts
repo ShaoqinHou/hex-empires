@@ -178,7 +178,7 @@ describe('projectsSystem + victorySystem integration', () => {
         id: 'p1',
         researchedTechs: ['nuclear_fission'],
         ideologyPoints: 20,
-        researchedCivics: ['democracy'], // X5.1: ideology civic required for Military victory
+        ideology: 'democracy', // X5.1: ideology field required for Military victory
       })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
