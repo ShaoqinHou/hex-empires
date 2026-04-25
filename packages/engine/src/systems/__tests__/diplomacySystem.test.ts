@@ -716,3 +716,84 @@ describe('DIPLOMATIC_SANCTION action', () => {
     expect(next).toBe(state);
   });
 });
+
+// ── AA2.1: RESPOND_ENDEAVOR 3-way bilateral (F-04) ──
+
+describe('RESPOND_ENDEAVOR bilateral spec (AA2.1)', () => {
+  function stateWithEndeavor(p1Influence = 200, p2Influence = 200) {
+    return createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: p1Influence })],
+        ['p2', createTestPlayer({ id: 'p2', influence: p2Influence })],
+      ]),
+      currentPlayerId: 'p2', // p2 is the target responding
+      diplomacy: {
+        relations: new Map([['p1:p2', defaultRelation()]]),
+        pendingEndeavors: [{
+          id: 'e1',
+          sourceId: 'p1',
+          targetId: 'p2',
+          endeavorType: 'endorse_trade',
+          influenceCost: 50,
+        }],
+      },
+    });
+  }
+
+  it('SUPPORT: both players gain an ActiveEffect benefit and relationship rises', () => {
+    const state = stateWithEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'e1',
+      response: 'support',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.relationship).toBe(10); // +10 RELATIONSHIP_DELTA_SUPPORT
+    expect(rel.activeEndeavors).toHaveLength(1);
+    // Both players gain an ActiveEffect (culture +1)
+    const p1Benefit = next.players.get('p1')!.legacyBonuses.find(b => b.source.startsWith('endeavor_support:'));
+    const p2Benefit = next.players.get('p2')!.legacyBonuses.find(b => b.source.startsWith('endeavor_support:'));
+    expect(p1Benefit).toBeDefined();
+    expect(p2Benefit).toBeDefined();
+    if (p1Benefit!.effect.type === 'MODIFY_YIELD') {
+      expect(p1Benefit!.effect.yield).toBe('culture');
+      expect(p1Benefit!.effect.value).toBe(1);
+    }
+  });
+
+  it('ACCEPT: endeavor proceeds (active), relationship +5, no mutual benefit', () => {
+    const state = stateWithEndeavor();
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'e1',
+      response: 'accept',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.relationship).toBe(5); // +5 RELATIONSHIP_DELTA_ACCEPT
+    expect(rel.activeEndeavors).toHaveLength(1);
+    expect(rel.activeEndeavors[0].type).toBe('endorse_trade');
+    // No mutual benefit for plain accept (unlike SUPPORT)
+    const p1Benefit = next.players.get('p1')!.legacyBonuses.find(b => b.source.startsWith('endeavor_support:'));
+    expect(p1Benefit).toBeUndefined();
+    // Pending cleared
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+
+  it('REJECT: proposer (p1) loses Influence; relationship drops', () => {
+    const state = stateWithEndeavor(200, 200);
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'e1',
+      response: 'reject',
+    });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.relationship).toBe(-10); // RELATIONSHIP_DELTA_REJECT
+    // Proposer (p1) loses 10 Influence
+    expect(next.players.get('p1')!.influence).toBe(190); // 200 - 10 drain
+    // Target (p2) influence unchanged
+    expect(next.players.get('p2')!.influence).toBe(200);
+    // No endeavor activated
+    expect(rel.activeEndeavors).toHaveLength(0);
+    expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+});

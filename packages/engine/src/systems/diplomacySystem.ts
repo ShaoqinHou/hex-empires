@@ -374,6 +374,12 @@ const RELATIONSHIP_DELTA_SUPPORT = 10;
 const RELATIONSHIP_DELTA_REJECT = -10;
 
 /**
+ * F-04: Influence drain on the proposer (sourceId) when their endeavor is rejected.
+ * Represents the diplomatic cost of a failed initiative.
+ */
+const ENDEAVOR_REJECT_INFLUENCE_DRAIN = 10;
+
+/**
  * F-04 STEP 2: RESPOND_ENDEAVOR resolves a pending endeavor.
  * - accept: activates the endeavor with standard relationship delta
  * - support: activates the endeavor with bigger relationship delta + both players gain benefit
@@ -399,7 +405,8 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
   let logMessage: string;
 
   if (response === 'reject') {
-    // Rejection: negative relationship delta, no active endeavor created
+    // Rejection: negative relationship delta, no active endeavor created,
+    // and source player (proposer) loses Influence for the failed initiative.
     const newRelationship = clampRelationship(currentRelation.relationship + RELATIONSHIP_DELTA_REJECT);
     updatedRelations.set(relationKey, {
       ...currentRelation,
@@ -407,7 +414,33 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
       status: getStatusFromRelationship(newRelationship),
     });
 
-    logMessage = `Rejected ${endeavor.endeavorType} endeavor from ${endeavor.sourceId}`;
+    // Drain Influence from the proposer
+    const updatedPlayers = new Map(state.players);
+    const sourcePlayer = updatedPlayers.get(endeavor.sourceId);
+    if (sourcePlayer) {
+      updatedPlayers.set(endeavor.sourceId, {
+        ...sourcePlayer,
+        influence: Math.max(0, sourcePlayer.influence - ENDEAVOR_REJECT_INFLUENCE_DRAIN),
+      });
+    }
+
+    return {
+      ...state,
+      players: updatedPlayers,
+      diplomacy: {
+        ...state.diplomacy,
+        relations: updatedRelations,
+        pendingEndeavors: updatedPending,
+      },
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `Rejected ${endeavor.endeavorType} endeavor from ${endeavor.sourceId} (proposer loses ${ENDEAVOR_REJECT_INFLUENCE_DRAIN} Influence)`,
+        type: 'diplomacy',
+        category: 'diplomatic' as const,
+        panelTarget: 'diplomacy' as const,
+      }],
+    };
   } else {
     // Accept or Support: activate the endeavor
     const delta = response === 'support' ? RELATIONSHIP_DELTA_SUPPORT : RELATIONSHIP_DELTA_ACCEPT;
