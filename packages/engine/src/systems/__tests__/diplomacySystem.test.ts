@@ -120,8 +120,8 @@ describe('diplomacySystem', () => {
     });
   });
 
-  describe('peace', () => {
-    it('makes peace when war has lasted > 5 turns and war support is low', () => {
+  describe('peace (F-13 bilateral)', () => {
+    it('PROPOSE_PEACE creates a pending offer when at war', () => {
       const state = stateWithRelation({
         status: 'war', turnsAtWar: 6, warSupport: 5, relationship: -50,
         warDeclarer: 'p1', isSurpriseWar: false,
@@ -131,24 +131,60 @@ describe('diplomacySystem', () => {
         targetId: 'p2',
         proposal: { type: 'PROPOSE_PEACE' },
       });
+      // War still in progress — offer is pending, not auto-resolved
       const rel = next.diplomacy.relations.get('p1:p2')!;
-      expect(rel.status).not.toBe('war');
-      expect(rel.warSupport).toBe(0);
-      expect(rel.warDeclarer).toBeNull();
+      expect(rel.status).toBe('war');
+      const offers = next.diplomacy.pendingPeaceOffers ?? [];
+      expect(offers).toHaveLength(1);
+      expect(offers[0].proposerId).toBe('p1');
+      expect(offers[0].targetId).toBe('p2');
     });
 
-    it('rejects peace when war is too recent and war support is high', () => {
+    it('ACCEPT_PEACE ends war when target player accepts', () => {
       const state = stateWithRelation({
-        status: 'war', turnsAtWar: 2, warSupport: -40, relationship: -50,
-        warDeclarer: 'p1', isSurpriseWar: true,
+        status: 'war', turnsAtWar: 6, warSupport: 5, relationship: -50,
+        warDeclarer: 'p1', isSurpriseWar: false,
       });
-      const next = diplomacySystem(state, {
+      // p1 proposes
+      const withOffer = diplomacySystem(state, {
         type: 'PROPOSE_DIPLOMACY',
         targetId: 'p2',
         proposal: { type: 'PROPOSE_PEACE' },
       });
+      const offerId = (withOffer.diplomacy.pendingPeaceOffers ?? [])[0].id;
+
+      // p2 accepts
+      const stateAsP2 = { ...withOffer, currentPlayerId: 'p2' };
+      const next = diplomacySystem(stateAsP2, { type: 'ACCEPT_PEACE', offerId });
+
+      const rel = next.diplomacy.relations.get('p1:p2')!;
+      expect(rel.status).not.toBe('war');
+      expect(rel.warSupport).toBe(0);
+      expect(rel.warDeclarer).toBeNull();
+      expect(next.diplomacy.pendingPeaceOffers ?? []).toHaveLength(0);
+    });
+
+    it('REJECT_PEACE preserves war and starts cooldown', () => {
+      const state = stateWithRelation({
+        status: 'war', turnsAtWar: 6, warSupport: 5, relationship: -50,
+        warDeclarer: 'p1', isSurpriseWar: false,
+      });
+      // p1 proposes
+      const withOffer = diplomacySystem(state, {
+        type: 'PROPOSE_DIPLOMACY',
+        targetId: 'p2',
+        proposal: { type: 'PROPOSE_PEACE' },
+      });
+      const offerId = (withOffer.diplomacy.pendingPeaceOffers ?? [])[0].id;
+
+      // p2 rejects
+      const stateAsP2 = { ...withOffer, currentPlayerId: 'p2' };
+      const next = diplomacySystem(stateAsP2, { type: 'REJECT_PEACE', offerId });
+
       const rel = next.diplomacy.relations.get('p1:p2')!;
       expect(rel.status).toBe('war'); // still at war
+      expect(rel.peaceCooldownUntilTurn).toBe(stateAsP2.turn + 5);
+      expect(next.diplomacy.pendingPeaceOffers ?? []).toHaveLength(0);
     });
 
     it('cannot propose peace when not at war', () => {
@@ -200,40 +236,19 @@ describe('diplomacySystem', () => {
     });
   });
 
-  describe('friendship', () => {
-    it('establishes friendship when relationship is neutral or better', () => {
+  describe('friendship (Z5.2 — retired PROPOSE_FRIENDSHIP pathway)', () => {
+    it('PROPOSE_FRIENDSHIP is no longer a valid DiplomacyProposal — diplomacySystem returns state unchanged', () => {
+      // The DiplomacyProposal union no longer includes PROPOSE_FRIENDSHIP.
+      // Dispatching it via PROPOSE_DIPLOMACY falls through to the default case.
       const state = twoPlayerState();
       const next = diplomacySystem(state, {
         type: 'PROPOSE_DIPLOMACY',
         targetId: 'p2',
+        // @ts-expect-error intentional: PROPOSE_FRIENDSHIP removed from DiplomacyProposal
         proposal: { type: 'PROPOSE_FRIENDSHIP' },
       });
-      const rel = next.diplomacy.relations.get('p1:p2')!;
-      expect(rel.hasFriendship).toBe(true);
-      // default relationship is 0; friendship adds +20 → 20
-      expect(rel.relationship).toBe(20);
-    });
-
-    it('rejects friendship when relationship is too negative', () => {
-      const state = stateWithRelation({ relationship: -30, status: 'unfriendly' });
-      const next = diplomacySystem(state, {
-        type: 'PROPOSE_DIPLOMACY',
-        targetId: 'p2',
-        proposal: { type: 'PROPOSE_FRIENDSHIP' },
-      });
-      const rel = next.diplomacy.relations.get('p1:p2')!;
-      expect(rel.hasFriendship).toBe(false);
-    });
-
-    it('friendship improves relationship by 20', () => {
-      const state = stateWithRelation({ relationship: 10, status: 'neutral' });
-      const next = diplomacySystem(state, {
-        type: 'PROPOSE_DIPLOMACY',
-        targetId: 'p2',
-        proposal: { type: 'PROPOSE_FRIENDSHIP' },
-      });
-      const rel = next.diplomacy.relations.get('p1:p2')!;
-      expect(rel.relationship).toBe(30);
+      // Falls through default → returns state unchanged
+      expect(next).toBe(state);
     });
   });
 

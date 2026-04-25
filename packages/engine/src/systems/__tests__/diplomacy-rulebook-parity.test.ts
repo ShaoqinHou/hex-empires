@@ -130,12 +130,12 @@ describe('D3: declaring surprise war transitions relation status to \'war\' (§1
 });
 
 // ── D4: Making peace flips 'war' back to a peaceful status (§11.4) ─────────
+// F-13: peace is now bilateral — PROPOSE_PEACE creates an offer, ACCEPT_PEACE resolves it.
 
 describe('D4: peace proposal ends war and returns to a peaceful status (§11.4)', () => {
-  it('war → neutral once war has lasted long enough for peace to be accepted', () => {
-    // §11.4: war must be terminable. Engine accepts peace when turnsAtWar
-    // ≥ 5 OR |warSupport| ≤ 20. We set turnsAtWar = 10 to unambiguously
-    // satisfy the acceptance rule.
+  it('war → peaceful once PROPOSE_PEACE offer is accepted by target (F-13 bilateral)', () => {
+    // §11.4: war must be terminable. With F-13, PROPOSE_PEACE creates an offer.
+    // Only when the target dispatches ACCEPT_PEACE does the war end.
     const state = stateWithRelation({
       status: 'war',
       relationship: -50,
@@ -144,11 +144,19 @@ describe('D4: peace proposal ends war and returns to a peaceful status (§11.4)'
       warDeclarer: 'p1',
       isSurpriseWar: true,
     });
-    const next = diplomacySystem(state, {
+    // p1 proposes
+    const withOffer = diplomacySystem(state, {
       type: 'PROPOSE_DIPLOMACY',
       targetId: 'p2',
       proposal: { type: 'PROPOSE_PEACE' },
     });
+    expect(withOffer.diplomacy.pendingPeaceOffers ?? []).toHaveLength(1);
+
+    // p2 accepts
+    const offerId = (withOffer.diplomacy.pendingPeaceOffers ?? [])[0].id;
+    const stateAsP2 = { ...withOffer, currentPlayerId: 'p2' };
+    const next = diplomacySystem(stateAsP2, { type: 'ACCEPT_PEACE', offerId });
+
     const rel = next.diplomacy.relations.get('p1:p2')!;
     expect(rel.status).not.toBe('war');
     // relationship bumped by +10 → -40 → status 'unfriendly' by threshold.
@@ -471,13 +479,11 @@ describe('D13: base Influence generation is at least 10/turn (§11.1)', () => {
   });
 });
 
-// ── D14: Cease-fire window: peace rejected immediately after war starts ────
+// ── D14: F-13 bilateral peace — PROPOSE_PEACE creates offer, REJECT_PEACE starts cooldown ────
 
-describe('D14: peace cannot be negotiated in the first turns after war is declared (§11.4 cease-fire window)', () => {
-  it('peace proposal is rejected at turnsAtWar = 0 with high warSupport', () => {
-    // §11.4 + standard 4X convention: there is a cease-fire window right
-    // after a declaration — you cannot instantly sue for peace mid-stab.
-    // Engine: peace is rejected when turnsAtWar < 5 AND |warSupport| > 20.
+describe('D14: peace cooldown after REJECT_PEACE prevents immediate re-offer (§11.4 F-13)', () => {
+  it('REJECT_PEACE sets a 5-turn cooldown, war relation unchanged', () => {
+    // F-13: After REJECT_PEACE the proposer must wait 5 turns before proposing again.
     const state = stateWithRelation({
       status: 'war',
       relationship: -80,
@@ -486,15 +492,22 @@ describe('D14: peace cannot be negotiated in the first turns after war is declar
       warDeclarer: 'p1',
       isSurpriseWar: true,
     });
-    const next = diplomacySystem(state, {
+    // p1 proposes
+    const withOffer = diplomacySystem(state, {
       type: 'PROPOSE_DIPLOMACY',
       targetId: 'p2',
       proposal: { type: 'PROPOSE_PEACE' },
     });
+    const offerId = (withOffer.diplomacy.pendingPeaceOffers ?? [])[0].id;
+
+    // p2 rejects
+    const stateAsP2 = { ...withOffer, currentPlayerId: 'p2' };
+    const next = diplomacySystem(stateAsP2, { type: 'REJECT_PEACE', offerId });
+
     const rel = next.diplomacy.relations.get('p1:p2')!;
-    // War still on, no fields flipped.
+    // War still on, cooldown set.
     expect(rel.status).toBe('war');
-    expect(rel.turnsAtWar).toBe(0);
     expect(rel.warSupport).toBe(-50);
+    expect(rel.peaceCooldownUntilTurn).toBe(stateAsP2.turn + 5);
   });
 });

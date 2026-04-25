@@ -552,6 +552,40 @@ export interface PlayerState {
    */
   readonly worldBankOfficesRemaining?: number | null;
 
+  // ── Z3.2: Dedicated milestone fields ──
+  /**
+   * Z3.2 (Cultural): Count of artifacts currently displayed in Museum buildings.
+   * Used by Cultural Legacy Path predicates instead of the `culture` proxy.
+   * Incremented when an artifact is placed in a Museum. Defaults to 0.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly artifactsInMuseums?: number;
+
+  /**
+   * Z3.2 (Exploration): Points earned from settling or conquering Distant Lands tiles.
+   * +1 each time the player founds a city on an isDistantLands hex.
+   * Used by Exploration Military Legacy Path predicates.
+   * Defaults to 0. Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly distantLandPoints?: number;
+
+  /**
+   * Z3.2 (Religion): Count of relics currently displayed in Cathedral/Reliquary buildings.
+   * Distinct from `relics` (which tracks acquired relics); this field tracks relics
+   * actively contributing faith/culture yields via display.
+   * Used by Exploration Culture Legacy Path predicates instead of the `faith` proxy.
+   * Defaults to 0. Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly relicsDisplayedCount?: number;
+
+  /**
+   * Z3.2 (Economic): Count of unique resources currently assigned to cities.
+   * Incremented on ASSIGN_RESOURCE, decremented on UNASSIGN_RESOURCE.
+   * Used by Economic Legacy Path predicates instead of the `totalGoldEarned` proxy.
+   * Defaults to 0. Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly resourcesAssigned?: number;
+
   // ── F-08: Civ unlock system ──
   /**
    * IDs of civilizations this player is allowed to pick on age transition.
@@ -642,6 +676,28 @@ export interface DiplomacyRelation {
    * Optional so existing DiplomacyRelation construction keeps compiling.
    */
   readonly hasEmbargo?: boolean;
+  /**
+   * F-13: Peace cooldown — turn on which a new PROPOSE_PEACE between the
+   * same pair is allowed again. Set to state.turn + 5 on REJECT_PEACE.
+   * Optional so existing DiplomacyRelation construction keeps compiling.
+   */
+  readonly peaceCooldownUntilTurn?: number;
+}
+
+/**
+ * F-13: A pending bilateral peace offer awaiting the target player's response.
+ * Created by PROPOSE_PEACE; resolved by ACCEPT_PEACE or REJECT_PEACE.
+ */
+export interface PeaceOffer {
+  readonly id: string;
+  readonly proposerId: PlayerId;
+  readonly targetId: PlayerId;
+  readonly proposedOnTurn: number;
+  /** Optional city/territory transfers included in the offer terms. */
+  readonly terms?: {
+    /** City ids the proposer offers to cede (if any). */
+    readonly cityTransfers?: ReadonlyArray<CityId>;
+  };
 }
 
 /**
@@ -686,6 +742,13 @@ export interface DiplomacyState {
    * an empty array.
    */
   readonly activeTreaties?: ReadonlyArray<ActiveTreaty>;
+
+  /**
+   * F-13: Pending bilateral peace offers awaiting the target player's response.
+   * Created by PROPOSE_PEACE; resolved by ACCEPT_PEACE or REJECT_PEACE.
+   * Optional so existing DiplomacyState construction keeps compiling unchanged.
+   */
+  readonly pendingPeaceOffers?: ReadonlyArray<PeaceOffer>;
 }
 
 // ── Effects ──
@@ -968,7 +1031,6 @@ export type DiplomacyProposal =
   | { readonly type: 'DECLARE_WAR'; readonly warType: 'formal' | 'surprise' }
   | { readonly type: 'PROPOSE_PEACE' }
   | { readonly type: 'PROPOSE_ALLIANCE' }
-  | { readonly type: 'PROPOSE_FRIENDSHIP' }
   | { readonly type: 'DENOUNCE' };
 
 export type GameAction =
@@ -1002,6 +1064,11 @@ export type GameAction =
   | { readonly type: 'PLACE_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId; readonly tile: HexCoord }
   | { readonly type: 'SET_RESEARCH'; readonly techId: TechnologyId }
   | { readonly type: 'PROPOSE_DIPLOMACY'; readonly targetId: PlayerId; readonly proposal: DiplomacyProposal }
+  // ── F-13: Bilateral peace resolution ──
+  /** Accept a pending peace offer. Ends war and optionally applies city transfer terms. */
+  | { readonly type: 'ACCEPT_PEACE'; readonly offerId: string }
+  /** Reject a pending peace offer. Preserves war and starts a 5-turn peace cooldown. */
+  | { readonly type: 'REJECT_PEACE'; readonly offerId: string }
   | { readonly type: 'TRANSITION_AGE'; readonly newCivId: CivilizationId }
   | { readonly type: 'RESOLVE_CRISIS'; readonly crisisId: string; readonly choice: string }
   | { readonly type: 'FORTIFY_UNIT'; readonly unitId: UnitId }

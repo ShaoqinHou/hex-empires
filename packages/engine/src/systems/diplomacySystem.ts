@@ -1,4 +1,4 @@
-import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect, PeaceOffer } from '../types/GameState';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 /**
@@ -39,8 +39,20 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
     action.type !== 'PROPOSE_DIPLOMACY' &&
     action.type !== 'PROPOSE_ENDEAVOR' &&
     action.type !== 'RESPOND_ENDEAVOR' &&
-    action.type !== 'DIPLOMATIC_SANCTION'
+    action.type !== 'DIPLOMATIC_SANCTION' &&
+    action.type !== 'ACCEPT_PEACE' &&
+    action.type !== 'REJECT_PEACE'
   ) return state;
+
+  // ── F-13: ACCEPT_PEACE ──
+  if (action.type === 'ACCEPT_PEACE') {
+    return handleAcceptPeace(state, action.offerId);
+  }
+
+  // ── F-13: REJECT_PEACE ──
+  if (action.type === 'REJECT_PEACE') {
+    return handleRejectPeace(state, action.offerId);
+  }
 
   // Handle RESPOND_ENDEAVOR (target player responds to a pending endeavor)
   if (action.type === 'RESPOND_ENDEAVOR') {
@@ -148,32 +160,67 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
 
     case 'PROPOSE_PEACE': {
       if (currentRelation.status !== 'war') return state;
-      // Peace requires war support near zero or negative for the loser
-      // Simplified: auto-accepts if war has been going on > 5 turns or war support is near 0
-      if (currentRelation.turnsAtWar < 5 && Math.abs(currentRelation.warSupport) > 20) {
+
+      // ── F-13: Check peace cooldown ──
+      if (
+        currentRelation.peaceCooldownUntilTurn !== undefined &&
+        state.turn < currentRelation.peaceCooldownUntilTurn
+      ) {
         return {
           ...state,
           log: [...state.log, {
             turn: state.turn,
             playerId: sourceId,
-            message: `Peace proposal rejected by ${targetId} (war support too high)`,
-            type: 'diplomacy',
+            message: `Cannot propose peace to ${targetId} yet (peace cooldown until turn ${currentRelation.peaceCooldownUntilTurn})`,
+            type: 'diplomacy' as const,
           }],
         };
       }
-      const newRelationship = clampRelationship(currentRelation.relationship + 10);
-      newRelation = {
-        ...currentRelation,
-        status: getStatusFromRelationship(newRelationship),
-        turnsAtPeace: 0,
-        turnsAtWar: 0,
-        warSupport: 0,
-        warDeclarer: null,
-        isSurpriseWar: false,
-        relationship: newRelationship,
+
+      // ── F-13: Create a pending bilateral peace offer ──
+      const existingOffers = state.diplomacy.pendingPeaceOffers ?? [];
+      // Prevent duplicate offers between the same pair this turn
+      const alreadyPending = existingOffers.some(
+        o => (o.proposerId === sourceId && o.targetId === targetId) ||
+             (o.proposerId === targetId && o.targetId === sourceId)
+      );
+      if (alreadyPending) {
+        return {
+          ...state,
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `A peace offer between you and ${targetId} is already pending`,
+            type: 'diplomacy' as const,
+          }],
+        };
+      }
+
+      const offerId = `peace:${sourceId}:${targetId}:t${state.turn}`;
+      const newOffer: PeaceOffer = {
+        id: offerId,
+        proposerId: sourceId,
+        targetId,
+        proposedOnTurn: state.turn,
       };
-      logMessage = `Made peace with ${targetId}`;
-      break;
+
+      return {
+        ...state,
+        diplomacy: {
+          ...state.diplomacy,
+          pendingPeaceOffers: [...existingOffers, newOffer],
+        },
+        log: [...state.log, {
+          turn: state.turn,
+          playerId: sourceId,
+          message: `Proposed peace to ${targetId}`,
+          type: 'diplomacy' as const,
+          category: 'diplomatic' as const,
+          panelTarget: 'diplomacy' as const,
+          severity: 'warning' as const,
+          blocksTurn: true as const,
+        }],
+      };
     }
 
     case 'PROPOSE_ALLIANCE': {
@@ -202,31 +249,6 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
       break;
     }
 
-    case 'PROPOSE_FRIENDSHIP': {
-      if (currentRelation.status === 'war') return state;
-      // Friendship requires at least neutral relationship (> -20)
-      if (currentRelation.relationship < -20) {
-        return {
-          ...state,
-          log: [...state.log, {
-            turn: state.turn,
-            playerId: sourceId,
-            message: `Cannot establish friendship with ${targetId} (relationship too low)`,
-            type: 'diplomacy',
-          }],
-        };
-      }
-      newRelation = {
-        ...currentRelation,
-        hasFriendship: true,
-        hasDenounced: false,
-        relationship: clampRelationship(currentRelation.relationship + 20),
-      };
-      newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
-      logMessage = `Established friendship with ${targetId}`;
-      break;
-    }
-
     case 'DENOUNCE': {
       if (currentRelation.status === 'war') return state;
       newRelation = {
@@ -248,10 +270,9 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
   const updatedRelations = new Map(state.diplomacy.relations);
   updatedRelations.set(relationKey, newRelation);
 
-  // Friendship / alliance proposals are noteworthy (warning) so the player notices the offer.
+  // Alliance proposals are noteworthy (warning) so the player notices the offer.
   const proposalSeverity =
-    (action.type === 'PROPOSE_DIPLOMACY' &&
-      (action.proposal.type === 'PROPOSE_FRIENDSHIP' || action.proposal.type === 'PROPOSE_ALLIANCE'))
+    (action.type === 'PROPOSE_DIPLOMACY' && action.proposal.type === 'PROPOSE_ALLIANCE')
       ? 'warning' as const
       : 'info' as const;
 
@@ -492,6 +513,128 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
       playerId: sourceId,
       message: `Imposed ${sanctionType} sanction on ${targetId}`,
       type: 'diplomacy',
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
+    }],
+  };
+}
+
+// ── F-13: Bilateral peace resolution ──
+
+/** Number of turns before another PROPOSE_PEACE is allowed after REJECT_PEACE. */
+const PEACE_COOLDOWN_TURNS = 5;
+
+/**
+ * ACCEPT_PEACE: current player accepts the pending peace offer targetted at them.
+ * - Ends the war between the two players (sets status based on new relationship).
+ * - Optionally transfers cities listed in offer.terms.cityTransfers.
+ * - Removes the resolved offer from pendingPeaceOffers.
+ */
+function handleAcceptPeace(state: GameState, offerId: string): GameState {
+  const offers = state.diplomacy.pendingPeaceOffers ?? [];
+  const offerIdx = offers.findIndex(o => o.id === offerId);
+  if (offerIdx === -1) return state;
+
+  const offer = offers[offerIdx];
+
+  // Only the target of the offer can accept it
+  if (state.currentPlayerId !== offer.targetId) return state;
+
+  const relationKey = getRelationKey(offer.proposerId, offer.targetId);
+  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+  if (currentRelation.status !== 'war') return state;
+
+  const newRelationship = clampRelationship(currentRelation.relationship + 10);
+  const updatedRelation: DiplomacyRelation = {
+    ...currentRelation,
+    status: getStatusFromRelationship(newRelationship),
+    turnsAtPeace: 0,
+    turnsAtWar: 0,
+    warSupport: 0,
+    warDeclarer: null,
+    isSurpriseWar: false,
+    relationship: newRelationship,
+    peaceCooldownUntilTurn: undefined,
+  };
+
+  const updatedRelations = new Map(state.diplomacy.relations);
+  updatedRelations.set(relationKey, updatedRelation);
+
+  const remainingOffers = offers.filter((_, i) => i !== offerIdx);
+
+  let nextState: GameState = {
+    ...state,
+    diplomacy: {
+      ...state.diplomacy,
+      relations: updatedRelations,
+      pendingPeaceOffers: remainingOffers,
+    },
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `Accepted peace from ${offer.proposerId}`,
+      type: 'diplomacy' as const,
+      category: 'diplomatic' as const,
+      panelTarget: 'diplomacy' as const,
+    }],
+  };
+
+  // Apply any city transfers from the offer terms
+  if (offer.terms?.cityTransfers && offer.terms.cityTransfers.length > 0) {
+    const updatedCities = new Map(nextState.cities);
+    for (const cityId of offer.terms.cityTransfers) {
+      const city = updatedCities.get(cityId);
+      if (city && city.owner === offer.proposerId) {
+        updatedCities.set(cityId, { ...city, owner: offer.targetId });
+      }
+    }
+    nextState = { ...nextState, cities: updatedCities };
+  }
+
+  return nextState;
+}
+
+/**
+ * REJECT_PEACE: current player rejects the pending peace offer targetted at them.
+ * - War continues unchanged.
+ * - Imposes a PEACE_COOLDOWN_TURNS cooldown before a new PROPOSE_PEACE can be made.
+ * - Removes the resolved offer from pendingPeaceOffers.
+ */
+function handleRejectPeace(state: GameState, offerId: string): GameState {
+  const offers = state.diplomacy.pendingPeaceOffers ?? [];
+  const offerIdx = offers.findIndex(o => o.id === offerId);
+  if (offerIdx === -1) return state;
+
+  const offer = offers[offerIdx];
+
+  // Only the target of the offer can reject it
+  if (state.currentPlayerId !== offer.targetId) return state;
+
+  const relationKey = getRelationKey(offer.proposerId, offer.targetId);
+  const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
+
+  const updatedRelation: DiplomacyRelation = {
+    ...currentRelation,
+    peaceCooldownUntilTurn: state.turn + PEACE_COOLDOWN_TURNS,
+  };
+
+  const updatedRelations = new Map(state.diplomacy.relations);
+  updatedRelations.set(relationKey, updatedRelation);
+
+  const remainingOffers = offers.filter((_, i) => i !== offerIdx);
+
+  return {
+    ...state,
+    diplomacy: {
+      ...state.diplomacy,
+      relations: updatedRelations,
+      pendingPeaceOffers: remainingOffers,
+    },
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `Rejected peace from ${offer.proposerId} (cooldown: ${PEACE_COOLDOWN_TURNS} turns)`,
+      type: 'diplomacy' as const,
       category: 'diplomatic' as const,
       panelTarget: 'diplomacy' as const,
     }],

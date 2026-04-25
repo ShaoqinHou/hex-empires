@@ -655,3 +655,70 @@ describe('researchSystem', () => {
     });
   });
 });
+
+// ── Z2.4: Future Tech Modern — 2-prereq gate ──
+
+describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', () => {
+  it('rejects future_tech_modern when neither prereq is researched', () => {
+    const player = createTestPlayer({ age: 'modern', researchedTechs: [] });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_modern' });
+    expect(next.players.get('p1')!.currentResearch).toBeNull();
+    // State should be unchanged
+    expect(next).toBe(state);
+  });
+
+  it('rejects future_tech_modern when only rocketry is researched (missing nuclear_fission)', () => {
+    const player = createTestPlayer({
+      age: 'modern',
+      researchedTechs: ['rocketry'],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_modern' });
+    expect(next.players.get('p1')!.currentResearch).toBeNull();
+    expect(next).toBe(state);
+  });
+
+  it('rejects future_tech_modern when only nuclear_fission is researched (missing rocketry)', () => {
+    const player = createTestPlayer({
+      age: 'modern',
+      researchedTechs: ['nuclear_fission'],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_modern' });
+    expect(next.players.get('p1')!.currentResearch).toBeNull();
+    expect(next).toBe(state);
+  });
+
+  it('allows future_tech_modern once both rocketry AND nuclear_fission are researched', () => {
+    const player = createTestPlayer({
+      age: 'modern',
+      researchedTechs: ['rocketry', 'nuclear_fission'],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_modern' });
+    expect(next.players.get('p1')!.currentResearch).toBe('future_tech_modern');
+  });
+
+  it('future_tech_modern grants ageProgress on completion (repeatable)', () => {
+    // future_tech_modern costs 100. Start at 95, city with population 6 → 7 science/turn.
+    // Turn 1: 95 + 7 = 102 >= 100 → complete. Grants +10 ageProgress.
+    const player = createTestPlayer({
+      age: 'modern',
+      researchedTechs: ['rocketry', 'nuclear_fission'],
+      currentResearch: 'future_tech_modern',
+      researchProgress: 95,
+      ageProgress: 0,
+    });
+    const city = createTestCity({ population: 6 }); // science = 1(base) + 6(pop) = 7
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = researchSystem(state, { type: 'END_TURN' });
+    const p = next.players.get('p1')!;
+    expect(p.ageProgress).toBe(10); // +10 granted
+    expect(p.currentResearch).toBeNull(); // cleared after completion
+    expect(p.researchedTechs).not.toContain('future_tech_modern'); // repeatable — not added to tree
+  });
+});
