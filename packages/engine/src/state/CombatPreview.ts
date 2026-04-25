@@ -4,6 +4,8 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
 import { nextRandom } from './SeededRng';
 import { computeEffectiveCS } from './CombatAnalytics';
+import { getCombatBonus } from './EffectUtils';
+import { getCommanderAuraCombatBonus } from './CommanderAura';
 
 /**
  * Target type for combat preview.
@@ -247,7 +249,7 @@ export function calculateCombatPreview(
   });
   const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
 
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile) + attackerPromoBonus;
+  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile, defender) + attackerPromoBonus;
   const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
 
   const strengthDiff = attackerStrength - defenderStrength;
@@ -279,7 +281,8 @@ export function calculateCombatPreview(
   // Gather modifiers for display
   const flankingBonus = calculateFlankingBonus(attacker, defender.position, state);
   const terrainBonusForDisplay = defenderTile ? getTerrainDefenseBonus(state, defenderTile) : { percent: 0, flat: 0 };
-  const riverPenalty = Boolean(attackerTile && attackerTile.river.length > 0);
+  // River penalty: only applies when crossing the specific edge facing the defender
+  const riverPenalty = Boolean(attackerTile && isRiverEdgeBetweenPreview(attackerTile, attacker.position, defender.position));
   const firstStrikeBonus = attacker.health === 100;
   const warSupportPenalty = calculateWarSupportPenalty(state, attacker.owner);
 
@@ -700,8 +703,9 @@ function getCityDefenseStrength(city: CityState): number {
 }
 
 /**
- * Get effective combat strength for preview — uses computeEffectiveCS to match
- * combatSystem's resolution formula exactly (VII: multiplicative HP scaling).
+ * Get effective combat strength for preview — mirrors combatSystem's
+ * getEffectiveCombatStrength exactly (VII: multiplicative HP scaling,
+ * plus all active bonuses: effects, resources, commander aura, support).
  */
 function getEffectiveCombatStrength(
   state: GameState,
@@ -709,6 +713,7 @@ function getEffectiveCombatStrength(
   isAttacking: boolean,
   defenderPosition?: HexCoord,
   attackerTile?: HexTile | null,
+  defenderUnit?: UnitState,
 ): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
   // VII: health scales CS multiplicatively — same formula as combatSystem
@@ -716,13 +721,25 @@ function getEffectiveCombatStrength(
   const flankingBonus = isAttacking && defenderPosition
     ? calculateFlankingBonus(unit, defenderPosition, state)
     : 0;
-  // B1: River penalty — flat -2 CS (matches combatSystem, not old 15% of base)
-  const riverPenalty = isAttacking && attackerTile && attackerTile.river.length > 0
-    ? 2
-    : 0;
+  // B1: River penalty — multiplicative -25% when crossing a river edge to attack
+  const crossingRiver = isAttacking && attackerTile && defenderPosition
+    ? isRiverEdgeBetweenPreview(attackerTile, unit.position, defenderPosition)
+    : false;
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
+  // Civ/leader/legacy combat bonuses (MODIFY_COMBAT effects) — mirrors combatSystem
+  const unitDef = state.config.units.get(unit.typeId);
+  const category = unitDef?.category ?? 'melee';
+  const effectBonus = getCombatBonus(state, unit.owner, category);
+  // Empire resource combat strength modifiers — mirrors combatSystem
+  const resourceBonus = calculateResourceCombatBonusPreview(state, unit.owner, category, defenderUnit);
+  // Commander aura: +3 CS per friendly commander within 2 hexes — mirrors combatSystem
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  // Support adjacency bonus: +2 CS when a friendly support unit is adjacent (attack only)
+  const supportBonus = isAttacking ? calculateSupportAdjacencyBonusPreview(unit, state) : 0;
 
-  return effectiveBase + flankingBonus - riverPenalty - warSupportPenalty;
+  const baseTotal = effectiveBase + flankingBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
+  // Apply river-crossing penalty as multiplicative -25% (same as combatSystem)
+  return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
 }
 
 /**
@@ -734,15 +751,21 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   // VII: health scales CS multiplicatively — same formula as combatSystem
   let strength = computeEffectiveCS(base, unit.health);
 
+  // Terrain defense bonus — multiplicative component on base strength
   if (tile) {
     const { percent, flat } = getTerrainDefenseBonus(state, tile);
     strength *= (1 + percent);
     strength += flat;
   }
 
+  // B6: Fortification bonus is flat +5 CS additive — mirrors combatSystem
   if (unit.fortified) {
     strength += 5;
   }
+
+  // Commander aura: +3 CS per friendly commander within 2 hexes — mirrors combatSystem
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  strength += commanderAuraBonus;
 
   return strength;
 }
@@ -816,6 +839,80 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
     if (penalty > maxPenalty) maxPenalty = penalty;
   }
   return maxPenalty;
+}
+
+/**
+ * Empire resource combat strength bonus — mirrors combatSystem's
+ * calculateResourceCombatBonus. Reads player.ownedResources and sums
+ * bonusTable[currentAge].combatMod entries matching the unit's category
+ * (and optionally the defender's category via versusCategory).
+ */
+function calculateResourceCombatBonusPreview(
+  state: GameState,
+  playerId: string,
+  unitCategory: string,
+  defenderUnit?: UnitState,
+): number {
+  const player = state.players.get(playerId);
+  if (!player) return 0;
+  const owned = (player as typeof player & { readonly ownedResources?: ReadonlyArray<string> }).ownedResources;
+  if (!owned || owned.length === 0) return 0;
+  const currentAge = state.age.currentAge;
+  let bonus = 0;
+  for (const resId of owned) {
+    const resDef = state.config.resources.get(resId);
+    const row = resDef?.bonusTable?.[currentAge];
+    if (!row?.combatMod) continue;
+    const mod = row.combatMod;
+    if (mod.unitCategory !== unitCategory) continue;
+    if (mod.versusCategory !== undefined && mod.versusCategory !== null) {
+      if (!defenderUnit) continue;
+      const defDef = state.config.units.get(defenderUnit.typeId);
+      const defCategory = defDef?.category ?? 'melee';
+      if (defCategory !== mod.versusCategory) continue;
+    }
+    bonus += mod.value;
+  }
+  return bonus;
+}
+
+/**
+ * Support unit adjacency bonus — mirrors combatSystem's
+ * calculateSupportAdjacencyBonus. Returns +2 CS if any adjacent
+ * friendly unit has category 'support' (one bonus regardless of count).
+ */
+function calculateSupportAdjacencyBonusPreview(attacker: UnitState, state: GameState): number {
+  const adjHexes = neighbors(attacker.position);
+  for (const [, u] of state.units) {
+    if (u.id === attacker.id) continue;
+    if (u.owner !== attacker.owner) continue;
+    const uDef = state.config.units.get(u.typeId);
+    if (uDef?.category !== 'support') continue;
+    const isAdj = adjHexes.some(n => n.q === u.position.q && n.r === u.position.r);
+    if (isAdj) return 2;
+  }
+  return 0;
+}
+
+/**
+ * River-crossing penalty check — mirrors combatSystem's isRiverEdgeBetween.
+ * Returns true if attacker's tile has a river on the edge facing the defender.
+ * HEX_DIRECTIONS: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE.
+ */
+function isRiverEdgeBetweenPreview(
+  attackerTile: HexTile,
+  attackerPos: HexCoord,
+  defenderPos: HexCoord,
+): boolean {
+  const dq = defenderPos.q - attackerPos.q;
+  const dr = defenderPos.r - attackerPos.r;
+  const HEX_DIRECTIONS = [
+    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+  ];
+  const edgeIndex = HEX_DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
+  if (edgeIndex === -1) return false;
+  return attackerTile.river.includes(edgeIndex);
 }
 
 function createEmptyModifiers(): CombatModifiers {

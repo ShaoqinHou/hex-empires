@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCombatPreview, calculateCityCombatPreview, getAttackableUnits, getAttackableCities } from '../CombatPreview';
 import { computeEffectiveCS } from '../CombatAnalytics';
+import { combatSystem } from '../../systems/combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
 
 describe('calculateCombatPreview', () => {
@@ -92,13 +93,16 @@ describe('calculateCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(false);
-    // warrior combat=20, health=100 → effectiveCS=floor(20*(100/100))=20; no modifiers
-    expect(preview.attackerStrength).toBe(20);
+    // warrior combat=20, health=100 → effectiveCS=floor(20*(100/100))=20
+    // + Augustus leader ability: MODIFY_COMBAT all +5 → attackerStrength=25
+    // defender p2 also has Augustus but effectBonus only applies to attacker CS, not defense CS
+    // defenderStrength = effectiveCS(20, 100) = 20 (no effectBonus in defense formula)
+    expect(preview.attackerStrength).toBe(25);
     expect(preview.defenderStrength).toBe(20);
-    // strengthDiff=0 → min=round(30*exp(0)*0.75)=round(22.5)=23, max=round(30*exp(0)*1.25)=round(37.5)=38
-    // expected = round((23+38)/2) = round(30.5) = 31
-    expect(preview.expectedDamageToDefender).toBe(31);
-    expect(preview.expectedDamageToAttacker).toBe(31); // Melee takes retaliation, equal CS → symmetric
+    // strengthDiff=5 → atk min=round(30*exp(5/25)*0.75)=27, max=round(30*exp(5/25)*1.25)=46, exp=round((27+46)/2)=37
+    // def retaliation (strengthDiff=-5): min=round(30*exp(-5/25)*0.75)=18, max=31, exp=25
+    expect(preview.expectedDamageToDefender).toBe(37);
+    expect(preview.expectedDamageToAttacker).toBe(25); // Melee retaliation at -5 diff
     expect(preview.strengthDifference).toEqual(preview.attackerStrength - preview.defenderStrength);
   });
 
@@ -116,9 +120,9 @@ describe('calculateCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(true);
-    // archer rangedCombat=20, warrior defense=20; effectiveCS both=20; strengthDiff=0
-    // min=23, max=38, expected=31
-    expect(preview.expectedDamageToDefender).toBe(31);
+    // archer rangedCombat=20 + Augustus leader +5 (all categories) = 25; warrior defense=20
+    // strengthDiff=5 → min=27, max=46, expected=37
+    expect(preview.expectedDamageToDefender).toBe(37);
     expect(preview.expectedDamageToAttacker).toBe(0); // Ranged takes no retaliation
     expect(preview.minDamageToAttacker).toBe(0);
     expect(preview.maxDamageToAttacker).toBe(0);
@@ -364,11 +368,11 @@ describe('calculateCityCombatPreview', () => {
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(false);
     expect(preview.target).toEqual({ type: 'city', cityId: 'c1' });
-    // warrior effectiveCS=20, cityDefense=10(base)+0(no walls); strengthDiff=10
-    // atk min=round(30*exp(10/25)*0.75)=34, max=round(30*exp(10/25)*1.25)=56, exp=round((34+56)/2)=45
-    // def min=round(30*exp(-10/25)*0.75)=15, max=round(30*exp(-10/25)*1.25)=25, exp=round((15+25)/2)=20
-    expect(preview.expectedDamageToDefender).toBe(45);
-    expect(preview.expectedDamageToAttacker).toBe(20); // Melee takes retaliation
+    // warrior effectiveCS=20 + Augustus leader +5 (all categories) = 25; cityDefense=10(base)+0(no walls)
+    // strengthDiff=15 → atk min=round(30*exp(15/25)*0.75)=41, max=68, exp=55
+    // city retaliation (-15): def min=round(30*exp(-15/25)*0.75)=12, max=21, exp=17
+    expect(preview.expectedDamageToDefender).toBe(55);
+    expect(preview.expectedDamageToAttacker).toBe(17); // Melee takes retaliation (strengthDiff=-15)
   });
 
   it('calculates preview for valid ranged attack on city', () => {
@@ -381,9 +385,9 @@ describe('calculateCityCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.isRanged).toBe(true);
-    // archer rangedCombat=20, cityDefense=10; strengthDiff=10
-    // min=34, max=56, expected=45; no retaliation for ranged
-    expect(preview.expectedDamageToDefender).toBe(45);
+    // archer rangedCombat=20 + Augustus leader +5 = 25; cityDefense=10; strengthDiff=15
+    // min=41, max=68, expected=55; no retaliation for ranged
+    expect(preview.expectedDamageToDefender).toBe(55);
     expect(preview.expectedDamageToAttacker).toBe(0); // Ranged takes no retaliation
   });
 
@@ -597,10 +601,11 @@ describe('getAttackableCities', () => {
 });
 
 describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
-  it('preview attackerStrength uses computeEffectiveCS(base, hp) — single shared formula', () => {
+  it('preview attackerStrength uses computeEffectiveCS(base, hp) plus active effects — single shared formula', () => {
     // A warrior at 75 HP attacks an adjacent enemy.
     // Warrior base combat = 20 (from test config). computeEffectiveCS(20, 75) = floor(20 * 75/100) = 15.
-    // Preview attackerStrength should equal computeEffectiveCS(base, hp) (no other modifiers in this clean scenario).
+    // Default test player has Rome/Augustus leader (+5 MODIFY_COMBAT all categories).
+    // Preview attackerStrength = effectiveCS(15) + effectBonus(5) = 20.
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 75 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
@@ -612,9 +617,9 @@ describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
     // Retrieve attacker's base CS from state.config (same as CombatPreview uses internally)
     const warriorBase = state.config.units.get('warrior')?.combat ?? 20;
     const expectedEffectiveCS = computeEffectiveCS(warriorBase, 75);
-    // Preview strength includes effective CS as its foundation; verify they use the same formula.
-    // (No terrain/flanking/support/commander bonuses in this scenario — clean unit vs unit.)
-    expect(preview.attackerStrength).toBe(expectedEffectiveCS);
+    // Preview strength = effectiveCS + leader ability (Augustus +5) — mirrors combatSystem exactly.
+    // Note: effectBonus (+5) is included in the shared formula, so just checking the total directly.
+    expect(preview.attackerStrength).toBe(expectedEffectiveCS + 5); // effectiveCS(15) + augustus(5) = 20
   });
 
   it('preview defenderStrength degrades with HP (same formula as attacker)', () => {
@@ -631,5 +636,40 @@ describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
     const expectedDefenderCS = computeEffectiveCS(warriorBase, 50);
     // Defender strength = computeEffectiveCS on flat grassland, not fortified
     expect(preview.defenderStrength).toBe(expectedDefenderCS);
+  });
+});
+
+describe('DD4.2: CombatPreview vs combatSystem parity', () => {
+  it('preview expectedDamageToDefender is within ±10% of actual combatSystem damage', () => {
+    // Simulate the same combat with both preview and live system.
+    // Both use the same strength formula — preview shows the expected (average) value;
+    // combatSystem uses a seeded random modifier in [0.75, 1.25].
+    // At seed=42, counter=0, the actual modifier is ~1.05 → actual ≈ expected.
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    // Use default seed (42, counter 0) — deterministic modifier ~1.05 → actual ≈ expected
+    const state = createTestState({ units, players, rng: { seed: 42, counter: 0 } });
+
+    // Preview: computed without RNG (average of min-max range)
+    const preview = calculateCombatPreview(state, 'a1', 'd1');
+    expect(preview.canAttack).toBe(true);
+
+    // Live combat: uses seeded RNG modifier
+    const nextState = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const defender = nextState.units.get('d1');
+    expect(defender).toBeDefined();
+    const actualDamage = 100 - defender!.health;
+
+    // Preview expected vs actual: assert within ±10% (random modifier is 0.75-1.25; average is 1.0)
+    const tolerance = 0.10;
+    const ratio = actualDamage / preview.expectedDamageToDefender;
+    expect(ratio).toBeGreaterThanOrEqual(1 - tolerance);
+    expect(ratio).toBeLessThanOrEqual(1 + tolerance);
   });
 });
