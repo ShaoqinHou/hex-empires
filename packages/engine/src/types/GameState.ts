@@ -197,6 +197,14 @@ export interface CityState {
   readonly isUrban?: boolean;
 
   /**
+   * X1.1 (settlements): True when this city has been downgraded to a town on
+   * age transition. Redundant with settlementType === town but provided as
+   * a convenient boolean flag for systems that only need to check town status.
+   * Optional so existing CityState construction keeps compiling unchanged.
+   */
+  readonly isTown?: boolean;
+
+  /**
    * F-08: The religion currently dominant in this city (set by SPREAD_RELIGION).
    * Null / undefined when the city has no majority religion.
    * Optional so existing CityState construction keeps compiling unchanged.
