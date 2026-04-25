@@ -78,13 +78,13 @@ function typeBadgeStyle(type: ResourceType): { color: string; backgroundColor: s
       // City resources (happiness / yield) — formerly called 'luxury'
       return {
         color: 'var(--hud-tooltip-heading-strong)',
-        backgroundColor: 'rgba(251, 191, 36, 0.15)',
+        backgroundColor: 'var(--hud-resource-type-city-bg)',
       };
     case 'empire':
       // Empire resources (combat mods) — formerly called 'strategic'
       return {
         color: 'var(--hud-tooltip-improvement)',
-        backgroundColor: 'rgba(147, 197, 253, 0.12)',
+        backgroundColor: 'var(--hud-resource-type-empire-bg)',
       };
     case 'bonus':
     case 'treasureFleet':
@@ -92,7 +92,7 @@ function typeBadgeStyle(type: ResourceType): { color: string; backgroundColor: s
     default:
       return {
         color: 'var(--hud-tooltip-own-civilian)',
-        backgroundColor: 'rgba(187, 247, 208, 0.10)',
+        backgroundColor: 'var(--hud-resource-type-bonus-bg)',
       };
   }
 }

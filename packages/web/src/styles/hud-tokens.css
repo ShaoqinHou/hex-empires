@@ -131,4 +131,10 @@
   --hud-resource-luxury:    #ffd54f;   /* warm gold */
   --hud-resource-strategic: #9e9e9e;   /* neutral grey */
   --hud-resource-bonus:     #66bb6a;   /* soft green */
+
+  /* ─── AA4 chrome-trap sweep — ResourceTooltip type-badge backgrounds ────────
+   * Replaces 3 raw rgba() literals in typeBadgeStyle(). */
+  --hud-resource-type-city-bg:   rgba(251, 191, 36, 0.15);   /* gold tint for city resources */
+  --hud-resource-type-empire-bg: rgba(147, 197, 253, 0.12);  /* blue tint for empire resources */
+  --hud-resource-type-bonus-bg:  rgba(187, 247, 208, 0.10);  /* green tint for bonus/other resources */
 }

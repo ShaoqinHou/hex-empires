@@ -86,7 +86,7 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
 
       {/* Warnings */}
       {(summary.starvingCities.length > 0 || summary.unhappyCities > 0 || summary.goldPerTurn < -5) && (
-        <div className="px-3 py-3 mb-3 -mx-1 rounded" style={{ borderBottom: '1px solid var(--panel-border)', backgroundColor: 'rgba(255, 100, 100, 0.1)' }}>
+        <div className="px-3 py-3 mb-3 -mx-1 rounded" style={{ borderBottom: '1px solid var(--panel-border)', backgroundColor: 'var(--panel-warning-bg)' }}>
           <h3 className="text-xs uppercase tracking-wide mb-2 font-bold" style={{ color: 'var(--color-health-low)' }}>
             ⚠️ Warnings
           </h3>

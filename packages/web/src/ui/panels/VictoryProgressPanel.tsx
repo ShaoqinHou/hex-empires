@@ -71,7 +71,7 @@ export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
                 borderColor: vp.achieved ? 'var(--tech-state-researched)' : 'var(--panel-border)',
                 backgroundColor: vp.achieved
                   ? 'color-mix(in srgb, var(--tech-state-researched) 10%, transparent)'
-                  : 'rgba(255,255,255,0.03)',
+                  : 'var(--panel-surface-subtle)',
                 boxShadow: vp.achieved
                   ? 'color-mix(in srgb, var(--tech-state-researched) 20%, transparent) 0 0 10px'
                   : undefined,
@@ -100,7 +100,7 @@ export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
               {/* Progress bar */}
               <div
                 className="w-full rounded-full h-3 mb-2"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+                style={{ backgroundColor: 'var(--panel-surface-track)' }}
               >
                 <div
                   className="h-3 rounded-full transition-all duration-500"
@@ -190,7 +190,7 @@ export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
       <div
         className="mt-6 p-4 rounded-lg"
         style={{
-          backgroundColor: 'rgba(255,255,255,0.03)',
+          backgroundColor: 'var(--panel-surface-subtle)',
           border: '1px solid var(--panel-border)',
         }}
       >
@@ -218,7 +218,7 @@ export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
           onClick={onClose}
           className="px-6 py-2 rounded-lg transition-colors"
           style={{
-            backgroundColor: 'rgba(255,255,255,0.06)',
+            backgroundColor: 'var(--panel-surface-muted)',
             color: 'var(--panel-text-color)',
             border: '1px solid var(--panel-border)',
           }}

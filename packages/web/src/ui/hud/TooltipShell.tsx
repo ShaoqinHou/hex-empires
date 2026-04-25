@@ -172,14 +172,14 @@ function resolveAnchor(
 // Tokenised chrome values with `--panel-*` fallbacks so the shell
 // renders correctly even if `hud-tokens.css` has not been imported by
 // the time the first TooltipShell mounts (cycle (a) lands in parallel).
-// If neither token resolves, the final value after the commas is a
-// literal CSS keyword/length the browser will accept — never a raw
-// hex colour.
-const SHELL_BG       = 'var(--hud-bg, var(--panel-bg, rgba(22, 27, 34, 0.96)))';
-const SHELL_BORDER   = 'var(--hud-border, var(--panel-border, rgba(100, 116, 139, 0.45)))';
+// AA4.6: rgba() last-resort fallbacks removed — --hud-* tokens are
+// defined in hud-tokens.css; redundant rgba literals violated the
+// chrome-raw-hex-regression trap.
+const SHELL_BG       = 'var(--hud-bg, var(--panel-bg))';
+const SHELL_BORDER   = 'var(--hud-border, var(--panel-border))';
 const SHELL_RADIUS   = 'var(--hud-radius, var(--panel-radius, 6px))';
-const SHELL_SHADOW   = 'var(--hud-shadow, var(--panel-shadow, 0 4px 14px rgba(0, 0, 0, 0.5)))';
-const SHELL_TEXT     = 'var(--hud-text-color, var(--panel-text-color, rgba(230, 237, 243, 0.95)))';
+const SHELL_SHADOW   = 'var(--hud-shadow, var(--panel-shadow))';
+const SHELL_TEXT     = 'var(--hud-text-color, var(--panel-text-color))';
 const SHELL_PAD_COMPACT  = 'var(--hud-padding-compact, var(--panel-padding-sm, 6px) var(--panel-padding-md, 10px))';
 const SHELL_PAD_DETAILED = 'var(--hud-padding-detailed, var(--panel-padding-md, 10px) var(--panel-padding-lg, 14px))';
 const SHELL_Z_INDEX  = 'var(--hud-z-floating, var(--panel-z-overlay, 110))';

@@ -53,9 +53,9 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
         style={
           ready
             ? {
-                background: 'linear-gradient(to right, rgba(120, 53, 15, 0.40), rgba(113, 63, 18, 0.40))',
+                background: 'var(--panel-age-ready-gradient-bg)',
                 borderColor: 'var(--panel-accent-gold-soft)',
-                boxShadow: '0 10px 15px -3px rgba(251, 191, 36, 0.20)',
+                boxShadow: 'var(--panel-age-ready-glow)',
               }
             : {
                 backgroundColor: 'var(--panel-muted-bg)',
@@ -92,7 +92,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                 ? 'linear-gradient(to right, var(--panel-accent-gold-soft), var(--panel-accent-gold-dark))'
                 : undefined,
               backgroundColor: !ready ? getAgeColor(player.age) : undefined,
-              boxShadow: ready ? '0 0 20px rgba(251, 191, 36, 0.6)' : 'none',
+              boxShadow: ready ? 'var(--panel-age-progress-glow)' : 'none',
             }}
           />
         </div>
@@ -104,7 +104,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
         <div
           className="mb-8 p-5 rounded-xl border"
           style={{
-            background: 'linear-gradient(to right, rgba(88, 28, 135, 0.20), rgba(49, 46, 129, 0.20))',
+            background: 'var(--panel-age-legacy-gradient-bg)',
             borderColor: 'var(--panel-accent-purple-glow)',
           }}
         >
@@ -137,7 +137,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
         <div
           className="mb-8 p-5 rounded-xl border"
           style={{
-            background: 'linear-gradient(to right, rgba(6, 78, 59, 0.20), rgba(6, 95, 70, 0.20))',
+            background: 'var(--panel-age-pending-gradient-bg)',
             borderColor: 'var(--panel-accent-gold-soft)',
           }}
         >
@@ -169,7 +169,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                       ? {
                           backgroundColor: 'var(--panel-muted-bg)',
                           borderColor: 'var(--panel-accent-gold-soft)',
-                          boxShadow: '0 0 8px rgba(251, 191, 36, 0.3)',
+                          boxShadow: 'var(--panel-age-selected-glow)',
                         }
                       : {
                           backgroundColor: 'var(--panel-muted-bg)',
@@ -263,7 +263,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                 style={
                   ready
                     ? {
-                        background: 'linear-gradient(to bottom right, rgba(30, 41, 59, 1), rgba(15, 23, 42, 1))',
+                        background: 'var(--panel-civ-card-gradient)',
                         borderColor: 'var(--panel-muted-strong)',
                       }
                     : {
@@ -339,7 +339,7 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
                 {/* Legacy bonus */}
                 <div
                   className="p-2 rounded border"
-                  style={{ backgroundColor: 'rgba(88, 28, 135, 0.20)', borderColor: 'var(--panel-accent-purple-glow)' }}
+                  style={{ backgroundColor: 'var(--panel-legacy-bonus-bg)', borderColor: 'var(--panel-accent-purple-glow)' }}
                 >
                   <div className="text-[10px] mb-1" style={{ color: 'var(--panel-accent-purple)' }}>🏆 Legacy Bonus</div>
                   <div className="text-xs" style={{ color: 'var(--panel-text-color)' }}>{civ.legacyBonus.name}</div>

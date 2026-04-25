@@ -105,7 +105,7 @@ function getHeroSlotStyle(heroHeight?: number): CSSProperties {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(26, 21, 16, 0.60)',
+    backgroundColor: 'var(--drama-hero-bg)',
   };
 }
 

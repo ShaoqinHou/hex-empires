@@ -52,7 +52,7 @@ const TITLE_STYLE: React.CSSProperties = {
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
   color: 'var(--color-accent)',
-  textShadow: '0 0 48px rgba(212,148,58,0.45), 0 2px 4px rgba(0,0,0,0.8)',
+  textShadow: 'var(--panel-setup-title-shadow)',
   lineHeight: 1.1,
 };
 
@@ -113,13 +113,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
         backgroundColor: 'var(--color-bg)',
         color: 'var(--color-text)',
         /* Warm hex-pattern radial glow + subtle hex tessellation */
-        backgroundImage: [
-          'radial-gradient(ellipse 90% 60% at 50% -10%, rgba(212,148,58,0.12) 0%, transparent 60%)',
-          'radial-gradient(ellipse 60% 40% at 50% 110%, rgba(90,60,20,0.18) 0%, transparent 55%)',
-          /* horizontal faint hex lines */
-          'repeating-linear-gradient(60deg, transparent, transparent 28px, rgba(255,255,255,0.015) 28px, rgba(255,255,255,0.015) 29px)',
-          'repeating-linear-gradient(-60deg, transparent, transparent 28px, rgba(255,255,255,0.015) 28px, rgba(255,255,255,0.015) 29px)',
-        ].join(', '),
+        backgroundImage: 'var(--panel-setup-bg-image)',
       }}
     >
 
@@ -157,7 +151,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
             border: '1px solid var(--color-border)',
             borderRadius: '12px',
             overflow: 'hidden',
-            boxShadow: '0 4px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)',
+            boxShadow: 'var(--panel-setup-card-shadow)',
           }}
         >
 
@@ -269,7 +263,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                         borderRadius: '8px',
                         cursor: 'pointer',
                         border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                        backgroundColor: active ? 'rgba(212,148,58,0.12)' : 'var(--color-bg)',
+                        backgroundColor: active ? 'var(--panel-setup-active-bg)' : 'var(--color-bg)',
                         outline: 'none',
                         transition: 'border-color 0.12s',
                       }}
@@ -314,7 +308,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                         borderRadius: '8px',
                         cursor: 'pointer',
                         border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                        backgroundColor: active ? 'rgba(212,148,58,0.12)' : 'var(--color-bg)',
+                        backgroundColor: active ? 'var(--panel-setup-active-bg)' : 'var(--color-bg)',
                         outline: 'none',
                         transition: 'border-color 0.12s',
                       }}
@@ -370,7 +364,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                     minWidth: '260px',
                     padding: '14px 32px',
                     borderRadius: '10px',
-                    border: '2px solid rgba(255,255,255,0.2)',
+                    border: 'var(--panel-setup-resume-border)',
                     background: 'linear-gradient(135deg, var(--panel-setup-resume-from) 0%, var(--panel-setup-resume-to) 100%)',
                     color: 'var(--panel-text-bright)',
                     fontWeight: 800,
@@ -378,7 +372,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 20px rgba(34,197,94,0.35)',
+                    boxShadow: 'var(--panel-setup-resume-shadow)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -414,7 +408,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                     outline: 'none',
                     transition: 'background-color 0.12s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(212,148,58,0.1)')}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--panel-setup-hover-bg)')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   New Game (overwrites save)
@@ -428,7 +422,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                   minWidth: '260px',
                   padding: '16px 40px',
                   borderRadius: '10px',
-                  border: '2px solid rgba(212,148,58,0.4)',
+                  border: 'var(--panel-setup-start-border)',
                   background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--panel-setup-start-to) 100%)',
                   color: 'var(--color-bg)',
                   fontFamily: 'var(--type-heading-family, Cinzel, Georgia, serif)',
@@ -437,7 +431,7 @@ export function SetupScreen({ onStart, onLoadGame }: SetupScreenProps) {
                   letterSpacing: '0.15em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 24px rgba(212,148,58,0.4)',
+                  boxShadow: 'var(--panel-setup-start-shadow)',
                   outline: 'none',
                   transition: 'filter 0.1s',
                 }}
@@ -557,8 +551,8 @@ function LeaderCard({
       style={{
         ...cardBase,
         borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-        backgroundColor: selected ? 'rgba(212,148,58,0.08)' : 'var(--color-bg)',
-        boxShadow: selected ? '0 0 0 1px var(--color-accent), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        backgroundColor: selected ? 'var(--panel-setup-selected-bg)' : 'var(--color-bg)',
+        boxShadow: selected ? 'var(--panel-setup-selected-shadow)' : 'none',
       }}
     >
       {/* Avatar circle */}
@@ -576,7 +570,7 @@ function LeaderCard({
           fontFamily: 'var(--type-heading-family, Cinzel, Georgia, serif)',
           backgroundColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
           color: selected ? 'var(--color-bg)' : 'var(--color-text-muted)',
-          border: selected ? '2px solid rgba(255,255,255,0.3)' : '1.5px solid transparent',
+          border: selected ? 'var(--panel-setup-avatar-border)' : '1.5px solid transparent',
         }}
       >
         {leader.name.charAt(0)}

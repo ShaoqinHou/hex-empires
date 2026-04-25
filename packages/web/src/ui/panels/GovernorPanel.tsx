@@ -157,7 +157,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
             <span className="text-xs">📍 {assignedCityName}</span>
             <button onClick={onUnassign}
               className="text-xs px-2 py-0.5 rounded cursor-pointer"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--panel-accent-danger)' }}>
+              style={{ backgroundColor: 'var(--panel-gov-recall-bg)', color: 'var(--panel-accent-danger)' }}>
               Recall
             </button>
           </>
@@ -198,7 +198,7 @@ function GovernorCard({ governor, def, cities, onAssign, onUnassign, onPromote, 
               <button
                 onClick={() => onPromote(a.id)}
                 className="text-xs px-2 py-0.5 rounded cursor-pointer"
-                style={{ backgroundColor: 'rgba(251, 191, 36, 0.2)', color: 'var(--panel-accent-gold-soft)' }}>
+                style={{ backgroundColor: 'var(--panel-gov-unlock-bg)', color: 'var(--panel-accent-gold-soft)' }}>
                 Unlock
               </button>
             </div>
