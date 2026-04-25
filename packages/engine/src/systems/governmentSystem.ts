@@ -311,13 +311,15 @@ function applyPickCelebrationBonus(
 
   const duration = CELEBRATION_DURATION['standard'] ?? 10;
 
+  // BB1.5 (S10): cap celebrationCount at 7 — threshold effects stop after the 7th celebration
+  const MAX_CELEBRATION_COUNT = 7;
   const updated: PlayerState = {
     ...player,
     activeCelebrationBonus: bonusId,
     celebrationTurnsLeft: duration,
     // celebrationBonus (old percent field) — keep backward compat but also set to 10
     celebrationBonus: 10,
-    celebrationCount: player.celebrationCount + 1,
+    celebrationCount: Math.min(MAX_CELEBRATION_COUNT, player.celebrationCount + 1),
     // F-04: increment social policy slots
     socialPolicySlots: (player.socialPolicySlots ?? 0) + 1,
     // Clear the pending prompt

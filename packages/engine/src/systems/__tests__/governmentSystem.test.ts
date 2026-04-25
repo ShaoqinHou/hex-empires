@@ -734,4 +734,39 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
     const updatedB = nextB.players.get('p1')!;
     expect((updatedB as typeof updatedB & { activeCelebrationBonus: string }).activeCelebrationBonus).toBe('classical-rep-wonder');
   });
+
+  it('BB1.5: celebrationCount is capped at 7 — 10 celebrations still shows 7', () => {
+    // Simulate a player who has already celebrated 6 times and is now celebrating again
+    // (the 7th celebration brings them to 7; attempting an 8th should remain at 7)
+    function celebrateOnce(celebrationCount: number): number {
+      const player = {
+        ...createTestPlayer({ id: 'p1', celebrationCount }),
+        governmentId: 'classical_republic',
+        slottedPolicies: [],
+        pendingCelebrationChoice: { governmentId: 'classical_republic' },
+        celebrationBonus: 0,
+        celebrationTurnsLeft: 0,
+        socialPolicySlots: 0,
+      } as ReturnType<typeof createTestPlayer> & {
+        governmentId: string;
+        slottedPolicies: unknown[];
+        pendingCelebrationChoice: { governmentId: string };
+        socialPolicySlots: number;
+      };
+      const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+      const next = governmentSystem(state, {
+        type: 'PICK_CELEBRATION_BONUS',
+        playerId: 'p1',
+        bonusId: 'classical-rep-culture',
+      });
+      return next.players.get('p1')!.celebrationCount;
+    }
+
+    // celebrations 1–7 increment normally
+    expect(celebrateOnce(0)).toBe(1);
+    expect(celebrateOnce(6)).toBe(7);
+    // at or above cap — stays at 7
+    expect(celebrateOnce(7)).toBe(7);
+    expect(celebrateOnce(9)).toBe(7);
+  });
 });
