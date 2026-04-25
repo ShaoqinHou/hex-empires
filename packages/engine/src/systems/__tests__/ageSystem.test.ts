@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ageSystem } from '../ageSystem';
+import { scoreLegacyPaths } from '../../state/LegacyPaths';
 import { createTestState, createTestPlayer, createTestCity } from './helpers';
 
 describe('ageSystem', () => {
@@ -1061,6 +1062,68 @@ describe('F-14: mastered techs and civics persist across age transitions', () =>
   });
 });
 
+
+// ── X5.3: Legacy path reconciliation (dual-schema unification) ──
+// Verifies that checkLegacyMilestones() in ageSystem uses scoreLegacyPaths()
+// as its single source of truth (the reconciliation is already done; these tests
+// document and guard the behaviour).
+describe('X5.3 — legacy path reconciliation: ageSystem mirrors scoreLegacyPaths', () => {
+  it('X5.3 legacy milestone: ageSystem END_TURN legacyPaths matches scoreLegacyPaths result', () => {
+    // Player has 4 techs → antiquity_science_t1 passes (scienceLegacyScore >= 4)
+    // scoreLegacyPaths should return tiersCompleted=1 for antiquity/science path.
+    // ageSystem END_TURN (checkLegacyMilestones) must agree.
+    const player = createTestPlayer({
+      id: 'p1',
+      researchedTechs: ['pottery', 'mining', 'animal_husbandry', 'irrigation'],
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+
+    // scoreLegacyPaths is the authoritative predicate-based scorer
+    const pathResults = scoreLegacyPaths('p1', state);
+    const antiquitySciencePath = pathResults.find(p => p.axis === 'science' && p.age === 'antiquity');
+    // 4 techs → scienceLegacyScore = 4 → tier 1 should be satisfied
+    expect(antiquitySciencePath?.tiersCompleted).toBeGreaterThanOrEqual(1);
+
+    // ageSystem END_TURN calls checkLegacyMilestones which calls scoreLegacyPaths
+    const next = ageSystem(state, { type: 'END_TURN' });
+    const updatedPlayer = next.players.get('p1')!;
+    // legacyPaths.science should reflect the tier completed (1 or more)
+    expect(updatedPlayer.legacyPaths.science).toBeGreaterThanOrEqual(antiquitySciencePath?.tiersCompleted ?? 0);
+    // legacyPoints must be positive (at least one tier gained)
+    expect(updatedPlayer.legacyPoints).toBeGreaterThan(0);
+  });
+
+  it('X5.3 TRANSITION_AGE correctly carries legacyPaths into totalCareerLegacyPoints', () => {
+    // A player who has earned 3 legacy points in antiquity should see
+    // totalCareerLegacyPoints preserved (not reset) after TRANSITION_AGE.
+    const player = createTestPlayer({
+      id: 'p1',
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 0 },
+      legacyPoints: 3,
+      totalCareerLegacyPoints: 3,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const updated = next.players.get('p1')!;
+    // legacyPoints resets at transition
+    expect(updated.legacyPoints).toBe(0);
+    // totalCareerLegacyPoints retains the 3 earned this age
+    expect(updated.totalCareerLegacyPoints).toBe(3);
+    // Age transition does NOT alter legacy path tiers (bonuses persist)
+    expect(updated.legacyPaths.military).toBeGreaterThanOrEqual(1);
+  });
+});
 
 describe("X1.1: isTown flag",function(){it("non-capital gets isTown: true",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,legacyPaths:{military:1,economic:1,science:1,culture:1}});var c={id:"nc1",name:"Colony",owner:"p1",position:{q:5,r:0},population:7,food:0,productionQueue:[],productionProgress:0,buildings:[],territory:[],settlementType:"city",happiness:10,isCapital:false,defenseHP:100,specialization:null,specialists:0,districts:[]};var s=createTestState({players:new Map([["p1",p]]),cities:new Map([["nc1",c]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.cities.get("nc1").isTown).toBe(true);expect(n.cities.get("nc1").population).toBe(1);});it("capital stays city and isTown falsy",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,legacyPaths:{military:1,economic:1,science:1,culture:1}});var c={id:"cap",name:"Capital",owner:"p1",position:{q:0,r:0},population:5,food:0,productionQueue:[],productionProgress:0,buildings:[],territory:[],settlementType:"city",happiness:10,isCapital:true,defenseHP:100,specialization:null,specialists:0,districts:[]};var s=createTestState({players:new Map([["p1",p]]),cities:new Map([["cap",c]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.cities.get("cap").settlementType).toBe("city");expect(n.cities.get("cap").isTown).toBeFalsy();});it("population drops to 1",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,legacyPaths:{military:1,economic:1,science:1,culture:1}});var c={id:"nc2",name:"Town2",owner:"p1",position:{q:3,r:0},population:8,food:0,productionQueue:[],productionProgress:0,buildings:[],territory:[],settlementType:"city",happiness:10,isCapital:false,defenseHP:100,specialization:null,specialists:0,districts:[]};var s=createTestState({players:new Map([["p1",p]]),cities:new Map([["nc2",c]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});expect(n.cities.get("nc2").population).toBe(1);});});
 
