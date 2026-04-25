@@ -124,13 +124,16 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
       blocksTurn: defenderIsOwnUnit ? true : undefined,
     });
 
-    // Increment totalKills for the attacker's owner
+    // Increment totalKills and ideologyPoints for the attacker's owner
     if (newAttackerHealth > 0) {
       const attackerPlayer = state.players.get(attacker.owner);
       if (attackerPlayer) {
+        // Y1.1: award 1 ideologyPoint per kill if attacker has selected a Modern Ideology civic
+        const ideologyBonus = attackerPlayer.ideology != null ? 1 : 0;
         updatedPlayers.set(attackerPlayer.id, {
           ...attackerPlayer,
           totalKills: attackerPlayer.totalKills + 1,
+          ideologyPoints: (attackerPlayer.ideologyPoints ?? 0) + ideologyBonus,
         });
       }
     }
@@ -264,12 +267,12 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
   // First Strike bonus: +5 combat strength when attacking at full HP
   const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
-  // B1: River penalty applies to ATTACKER attacking from a river tile (rulebook §6.4: -2 CS flat)
-  // TODO (F-08): river-crossing penalty — if attacker crosses a river edge to attack,
-  // defender gets -5 CS per VII spec. Currently only attacker-side river tile penalty is
-  // implemented. The river-edge-crossing check requires comparing river arrays on both
-  // the attacker and defender tiles to detect an actual river boundary between them.
-  const riverPenalty = (isAttacking && attackerTile && attackerTile.river.length > 0) ? 2 : 0;
+  // Y5.2 (F-08): River-crossing penalty — if attacker crosses a river edge to attack,
+  // apply -25% multiplicative CS penalty (standard Civ river crossing rule).
+  // Checks the specific edge on the attacker's tile that faces the defender.
+  const crossingRiver = isAttacking && attackerTile && defenderPosition
+    ? isRiverEdgeBetween(attackerTile, unit.position, defenderPosition)
+    : false;
   // S6: War support CS penalty: -1 CS per negative war support point (cap at -10)
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
   // Civ/leader/legacy combat bonuses (MODIFY_COMBAT effects)
@@ -280,7 +283,11 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const resourceBonus = calculateResourceCombatBonus(state, unit.owner, category, defenderUnit);
   // Commander aura: +3 CS per friendly commander within 2 hexes (F-04 base + promotion stacks)
   const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
-  return effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus - riverPenalty - warSupportPenalty;
+  // Y5.3 (F-05): Adjacent friendly support units grant +2 CS (one bonus regardless of count)
+  const supportBonus = isAttacking ? calculateSupportAdjacencyBonus(unit, state) : 0;
+  const baseTotal = effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
+  // Apply river-crossing penalty as multiplicative -25%
+  return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
 }
 
 /**
@@ -431,7 +438,8 @@ function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord,
   }
   // F2: rulebook requires 2+ friendly flankers — a single flanker grants nothing.
   if (flankingCount < 2) return 0;
-  return Math.min(flankingCount * 2, 6);
+  // Y5.1: +3 CS per flanking ally, capped at +9 (max 3 effective flankers)
+  return Math.min(flankingCount * 3, 9);
 }
 
 /**
@@ -568,6 +576,7 @@ function handleAttackCity(
   const updatedUnits = new Map(state.units);
   const updatedCities = new Map(state.cities);
   const updatedPlayers = new Map(state.players);
+  const updatedRoutes = new Map(state.tradeRoutes);
   const logEntries = [...state.log];
 
   // Update attacker
@@ -612,6 +621,23 @@ function handleAttackCity(
       });
     }
 
+    // Y1.3: cancel all trade routes to the captured city (city ownership changed)
+    for (const [routeId, route] of state.tradeRoutes) {
+      if (route.to === city.id) {
+        updatedUnits.delete(route.caravanUnitId);
+        updatedRoutes.delete(routeId);
+      }
+    }
+
+    // Y1.1: capital city capture awards +5 ideologyPoints to attacker (if ideology civic researched)
+    const attackerPlayerForCapture = updatedPlayers.get(attacker.owner);
+    if (attackerPlayerForCapture && attackerPlayerForCapture.ideology != null && city.isCapital) {
+      updatedPlayers.set(attacker.owner, {
+        ...attackerPlayerForCapture,
+        ideologyPoints: (attackerPlayerForCapture.ideologyPoints ?? 0) + 5,
+      });
+    }
+
     // Critical for the city's previous owner (defender); just informational for the attacker
     const captureIsOwnLoss = previousOwner === state.currentPlayerId;
     logEntries.push({
@@ -643,6 +669,7 @@ function handleAttackCity(
     units: updatedUnits,
     cities: updatedCities,
     players: updatedPlayers,
+    tradeRoutes: updatedRoutes,
     log: logEntries,
     rng: currentRng,
     lastValidation: null,
@@ -844,6 +871,38 @@ function findRetreatHex(
     return hex;
   }
   return null;
+}
+
+/**
+ * Y5.2 (F-08): Checks whether there is a river on the edge between attacker and defender.
+ * HEX_DIRECTIONS: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE.
+ * Returns true if the attacker's tile has a river mark on the edge facing the defender.
+ */
+function isRiverEdgeBetween(
+  attackerTile: HexTile,
+  attackerPos: HexCoord,
+  defenderPos: HexCoord,
+): boolean {
+  const edgeIndex = hexDirectionIndex(attackerPos, defenderPos);
+  if (edgeIndex === -1) return false; // not adjacent — no edge river applies
+  return attackerTile.river.includes(edgeIndex);
+}
+
+/**
+ * Y5.3 (F-05): Returns +2 CS if any adjacent friendly unit has category 'support'.
+ * Only one bonus regardless of how many support units are adjacent.
+ */
+function calculateSupportAdjacencyBonus(attacker: UnitState, state: GameState): number {
+  const adjHexes = neighbors(attacker.position);
+  for (const [, u] of state.units) {
+    if (u.id === attacker.id) continue;
+    if (u.owner !== attacker.owner) continue;
+    const uDef = state.config.units.get(u.typeId);
+    if (uDef?.category !== 'support') continue;
+    const isAdj = adjHexes.some(n => n.q === u.position.q && n.r === u.position.r);
+    if (isAdj) return 2;
+  }
+  return 0;
 }
 
 /**

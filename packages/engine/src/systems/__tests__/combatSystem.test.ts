@@ -1049,4 +1049,46 @@ describe('combatSystem — commander aura', () => {
       expect(defFar.health).toBe(defBaseline.health);
     }
   });
+
+  // -- Y1.1: ideologyPoints from kills --
+
+  it('Y1.1: kill without ideology civic awards 0 ideologyPoints', () => {
+    // Attacker has NO ideology set -- defender at 1 HP so kill is guaranteed
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, movementLeft: 0, health: 1 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', ideology: null })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, currentPlayerId: 'p1' });
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Defender should be dead (1 HP + warrior attack)
+    expect(next.units.has('d1')).toBe(false);
+    // No ideology -> no ideologyPoints
+    expect(next.players.get('p1')!.ideologyPoints ?? 0).toBe(0);
+  });
+
+  it('Y1.1: kill after ideology civic researched awards +1 ideologyPoints', () => {
+    // Attacker has ideology set -- defender at 1 HP so kill is guaranteed
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, movementLeft: 0, health: 1 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', ideology: 'democracy' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, currentPlayerId: 'p1' });
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    // Defender should be dead
+    expect(next.units.has('d1')).toBe(false);
+    // ideology set -> +1 ideologyPoints
+    expect(next.players.get('p1')!.ideologyPoints).toBe(1);
+  });
 });
