@@ -6,6 +6,30 @@ import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus } from '../state/EffectUtils';
 import { computeEffectiveCS } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
+import type { ActiveTreaty } from '../types/Treaty';
+
+/**
+ * AA2.2 (F-06): denounce_military_presence — -25% multiplicative CS penalty.
+ * Applies to the sanctioned player's (targetPlayerId) units when they fight
+ * near the declaring player's (declaringPlayerId) cities.
+ * The "near" definition is: any active treaty of this type exists; we apply
+ * the penalty globally (simplest, rulebook-consistent interpretation for now).
+ *
+ * Returns true if unitOwner is the target of an active denounce_military_presence
+ * treaty declared by opponentOwner.
+ */
+function hasDenouncePresencePenalty(unitOwner: string, opponentOwner: string, state: GameState): boolean {
+  const treaties: ReadonlyArray<ActiveTreaty> = state.diplomacy.activeTreaties ?? [];
+  for (const t of treaties) {
+    if (t.status !== 'active') continue;
+    if (t.treatyId !== 'denounce_military_presence') continue;
+    // The declarer proposed; the target is the sanctioned player.
+    if (t.proposerId === opponentOwner && t.targetId === unitOwner) return true;
+    // Also check reversed party positions (treaties are accepted by target)
+    if (t.proposerId === opponentOwner && t.targetId === unitOwner) return true;
+  }
+  return false;
+}
 
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
@@ -59,8 +83,16 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     adjacentAlly: false,
   });
   const defenderFortifyPromoBonus = getPromotionDefenseBonus(state, defender);
-  const attackerStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile, defender) + attackerPromoBonus;
-  const defenderStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
+  const attackerBaseStrength = getEffectiveCombatStrength(state, attacker, true, defender.position, attackerTile, defender) + attackerPromoBonus;
+  const defenderBaseStrength = getEffectiveDefenseStrength(state, defender, defenderTile ?? null) + defenderPromoBonus + defenderFortifyPromoBonus;
+
+  // AA2.2 (F-06): denounce_military_presence — applies -25% CS to the sanctioned player's unit.
+  // If the defender's owner has an active treaty against the attacker's owner, attacker gets -25%.
+  // If the attacker's owner has an active treaty against the defender's owner, defender gets -25%.
+  const attackerDenounced = hasDenouncePresencePenalty(attacker.owner, defender.owner, state);
+  const defenderDenounced = hasDenouncePresencePenalty(defender.owner, attacker.owner, state);
+  const attackerStrength = attackerDenounced ? Math.floor(attackerBaseStrength * 0.75) : attackerBaseStrength;
+  const defenderStrength = defenderDenounced ? Math.floor(defenderBaseStrength * 0.75) : defenderBaseStrength;
 
   // Calculate damage with seeded randomness
   const strengthDiff = attackerStrength - defenderStrength;

@@ -1133,4 +1133,211 @@ describe("X1.3: civic reset",function(){it("currentCivic and civicProgress clear
 
 describe("X1.4: data-driven civ legacy bonus",function(){it("each of 5 civs returns legacyBonus from state.config",function(){var civIds=["rome","egypt","greece","persia","india"];for(var i=0;i<civIds.length;i++){var civId=civIds[i];var p=createTestPlayer({age:"antiquity",civilizationId:civId,ageProgress:50,legacyBonuses:[],legacyPaths:{military:1,economic:1,science:1,culture:1}});var s=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var n=ageSystem(s,{type:"TRANSITION_AGE",newCivId:"spain"});var pending=n.players.get("p1").pendingLegacyBonuses;expect(pending).toBeDefined();var civBonus=pending.find(function(b){return b.bonusId.includes(civId);});expect(civBonus).toBeDefined();var civDef=s.config.civilizations.get(civId);expect(civDef&&civDef.legacyBonus).toBeDefined();expect(civBonus.effect).toEqual(civDef.legacyBonus.effect);}});});
 
+describe('AA1.1: building obsolescence on age transition', () => {
+  it('ageless wonder (isAgeless: true) persists after age transition', () => {
+    // pyramids is an antiquity wonder with isAgeless: true
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      owner: 'p1',
+      isCapital: true,
+      buildings: ['pyramids'], // antiquity wonder, isAgeless: true
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // pyramids must still be in the city's buildings array
+    expect(next.cities.get('cap')!.buildings).toContain('pyramids');
+  });
+
+  it('non-ageless antiquity building is removed when transitioning to exploration', () => {
+    // granary is an antiquity building without isAgeless — should be removed
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      owner: 'p1',
+      isCapital: true,
+      buildings: ['granary', 'pyramids'], // granary obsoletes, pyramids stays
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // granary (antiquity, non-ageless) must be removed
+    expect(next.cities.get('cap')!.buildings).not.toContain('granary');
+    // pyramids (antiquity, isAgeless) must persist
+    expect(next.cities.get('cap')!.buildings).toContain('pyramids');
+  });
+});
+
 describe("X1.5: totalCareerLegacyPoints accumulation",function(){it("two transitions accumulate total (5+3=8)",function(){var p=createTestPlayer({age:"antiquity",civilizationId:"rome",ageProgress:50,legacyPoints:5,totalCareerLegacyPoints:5,legacyPaths:{military:1,economic:1,science:1,culture:1}});var s1=createTestState({players:new Map([["p1",p]]),age:{currentAge:"antiquity",ageThresholds:{exploration:50,modern:100}}});var a1=ageSystem(s1,{type:"TRANSITION_AGE",newCivId:"spain"});expect(a1.players.get("p1").legacyPoints).toBe(0);expect(a1.players.get("p1").totalCareerLegacyPoints).toBe(5);var m2=new Map(a1.players);m2.set("p1",Object.assign({},a1.players.get("p1"),{ageProgress:200,legacyPoints:3,totalCareerLegacyPoints:8,legacyPaths:{military:1,economic:1,science:1,culture:1}}));var s2=Object.assign({},a1,{players:m2,age:{currentAge:"exploration",ageThresholds:{exploration:0,modern:100}}});var a2=ageSystem(s2,{type:"TRANSITION_AGE",newCivId:"america"});expect(a2.players.get("p1").legacyPoints).toBe(0);expect(a2.players.get("p1").totalCareerLegacyPoints).toBe(8);});});
+
+// ── AA3.1: Production queue cleared on age transition ──
+describe('AA3.1: non-capital production queue cleared on age transition', () => {
+  it('clears the production queue of a non-capital city on age transition', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const nonCapital = createTestCity({
+      id: 'nc1',
+      name: 'Colony',
+      owner: 'p1',
+      position: { q: 5, r: 0 },
+      population: 5,
+      isCapital: false,
+      settlementType: 'city',
+      productionQueue: [{ type: 'unit' as const, id: 'warrior' }, { type: 'building' as const, id: 'granary' }],
+      productionProgress: 25,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['nc1', nonCapital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const city = next.cities.get('nc1')!;
+    expect(city.productionQueue).toEqual([]);
+    expect(city.productionProgress).toBe(0);
+    expect(city.isTown).toBe(true);
+  });
+
+  it('capital keeps its production queue on age transition', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      name: 'Rome',
+      owner: 'p1',
+      position: { q: 0, r: 0 },
+      population: 5,
+      isCapital: true,
+      settlementType: 'city',
+      productionQueue: [{ type: 'unit' as const, id: 'warrior' }],
+      productionProgress: 10,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const city = next.cities.get('cap')!;
+    // Capital keeps its queue
+    expect(city.productionQueue.length).toBe(1);
+    expect(city.settlementType).toBe('city');
+    expect(city.isTown).toBeFalsy();
+  });
+});
+
+// ── AA3.2: Global ageProgressMeter compression dynamic ──
+describe('AA3.2: global ageProgressMeter', () => {
+  it('per-player milestone gain pushes both ageProgress and ageProgressMeter', () => {
+    const player = createTestPlayer({
+      totalGoldEarned: 200, // hits economic tier 1
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      ageProgress: 5,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      // no ageProgressMeter set yet
+    });
+    const next = ageSystem(state, { type: 'END_TURN' });
+    // Per-player ageProgress: 5 + 1 (base) + 10 (1 milestone gain * 10) = 16
+    expect(next.players.get('p1')!.ageProgress).toBe(16);
+    // Global meter boosted by same 10 (milestone acceleration)
+    expect(next.ageProgressMeter).toBe(10);
+  });
+
+  it('cross-player milestone contributions accumulate in global meter', () => {
+    const p1 = createTestPlayer({
+      id: 'p1',
+      totalGoldEarned: 200, // hits economic tier 1
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      ageProgress: 5,
+    });
+    const p2 = createTestPlayer({
+      id: 'p2',
+      totalKills: 3, // hits military tier 1
+      legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
+      legacyPoints: 0,
+      ageProgress: 5,
+    });
+    // p1's turn first
+    const state1 = createTestState({
+      players: new Map([['p1', p1], ['p2', p2]]),
+      currentPlayerId: 'p1',
+    });
+    const after_p1 = ageSystem(state1, { type: 'END_TURN' });
+    expect(after_p1.ageProgressMeter).toBe(10); // p1 earned 1 milestone
+
+    // p2's turn
+    const state2 = { ...after_p1, currentPlayerId: 'p2' };
+    const after_p2 = ageSystem(state2, { type: 'END_TURN' });
+    // Both players' boosts accumulate: 10 + 10 = 20
+    expect(after_p2.ageProgressMeter).toBe(20);
+  });
+
+  it('global meter reaching threshold allows transition for a player below personal threshold', () => {
+    // p1 has low personal ageProgress but the global meter is >= threshold
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 10, // below threshold of 50
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+      ageProgressMeter: 50, // global meter at threshold
+    });
+    // Transition should succeed because globalReady=true even though personalReady=false
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    expect(next.players.get('p1')!.age).toBe('exploration');
+  });
+});
+
+// ── AA3.3: totalCareerLegacyPoints — score victory uses career total ──
+describe('AA3.3: score victory uses totalCareerLegacyPoints', () => {
+  it('totalCareerLegacyPoints never resets across age transitions', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPoints: 5,
+      totalCareerLegacyPoints: 5,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // legacyPoints resets; totalCareerLegacyPoints DOES NOT
+    expect(next.players.get('p1')!.legacyPoints).toBe(0);
+    expect(next.players.get('p1')!.totalCareerLegacyPoints).toBe(5);
+  });
+});

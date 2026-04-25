@@ -2,6 +2,7 @@ import type { GameState, GameAction, TradeRoute, PlayerState } from '../types/Ga
 import type { CityId, PlayerId } from '../types/Ids';
 import { distance } from '../hex/HexMath';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
+import type { ActiveTreaty } from '../types/Treaty';
 
 // ── Age-scaled constants ──
 
@@ -10,6 +11,29 @@ function goldRateForAge(age: 'antiquity' | 'exploration' | 'modern'): number {
   if (age === 'exploration') return 3;
   if (age === 'modern') return 4;
   return 2; // antiquity
+}
+
+/**
+ * AA2.2 (F-06): Gold multiplier from improve_trade_relations treaty.
+ * Active bilateral treaty between the route owner and destination city owner
+ * grants +50% gold yield on the destination side.
+ */
+const IMPROVE_TRADE_GOLD_MULTIPLIER = 1.5;
+
+/**
+ * AA2.2 (F-06): Returns true if playerA and playerB have an active treaty of
+ * the given treatyId.
+ */
+function hasActiveTreaty(playerA: string, playerB: string, treatyId: string, state: GameState): boolean {
+  const treaties: ReadonlyArray<ActiveTreaty> = state.diplomacy.activeTreaties ?? [];
+  for (const t of treaties) {
+    if (t.status !== 'active') continue;
+    if (t.treatyId !== treatyId) continue;
+    const involvesA = t.proposerId === playerA || t.targetId === playerA;
+    const involvesB = t.proposerId === playerB || t.targetId === playerB;
+    if (involvesA && involvesB) return true;
+  }
+  return false;
 }
 
 /** Maximum land-route distance by age (hexes) */
@@ -214,8 +238,12 @@ function handleEndTurn(state: GameState): GameState {
     const resourceSlots = targetCity.assignedResources
       ? targetCity.assignedResources.length
       : 0;
+    // AA2.2 (F-06): improve_trade_relations treaty adds +50% gold yield.
+    const tradeMultiplier = hasActiveTreaty(route.owner, targetCity.owner, 'improve_trade_relations', state)
+      ? IMPROVE_TRADE_GOLD_MULTIPLIER
+      : 1;
     // Guarantee at least 1 gold per turn even when no resources are slotted
-    const goldToDestination = Math.max(1, resourceSlots) * goldRate * seaMultiplier;
+    const goldToDestination = Math.round(Math.max(1, resourceSlots) * goldRate * seaMultiplier * tradeMultiplier);
     addGold(updatedPlayers, targetCity.owner, goldToDestination);
 
     // F-01 origin yield: +1 food per resource slot (at minimum 1) — replaces flat +2 placeholder

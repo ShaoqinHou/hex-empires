@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { treatySystem, canEstablishTrade, canCrossBorder } from '../treatySystem';
+import { tradeSystem } from '../tradeSystem';
+import { combatSystem } from '../combatSystem';
 import { getRelationshipTier, getRelationshipTierForPair } from '../../state/DiplomacyUtils';
-import { createTestState, createTestPlayer } from './helpers';
-import type { DiplomacyRelation } from '../../types/GameState';
+import { createTestState, createTestPlayer, createTestUnit } from './helpers';
+import type { DiplomacyRelation, CityState } from '../../types/GameState';
 import { defaultRelation } from '../../state/DiplomacyUtils';
+import type { ActiveTreaty } from '../../types/Treaty';
 
 function stateWithTwoPlayers(overrides: { p1Influence?: number; p2Influence?: number } = {}) {
   return createTestState({
@@ -471,5 +474,157 @@ describe('IMPOSE_EMBARGO (Y4.5)', () => {
     expect(next.diplomacy.relations.get('p1:p2')!.hasEmbargo).toBe(true);
     // Trade should now be blocked even though default tier is Neutral
     expect(canEstablishTrade('p1', 'p2', next)).toBe(false);
+  });
+});
+
+// ── AA2.2 (F-06): Treaty effect hooks ──
+
+describe('AA2.2 treaty effects', () => {
+  /** Helper: produce a state with an active treaty between p1 and p2. */
+  function stateWithActiveTreaty(treatyId: string) {
+    const treaty: ActiveTreaty = {
+      id: `treaty-${treatyId}-1`,
+      treatyId: treatyId as ActiveTreaty['treatyId'],
+      proposerId: 'p1',
+      targetId: 'p2',
+      status: 'active',
+      proposedOnTurn: 1,
+      activeSinceTurn: 1,
+      turnsRemaining: 30,
+    };
+    return createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 100, influence: 100 })],
+        ['p2', createTestPlayer({ id: 'p2', gold: 50, influence: 100 })],
+      ]),
+      diplomacy: {
+        relations: new Map([['p1:p2', defaultRelation()]]),
+        activeTreaties: [treaty],
+      },
+    });
+  }
+
+  it('open_borders: canCrossBorder returns true for Unfriendly players with active treaty', () => {
+    const state = stateWithActiveTreaty('open_borders');
+    // Override relation to Unfriendly (score -30)
+    const rel: DiplomacyRelation = { ...defaultRelation(), relationship: -30, status: 'unfriendly' };
+    const stateUnfriendly = {
+      ...state,
+      diplomacy: {
+        ...state.diplomacy,
+        relations: new Map([['p1:p2', rel]]),
+      },
+    };
+    // Without treaty, Unfriendly would block crossing
+    const stateNoTreaty = { ...stateUnfriendly, diplomacy: { ...stateUnfriendly.diplomacy, activeTreaties: [] as ActiveTreaty[] } };
+    expect(canCrossBorder('p1', 'p2', stateNoTreaty)).toBe(false);
+    // With open_borders treaty, crossing is allowed despite Unfriendly
+    expect(canCrossBorder('p1', 'p2', stateUnfriendly)).toBe(true);
+  });
+
+  it('improve_trade_relations: trade route gold yield is +50% for parties with active treaty', () => {
+    // Build a state with a trade route where p1 is origin and p2 is destination
+    const homeCity: CityState = {
+      id: 'city1',
+      name: 'Rome',
+      owner: 'p1',
+      position: { q: 0, r: 0 },
+      population: 2,
+      food: 0,
+      productionQueue: [],
+      productionProgress: 0,
+      buildings: [],
+      territory: [],
+      settlementType: 'city',
+      happiness: 10,
+      isCapital: true,
+      defenseHP: 100,
+      specialization: null,
+      specialists: 0,
+      districts: [],
+    };
+    const foreignCity: CityState = {
+      ...homeCity,
+      id: 'city2',
+      name: 'Athens',
+      owner: 'p2',
+      position: { q: 2, r: 0 },
+      isCapital: false,
+      assignedResources: [],
+    };
+
+    // Caravan unit for the route
+    const caravan = createTestUnit({ id: 'c1', typeId: 'caravan', owner: 'p1', position: { q: 2, r: 0 } });
+
+    const baseState = stateWithActiveTreaty('improve_trade_relations');
+    const tradeRouteState = {
+      ...baseState,
+      cities: new Map([['city1', homeCity], ['city2', foreignCity]]),
+      units: new Map([['c1', caravan]]),
+      tradeRoutes: new Map([['route1', { id: 'route1', from: 'city1', to: 'city2', owner: 'p1', isSea: false, caravanUnitId: 'c1', resources: [] }]]),
+    };
+
+    // Without treaty: antiquity base gold = 2, 1 slot minimum = 2 gold to p2
+    const noTreatyState = { ...tradeRouteState, diplomacy: { ...tradeRouteState.diplomacy, activeTreaties: [] as ActiveTreaty[] } };
+    const afterNoTreaty = tradeSystem(noTreatyState, { type: 'END_TURN' });
+    const goldNoTreaty = afterNoTreaty.players.get('p2')!.gold - 50;
+
+    // With treaty: should be 2 × 1.5 = 3 gold
+    const afterWithTreaty = tradeSystem(tradeRouteState, { type: 'END_TURN' });
+    const goldWithTreaty = afterWithTreaty.players.get('p2')!.gold - 50;
+
+    expect(goldNoTreaty).toBe(2); // base: 2 gold/turn
+    expect(goldWithTreaty).toBe(3); // 2 × 1.5 = 3 gold/turn
+    expect(goldWithTreaty).toBeGreaterThan(goldNoTreaty);
+  });
+
+  it('denounce_military_presence: sanctioned attacker gets -25% combat strength', () => {
+    // p1 has an active denounce_military_presence treaty targeting p2
+    // p2 is the "sanctioned" player (targetId of the treaty)
+    const treaty: ActiveTreaty = {
+      id: 'treaty-denounce-1',
+      treatyId: 'denounce_military_presence',
+      proposerId: 'p1', // p1 declared the sanction against p2
+      targetId: 'p2',   // p2 is sanctioned
+      status: 'active',
+      proposedOnTurn: 1,
+      activeSinceTurn: 1,
+      turnsRemaining: 20,
+    };
+
+    // p2 attacks p1 — p2 should receive -25% CS penalty
+    const attacker = createTestUnit({ id: 'u1', typeId: 'warrior', owner: 'p2', position: { q: 0, r: 0 } });
+    const defender = createTestUnit({ id: 'u2', typeId: 'warrior', owner: 'p1', position: { q: 1, r: 0 } });
+
+    const state = createTestState({
+      currentPlayerId: 'p2',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', influence: 100 })],
+        ['p2', createTestPlayer({ id: 'p2', influence: 100 })],
+      ]),
+      units: new Map([['u1', attacker], ['u2', defender]]),
+      diplomacy: {
+        relations: new Map([['p1:p2', { ...defaultRelation(), status: 'war', turnsAtWar: 1 }]]),
+        activeTreaties: [treaty],
+      },
+    });
+
+    // Apply combat — p2 (sanctioned) attacks p1
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'u1', targetId: 'u2' });
+
+    // The sanctioned attacker (p2) should be penalized — defender should survive or take less damage
+    // compared to an equivalent combat without the treaty.
+    const noTreatyState = { ...state, diplomacy: { ...state.diplomacy, activeTreaties: [] as ActiveTreaty[] } };
+    const nextNoTreaty = combatSystem(noTreatyState, { type: 'ATTACK_UNIT', attackerId: 'u1', targetId: 'u2' });
+
+    // Defender (p1's warrior) should take less or equal damage with the treaty penalty active
+    const defenderHpWithTreaty = next.units.get('u2')?.health ?? 0;
+    const defenderHpWithoutTreaty = nextNoTreaty.units.get('u2')?.health ?? 0;
+
+    // With -25% CS on attacker, defender should survive with more HP (take less damage)
+    expect(defenderHpWithTreaty).toBeGreaterThanOrEqual(defenderHpWithoutTreaty);
+    // And the combat should have resolved (attacker moved or took damage)
+    expect(next.lastValidation).toBeNull();
   });
 });

@@ -32,7 +32,14 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   if (!nextAge) return state; // already in modern age
 
   const threshold = state.age.ageThresholds[nextAge];
-  if (player.ageProgress < threshold) return state; // not ready
+  // AA3.2 (F-11): Transition is allowed when the player's personal ageProgress
+  // reaches threshold OR when the global ageProgressMeter reaches threshold
+  // (compression dynamic: a fast player's milestones unlock the age for all).
+  // Per-player check is the primary path; the global meter is the "compression"
+  // shortcut that lets slower players transition even before personal readiness.
+  const personalReady = player.ageProgress >= threshold;
+  const globalReady = (state.ageProgressMeter ?? 0) >= threshold;
+  if (!personalReady && !globalReady) return state; // not ready
 
   // F-03: unresolved crisis blocks transition
   if (player.crisisPhase && player.crisisPhase !== 'none' && player.crisisPhase !== 'resolved') {
@@ -261,6 +268,43 @@ function handleTransition(state: GameState, newCivId: string): GameState {
       foodReset = true;
     }
     if (foodReset) updatedCities = nextCities;
+  }
+
+  // AA1.1: Building obsolescence on age transition.
+  // For each city owned by the transitioning player, remove buildings whose
+  // defined age is older than the next age AND whose isAgeless flag is not true.
+  // Example: an antiquity-age granary is removed when transitioning to exploration.
+  // Wonders (isAgeless: true) and buildings without an age field are preserved.
+  {
+    const ageOrder: Record<string, number> = { antiquity: 0, exploration: 1, modern: 2 };
+    const nextAgeRank = ageOrder[nextAge] ?? 0;
+    const nextCities = new Map(updatedCities);
+    let buildingsRemoved = false;
+    for (const [cityId, city] of updatedCities) {
+      if (city.owner !== player.id) continue;
+      const keptBuildings = city.buildings.filter((bid) => {
+        const def = state.config.buildings.get(bid);
+        if (!def) return true; // unknown building: keep
+        if (def.isAgeless) return true; // wonders and ageless buildings always persist
+        const bAgeRank = ageOrder[def.age] ?? 0;
+        return bAgeRank >= nextAgeRank; // keep if same or newer age
+      });
+      if (keptBuildings.length !== city.buildings.length) {
+        nextCities.set(cityId, { ...city, buildings: keptBuildings });
+        buildingsRemoved = true;
+      }
+    }
+    if (buildingsRemoved) {
+      updatedCities = nextCities;
+      logEntries.push({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: 'Older-age buildings removed from cities on age transition.',
+        type: 'age' as const,
+        category: 'age' as const,
+        panelTarget: 'age' as const,
+      });
+    }
   }
 
   // W4-04 (F-08): state.commanders is intentionally NOT reset here.
