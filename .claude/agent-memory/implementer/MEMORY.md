@@ -6,4 +6,7 @@
 - [Prior session may have already committed brief work](feedback_prior_session_committed.md) — check git show HEAD --stat before implementing; a prior agent may have committed the same files
 - [Linter reverts Edit/Write tool changes mid-session](feedback_linter_reverts_edits.md) — verify edits with grep after applying; fall back to Python file writes immediately if reverted
 - [Pre-commit hook absorbs staged files](feedback_precommit_absorbs_staged.md) — staged files may end up in another agent's commit; check git diff HEAD to verify
+- [Pre-commit multi-absorption pattern](feedback_precommit_multi_absorption.md) — verify with `git diff --cached --name-only` before committing; unstage other agents' files; after commit, verify code is in HEAD regardless of exit code
 - [Parallel RNG interference between state machines](feedback_parallel_rng_interference.md) — gate new state machines to avoid extra RNG draws shifting existing tests
+- [Codex system pattern](project_codex_pattern.md) — ownedCodices=placement array; state.codices=global map (AA5.1); LegacyPaths checks codicesCount when present
+- [Unit typeId lookup before tests](feedback_unit_typeids.md) — 'builder' does not exist; civilian units are settler/merchant/caravan (antiquity), explorer/missionary (exploration); missionary is 'civilian' not 'religious'

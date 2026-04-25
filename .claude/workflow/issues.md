@@ -27,3 +27,4 @@
 - [2026-04-22T00:27:17Z] [PRINCIPLE-GAP] F-f9e71910 on f1fda8b: Per-age opt-in boolean (darkAgeOptIn) not cleared in TRANSITION_AGE handler; engine-patterns.md age-transition section covers legacy bonuses and leader but does not enumerate all per-age flags that must reset
 - [2026-04-25T07:50:00Z] [PRINCIPLE-GAP] F-ae0783d9 on fdd92fc: river+coastal adjacency stacking on navigable_river terrain is untested and undocumented — unclear if intentional double-counting
 - [2026-04-25T21:00:00+12:00] [WARN-OPEN] F-40518187 on df73344: air_general missing from KNOWN_COMMANDER_IDS hardcoded fallback (commanderPromotionSystem.ts:78) — isCommander(unit) without state returns false for air_general
+- [2026-04-25T11:20Z] [PRINCIPLE-GAP] F-d71afbaa on d7c5b66: log message claims action occurred when a guard may have skipped it (defensive-guard / log-message desync)

@@ -718,4 +718,34 @@ describe('religionSystem', () => {
       expect(next.players.get('p1')!.faith).toBe(startingFaith);
     });
   });
+
+  // ── AA5.3: player.faith field is NOT dead (R7 / Y5.4 finding) ──────────────
+  describe('AA5.3: player.faith is alive — used for ADOPT_PANTHEON, not deducted by FOUND_RELIGION', () => {
+    it('FOUND_RELIGION succeeds with faith=0 (no faith cost per F-04)', () => {
+      // AA5.3 confirmed player.faith remains active: ADOPT_PANTHEON deducts it.
+      // FOUND_RELIGION does NOT deduct faith (Y5.4/F-04).
+      // This test is the required pure verification that founding works
+      // regardless of faith balance.
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: 0, researchedCivics: ['piety'] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const action: ReligionAction = {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Buddhism',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      };
+      const next = religionSystem(state, action);
+      // Religion founding must succeed even with faith=0
+      expect(next.religion?.religions.length).toBe(1);
+      // Faith stays at 0 — no deduction occurred
+      expect(next.players.get('p1')!.faith).toBe(0);
+    });
+  });
 });
