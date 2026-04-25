@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import type { ResourceDef } from '@hex/engine';
 import { TooltipContent, type TooltipSection } from '../Tooltip';
@@ -8,19 +7,22 @@ interface ResourceTooltipProps {
 }
 
 /**
- * Tooltip for resources showing type, bonus yields, and strategic value.
+ * Tooltip for resources showing type, bonus yields, and Civ VII value.
+ * Civ VII taxonomy: bonus | city | empire | treasureFleet | factory
  */
 export function ResourceTooltip({ resource }: ResourceTooltipProps) {
   const sections: TooltipSection[] = [];
 
-  // Resource type
+  // Resource type — Civ VII vocabulary
   const typeLabels: Record<string, { label: string; color: string }> = {
-    'luxury': { label: 'Luxury Resource', color: 'var(--color-gold)' },
-    'strategic': { label: 'Strategic Resource', color: 'var(--color-production)' },
-    'bonus': { label: 'Bonus Resource', color: 'var(--color-food)' },
+    'city':         { label: 'City Resource',         color: 'var(--color-gold)' },
+    'empire':       { label: 'Empire Resource',       color: 'var(--color-production)' },
+    'bonus':        { label: 'Bonus Resource',        color: 'var(--color-food)' },
+    'treasureFleet':{ label: 'Treasure Fleet Resource', color: 'var(--color-gold)' },
+    'factory':      { label: 'Factory Resource',      color: 'var(--color-production)' },
   };
 
-  const typeInfo = typeLabels[resource.type] || { label: resource.type, color: 'var(--color-text-muted)' };
+  const typeInfo = typeLabels[resource.type] ?? { label: resource.type, color: 'var(--color-text-muted)' };
 
   sections.push({
     title: 'Type',
@@ -34,7 +36,7 @@ export function ResourceTooltip({ resource }: ResourceTooltipProps) {
   });
 
   // Yields
-  const yieldItems = [];
+  const yieldItems: { label: string; value: string; color?: string }[] = [];
   if (resource.yieldBonus.food) {
     yieldItems.push({ label: 'Food', value: `+${resource.yieldBonus.food}`, color: 'var(--color-food)' });
   }
@@ -61,58 +63,73 @@ export function ResourceTooltip({ resource }: ResourceTooltipProps) {
     });
   }
 
-  // Special effects by resource type
-  if (resource.type === 'luxury' && resource.happinessBonus > 0) {
+  // Special effects by Civ VII resource type
+  if (resource.type === 'city' && resource.happinessBonus > 0) {
     sections.push({
-      title: 'Luxury Benefits',
+      title: 'City Benefits',
       items: [
         {
           label: 'Happiness',
-          value: `+${resource.happinessBonus} per copy`,
+          value: `+${resource.happinessBonus} per assignment`,
           color: 'var(--color-culture)',
-        },
-        {
-          label: 'Amenity',
-          value: 'Provides +1 amenity to 4 cities',
-          color: 'var(--color-text-muted)',
         },
       ],
     });
   }
 
-  if (resource.type === 'strategic') {
+  if (resource.type === 'empire') {
     sections.push({
-      title: 'Strategic Value',
+      title: 'Empire Bonus',
       items: [
         {
-          label: 'Required for',
-          value: 'Advanced military units',
+          label: 'Effect',
+          value: 'Empire-wide bonus once owned',
           color: 'var(--color-production)',
         },
         {
-          label: 'Usage',
-          value: 'Consumed when unit is built',
+          label: 'Note',
+          value: 'No hard production gate (Civ VII design)',
           color: 'var(--color-text-muted)',
         },
       ],
     });
   }
 
-  // Buildable info
-  sections.push({
-    title: 'Improvement',
-    items: [
-      {
-        label: 'Required improvement',
-        value: resource.improvement || 'None',
-      },
-      {
-        label: 'Builder action',
-        value: 'Charges: 1-3 depending on tech',
-        color: 'var(--color-text-muted)',
-      },
-    ],
-  });
+  if (resource.type === 'treasureFleet') {
+    sections.push({
+      title: 'Treasure Fleet',
+      items: [
+        {
+          label: 'Age',
+          value: 'Exploration Age',
+          color: 'var(--color-gold)',
+        },
+        {
+          label: 'Effect',
+          value: 'Triggers Treasure Fleet gold generation',
+          color: 'var(--color-text-muted)',
+        },
+      ],
+    });
+  }
+
+  if (resource.type === 'factory') {
+    sections.push({
+      title: 'Factory Slot',
+      items: [
+        {
+          label: 'Age',
+          value: 'Modern Age',
+          color: 'var(--color-production)',
+        },
+        {
+          label: 'Effect',
+          value: 'Powers Factory Town specialization',
+          color: 'var(--color-text-muted)',
+        },
+      ],
+    });
+  }
 
   return (
     <TooltipContent

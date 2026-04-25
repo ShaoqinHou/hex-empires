@@ -440,13 +440,17 @@ export class HexRenderer {
     }
   }
 
-  /** Ring color for resource badge by type. Uses warm-palette token colors. */
+  /** Ring color for resource badge by type. Uses warm-palette token colors.
+   * Civ VII taxonomy: bonus | city | empire | treasureFleet | factory
+   */
   private _resourceRingColor(type: string): string {
     switch (type) {
-      case 'luxury':   return getPaletteColor('--color-gold')         || '#fbbf24';
-      case 'strategic':return getPaletteColor('--color-text-muted')   || '#a89070';
-      case 'bonus':    return getPaletteColor('--color-success')      || '#4a8c5a';
-      default:         return getPaletteColor('--color-border-accent') || '#7a6030';
+      case 'city':         return getPaletteColor('--color-gold')         || '#fbbf24';
+      case 'empire':       return getPaletteColor('--color-text-muted')   || '#a89070';
+      case 'bonus':        return getPaletteColor('--color-success')      || '#4a8c5a';
+      case 'treasureFleet':return getPaletteColor('--color-gold')         || '#fbbf24';
+      case 'factory':      return getPaletteColor('--color-production')   || '#c0703a';
+      default:             return getPaletteColor('--color-border-accent') || '#7a6030';
     }
   }
 
