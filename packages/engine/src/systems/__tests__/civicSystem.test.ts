@@ -139,6 +139,48 @@ describe('civicSystem', () => {
     expect(civicSystem(state, { type: 'START_TURN' })).toBe(state);
   });
 
+  describe('TRANSITION_AGE civic reset', () => {
+    it('clears civicProgress and currentCivic on TRANSITION_AGE', () => {
+      const player = createTestPlayer({
+        currentCivic: 'code_of_laws',
+        civicProgress: 15,
+        researchedCivics: ['craftsmanship'],
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const nextPlayer = next.players.get('p1')!;
+      expect(nextPlayer.currentCivic).toBeNull();
+      expect(nextPlayer.civicProgress).toBe(0);
+    });
+
+    it('preserves researchedCivics and masteredCivics across TRANSITION_AGE', () => {
+      const player = createTestPlayer({
+        currentCivic: 'code_of_laws',
+        civicProgress: 12,
+        researchedCivics: ['craftsmanship', 'early_empire'],
+        masteredCivics: ['craftsmanship'],
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const nextPlayer = next.players.get('p1')!;
+      expect(nextPlayer.researchedCivics).toContain('craftsmanship');
+      expect(nextPlayer.researchedCivics).toContain('early_empire');
+      expect(nextPlayer.masteredCivics).toContain('craftsmanship');
+    });
+
+    it('TRANSITION_AGE is a no-op when no civic research is in progress', () => {
+      const player = createTestPlayer({
+        currentCivic: null,
+        civicProgress: 0,
+        currentCivicMastery: null,
+        civicMasteryProgress: 0,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      expect(next).toBe(state);
+    });
+  });
+
   describe('S3: civic mastery', () => {
     it('SET_CIVIC_MASTERY begins mastery for a researched civic', () => {
       const player = createTestPlayer({ researchedCivics: ['code_of_laws'], masteredCivics: [] });

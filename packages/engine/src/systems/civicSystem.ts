@@ -14,6 +14,8 @@ export function civicSystem(state: GameState, action: GameAction): GameState {
       return handleSetCivicMastery(state, action.civicId);
     case 'END_TURN':
       return processCivicResearch(state);
+    case 'TRANSITION_AGE':
+      return clearCivicProgressOnTransition(state);
     default:
       return state;
   }
@@ -266,6 +268,43 @@ function processCivicMasteryResearch(state: GameState): GameState {
   updatedPlayers.set(player.id, {
     ...player,
     civicMasteryProgress: newProgress,
+  });
+
+  return { ...state, players: updatedPlayers };
+}
+
+/**
+ * On TRANSITION_AGE: reset in-progress civic research and mastery for the
+ * transitioning player. Completed civics (researchedCivics) and mastered
+ * civics (masteredCivics) are permanent records that persist across ages.
+ *
+ * Note: ageSystem also resets these fields in its TRANSITION_AGE handler.
+ * This handler exists as defense-in-depth — the same pattern as researchSystem
+ * clearing techProgressMap — so civicSystem is self-consistent and testable
+ * in isolation regardless of pipeline ordering.
+ */
+function clearCivicProgressOnTransition(state: GameState): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // Nothing to reset if no civic research or mastery is in progress
+  const hasProgress = player.currentCivic !== null
+    || player.civicProgress > 0
+    || player.currentCivicMastery !== null
+    || player.civicMasteryProgress > 0;
+  if (!hasProgress) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, {
+    ...player,
+    // Reset in-progress civic research
+    currentCivic: null,
+    civicProgress: 0,
+    // Reset in-progress civic mastery
+    currentCivicMastery: null,
+    civicMasteryProgress: 0,
+    // researchedCivics and masteredCivics are NOT reset — they persist as a
+    // permanent historical record across ages (X1.3 / F-14).
   });
 
   return { ...state, players: updatedPlayers };
