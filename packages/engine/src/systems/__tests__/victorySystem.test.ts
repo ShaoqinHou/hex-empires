@@ -156,14 +156,16 @@ describe('victorySystem', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('detects economic victory with gold and totalGoldEarned (alliance gate removed — W2-08 F-01)', () => {
-    // The invented alliance >= 1 gate is removed; gold thresholds alone are sufficient.
+  it('gold alone does NOT trigger economic victory (X5.1: World Bank wonder + trade routes required)', () => {
+    // X5.1 rewrite: gold thresholds alone no longer achieve Economic victory.
+    // Victory requires the World Bank wonder + >= 3 trade routes to distinct rival civs.
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', gold: 500, totalGoldEarned: 1000 })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const cities = new Map([
-      ['c1', makeCity('c1', 'p2', { q: 5, r: 5 })], // p2 has city so domination doesn't trigger
+      ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })], // p1 has a city so domination doesn't trigger
+      ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })], // p2 has city so domination doesn't trigger
     ]);
     const state = createTestState({
       players,
@@ -172,8 +174,7 @@ describe('victorySystem', () => {
       age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = victorySystem(state, { type: 'END_TURN' });
-    expect(next.victory.winner).toBe('p1');
-    expect(next.victory.winType).toBe('economic');
+    expect(next.victory.winner).toBeNull();
   });
 
   it('does not trigger economic victory without enough gold', () => {
@@ -191,13 +192,13 @@ describe('victorySystem', () => {
   });
 
   // W5-01: Military victory now requires Operation Ivy project chain, NOT kills+cities scaffold
-  it('detects military victory when operation_ivy project is completed (W5-01)', () => {
+  it('detects military victory when operation_ivy project is completed + ideology civic (W5-01 X5.1)', () => {
     const cities = new Map([
       ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
       ['c2', makeCity('c2', 'p2', { q: 8, r: 8 })], // p2 has a city so domination doesn't trigger
     ]);
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'] })],
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], researchedCivics: ['democracy'] })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -232,7 +233,7 @@ describe('victorySystem', () => {
       ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
     ]);
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'] })],
+      ['p1', createTestPlayer({ id: 'p1', completedProjects: ['manhattan_project', 'operation_ivy'], researchedCivics: ['democracy'] })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
     const state = createTestState({ players, cities, currentPlayerId: 'p2', age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } } });
@@ -487,6 +488,109 @@ describe('victorySystem', () => {
       const next = victorySystem(state, { type: 'END_TURN' });
       expect(next.victory.winner).toBe('p1');
       expect(next.victory.tied).toBeFalsy();
+    });
+  });
+
+  // ── X5.1 Explicit Victory Condition Tests ──
+  describe('X5.1 victory condition rewrites', () => {
+    it('X5.1 Military: detects victory with operation_ivy + ideology civic (fascism)', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          completedProjects: ['manhattan_project', 'operation_ivy'],
+          researchedCivics: ['fascism'], // ideology civic satisfies the requirement
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 8, r: 8 })],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        currentPlayerId: 'p2',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.winType).toBe('military');
+    });
+
+    it('X5.1 Military: does NOT trigger without ideology civic even if operation_ivy completed', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          completedProjects: ['manhattan_project', 'operation_ivy'],
+          researchedCivics: ['agriculture', 'writing'], // no ideology civic
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const cities = new Map([
+        ['c1', makeCity('c1', 'p1', { q: 0, r: 0 })],
+        ['c2', makeCity('c2', 'p2', { q: 8, r: 8 })],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        currentPlayerId: 'p2',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.winner).toBeNull();
+    });
+
+    it('X5.1 Economic: detects victory with world_bank wonder + >=3 trade routes to rival civs', () => {
+      // Build state: p1 has world_bank wonder + 3 trade routes to p2, p3, p4 cities
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+        ['p3', createTestPlayer({ id: 'p3' })],
+        ['p4', createTestPlayer({ id: 'p4' })],
+      ]);
+      const cities = new Map([
+        ['c1', { ...makeCity('c1', 'p1', { q: 0, r: 0 }), buildings: ['world_bank'] }],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+        ['c3', makeCity('c3', 'p3', { q: 10, r: 0 })],
+        ['c4', makeCity('c4', 'p4', { q: 0, r: 10 })],
+      ]);
+      const tradeRoutes = new Map([
+        ['tr1', { id: 'tr1', from: 'c1', to: 'c2', owner: 'p1', resources: [], isSea: false, caravanUnitId: 'u1' }],
+        ['tr2', { id: 'tr2', from: 'c1', to: 'c3', owner: 'p1', resources: [], isSea: false, caravanUnitId: 'u2' }],
+        ['tr3', { id: 'tr3', from: 'c1', to: 'c4', owner: 'p1', resources: [], isSea: false, caravanUnitId: 'u3' }],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        tradeRoutes,
+        builtWonders: ['world_bank'],
+        currentPlayerId: 'p4',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.winType).toBe('economic');
+    });
+
+    it('X5.1 Cultural: detects victory with worlds_fair + 10 artifacts collected', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', artifactsCollected: 10 })],
+        ['p2', createTestPlayer({ id: 'p2', artifactsCollected: 1 })], // triggers GDD path
+      ]);
+      const cities = new Map([
+        ['c1', { ...makeCity('c1', 'p1', { q: 0, r: 0 }), buildings: ['worlds_fair'] }],
+        ['c2', makeCity('c2', 'p2', { q: 5, r: 5 })],
+      ]);
+      const state = createTestState({
+        players,
+        cities,
+        builtWonders: ['worlds_fair'],
+        currentPlayerId: 'p2',
+        age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = victorySystem(state, { type: 'END_TURN' });
+      expect(next.victory.winner).toBe('p1');
+      expect(next.victory.winType).toBe('culture');
     });
   });
 });

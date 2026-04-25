@@ -172,12 +172,13 @@ describe('projectsSystem', () => {
 // ── Integration tests: project → victory check ───────────────────────────────
 
 describe('projectsSystem + victorySystem integration', () => {
-  it('Military: manhattan → operation_ivy chain fires Military Victory (W5-01)', () => {
+  it('Military: manhattan → operation_ivy chain + ideology civic fires Military Victory (W5-01 X5.1)', () => {
     const players = new Map([
       ['p1', createTestPlayer({
         id: 'p1',
         researchedTechs: ['nuclear_fission'],
         ideologyPoints: 20,
+        researchedCivics: ['democracy'], // X5.1: ideology civic required for Military victory
       })],
       ['p2', createTestPlayer({ id: 'p2' })],
     ]);
@@ -236,7 +237,9 @@ describe('projectsSystem + victorySystem integration', () => {
     expect(next.victory.winType).toBe('science');
   });
 
-  it('Economic: worldBankOfficesRemaining === 0 fires Economic Victory (W5-01)', () => {
+  it('Economic: worldBankOfficesRemaining === 0 alone no longer fires Economic Victory (X5.1: wonder required)', () => {
+    // X5.1 rewrite: worldBankOfficesRemaining === 0 is now progress-only, not a victory trigger.
+    // Economic victory requires the World Bank wonder + >= 3 distinct-civ trade routes.
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', worldBankOfficesRemaining: 0 })],
       ['p2', createTestPlayer({ id: 'p2' })],
@@ -253,8 +256,7 @@ describe('projectsSystem + victorySystem integration', () => {
       currentPlayerId: 'p2',
     });
     const next = victorySystem(state, { type: 'END_TURN' });
-    expect(next.victory.winner).toBe('p1');
-    expect(next.victory.winType).toBe('economic');
+    expect(next.victory.winner).toBeNull(); // worldBankOffices alone no longer triggers victory
   });
 
   it('Economic does NOT fire when worldBankOfficesRemaining > 0', () => {

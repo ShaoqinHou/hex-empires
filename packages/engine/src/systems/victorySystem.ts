@@ -9,21 +9,34 @@ import { scoreLegacyPaths } from '../state/LegacyPaths';
 export const CULTURAL_VICTORY_RELIC_COUNT = 8;
 
 /**
+ * X5.1: Number of great-works artifacts required for the VII-correct Cultural victory.
+ * Brief F-01: player needs World's Fair wonder AND >= ARTIFACTS_FOR_CULTURAL_VICTORY artifacts.
+ */
+export const ARTIFACTS_FOR_CULTURAL_VICTORY = 10;
+
+/**
+ * X5.1: Modern ideology civics -- any one of these counts as "has ideology" for
+ * the Military (Operation Ivy) victory prerequisite.
+ */
+export const IDEOLOGY_CIVICS: ReadonlyArray<string> = ['fascism', 'communism', 'democracy'];
+
+/**
  * VictorySystem checks win conditions at the end of each turn.
  *
- * Victory types:
- * - Domination: eliminate all rival players (they lose all cities — units alone do not keep a player alive)
+ * Victory types (X5.1 VII-parity rewrite):
+ * - Domination: eliminate all rival players (they lose all cities -- units alone do not keep a player alive)
  * - Science: complete 3 Space Race projects (spaceMilestonesComplete >= 3) [W5-01]
  *   Scaffold fallback: all 10 modern techs researched (if no project data available)
- * - Culture: culture >= 300 + at least 5 civics researched [TODO(W5-02): Artifacts / World's Fair]
- * - Economic: World Bank offices in all rival capitals (worldBankOfficesRemaining === 0) [W5-01]
- *   Scaffold fallback: gold >= 500 + totalGoldEarned >= 1000 (if no project chain started)
- * - Military: complete Operation Ivy project (completedProjects.includes('operation_ivy')) [W5-01]
- *   Scaffold fallback: totalKills >= 20 + at least 5 cities (if Operation Ivy not completed)
+ * - Culture: World's Fair wonder built + >= ARTIFACTS_FOR_CULTURAL_VICTORY (10) artifacts collected [X5.1]
+ *   Scaffold fallback: culture >= 300 + at least 5 civics (if no artifact gameplay)
+ * - Economic: World Bank wonder built + trade routes to >= 3 distinct rival civs [X5.1]
+ *   Scaffold fallback: worldBankOfficesRemaining countdown (W5-01) then gold thresholds
+ * - Military: Operation Ivy completed (completedProjects.includes('operation_ivy'))
+ *             AND ideology civic researched (fascism | communism | democracy) [X5.1]
+ *   Progress: 0% no ideology, 33% ideology civic, 66% manhattan_project, 100% operation_ivy
  * - Score: highest score when Modern age progress reaches 100% (F-06) using legacy-based scoring
  *
- * Note: diplomacy victory type was removed (no GDD basis — W1-C / W2-08).
- * W5-02 (Culture/Artifacts/World's Fair) is a separate workpack.
+ * Note: diplomacy victory type was removed (no GDD basis -- W1-C / W2-08).
  */
 export function victorySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'END_TURN') return state;
@@ -39,7 +52,7 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
   const progress = new Map<string, ReadonlyArray<VictoryProgress>>();
 
   // M18: Recompute LegacyPath progress for every player. The scoring is
-  // pure and independent of victory detection — we always compute it on
+  // pure and independent of victory detection -- we always compute it on
   // a victory-check tick, even if a player wins this turn, so UI panels
   // always see a fresh snapshot. This is pure enrichment; the existing
   // seven-path victory detection below is unchanged.
@@ -107,8 +120,8 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
 function checkDomination(state: GameState, playerId: string): VictoryProgress {
   // Domination: must have at least one city AND all other players must have
   // lost all their cities (eliminated). A player stripped of all cities is
-  // eliminated even if stray units survive — units alone do not constitute
-  // a living empire (Civ VII rulebook §7.2 — W2-08).
+  // eliminated even if stray units survive -- units alone do not constitute
+  // a living empire (Civ VII rulebook §7.2 -- W2-08).
   const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
   const otherPlayersTotal = state.players.size - 1;
 
@@ -148,7 +161,7 @@ function checkScience(state: GameState, playerId: string): VictoryProgress {
   }
 
   // Scaffold fallback (no project chain started): research all modern techs (10 techs).
-  // The invented culture >= 100 gate has been removed (no GDD basis — W2-08 / F-04).
+  // The invented culture >= 100 gate has been removed (no GDD basis -- W2-08 / F-04).
   const modernTechs = [
     'industrialization', 'scientific_theory', 'rifling',
     'steam_power', 'electricity', 'replaceable_parts',
@@ -169,25 +182,26 @@ function checkCulture(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'culture', progress: 0, achieved: false };
 
-  // W5-02: GDD-parity cultural victory — 15 Artifacts via Explorer + World's Fair built.
+  // X5.1: GDD-parity cultural victory -- World's Fair wonder + >= 10 artifacts.
   // Activate GDD path when any player has collected at least 1 artifact (signals artifact
   // gameplay is live in this session).
   const anyArtifactCollected = [...state.players.values()].some(p => (p.artifactsCollected ?? 0) > 0);
 
   if (anyArtifactCollected) {
-    const ARTIFACTS_REQUIRED = 15;
+    // X5.1: Brief F-01 -- Cultural victory requires World's Fair wonder + >= 10 artifacts.
     const artifactsCollected = player.artifactsCollected ?? 0;
     const worldsFairOwnedByPlayer = worldsFairBuiltByPlayer(state, playerId);
     const relicCount = player.relics?.length ?? 0;
 
     // F-09: Relics contribute to cultural victory alongside artifacts.
-    // Progress: 50% from artifacts, 20% from relics, 30% from World's Fair
-    const artifactProgress = Math.min(1, artifactsCollected / ARTIFACTS_REQUIRED);
+    // Progress: 50% from artifacts (threshold = ARTIFACTS_FOR_CULTURAL_VICTORY),
+    //           20% from relics, 30% from World's Fair
+    const artifactProgress = Math.min(1, artifactsCollected / ARTIFACTS_FOR_CULTURAL_VICTORY);
     const relicProgress = Math.min(1, relicCount / CULTURAL_VICTORY_RELIC_COUNT);
     const wonderProgress = worldsFairOwnedByPlayer ? 1 : 0;
     const progress = artifactProgress * 0.5 + relicProgress * 0.2 + wonderProgress * 0.3;
 
-    const achieved = artifactsCollected >= ARTIFACTS_REQUIRED && worldsFairOwnedByPlayer && state.age.currentAge === 'modern';
+    const achieved = artifactsCollected >= ARTIFACTS_FOR_CULTURAL_VICTORY && worldsFairOwnedByPlayer && state.age.currentAge === 'modern';
     return { type: 'culture', progress, achieved };
   }
 
@@ -254,49 +268,92 @@ function checkEconomic(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'economic', progress: 0, achieved: false };
 
-  // W5-01: World Bank offices — all rival capitals visited.
-  // worldBankOfficesRemaining is null/undefined until the player starts the chain,
-  // then counts down to 0 (victory).
+  // X5.1 (World Bank): victory requires:
+  //   1. The player has built the 'world_bank' wonder in one of their cities.
+  //   2. The player has active trade routes to >= 3 distinct rival civilizations.
+  const hasWorldBankWonder = worldBankBuiltByPlayer(state, playerId);
+  const TRADE_ROUTES_REQUIRED = 3;
+  const tradeRouteCivCount = countDistinctTradeRouteCivs(state, playerId);
+
+  if (hasWorldBankWonder) {
+    const tradeProgress = Math.min(1, tradeRouteCivCount / TRADE_ROUTES_REQUIRED);
+    // Progress: 50% from wonder, 50% from trade routes
+    const progress = 0.5 + tradeProgress * 0.5;
+    return {
+      type: 'economic',
+      progress,
+      achieved: tradeRouteCivCount >= TRADE_ROUTES_REQUIRED && state.age.currentAge === 'modern',
+    };
+  }
+
+  // Scaffold / pre-wonder fallback: worldBankOfficesRemaining chain (W5-01) as a progress
+  // signal only -- it no longer achieves victory by itself (wonder required).
   const officesRemaining = player.worldBankOfficesRemaining;
   if (officesRemaining !== null && officesRemaining !== undefined) {
     const totalRivals = state.players.size - 1;
     const establishedCount = Math.max(0, totalRivals - officesRemaining);
-    const progress = totalRivals > 0 ? establishedCount / totalRivals : 0;
+    const progress = totalRivals > 0 ? (establishedCount / totalRivals) * 0.5 : 0;
     return {
       type: 'economic',
       progress,
-      achieved: officesRemaining === 0 && state.age.currentAge === 'modern',
+      achieved: false, // World Bank offices alone no longer achieve victory; need the wonder too
     };
   }
 
-  // Scaffold fallback (World Bank chain not yet started): gold thresholds.
-  // The invented alliance >= 1 gate has been removed (no GDD basis — W2-08 / F-01).
+  // Final fallback: gold thresholds (no GDD basis; preserved for progress display only).
   const goldReq = 500;
   const totalGoldReq = 1000;
-  const hasGold = player.gold >= goldReq;
-  const hasTotalGold = player.totalGoldEarned >= totalGoldReq;
-
-  // Progress: 50% gold, 50% total gold
   const goldProgress = Math.min(1, player.gold / goldReq);
   const totalGoldProgress = Math.min(1, player.totalGoldEarned / totalGoldReq);
-  const progress = goldProgress * 0.5 + totalGoldProgress * 0.5;
+  const progress = (goldProgress * 0.5 + totalGoldProgress * 0.5) * 0.5; // caps at 0.5 (wonder not built)
 
-  // Economic victory can only be achieved in the modern age
   return {
     type: 'economic',
     progress,
-    achieved: hasGold && hasTotalGold && state.age.currentAge === 'modern',
+    achieved: false, // victory requires World Bank wonder + 3 trade routes
   };
+}
+
+/**
+ * Returns true if the given player owns a city that has the World Bank wonder.
+ */
+function worldBankBuiltByPlayer(state: GameState, playerId: string): boolean {
+  if (!state.builtWonders.includes('world_bank')) return false;
+  for (const city of state.cities.values()) {
+    if (city.owner === playerId && city.buildings.includes('world_bank')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Counts how many distinct rival civilizations this player has active trade routes to.
+ * Each trade route's target city's owner that is not the current player counts as one civ
+ * (deduplicated so multiple routes to the same civ count once).
+ */
+function countDistinctTradeRouteCivs(state: GameState, playerId: string): number {
+  const civs = new Set<string>();
+  for (const route of state.tradeRoutes.values()) {
+    if (route.owner !== playerId) continue;
+    const targetCity = state.cities.get(route.to);
+    if (!targetCity) continue;
+    if (targetCity.owner === playerId) continue; // internal route
+    civs.add(targetCity.owner);
+  }
+  return civs.size;
 }
 
 function checkMilitary(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'military', progress: 0, achieved: false };
 
-  // W5-01: Operation Ivy terminal check — project chain victory.
-  // completedProjects.includes('operation_ivy') → Military Victory.
+  // X5.1 / W5-01: Operation Ivy terminal check -- project chain victory.
+  // completedProjects.includes('operation_ivy') AND ideology civic researched -> Military Victory.
   const completedProjects = player.completedProjects ?? [];
-  if (completedProjects.includes('operation_ivy')) {
+  const hasIdeologyCivic = IDEOLOGY_CIVICS.some(c => player.researchedCivics.includes(c));
+
+  if (completedProjects.includes('operation_ivy') && hasIdeologyCivic) {
     return {
       type: 'military',
       progress: 1,
@@ -304,35 +361,27 @@ function checkMilitary(state: GameState, playerId: string): VictoryProgress {
     };
   }
 
-  // Progress indicator for the project chain:
-  // Step 0 = 0 pts, step 1 (ideology >= 20) = 0.33, step 2 (manhattan complete) = 0.66, step 3 (ivy) = 1.0
-  const ideologyPts = player.ideologyPoints ?? 0;
-  const IDEOLOGY_THRESHOLD = 20;
+  // Progress indicator (3 steps):
+  //   0   = no ideology civic yet (0%)
+  //   0.33 = ideology civic researched
+  //   0.66 = manhattan_project completed
+  //   1.0  = operation_ivy completed (above)
+  // Also show Operation Ivy build progress from operationIvyProgress (0-100).
+  const ivyProgress = (player.operationIvyProgress ?? 0) / 100;
   let chainProgress = 0;
   if (completedProjects.includes('manhattan_project')) {
-    chainProgress = 0.66;
-  } else if (ideologyPts >= IDEOLOGY_THRESHOLD) {
+    // between 0.66 and 1.0 based on ivy build progress
+    chainProgress = 0.66 + ivyProgress * 0.34;
+  } else if (hasIdeologyCivic) {
     chainProgress = 0.33;
   } else {
-    chainProgress = Math.min(0.33, (ideologyPts / IDEOLOGY_THRESHOLD) * 0.33);
+    chainProgress = 0;
   }
-
-  // Scaffold fallback: if the project system has never been triggered,
-  // also show kills + cities progress as a baseline signal.
-  const killsReq = 20;
-  const citiesReq = 5;
-  const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
-  const killsProgress = Math.min(1, player.totalKills / killsReq);
-  const citiesProgress = Math.min(1, ownedCities / citiesReq);
-  const scaffoldProgress = killsProgress * 0.6 + citiesProgress * 0.4;
-
-  // Show whichever is higher so players see meaningful progress either way
-  const progress = Math.max(chainProgress, scaffoldProgress);
 
   // Military victory can only be achieved in the modern age via Operation Ivy
   return {
     type: 'military',
-    progress,
+    progress: chainProgress,
     achieved: false, // only achieved via completedProjects.includes('operation_ivy') above
   };
 }
@@ -343,14 +392,14 @@ function checkScore(state: GameState, playerId: string): VictoryProgress {
 
   // F-06: Score victory triggers when the Modern age progress reaches 100%.
   // Gate: currentAge === "modern" AND ageProgress >= modernThreshold.
-  // The old turn-gate (turn >= 300) has been removed — only age-progress matters.
+  // The old turn-gate (turn >= 300) has been removed -- only age-progress matters.
   // (The outer victorySystem already short-circuits when state.victory.winner is set.)
   const modernThreshold = state.age.ageThresholds?.modern ?? 100;
   const ageProgressRatio = player.ageProgress / modernThreshold;
   const progress = Math.min(1, ageProgressRatio);
 
   if (state.age.currentAge === 'modern' && ageProgressRatio >= 1.0) {
-    // Calculate scores — player with the highest score wins
+    // Calculate scores -- player with the highest score wins
     const score = calculateScore(state, playerId);
     let isHighest = true;
     for (const [pid] of state.players) {

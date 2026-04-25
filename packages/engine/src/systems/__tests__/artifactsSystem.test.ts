@@ -220,8 +220,8 @@ describe('victorySystem — cultural victory (W5-02 GDD path)', () => {
     expect(next.victory.winner).toBeNull();
   });
 
-  it('does not trigger cultural victory with World Fair but only 14 artifacts', () => {
-    const p1 = createTestPlayer({ id: 'p1', artifactsCollected: 14 });
+  it('does not trigger cultural victory with World Fair but only 9 artifacts (X5.1: threshold is 10)', () => {
+    const p1 = createTestPlayer({ id: 'p1', artifactsCollected: 9 });
     const p2 = createTestPlayer({ id: 'p2' });
     const players = new Map([['p1', p1], ['p2', p2]]);
     const cities = new Map([

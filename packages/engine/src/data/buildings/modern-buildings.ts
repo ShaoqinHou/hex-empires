@@ -451,10 +451,10 @@ export const WORLDS_FAIR: BuildingDef = {
   maintenance: 0,
   yields: { culture: 10, gold: 3 },
   effects: [
-    'Terminal Cultural Victory wonder — requires 15 Artifacts collected',
+    'Terminal Cultural Victory wonder — requires 10 Artifacts collected (X5.1)',
     '+4 Culture to all cities',
     '+1 Great Artist point per turn',
-    'Unlocks Cultural Victory when 15 Artifacts have been excavated by Explorer units',
+    'Unlocks Cultural Victory when 10 Artifacts have been excavated by Explorer units',
   ],
   requiredCivic: 'natural_history',
   requiredTech: null,
@@ -463,6 +463,33 @@ export const WORLDS_FAIR: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'artist', amount: 1 },
+} as const;
+
+/**
+ * X5.1: World Bank wonder — Economic Victory terminal wonder.
+ * Player must build this AND establish trade routes to >= 3 distinct rival civs.
+ * Requires Mercantilism civic.
+ */
+export const WORLD_BANK: BuildingDef = {
+  id: 'world_bank',
+  name: 'World Bank',
+  age: 'modern',
+  cost: 1000,
+  maintenance: 0,
+  yields: { gold: 12 },
+  effects: [
+    'Terminal Economic Victory wonder — requires trade routes to >= 3 distinct rival civilizations',
+    '+5 Gold per active trade route',
+    '+1 Great Merchant point per turn',
+    'Unlocks Economic Victory when 3 or more distinct rival civilizations are trading partners',
+  ],
+  requiredCivic: 'mercantilism',
+  requiredTech: null,
+  category: 'wonder',
+  happinessCost: 0,
+  isWonder: true,
+  isAgeless: true,
+  greatPersonPoints: { type: 'merchant', amount: 1 },
 } as const;
 
 export const MANHATTAN_PROJECT: BuildingDef = {
@@ -527,5 +554,5 @@ export const ALL_MODERN_BUILDINGS: ReadonlyArray<BuildingDef> = [
   SOLAR_FARM,
   EIFFEL_TOWER, STATUE_OF_LIBERTY, OXFORD_UNIVERSITY, BIG_BEN, PENTAGON, UN_HEDQUARTERS,
   BRANDENBURG_GATE, SYDNEY_OPERA_HOUSE, PANAMA_CANAL, BROADWAY, CRISTO_REDENTOR,
-  WORLDS_FAIR, MANHATTAN_PROJECT, WORLDS_FAIR_EXTRA,
+  WORLDS_FAIR, MANHATTAN_PROJECT, WORLDS_FAIR_EXTRA, WORLD_BANK,
 ] as const;
