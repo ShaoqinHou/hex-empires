@@ -9,7 +9,7 @@ import type { GameAction, GameState, PlayerState } from '../../types/GameState';
 /**
  * Tests for the Civ VII parity emissions added to generateAIActions:
  *   - ADOPT_PANTHEON   (CC2.1) — requires Temple city + faith
- *   - FOUND_RELIGION   (CC2.2) — requires pantheon + Piety + Temple city
+ *   - FOUND_RELIGION   (CC2.2 / DD2) — requires Piety + Temple city (no pantheon per Civ VII §18 / F-03)
  *   - SET_GOVERNMENT
  *   - SLOT_POLICY
  *
@@ -145,14 +145,23 @@ describe('aiSystem — Civ VII parity emissions', () => {
     expect(actions.find(a => a.type === 'FOUND_RELIGION')).toBeUndefined();
   });
 
-  it('AI without pantheon does NOT emit FOUND_RELIGION (CC2.2)', () => {
+  it('AI without pantheon DOES emit FOUND_RELIGION — Civ VII §18 / F-03 (pantheon no longer required)', () => {
+    // DD2: Pantheon prerequisite removed from FOUND_RELIGION per Civ VII §18.
+    // AI with Piety + Temple but NO pantheon must still dispatch FOUND_RELIGION.
+    // faith=0 ensures ADOPT_PANTHEON (priority 1) does NOT fire (requires >= 25),
+    // so FOUND_RELIGION (priority 2) gets evaluated. Faith is irrelevant to FOUND_RELIGION.
     const state = aiStateWith({
-      faith: 200,
+      faith: 0,
       pantheonId: null,
       researchedCivics: ['piety'],
     });
     const actions = generateAIActions(state) as ReadonlyArray<GameAction & { type: string }>;
-    expect(actions.find(a => a.type === 'FOUND_RELIGION')).toBeUndefined();
+    const found = actions.find(a => a.type === 'FOUND_RELIGION') as
+      | { type: 'FOUND_RELIGION'; playerId: string; cityId: string; founderBelief: string; followerBelief: string }
+      | undefined;
+    expect(found).toBeDefined();
+    expect(found!.playerId).toBe('p1');
+    expect(found!.cityId).toBe('c1');
   });
 
   // ── Government / policy tests (unchanged) ─────────────────────────

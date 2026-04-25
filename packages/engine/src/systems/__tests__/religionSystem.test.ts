@@ -387,7 +387,7 @@ describe('religionSystem', () => {
       const record = next.religion.religions[0];
       expect(record.name).toBe('Pax Romana');
       expect(record.founderPlayerId).toBe('p1');
-      expect(record.founderBeliefId).toBe('god_of_healing'); // U2: pantheon flavor continuity
+      expect(record.founderBeliefId).toBe('world_church'); // DD2: founderBelief from action, no pantheon override
       expect(record.followerBeliefId).toBe('jesuit_education');
       expect(record.holyCityId).toBe('c1');
       expect(record.foundedOnTurn).toBe(12);

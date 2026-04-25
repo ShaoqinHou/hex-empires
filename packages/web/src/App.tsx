@@ -44,6 +44,7 @@ const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ de
 const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(m => ({ default: m.TradeRoutesPanel })));
 const AchievementsPanel = lazy(() => import('./ui/panels/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
 const MementoPanel = lazy(() => import('./ui/panels/MementoPanel').then(m => ({ default: m.MementoPanel })));
+const NarrativeEventPanel = lazy(() => import('./ui/panels/NarrativeEventPanel').then(m => ({ default: m.NarrativeEventPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition, isProcessingAI } = useGame();
@@ -91,6 +92,18 @@ function GameUI() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasActiveCrisisPhase]);
+
+  // Auto-open the narrative event panel when a pending narrative event
+  // is in the queue for the current player. The panel dispatches
+  // RESOLVE_NARRATIVE_EVENT on choice and calls onResolve to close itself.
+  const pendingNarrativeEvents = state.pendingNarrativeEvents ?? [];
+  const hasPendingNarrativeEvent = pendingNarrativeEvents.length > 0;
+  useEffect(() => {
+    if (hasPendingNarrativeEvent) {
+      openPanel('narrativeEvent');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPendingNarrativeEvent]);
 
   // Keyboard shortcuts for panel toggles. ESC is handled inside
   // PanelManagerProvider (capture phase) so it's not duplicated here.
@@ -246,6 +259,9 @@ onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
           )}
           {activePanel === 'mementos' && (
             <MementoPanel onClose={closePanel} />
+          )}
+          {activePanel === 'narrativeEvent' && (
+            <NarrativeEventPanel onResolve={closePanel} />
           )}
          </div>
         </Suspense>

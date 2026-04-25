@@ -614,8 +614,8 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
  *   1. Adopt a pantheon when the player has none AND has enough faith AND
  *      at least one city with Temple AND at least one pantheon entry is not
  *      yet claimed by any player.
- *   2. Found a religion when player has adopted a pantheon AND has researched
- *      the Piety civic AND has at least one city with Temple.
+ *   2. Found a religion when player has researched the Piety civic AND has
+ *      at least one city with Temple (no pantheon prerequisite — Civ VII §18 / F-03).
  *   3. Set a government when the player has none AND has researched the
  *      unlock civic for at least one GovernmentDef.
  *   4. Slot a policy when the player HAS a government AND has at least
@@ -655,9 +655,8 @@ function pickCivVIIParityAction(
     }
   }
 
-  // 2. Found Religion — requires pantheon + Piety civic + Temple city
+  // 2. Found Religion — requires Piety civic + Temple city (no pantheon prerequisite per Civ VII §18 / F-03)
   if (
-    player.pantheonId &&
     (player.researchedCivics as ReadonlyArray<string>).includes('piety') &&
     hasTempleCity
   ) {

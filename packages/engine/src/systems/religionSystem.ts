@@ -9,12 +9,13 @@
  *  - `ADOPT_PANTHEON` (the "found pantheon" action in the design doc):
  *    validates that the pantheon exists and that the player has enough
  *    faith, then deducts faith and emits a log event.
- *  - `FOUND_RELIGION` (cycle E): validates pantheon prerequisite, 200
- *    faith cost, founder/follower belief catalog membership, per-belief
- *    uniqueness across players, and holy-city ownership. Writes a
- *    `ReligionRecord` to `state.religion.religions`, lazily initializing
- *    the optional slot on first use (pre-religion saves migrate as
- *    `undefined` → fresh empty slot on first successful action).
+ *  - `FOUND_RELIGION` (cycle E): validates Piety civic + Temple-in-city
+ *    prerequisites, founder/follower belief catalog membership, per-belief
+ *    uniqueness across players, and holy-city ownership. No pantheon
+ *    prerequisite and no Faith cost (both removed per Civ VII §18 / F-03
+ *    / F-04). Writes a `ReligionRecord` to `state.religion.religions`,
+ *    lazily initializing the optional slot on first use (pre-religion saves
+ *    migrate as `undefined` → fresh empty slot on first successful action).
  *  - All other actions — SPREAD_RELIGION, ENHANCE_RELIGION, etc. — are
  *    pass-through no-ops in this cycle.
  *
@@ -95,9 +96,10 @@ function playerHasFaithField(player: PlayerState): player is PlayerState & { rea
  * Returns state unchanged for invalid `ADOPT_PANTHEON` (unknown
  * pantheon, missing player, insufficient faith).
  *
- * Handles `FOUND_RELIGION` with full validation (pantheon prerequisite,
- * faith cost, belief catalog membership, cross-player belief
- * uniqueness, holy city ownership). Lazily initializes
+ * Handles `FOUND_RELIGION` with full validation (Piety civic + Temple
+ * prerequisites, belief catalog membership, cross-player belief
+ * uniqueness, holy city ownership). No pantheon prerequisite and no
+ * Faith cost (both Civ VI-isms removed per F-03/F-04). Lazily initializes
  * `state.religion` on first successful dispatch (optional slot, so
  * pre-religion saves round-trip as `undefined`).
  */
@@ -203,10 +205,9 @@ function handleFoundReligion(
 
   const { playerId, cityId, religionName, founderBelief, followerBelief } = action;
 
-  // Player must exist and carry a faith field.
+  // Player must exist.
   const player = state.players.get(playerId);
   if (!player) return state;
-  if (!playerHasFaithField(player)) return state;
 
   // Civ VII §18: pantheon is NOT a prerequisite for founding a religion.
   // Removed the `if (!player.pantheonId) return state` gate that was
@@ -275,14 +276,11 @@ function handleFoundReligion(
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);
 
-  // U2: If player has a pantheon, carry its belief forward for flavor continuity
-  const effectiveFounderBelief = player.pantheonId ?? founderBelief;
-
   const newRecord: ReligionRecord = {
     id: `religion.${playerId}.${founderBelief}`,
     name: religionName,
     founderPlayerId: playerId,
-    founderBeliefId: effectiveFounderBelief,
+    founderBeliefId: founderBelief,
     followerBeliefId: followerBelief,
     holyCityId: cityId,
     foundedOnTurn: state.turn,
