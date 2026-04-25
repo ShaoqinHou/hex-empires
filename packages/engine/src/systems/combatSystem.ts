@@ -265,8 +265,6 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   // VII: health scales CS multiplicatively — computeEffectiveCS(base, hp) = floor(base * hp/100)
   const effectiveBase = computeEffectiveCS(base, unit.health);
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
-  // First Strike bonus: +5 combat strength when attacking at full HP
-  const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
   // Y5.2 (F-08): River-crossing penalty — if attacker crosses a river edge to attack,
   // apply -25% multiplicative CS penalty (standard Civ river crossing rule).
   // Checks the specific edge on the attacker's tile that faces the defender.
@@ -285,7 +283,7 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
   // Y5.3 (F-05): Adjacent friendly support units grant +2 CS (one bonus regardless of count)
   const supportBonus = isAttacking ? calculateSupportAdjacencyBonus(unit, state) : 0;
-  const baseTotal = effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
+  const baseTotal = effectiveBase + flankingBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
   // Apply river-crossing penalty as multiplicative -25%
   return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
 }

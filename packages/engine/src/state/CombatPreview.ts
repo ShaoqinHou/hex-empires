@@ -716,14 +716,13 @@ function getEffectiveCombatStrength(
   const flankingBonus = isAttacking && defenderPosition
     ? calculateFlankingBonus(unit, defenderPosition, state)
     : 0;
-  const firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0;
   // B1: River penalty — flat -2 CS (matches combatSystem, not old 15% of base)
   const riverPenalty = isAttacking && attackerTile && attackerTile.river.length > 0
     ? 2
     : 0;
   const warSupportPenalty = calculateWarSupportPenalty(state, unit.owner);
 
-  return effectiveBase + flankingBonus + firstStrikeBonus - riverPenalty - warSupportPenalty;
+  return effectiveBase + flankingBonus - riverPenalty - warSupportPenalty;
 }
 
 /**
