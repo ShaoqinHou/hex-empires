@@ -137,8 +137,7 @@ export function ValidationFeedback({ validation, onAnimationEnd }: ValidationFee
       {isAnimating && (
         <div
           data-testid="validation-feedback-shake"
-          className="fixed inset-0 pointer-events-none animate-shake"
-          style={{ zIndex: 'var(--hud-z-fixed-corner)' }}
+          className="fixed inset-0 pointer-events-none animate-shake hud-z-fixed-corner"
           aria-hidden="true"
         >
           <div

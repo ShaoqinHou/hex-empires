@@ -407,3 +407,9 @@
 .layout-chrome-overlay {
   z-index: var(--panel-z-overlay);
 }
+
+/* Z-index utility classes — CC4.1.
+ * Use these in className instead of inline zIndex: 'var(--xxx)' casts. */
+.panel-z-modal   { z-index: var(--panel-z-modal); }
+.panel-z-overlay { z-index: var(--panel-z-overlay); }
+.panel-z-info    { z-index: var(--panel-z-info); }

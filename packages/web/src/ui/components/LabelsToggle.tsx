@@ -14,10 +14,9 @@ interface LabelsToggleProps {
 export function LabelsToggle({ showLabels, onToggle }: LabelsToggleProps) {
   return (
     <div
-      className="absolute left-2"
+      className="absolute left-2 hud-z-floating-control"
       style={{
         bottom: 'calc(var(--hud-floating-control-offset-bottom, 14rem) - 40px)',
-        zIndex: 'var(--hud-z-floating-control)',
         userSelect: 'none',
       }}
       onContextMenu={(e) => e.preventDefault()}

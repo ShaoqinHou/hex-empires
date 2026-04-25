@@ -14,10 +14,9 @@ interface YieldsToggleProps {
 export function YieldsToggle({ showYields, onToggle }: YieldsToggleProps) {
   return (
     <div
-      className="absolute left-2"
+      className="absolute left-2 hud-z-floating-control"
       style={{
         bottom: 'var(--hud-floating-control-offset-bottom)',
-        zIndex: 'var(--hud-z-floating-control)',
         userSelect: 'none',
       }}
       onContextMenu={(e) => e.preventDefault()}

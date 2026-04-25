@@ -88,13 +88,13 @@ export function TurnTransition({ onComplete }: TurnTransitionProps) {
           enabled so clicking anywhere dismisses. */}
       <div
         data-testid="turn-transition-backdrop"
+        className="hud-z-tooltip"
         onClick={handleDismiss}
         style={{
           position: 'fixed',
           inset: 0,
           cursor: 'pointer',
           backgroundColor: 'var(--hud-turn-transition-backdrop)',
-          zIndex: 'var(--hud-z-tooltip)',
           transition: `opacity var(--hud-turn-transition-animation-duration) ease-out`,
         }}
         aria-hidden="true"

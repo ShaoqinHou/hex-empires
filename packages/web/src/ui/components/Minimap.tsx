@@ -159,11 +159,10 @@ export function Minimap({ cameraRef }: MinimapProps) {
   return (
     <div
       data-hud-id="minimap"
-      className="absolute bottom-16 left-2 rounded-lg overflow-hidden cursor-pointer"
+      className="absolute bottom-16 left-2 rounded-lg overflow-hidden cursor-pointer hud-z-minimap"
       style={{
         border: '1px solid var(--panel-border)',
         backgroundColor: 'var(--panel-bg)',
-        zIndex: 'var(--hud-z-minimap)',
       }}
       onContextMenu={(e) => e.preventDefault()}
     >

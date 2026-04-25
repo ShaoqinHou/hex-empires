@@ -142,3 +142,11 @@
    * Used in @keyframes requiresActionPulse 50% keyframe (bright gold peak). */
   --hud-notification-pulse-peak: rgba(251, 191, 36, 0.85);
 }
+
+/* Z-index utility classes — CC4.1.
+ * Use these in className instead of inline zIndex: 'var(--xxx)' casts. */
+.hud-z-tooltip         { z-index: var(--hud-z-tooltip); }
+.hud-z-toast           { z-index: var(--hud-z-toast); }
+.hud-z-fixed-corner    { z-index: var(--hud-z-fixed-corner); }
+.hud-z-floating-control { z-index: var(--hud-z-floating-control); }
+.hud-z-minimap         { z-index: var(--hud-z-minimap); }

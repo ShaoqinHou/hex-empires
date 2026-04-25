@@ -24,6 +24,7 @@ export function HappinessHUD() {
   return (
     <div
       data-hud-id="happinessProgress"
+      className="panel-z-info"
       style={{
         position: 'fixed',
         bottom: 80,
@@ -32,7 +33,6 @@ export function HappinessHUD() {
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
-        zIndex: 'var(--panel-z-info)',
         userSelect: 'none',
       }}
     >

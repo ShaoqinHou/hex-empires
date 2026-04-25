@@ -70,7 +70,6 @@ const backdropBaseStyle: CSSProperties = {
   position: 'fixed',
   inset: 0,
   background: 'var(--drama-backdrop)',
-  zIndex: 'var(--panel-z-modal)',
 };
 
 // ── Container ─────────────────────────────────────────────────────────────────
@@ -88,7 +87,6 @@ function containerStyle(isWide: boolean): CSSProperties {
     borderRadius: 'var(--panel-radius)',
     boxShadow: 'var(--drama-frame-shadow)',
     color: 'var(--panel-text-color)',
-    zIndex: 'var(--panel-z-modal)',
     display: 'flex',
     flexDirection: 'column',
   };
@@ -294,7 +292,7 @@ export function DramaModal({
       {/* Backdrop — same z-index as container; rendered first (behind). */}
       <div
         data-testid={`panel-backdrop-${id}`}
-        className={backdropRevealClass}
+        className={`panel-z-modal ${backdropRevealClass}`.trim()}
         style={backdropBaseStyle}
         aria-hidden="true"
         onContextMenu={preventContextMenu}
@@ -310,7 +308,7 @@ export function DramaModal({
         data-reduced-motion={reducedMotion ? 'true' : 'false'}
         role="dialog"
         aria-label={title}
-        className={`drama-modal ${revealClass}`}
+        className={`drama-modal panel-z-modal ${revealClass}`.trim()}
         style={containerStyle(isWide)}
         onContextMenu={preventContextMenu}
       >
