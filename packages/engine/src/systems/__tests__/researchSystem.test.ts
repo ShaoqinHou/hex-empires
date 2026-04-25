@@ -770,3 +770,58 @@ describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', ()
     expect(p.researchedTechs).not.toContain('future_tech_modern'); // repeatable — not added to tree
   });
 });
+
+// ── EE3.1: Placed codex science yield ────────────────────────────────────────
+
+describe('EE3.1: placed codices contribute to science per turn', () => {
+  function makeCity(id: string, population: number, buildings: string[] = []): CityState {
+    return {
+      id, name: 'City', owner: 'p1', position: { q: 0, r: 0 },
+      population, food: 0, productionQueue: [], productionProgress: 0,
+      buildings, territory: [coordToKey({ q: 0, r: 0 })],
+      settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
+      specialization: null, specialists: 0, districts: [],
+    };
+  }
+
+  it('EE3.1a: N placed codices each add +2 science per turn (N=3)', () => {
+    // 3 codices placed in library slots → +6 science on top of base
+    const player = createTestPlayer({
+      currentResearch: 'pottery',
+      researchProgress: 0,
+      ownedCodices: ['cx-1', 'cx-2', 'cx-3'],
+      codexPlacements: [
+        { codexId: 'cx-1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx-2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx-3', buildingId: 'library', cityId: 'c1' },
+      ],
+    });
+    // City pop=0, library. Base: 1(min) + 0(pop) + 3(library yields.science) + 3*2(codices) = 10
+    const city = makeCity('c1', 0, ['library']);
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = researchSystem(state, { type: 'END_TURN' });
+    // researchProgress = sciencePerTurn = 1(min) + 3(library) + 6(3 codices*2) = 10
+    expect(next.players.get('p1')!.researchProgress).toBe(10);
+  });
+
+  it('EE3.1b: zero placed codices — science unchanged (no codex contribution)', () => {
+    const player = createTestPlayer({
+      currentResearch: 'pottery',
+      researchProgress: 0,
+      ownedCodices: [],
+      codexPlacements: [],
+    });
+    // City pop=2, no library. Base: 1(min) + 2(pop) = 3
+    const city = makeCity('c1', 2);
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = researchSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.researchProgress).toBe(3);
+  });
+});
+
