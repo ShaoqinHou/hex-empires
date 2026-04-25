@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { crisisSystem } from '../crisisSystem';
+import { turnSystem } from '../turnSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState, CrisisState } from '../../types/GameState';
 import type { CrisisEventDef } from '../../data/crises/types';
@@ -314,6 +315,107 @@ describe('crisisSystem', () => {
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = crisisSystem(state, { type: 'FORCE_CRISIS_POLICY', policyId: 'test' });
       expect(next).toBe(state);
+    });
+  });
+
+  // ── X5.2: 3-stage persistent crisis system tests ──
+  describe('X5.2 — 3-stage CrisisState advancement', () => {
+    function makeActiveCrisis(id = 'test_crisis', stage: 0 | 1 | 2 | 3 = 0): CrisisState {
+      return {
+        id,
+        name: 'Test Crisis',
+        active: true,
+        turn: 1,
+        choices: [],
+        resolvedBy: null,
+        choiceMade: null,
+        stage: stage === 0 ? undefined : stage as 1 | 2 | 3,
+        pendingResolution: false,
+      };
+    }
+
+    it('X5.2 stage 1 fires on CrisisState at age progress ratio >= 0.33', () => {
+      // ageThresholds.exploration = 100, ageProgress = 33 → ratio exactly 0.33
+      const player = createTestPlayer({ id: 'p1', ageProgress: 33 });
+      const crisis = makeActiveCrisis('test_crisis', 0);
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+        crises: [crisis],
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedCrisis = next.crises.find(c => c.id === 'test_crisis')!;
+      expect(updatedCrisis.stage).toBe(1);
+      expect(updatedCrisis.stageStartedTurn).toBe(1);
+      expect(updatedCrisis.pendingResolution).toBe(true);
+    });
+
+    it('X5.2 stage 2 fires on CrisisState at age progress ratio >= 0.66', () => {
+      // stage 1 → stage 2 at ratio 0.66
+      const player = createTestPlayer({ id: 'p1', ageProgress: 66 });
+      const crisis = makeActiveCrisis('test_crisis', 1); // already at stage 1
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+        crises: [crisis],
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedCrisis = next.crises.find(c => c.id === 'test_crisis')!;
+      expect(updatedCrisis.stage).toBe(2);
+      expect(updatedCrisis.pendingResolution).toBe(true);
+    });
+
+    it('X5.2 pendingResolution on CrisisState blocks END_TURN for the current player', () => {
+      // This test verifies the turnSystem gate added by X5.2:
+      // if any active crisis has pendingResolution AND the player has not slotted a policy,
+      // END_TURN must be blocked.
+      // We test this through turnSystem directly.
+      // Note: crisisSystem sets pendingResolution but turnSystem gates END_TURN.
+      const player = createTestPlayer({ id: 'p1', isHuman: true });
+      const crisis: CrisisState = {
+        id: 'test_crisis', name: 'Test Crisis', active: true, turn: 1,
+        choices: [], resolvedBy: null, choiceMade: null,
+        stage: 1,
+        pendingResolution: true,
+        slottedPolicies: new Map(), // no policies slotted yet
+      };
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        crises: [crisis],
+        currentPlayerId: 'p1',
+        phase: 'actions',
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.lastValidation).toMatchObject({
+        valid: false,
+        reason: expect.stringContaining('crisis'),
+      });
+    });
+
+    it('X5.2 SLOT_CRISIS_POLICY clears pendingResolution once all players have slotted', () => {
+      const player = createTestPlayer({ id: 'p1', isHuman: true });
+      const crisis: CrisisState = {
+        id: 'test_crisis', name: 'Test Crisis', active: true, turn: 1,
+        choices: [], resolvedBy: null, choiceMade: null,
+        stage: 1,
+        pendingResolution: true,
+        slottedPolicies: new Map(),
+      };
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        crises: [crisis],
+        currentPlayerId: 'p1',
+      });
+      const next = crisisSystem(state, {
+        type: 'SLOT_CRISIS_POLICY',
+        playerId: 'p1',
+        crisisId: 'test_crisis',
+        policyId: 'emergency_measures',
+      });
+      const updatedCrisis = next.crises.find(c => c.id === 'test_crisis')!;
+      expect(updatedCrisis.slottedPolicies?.get('p1')).toEqual(['emergency_measures']);
+      // Single human player has slotted → pendingResolution should clear
+      expect(updatedCrisis.pendingResolution).toBe(false);
     });
   });
 });

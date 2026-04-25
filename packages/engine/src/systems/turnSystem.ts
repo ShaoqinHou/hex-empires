@@ -285,6 +285,26 @@ function handleEndTurn(state: GameState): GameState {
         };
       }
     }
+
+    // X5.2: Block END_TURN if any active crisis has pendingResolution for this player.
+    // pendingResolution is set when a crisis advances to a new stage; cleared by SLOT_CRISIS_POLICY.
+    const hasPendingCrisis = state.crises.some(crisis => {
+      if (!crisis.active || crisis.resolvedBy !== null) return false;
+      if (!crisis.pendingResolution) return false;
+      // Only block if this player has not yet slotted a policy for this stage
+      const slotted = crisis.slottedPolicies?.get(state.currentPlayerId) ?? [];
+      return slotted.length === 0;
+    });
+    if (hasPendingCrisis) {
+      return {
+        ...state,
+        lastValidation: {
+          valid: false,
+          reason: 'A crisis requires your policy response before ending your turn.',
+          category: 'general',
+        },
+      };
+    }
   }
 
   // F-05: Apply deep ocean attrition before advancing turn order.

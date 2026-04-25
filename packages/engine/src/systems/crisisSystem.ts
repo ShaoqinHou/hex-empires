@@ -6,10 +6,16 @@ import type { CrisisEventDef } from '../data/crises/types';
  *
  * On END_TURN:
  *   1. Checks if any crisis trigger conditions are met for crises not yet triggered; activates them.
- *   2. Advances crisis stage (none→stage1@0.70, stage1→stage2@0.80, stage2→stage3@0.90) per age_progress.
+ *   2. Advances crisis stage on active crises:
+ *      - stage 1 fires at age progress ratio >= 0.33
+ *      - stage 2 fires at age progress ratio >= 0.66
+ *      - stage 3 fires at age progress ratio >= 1.00
+ *      Each stage transition sets pendingResolution = true on the CrisisState.
  *
  * On RESOLVE_CRISIS: applies the chosen effects and marks the crisis as resolved.
- * On FORCE_CRISIS_POLICY: appends a policy id to the player's crisisPolicies list.
+ * On FORCE_CRISIS_POLICY: appends a policy id to the player's crisisPolicies list (legacy path).
+ * On SLOT_CRISIS_POLICY (X5.2): slots a policy for a named crisis per-player; clears
+ *   pendingResolution once the required number of players have slotted their policies.
  */
 export function crisisSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -22,6 +28,8 @@ export function crisisSystem(state: GameState, action: GameAction): GameState {
       return resolveCrisis(state, action.crisisId, action.choice);
     case 'FORCE_CRISIS_POLICY':
       return forceCrisisPolicy(state, action.policyId);
+    case 'SLOT_CRISIS_POLICY':
+      return slotCrisisPolicy(state, action.playerId, action.crisisId, action.policyId);
     default:
       return state;
   }
@@ -147,60 +155,88 @@ function isTriggerMet(state: GameState, def: CrisisEventDef): boolean {
 }
 
 /**
- * Advance crisis phase for the current player based on age progress thresholds:
- *   none    → stage1  at ratio >= 0.70  (2 slots required)
- *   stage1  → stage2  at ratio >= 0.80  (3 slots required)
- *   stage2  → stage3  at ratio >= 0.90  (4 slots required)
+ * X5.2: Advance stage for all active crises based on the current player's age
+ * progress ratio.  Stage thresholds (VII-correct):
+ *   no stage  → stage 1  at ratio >= 0.33
+ *   stage 1   → stage 2  at ratio >= 0.66
+ *   stage 2   → stage 3  at ratio >= 1.00
  *
- * The phase only advances once per threshold; it never moves backward.
- * Resolved crises are skipped.
+ * Each new stage sets pendingResolution = true on the CrisisState.
+ * Stages only advance; resolved crises are skipped.
+ *
+ * Also keeps the legacy per-player crisisPhase in sync (70%/80%/90% thresholds)
+ * so turnSystem.ts's existing policy-slot gate still works.
  */
 function advanceCrisisStages(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
-  // Compute age progress ratio
+  // Compute age progress ratio for the next age threshold
   const { currentAge, ageThresholds } = state.age;
   const nextAge = currentAge === 'antiquity' ? 'exploration' : currentAge === 'exploration' ? 'modern' : null;
-  if (!nextAge) return state; // modern age has no next threshold
+  if (!nextAge) return state; // modern — no next threshold
   const maxProgress = ageThresholds[nextAge];
   if (maxProgress <= 0) return state;
   const ratio = player.ageProgress / maxProgress;
 
+  // ── X5.2: advance CrisisState.stage for each active crisis ──
+  let crisisesChanged = false;
+  const updatedCrises = state.crises.map(crisis => {
+    if (!crisis.active) return crisis;
+    if (crisis.resolvedBy !== null) return crisis;
+
+    const currentStage = crisis.stage ?? 0;
+    let newStage: 1 | 2 | 3 | 0 = currentStage;
+
+    if (currentStage === 0 && ratio >= 0.33) newStage = 1;
+    else if (currentStage === 1 && ratio >= 0.66) newStage = 2;
+    else if (currentStage === 2 && ratio >= 1.00) newStage = 3;
+
+    if (newStage === currentStage) return crisis;
+
+    crisisesChanged = true;
+    return {
+      ...crisis,
+      stage: newStage as 1 | 2 | 3,
+      stageStartedTurn: state.turn,
+      pendingResolution: true,
+    };
+  });
+
+  // ── Legacy: keep per-player crisisPhase in sync (existing turnSystem gate) ──
   const currentPhase = player.crisisPhase ?? 'none';
-
-  // Skip if resolved or if there is no active crisis situation requiring advancement
-  if (currentPhase === 'resolved') return state;
-
   let newPhase: 'none' | 'stage1' | 'stage2' | 'stage3' | 'resolved' = currentPhase;
   let newSlots: number = player.crisisPolicySlots ?? 0;
 
-  if (currentPhase === 'none' && ratio >= 0.70) {
-    newPhase = 'stage1';
-    newSlots = 2;
-  } else if (currentPhase === 'stage1' && ratio >= 0.80) {
-    newPhase = 'stage2';
-    newSlots = 3;
-  } else if (currentPhase === 'stage2' && ratio >= 0.90) {
-    newPhase = 'stage3';
-    newSlots = 4;
+  if (currentPhase !== 'resolved') {
+    if (currentPhase === 'none' && ratio >= 0.70) { newPhase = 'stage1'; newSlots = 2; }
+    else if (currentPhase === 'stage1' && ratio >= 0.80) { newPhase = 'stage2'; newSlots = 3; }
+    else if (currentPhase === 'stage2' && ratio >= 0.90) { newPhase = 'stage3'; newSlots = 4; }
   }
 
-  if (newPhase === currentPhase) return state;
+  const phaseChanged = newPhase !== currentPhase;
 
-  const updatedPlayers = new Map(state.players);
-  updatedPlayers.set(player.id, {
-    ...player,
-    crisisPhase: newPhase,
-    crisisPolicySlots: newSlots,
-    // Preserve existing policies but cap to new slot count
-    crisisPolicies: (player.crisisPolicies ?? []).slice(0, newSlots),
-  });
+  if (!crisisesChanged && !phaseChanged) return state;
 
-  return {
-    ...state,
-    players: updatedPlayers,
-    log: [...state.log, {
+  let nextState: GameState = crisisesChanged ? { ...state, crises: updatedCrises } : state;
+
+  if (phaseChanged) {
+    const updatedPlayers = new Map(nextState.players);
+    updatedPlayers.set(player.id, {
+      ...player,
+      crisisPhase: newPhase,
+      crisisPolicySlots: newSlots,
+      crisisPolicies: (player.crisisPolicies ?? []).slice(0, newSlots),
+    });
+    nextState = { ...nextState, players: updatedPlayers };
+  }
+
+  const newStageNames = updatedCrises
+    .filter((c, i) => crisisesChanged && c !== state.crises[i] && c.active)
+    .map(c => `${c.name} → Stage ${c.stage ?? 0}`);
+
+  const logMessages = [
+    ...(phaseChanged ? [{
       turn: state.turn,
       playerId: player.id,
       message: `Crisis escalated to ${newPhase} — fill ${newSlots} policy slots before ending your turn.`,
@@ -208,8 +244,22 @@ function advanceCrisisStages(state: GameState): GameState {
       severity: 'critical' as const,
       category: 'crisis' as const,
       panelTarget: 'crisis' as const,
-    }],
-  };
+    }] : []),
+    ...newStageNames.map(name => ({
+      turn: state.turn,
+      playerId: player.id,
+      message: `${name} — policies required before turn end.`,
+      type: 'crisis' as const,
+      severity: 'critical' as const,
+      blocksTurn: true as const,
+      category: 'crisis' as const,
+      panelTarget: 'crisis' as const,
+    })),
+  ];
+
+  if (logMessages.length === 0) return nextState;
+
+  return { ...nextState, log: [...nextState.log, ...logMessages] };
 }
 
 /**
@@ -237,6 +287,54 @@ function forceCrisisPolicy(state: GameState, policyId: string): GameState {
   });
 
   return { ...state, players: updatedPlayers };
+}
+
+/**
+ * X5.2: SLOT_CRISIS_POLICY handler.
+ *
+ * Appends policyId to the named crisis's per-player slottedPolicies map.
+ * Clears pendingResolution on the crisis once the required minimum is met
+ * (at least 1 policy slotted per active player per stage).
+ *
+ * No-ops if:
+ * - Crisis not found or not active
+ * - Player has already slotted this policy for this crisis
+ */
+function slotCrisisPolicy(state: GameState, playerId: string, crisisId: string, policyId: string): GameState {
+  const crisisIndex = state.crises.findIndex(c => c.id === crisisId && c.active);
+  if (crisisIndex === -1) return state;
+
+  const crisis = state.crises[crisisIndex];
+
+  // Build new slottedPolicies map
+  const currentSlottedPolicies = crisis.slottedPolicies ?? new Map<string, ReadonlyArray<string>>();
+  const playerPolicies = currentSlottedPolicies.get(playerId) ?? [];
+
+  // Deduplicate — policy already slotted
+  if (playerPolicies.includes(policyId)) return state;
+
+  const newPlayerPolicies: ReadonlyArray<string> = [...playerPolicies, policyId];
+  const newSlottedPolicies = new Map(currentSlottedPolicies);
+  newSlottedPolicies.set(playerId, newPlayerPolicies);
+
+  // Check if all active human players have slotted at least one policy for this crisis
+  // (pendingResolution clears when every active player has >= 1 policy slotted)
+  const activePlayers = [...state.players.values()].filter(p => p.isHuman);
+  const allSlotted = activePlayers.every(p => {
+    const slots = newSlottedPolicies.get(p.id);
+    return slots && slots.length > 0;
+  });
+
+  const updatedCrisis: CrisisState = {
+    ...crisis,
+    slottedPolicies: newSlottedPolicies,
+    pendingResolution: allSlotted ? false : crisis.pendingResolution,
+  };
+
+  const updatedCrises = [...state.crises];
+  updatedCrises[crisisIndex] = updatedCrisis;
+
+  return { ...state, crises: updatedCrises };
 }
 
 /** Convert a CrisisEventDef to a CrisisState */
