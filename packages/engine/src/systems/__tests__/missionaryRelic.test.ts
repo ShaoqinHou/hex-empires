@@ -24,11 +24,12 @@ function foundReligionState(): {
   state: GameState;
   religionId: string;
 } {
-  const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', position: { q: 3, r: 3 } });
+  // X4.3: Piety civic + Temple building required to found a religion
+  const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', position: { q: 3, r: 3 }, buildings: ['temple'] });
   const base = createTestState({
     turn: 5,
     players: new Map([
-      ['p1', createTestPlayer({ id: 'p1', faith: 500 })],
+      ['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] })],
     ]),
     cities: new Map([['c1', city]]),
   });

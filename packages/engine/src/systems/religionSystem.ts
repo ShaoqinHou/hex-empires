@@ -215,6 +215,10 @@ function handleFoundReligion(
 
   // F-04: No faith cost to found a religion in Civ VII.
 
+  // X4.3: Piety civic gate — player must have researched the Piety civic
+  // before founding a religion (replaces Faith-cost + pantheon prereqs).
+  if (!(player.researchedCivics as ReadonlyArray<string>).includes('piety')) return state;
+
   // Belief existence — both belief IDs must be in their respective
   // catalogues.
   if (!state.config.founderBeliefs.has(founderBelief)) return state;
@@ -224,6 +228,10 @@ function handleFoundReligion(
   const city = state.cities.get(cityId);
   if (!city) return state;
   if (city.owner !== playerId) return state;
+
+  // X4.3: Temple gate — the holy city must have a Temple building.
+  // Uses 'temple' as the canonical building id (matches data/buildings).
+  if (!(city.buildings as ReadonlyArray<string>).includes('temple')) return state;
 
   // Uniqueness — one civ per belief across the whole game. Consult the
   // religion slot if present; absent slot means no prior claims.

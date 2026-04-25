@@ -186,12 +186,12 @@ describe('religionSystem', () => {
   describe('FOUND_RELIGION — invalid (state unchanged)', () => {
     // F-03 (W2-04): pantheon is NO LONGER a prerequisite. This test was
     // renamed from "returns state unchanged when player has no pantheon" —
-    // that scenario now SUCCEEDS per Civ VII §18.
+    // that scenario now SUCCEEDS per Civ VII §18 (with Piety + Temple gates).
     it('religion can be founded without a pantheon (F-03 — Civ VII §18)', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
       const state = createTestState({
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: null })],
+          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: null, researchedCivics: ['piety'] })],
         ]),
         cities: new Map([['c1', city]]),
       });
@@ -211,6 +211,48 @@ describe('religionSystem', () => {
       expect(next.religion).toBeDefined();
       expect(next.religion!.religions.length).toBe(1);
       expect(next.religion!.religions[0].name).toBe('Zen');
+    });
+
+    // X4.3: Piety civic gate
+    it('returns state unchanged when player lacks Piety civic (X4.3)', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: [] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const action: ReligionAction = {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      };
+      const next = religionSystem(state, action);
+      expect(next).toBe(state);
+    });
+
+    // X4.3: Temple gate
+    it('returns state unchanged when holy city has no Temple (X4.3)', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: [] });
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const action: ReligionAction = {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      };
+      const next = religionSystem(state, action);
+      expect(next).toBe(state);
     });
 
     it('returns state unchanged when founder belief is not in catalog', () => {
@@ -255,10 +297,10 @@ describe('religionSystem', () => {
     });
 
     it('founds religion even with low faith — F-04 removed faith cost (Civ VII)', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
       const state = createTestState({
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', faith: 150, pantheonId: 'god_of_healing' })],
+          ['p1', createTestPlayer({ id: 'p1', faith: 150, pantheonId: 'god_of_healing', researchedCivics: ['piety'] })],
         ]),
         cities: new Map([['c1', city]]),
       });
@@ -319,11 +361,11 @@ describe('religionSystem', () => {
 
   describe('FOUND_RELIGION — valid (with religion slot)', () => {
     it('appends a ReligionRecord — F-04 no faith deduction (Civ VII)', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', buildings: ['temple'] });
       const base = createTestState({
         turn: 12,
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: 'god_of_healing' })],
+          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: 'god_of_healing', researchedCivics: ['piety'] })],
         ]),
         cities: new Map([['c1', city]]),
       });
@@ -354,11 +396,11 @@ describe('religionSystem', () => {
     });
 
     it('lazily initializes state.religion when absent on first successful FOUND_RELIGION', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
       const state = createTestState({
         turn: 4,
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: 'god_of_healing' })],
+          ['p1', createTestPlayer({ id: 'p1', faith: 500, pantheonId: 'god_of_healing', researchedCivics: ['piety'] })],
         ]),
         cities: new Map([['c1', city]]),
       });
@@ -553,9 +595,9 @@ describe('religionSystem', () => {
   // ── W7: FOUND_RELIGION starting relic ──────────────────────────────────
   describe('FOUND_RELIGION — starting relic (W7)', () => {
     it('auto-awards the first unclaimed relic to the founding player', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', buildings: ['temple'] });
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500 })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] })]]),
         cities: new Map([['c1', city]]),
       });
       const next = religionSystem(state, {
@@ -576,16 +618,16 @@ describe('religionSystem', () => {
     });
 
     it('does not award the same relic twice if another player already has it', () => {
-      const cityA = createTestCity({ id: 'cA', owner: 'p1', name: 'Rome', position: { q: 0, r: 0 } });
-      const cityB = createTestCity({ id: 'cB', owner: 'p2', name: 'Athens', position: { q: 5, r: 0 } });
+      const cityA = createTestCity({ id: 'cA', owner: 'p1', name: 'Rome', position: { q: 0, r: 0 }, buildings: ['temple'] });
+      const cityB = createTestCity({ id: 'cB', owner: 'p2', name: 'Athens', position: { q: 5, r: 0 }, buildings: ['temple'] });
       const p1AllButShroud = [
         'ark_of_the_covenant', 'sacred_tooth', 'staff_of_moses',
         'spear_of_destiny', 'holy_grail',
       ];
       const state = createTestState({
         players: new Map([
-          ['p1', createTestPlayer({ id: 'p1', relics: p1AllButShroud })],
-          ['p2', createTestPlayer({ id: 'p2', faith: 500 })],
+          ['p1', createTestPlayer({ id: 'p1', relics: p1AllButShroud, researchedCivics: ['piety'] })],
+          ['p2', createTestPlayer({ id: 'p2', faith: 500, researchedCivics: ['piety'] })],
         ]),
         cities: new Map([
           ['cA', cityA],
@@ -605,9 +647,9 @@ describe('religionSystem', () => {
     });
 
     it('emits a second log event for the relic award', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', buildings: ['temple'] });
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500 })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] })]]),
         cities: new Map([['c1', city]]),
       });
       const next = religionSystem(state, {
@@ -625,13 +667,13 @@ describe('religionSystem', () => {
     });
 
     it('gracefully skips relic award when all relics are already owned', () => {
-      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', buildings: ['temple'] });
       const allRelicIds = [
         'ark_of_the_covenant', 'shroud_of_turin', 'sacred_tooth',
         'staff_of_moses', 'spear_of_destiny', 'holy_grail',
       ];
       const state = createTestState({
-        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, relics: allRelicIds })]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, relics: allRelicIds, researchedCivics: ['piety'] })]]),
         cities: new Map([['c1', city]]),
       });
       const next = religionSystem(state, {
