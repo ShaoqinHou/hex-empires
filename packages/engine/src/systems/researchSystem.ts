@@ -132,6 +132,8 @@ function clearTechProgressMap(state: GameState): GameState {
 /**
  * Place a codex into a building's codex slot.
  * Validates: player owns codex, city has building, building has available slots.
+ * BB5.2: Also sets placedInCityId + placedInBuildingId on the CodexState entry
+ * in state.codices so the legacy system and YieldCalculator can query by placement.
  */
 function handlePlaceCodex(
   state: GameState,
@@ -146,7 +148,7 @@ function handlePlaceCodex(
   const ownedCodices = player.ownedCodices ?? [];
   if (!ownedCodices.includes(codexId)) return state;
 
-  // Codex must not already be placed
+  // Codex must not already be placed (check codexPlacements array)
   const existingPlacements = player.codexPlacements ?? [];
   if (existingPlacements.some(p => p.codexId === codexId)) return state;
 
@@ -167,11 +169,24 @@ function handlePlaceCodex(
   ).length;
   if (currentlyPlacedInBuilding >= buildingDef.codexSlots) return state;
 
+  // Update player's codexPlacements array
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
     codexPlacements: [...existingPlacements, { codexId, buildingId, cityId }],
   });
+
+  // BB5.2: Also update the CodexState entry in state.codices with placement info
+  const existingCodex = state.codices?.get(codexId);
+  if (existingCodex) {
+    const nextCodices = new Map(state.codices ?? new Map<string, CodexState>());
+    nextCodices.set(codexId, {
+      ...existingCodex,
+      placedInCityId: cityId,
+      placedInBuildingId: buildingId,
+    });
+    return { ...state, players: updatedPlayers, codices: nextCodices };
+  }
 
   return { ...state, players: updatedPlayers };
 }

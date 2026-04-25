@@ -387,6 +387,8 @@ export const MUSEUM: BuildingDef = {
   category: 'culture',
   happinessCost: 2,
   greatPersonPoints: { type: 'artist', amount: 1 },
+  /** BB5.1: Museums provide 4 codex display slots (+2 science per placed codex). */
+  codexSlots: 4,
 } as const;
 
 export const OPERA_HOUSE: BuildingDef = {

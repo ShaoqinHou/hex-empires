@@ -603,6 +603,53 @@ describe('researchSystem', () => {
       expect(next).toBe(state);
     });
 
+    it('rejects PLACE_CODEX when codex is already placed (duplicate placement)', () => {
+      // codex-writing-0-1 is already in codexPlacements — must not be placed again
+      const player = createTestPlayer({
+        ownedCodices: ['codex-writing-0-1'],
+        codexPlacements: [{ codexId: 'codex-writing-0-1', buildingId: 'library', cityId: 'c1' }],
+      });
+      const city = createTestCity({ buildings: ['library'] });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId: 'codex-writing-0-1',
+        buildingId: 'library',
+        cityId: 'c1',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('BB5.2: PLACE_CODEX sets placedInCityId + placedInBuildingId on CodexState in state.codices', () => {
+      const codexId = 'codex-pottery-p1-1';
+      const player = createTestPlayer({
+        ownedCodices: [codexId],
+        codexPlacements: [],
+      });
+      const city = createTestCity({ buildings: ['library'] });
+      // Pre-populate state.codices with the codex (as if earned during research)
+      const codex = {
+        id: codexId, playerId: 'p1', cityId: 'c1', buildingId: 'library', addedTurn: 1,
+      };
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        codices: new Map([[codexId, codex]]),
+      });
+      const next = researchSystem(state, {
+        type: 'PLACE_CODEX',
+        codexId,
+        buildingId: 'library',
+        cityId: 'c1',
+      });
+      const placedCodex = next.codices?.get(codexId);
+      expect(placedCodex?.placedInCityId).toBe('c1');
+      expect(placedCodex?.placedInBuildingId).toBe('library');
+    });
+
     it('codex placements contribute +2 science per turn in calculateSciencePerTurn', () => {
       // One codex in a Library. Science should include +2.
       const player = createTestPlayer({

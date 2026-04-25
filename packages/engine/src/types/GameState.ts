@@ -945,6 +945,17 @@ export interface CodexState {
   readonly buildingId: string;
   /** Turn on which the tech was researched and codex was generated */
   readonly addedTurn: number;
+  /**
+   * BB5.1: City id where this codex is currently displayed (placed in a building
+   * with codexSlots). Undefined when the codex is unplaced (in the player's
+   * collection but not yet assigned to a slot).
+   */
+  readonly placedInCityId?: string;
+  /**
+   * BB5.1: Building id where this codex is currently displayed.
+   * Undefined when unplaced. Set together with placedInCityId by PLACE_CODEX.
+   */
+  readonly placedInBuildingId?: string;
 }
 
 // ── Independent Powers ──
