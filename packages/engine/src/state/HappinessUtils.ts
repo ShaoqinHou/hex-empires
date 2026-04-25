@@ -1,5 +1,6 @@
-import type { GameState, CityState } from '../types/GameState';
+import type { GameState, CityState, PlayerState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
+import { calculateCityYields } from './YieldCalculator';
 
 /** Number of free settlements before happiness penalty applies (Civ VII: 4) */
 const FREE_SETTLEMENT_CAP = 4;
@@ -117,4 +118,41 @@ export function applyHappinessPenalty(value: number, happiness: number): number 
   if (happiness >= 0) return value;
   const penaltyPct = Math.min(100, Math.abs(happiness) * 2);
   return Math.floor(value * (100 - penaltyPct) / 100);
+}
+
+/**
+ * X3.2: Compute the total per-turn happiness yield for a player.
+ *
+ * Sums YieldSet.happiness from every city owned by the player using
+ * calculateCityYields. This value represents happiness produced by
+ * buildings (Bath, Aqueduct, Hanging Gardens, etc.) plus any
+ * MODIFY_YIELD empire-happiness effects from civ/leader abilities.
+ *
+ * Distinct from calculateCityHappiness which computes a city's overall
+ * happiness rating (base + bonuses - penalties). This function is the
+ * yield-dimension view of happiness — what gets added to globalHappiness
+ * each turn from the YieldSet pipeline.
+ */
+export function computePlayerHappiness(state: GameState, playerId: string): number {
+  let total = 0;
+  for (const city of state.cities.values()) {
+    if (city.owner !== playerId) continue;
+    const yields = calculateCityYields(city, state);
+    total += yields.happiness;
+  }
+  return total;
+}
+
+/**
+ * X3.2: Apply a per-turn happiness delta to a player's globalHappiness accumulator.
+ *
+ * Returns an updated PlayerState with globalHappiness incremented by deltaThisTurn.
+ * Immutable — returns a new PlayerState, never mutates the input.
+ * Only positive deltas accumulate toward celebration thresholds (matches
+ * the pattern in resourceSystem where only cityHappiness > 0 contributes).
+ */
+export function applyHappinessAccumulator(player: PlayerState, deltaThisTurn: number): PlayerState {
+  const prev = player.globalHappiness ?? 0;
+  const increment = deltaThisTurn > 0 ? deltaThisTurn : 0;
+  return { ...player, globalHappiness: prev + increment };
 }
