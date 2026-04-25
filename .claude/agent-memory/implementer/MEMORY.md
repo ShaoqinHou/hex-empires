@@ -4,3 +4,4 @@
 - [No-isolation concurrent agent collision](feedback_no_isolation_concurrent.md) — parallel agents can pick up each other's uncommitted working-tree edits; verify with git show <sha>
 - [In-flight work collision pattern](project_in_flight_work_collision.md) — failing tests from unrelated WIP (other work packages) are not scope regressions; GameState.ts may already have been committed by another agent
 - [Prior session may have already committed brief work](feedback_prior_session_committed.md) — check git show HEAD --stat before implementing; a prior agent may have committed the same files
+- [Linter reverts Edit/Write tool changes mid-session](feedback_linter_reverts_edits.md) — verify edits with grep after applying; fall back to Python file writes immediately if reverted

@@ -229,9 +229,11 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
     expect(forestDef).toBeLessThan(flat);
   });
 
-  it('R64c: forest gives FLAT +2 CS (rulebook §6.4 vegetated terrain), not +25% multiplicative', () => {
-    // Attacker at 99 HP (no first strike), warrior vs warrior on forest.
-    // Rulebook: defender CS 20+2=22, attacker CS 20. Diff -2. Expected avg ≈ 30 × e^(-2/25) ≈ 27.7.
+  it('R64c: forest gives +25% multiplicative defense bonus (Y5.2 — vegetated terrain)', () => {
+    // Y5.2: forest defenseBonusModifier = 0.25. Attacker at 99 HP (no first strike).
+    // effectiveCS(warrior 99HP) = floor(20 * 99/100) = 19.
+    // Defender CS = 19 * 1.25 = 23.75. Attacker CS = 19. Diff ≈ -4.75.
+    // Expected avg ≈ 30 × e^(-4.75/25) ≈ 24.8.
     const forestDef = averageDefenderDamage((seed) =>
       buildMeleeScenario({
         seed,
@@ -243,12 +245,13 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
         },
       }),
     );
-    expect(Math.abs(forestDef - 27.7)).toBeLessThanOrEqual(2);
+    expect(Math.abs(forestDef - 24.8)).toBeLessThanOrEqual(2);
   });
 
-  it('R64a: hills gives FLAT +3 CS (rulebook §6.4), not +30% multiplicative', () => {
-    // Attacker at 99 HP (no first strike), warrior vs warrior on hills.
-    // Rulebook: defender CS 20+3=23, attacker CS 20. Diff -3. Expected avg ≈ 30 × e^(-3/25) ≈ 26.6.
+  it('R64a: hills gives +25% multiplicative defense bonus (Y5.2 — rough terrain)', () => {
+    // Y5.2: hills defenseBonusModifier = 0.25. Attacker at 99 HP (no first strike).
+    // effectiveCS(warrior 99HP) = 19. Defender CS = 19 * 1.25 = 23.75. Diff ≈ -4.75.
+    // Expected avg ≈ 30 × e^(-4.75/25) ≈ 24.8.
     const hillsDef = averageDefenderDamage((seed) =>
       buildMeleeScenario({
         seed,
@@ -260,7 +263,7 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
         },
       }),
     );
-    expect(Math.abs(hillsDef - 26.6)).toBeLessThanOrEqual(2);
+    expect(Math.abs(hillsDef - 24.8)).toBeLessThanOrEqual(2);
   });
 
   it('R64b: mountains are impassable — movementSystem blocks entry', () => {

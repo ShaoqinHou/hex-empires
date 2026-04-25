@@ -25,3 +25,4 @@
 - [NOTE] F-f3b0d338: turnSystem.test.ts:332 — same pattern as F-7da6cfe9
 - [2026-04-22T00:27:17Z] [PRINCIPLE-GAP] F-60c9e2ba on f1fda8b: CombatPreview display formula adds percent-display-int + flat-CS-int — incommensurate units shown as single number; no named trap covers mixed-unit display aggregation
 - [2026-04-22T00:27:17Z] [PRINCIPLE-GAP] F-f9e71910 on f1fda8b: Per-age opt-in boolean (darkAgeOptIn) not cleared in TRANSITION_AGE handler; engine-patterns.md age-transition section covers legacy bonuses and leader but does not enumerate all per-age flags that must reset
+- [2026-04-25T07:50:00Z] [PRINCIPLE-GAP] F-ae0783d9 on fdd92fc: river+coastal adjacency stacking on navigable_river terrain is untested and undocumented — unclear if intentional double-counting

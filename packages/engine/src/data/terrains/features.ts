@@ -4,8 +4,8 @@ export const HILLS: TerrainFeatureDef = {
   id: 'hills',
   name: 'Hills',
   movementCostModifier: 1, // +1 to enter (binary deplete: see depletesMovement)
-  defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
-  flatDefenseBonus: 3,      // +3 CS to defenders (rulebook §6.4 rough terrain)
+  defenseBonusModifier: 0.25, // Y5.2: +25% multiplicative defense bonus (rough terrain)
+  flatDefenseBonus: 0,
   depletesMovement: true,   // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { production: 1 },
   blocksMovement: false,
@@ -17,7 +17,8 @@ export const MOUNTAINS: TerrainFeatureDef = {
   id: 'mountains',
   name: 'Mountains',
   movementCostModifier: 0,
-  defenseBonusModifier: 0,
+  defenseBonusModifier: 0.50, // Y5.2: +50% multiplicative defense bonus (impassable; bonus applies if ever reachable)
+  flatDefenseBonus: 0,
   yieldModifiers: {},
   blocksMovement: true, // impassable
   color: '#a0a0a0',
@@ -28,8 +29,8 @@ export const FOREST: TerrainFeatureDef = {
   id: 'forest',
   name: 'Forest',
   movementCostModifier: 1,
-  defenseBonusModifier: 0, // rulebook §6.4 — bonus is flat, not multiplicative
-  flatDefenseBonus: 2,      // +2 CS to defenders (rulebook §6.4 vegetated terrain)
+  defenseBonusModifier: 0.25, // Y5.2: +25% multiplicative defense bonus (vegetated terrain)
+  flatDefenseBonus: 0,
   depletesMovement: true,   // F-03: binary deplete-all movement (§6.3)
   yieldModifiers: { production: 1 },
   blocksMovement: false,

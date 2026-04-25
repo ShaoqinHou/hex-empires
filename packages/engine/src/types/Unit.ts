@@ -2,7 +2,7 @@ export interface UnitDef {
   readonly id: string;
   readonly name: string;
   readonly age: 'antiquity' | 'exploration' | 'modern';
-  readonly category: 'melee' | 'ranged' | 'siege' | 'cavalry' | 'naval' | 'civilian' | 'religious';
+  readonly category: 'melee' | 'ranged' | 'siege' | 'cavalry' | 'naval' | 'civilian' | 'religious' | 'support';
   readonly cost: number;       // production cost
   readonly combat: number;     // melee combat strength
   readonly rangedCombat: number; // ranged combat strength (0 = melee only)
