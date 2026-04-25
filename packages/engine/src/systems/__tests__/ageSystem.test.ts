@@ -1183,6 +1183,30 @@ describe('AA1.1: building obsolescence on age transition', () => {
     // pyramids (antiquity, isAgeless) must persist
     expect(next.cities.get('cap')!.buildings).toContain('pyramids');
   });
+
+  it('exploration-age building is kept when transitioning to exploration', () => {
+    // bank is an exploration-age building (age === newAge) — must not be removed
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      owner: 'p1',
+      isCapital: true,
+      buildings: ['bank'], // exploration-age building — same age as transition target
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    // bank is an exploration building — must still be in the city after transitioning to exploration
+    expect(next.cities.get('cap')!.buildings).toContain('bank');
+  });
 });
 
 describe('AA1.3: legacyPointsByAxis typed breakdown', () => {
