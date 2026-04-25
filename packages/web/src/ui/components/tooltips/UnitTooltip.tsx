@@ -1,19 +1,20 @@
 // @ts-nocheck
 import React from 'react';
-import type { UnitDef, UnitState } from '@hex/engine';
-import { ALL_PROMOTIONS } from '@hex/engine';
+import type { UnitDef, UnitState, PromotionDef } from '@hex/engine';
 import { TooltipContent, type TooltipSection } from '../Tooltip';
 
 interface UnitTooltipProps {
   unitDef: UnitDef;
   unitState?: UnitState;
   showState?: boolean;
+  /** Unit promotions registry from state.config.promotions (preferred over ALL_PROMOTIONS global). */
+  promotions?: ReadonlyMap<string, PromotionDef>;
 }
 
 /**
  * Tooltip for unit definitions showing stats, abilities, and upgrade path.
  */
-export function UnitTooltip({ unitDef, unitState, showState = false }: UnitTooltipProps) {
+export function UnitTooltip({ unitDef, unitState, showState = false, promotions }: UnitTooltipProps) {
   const sections: TooltipSection[] = [];
 
   // Combat Stats section
@@ -77,9 +78,13 @@ export function UnitTooltip({ unitDef, unitState, showState = false }: UnitToolt
     });
   }
 
-  // Promotions (if unit has XP)
+  // Promotions (if unit has XP) — sourced from state.config.promotions via the
+  // `promotions` prop; falls back to empty array if not provided (no ALL_X import).
   if (unitState && unitState.experience > 0) {
-    const availablePromotions = ALL_PROMOTIONS.filter(p => {
+    const promotionList: ReadonlyArray<PromotionDef> = promotions
+      ? [...promotions.values()]
+      : [];
+    const availablePromotions = promotionList.filter(p => {
       const unitXP = unitState.experience;
       const threshold = [10, 30, 50].find(t => unitXP < t) ?? 50;
       return unitXP >= threshold;
@@ -127,11 +132,12 @@ export function UnitTooltip({ unitDef, unitState, showState = false }: UnitToolt
 interface UnitStateTooltipProps {
   unitState: UnitState;
   unitDef: UnitDef;
+  promotions?: ReadonlyMap<string, PromotionDef>;
 }
 
 /**
  * Tooltip for active unit state on the map.
  */
-export function UnitStateTooltip({ unitState, unitDef }: UnitStateTooltipProps) {
-  return <UnitTooltip unitDef={unitDef} unitState={unitState} showState />;
+export function UnitStateTooltip({ unitState, unitDef, promotions }: UnitStateTooltipProps) {
+  return <UnitTooltip unitDef={unitDef} unitState={unitState} showState promotions={promotions} />;
 }

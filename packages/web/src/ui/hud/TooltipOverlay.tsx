@@ -683,7 +683,7 @@ function DetailedTooltipBody({
                 >&gt;</span>
               )}
               {def ? (
-                <UnitStateTooltip unitState={unit} unitDef={def} />
+                <UnitStateTooltip unitState={unit} unitDef={def} promotions={state.config.promotions} />
               ) : (
                 <div style={{ color: isEnemy ? 'var(--hud-tooltip-enemy-military)' : 'var(--hud-tooltip-own-military)' }}>
                   {unit.typeId} ({unit.health}hp, xp {unit.experience}, mv {unit.movementLeft})
