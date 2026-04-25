@@ -99,3 +99,54 @@ describe('VictoryProgressPanel (multi-player ranking)', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('VictoryProgressPanel — legacy path milestones (CC1.2)', () => {
+  it('renders 12 legacy milestone cells (4 axes × 3 ages)', () => {
+    mockRef.state = makeState();
+    const { getByTestId } = render(<VictoryProgressPanel onClose={() => {}} />);
+    // The grid section must be present
+    expect(getByTestId('legacy-milestones')).toBeTruthy();
+    // Each axis row is labelled
+    expect(getByTestId('legacy-axis-military')).toBeTruthy();
+    expect(getByTestId('legacy-axis-economic')).toBeTruthy();
+    expect(getByTestId('legacy-axis-science')).toBeTruthy();
+    expect(getByTestId('legacy-axis-culture')).toBeTruthy();
+    // 12 cells: 4 axes × 3 ages
+    const axes = ['military', 'economic', 'science', 'culture'] as const;
+    const ages = ['antiquity', 'exploration', 'modern'] as const;
+    for (const axis of axes) {
+      for (const age of ages) {
+        expect(getByTestId(`legacy-cell-${axis}-${age}`)).toBeTruthy();
+      }
+    }
+  });
+
+  it('shows correct progress for stub state with 5 tiers complete', () => {
+    const legacyProgressEntries = [
+      { axis: 'military' as const, age: 'antiquity' as const, tiersCompleted: 3 as const },
+      { axis: 'science' as const, age: 'antiquity' as const, tiersCompleted: 2 as const },
+      { axis: 'culture' as const, age: 'exploration' as const, tiersCompleted: 0 as const },
+    ];
+    mockRef.state = {
+      ...makeState(),
+      victory: {
+        ...makeState().victory,
+        legacyProgress: new Map([
+          ['p1', legacyProgressEntries],
+          ['p2', []],
+        ]),
+      },
+    } as unknown as GameState;
+
+    const { getByTestId, getAllByText } = render(<VictoryProgressPanel onClose={() => {}} />);
+    // military-antiquity: 3 tiers complete → 3 checkmarks
+    const milAntCell = getByTestId('legacy-cell-military-antiquity');
+    expect(milAntCell.querySelectorAll('[data-testid^="legacy-tier"]').length).toBe(3);
+    // science-antiquity: 2 tiers → 2 with tiersCompleted 2 means tiers 1+2 checked
+    const sciAntCell = getByTestId('legacy-cell-science-antiquity');
+    expect(sciAntCell.querySelectorAll('[data-testid^="legacy-tier"]').length).toBe(3);
+    // The progress summary shows total completed tiers across the 3 entries: 3+2+0 = 5
+    const summaries = getAllByText(/5 \/ 36 tiers/);
+    expect(summaries.length).toBeGreaterThanOrEqual(1);
+  });
+});

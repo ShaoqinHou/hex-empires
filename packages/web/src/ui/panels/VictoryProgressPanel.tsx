@@ -1,5 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
-import type { VictoryType } from '@hex/engine';
+import type { VictoryType, VictoryLegacyProgressEntry } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 
 const VICTORY_CONFIG: Record<VictoryType, { name: string; icon: string; description: string; color: string }> = {
@@ -10,6 +10,165 @@ const VICTORY_CONFIG: Record<VictoryType, { name: string; icon: string; descript
   military: { name: 'Military', icon: '🛡️', description: 'Have the strongest military', color: 'var(--color-production)' },
   score: { name: 'Score', icon: '📊', description: 'Have the highest score when max turns reached', color: 'var(--panel-muted-color)' },
 };
+
+// ── Legacy Path Milestone table ──────────────────────────────────────────────
+
+type LegacyAxis = 'military' | 'economic' | 'science' | 'culture';
+type LegacyAge = 'antiquity' | 'exploration' | 'modern';
+
+const LEGACY_AXES: ReadonlyArray<{ axis: LegacyAxis; label: string; color: string }> = [
+  { axis: 'military', label: 'Military', color: 'var(--color-production)' },
+  { axis: 'economic', label: 'Economic', color: 'var(--color-gold)' },
+  { axis: 'science', label: 'Science', color: 'var(--color-science)' },
+  { axis: 'culture', label: 'Culture', color: 'var(--color-culture)' },
+];
+
+const LEGACY_AGES: ReadonlyArray<LegacyAge> = ['antiquity', 'exploration', 'modern'];
+
+interface LegacyPathMilestonesProps {
+  legacyProgress: ReadonlyArray<VictoryLegacyProgressEntry> | undefined;
+}
+
+function LegacyPathMilestones({ legacyProgress }: LegacyPathMilestonesProps) {
+  // Build quick lookup: `${axis}-${age}` -> tiersCompleted
+  const progressMap = new Map<string, 0 | 1 | 2 | 3>();
+  if (legacyProgress) {
+    for (const entry of legacyProgress) {
+      progressMap.set(`${entry.axis}-${entry.age}`, entry.tiersCompleted);
+    }
+  }
+
+  const totalPossible = LEGACY_AXES.length * LEGACY_AGES.length * 3; // 36 tier slots
+  const totalCompleted = legacyProgress
+    ? legacyProgress.reduce((sum, e) => sum + e.tiersCompleted, 0)
+    : 0;
+
+  return (
+    <div
+      className="mt-6"
+      data-testid="legacy-milestones"
+      style={{ border: '1px solid var(--panel-border)', borderRadius: 'var(--panel-radius)', overflow: 'hidden' }}
+    >
+      {/* Section header */}
+      <div
+        style={{
+          padding: 'var(--panel-padding-md) var(--panel-padding-lg)',
+          borderBottom: '1px solid var(--panel-border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ color: 'var(--panel-text-color)', fontWeight: 'bold', fontSize: '14px' }}>
+          Legacy Path Milestones
+        </span>
+        <span style={{ color: 'var(--panel-muted-color)', fontSize: '12px' }}>
+          {totalCompleted} / {totalPossible} tiers
+        </span>
+      </div>
+
+      {/* Grid: header row + 4 axis rows */}
+      <div style={{ padding: 'var(--panel-padding-md) var(--panel-padding-lg)' }}>
+        {/* Column headers */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '110px repeat(3, 1fr)',
+            gap: '4px',
+            marginBottom: '4px',
+          }}
+        >
+          <div /> {/* axis label column */}
+          {LEGACY_AGES.map(age => (
+            <div
+              key={age}
+              style={{
+                textAlign: 'center',
+                fontSize: '11px',
+                color: 'var(--panel-muted-color)',
+                textTransform: 'capitalize',
+                fontWeight: 'bold',
+              }}
+            >
+              {age}
+            </div>
+          ))}
+        </div>
+
+        {/* Data rows */}
+        {LEGACY_AXES.map(({ axis, label, color }) => (
+          <div
+            key={axis}
+            data-testid={`legacy-axis-${axis}`}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '110px repeat(3, 1fr)',
+              gap: '4px',
+              marginBottom: '4px',
+            }}
+          >
+            {/* Axis label */}
+            <div style={{ fontSize: '12px', color, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              {label}
+            </div>
+
+            {/* Tier cells for each age */}
+            {LEGACY_AGES.map(age => {
+              const key = `${axis}-${age}`;
+              const tiers = progressMap.get(key) ?? 0;
+              return (
+                <div
+                  key={age}
+                  data-testid={`legacy-cell-${axis}-${age}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: '4px',
+                    borderRadius: 'var(--panel-radius)',
+                    backgroundColor: tiers > 0
+                      ? 'color-mix(in srgb, var(--tech-state-researched) 10%, transparent)'
+                      : 'var(--panel-surface-subtle)',
+                    border: '1px solid var(--panel-border)',
+                  }}
+                >
+                  {([1, 2, 3] as const).map(t => (
+                    <span
+                      key={t}
+                      data-testid={legacyProgress !== undefined ? `legacy-tier-${axis}-${age}-${t}` : undefined}
+                      style={{
+                        fontSize: '12px',
+                        color: tiers >= t ? 'var(--tech-state-researched)' : 'var(--panel-surface-track)',
+                      }}
+                    >
+                      {tiers >= t ? '✓' : '○'}
+                    </span>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* No-data notice when legacyProgress is undefined */}
+        {legacyProgress === undefined && (
+          <div
+            style={{
+              marginTop: '8px',
+              fontSize: '11px',
+              color: 'var(--panel-muted-color)',
+              fontStyle: 'italic',
+              textAlign: 'center',
+            }}
+          >
+            Legacy progress available after first END_TURN
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface VictoryProgressPanelProps {
   onClose: () => void;
@@ -131,6 +290,11 @@ export function VictoryProgressPanel({ onClose }: VictoryProgressPanelProps) {
           );
         })}
       </div>
+
+      {/* Legacy Path Tier Milestones (M18) */}
+      <LegacyPathMilestones
+        legacyProgress={state.victory.legacyProgress?.get(state.currentPlayerId)}
+      />
 
       {/* All Players Ranking */}
       <div className="mt-6">
