@@ -31,6 +31,7 @@ import type { TreatyDef } from './Treaty';
 import type { RelicDef } from './Relic';
 import type { CommanderUnitDef } from '../data/commanders/commanders';
 import type { CommanderPromotionDef } from './Commander';
+import type { TraditionDef } from './Tradition';
 
 /**
  * GameConfig holds all registered content definitions.
@@ -161,4 +162,11 @@ export interface GameConfig {
    * (instead of ALL_COMMANDER_PROMOTIONS) to look up promotion definitions.
    */
   readonly commanderPromotions?: ReadonlyMap<string, CommanderPromotionDef>;
+
+  /**
+   * EE1 — Traditions registry. Optional so existing GameConfig construction
+   * (tests, save files) compiles unchanged. civicSystem appends tradition IDs
+   * to player.traditions when unlockCivic matches a completed civic.
+   */
+  readonly traditions?: ReadonlyMap<string, TraditionDef>;
 }

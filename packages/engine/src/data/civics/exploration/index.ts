@@ -10,6 +10,7 @@ export const HUMANISM: CivicDef = {
   description: '+2 science per academy',
   treePosition: { row: 0, col: 0 },
   masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 2 }],
+  unlocksTradition: 'tradition-civic-pride',
 };
 
 export const MERCANTILISM: CivicDef = {

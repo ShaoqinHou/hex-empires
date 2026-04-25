@@ -146,6 +146,17 @@ function processNormalCivicResearch(state: GameState): GameState {
     const completedCivicDef = state.config.civics.get(completedCivicId);
     const updatedSlotCounts = applyCompletionEffects(player, completedCivicDef?.effects);
 
+    // EE1: Unlock tradition if civic has unlocksTradition set and tradition exists in registry
+    const unlockedTraditionId = completedCivicDef?.unlocksTradition;
+    const currentTraditions: ReadonlyArray<string> = player.traditions ?? [];
+    const traditionsUpdate = (
+      unlockedTraditionId !== undefined &&
+      state.config.traditions?.has(unlockedTraditionId) === true &&
+      !currentTraditions.includes(unlockedTraditionId)
+    )
+      ? { traditions: [...currentTraditions, unlockedTraditionId] }
+      : {};
+
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
@@ -159,6 +170,8 @@ function processNormalCivicResearch(state: GameState): GameState {
       policySwapWindowOpen: true,
       // Y2.1: Conditionally update policySlotCounts if civic grants slots
       ...(updatedSlotCounts !== null ? { policySlotCounts: updatedSlotCounts } : {}),
+      // EE1: Conditionally append tradition ID (no duplicates)
+      ...traditionsUpdate,
     });
 
     return {

@@ -23,6 +23,7 @@ export const CRAFTSMANSHIP: CivicDef = {
   description: '+1 production from improved tiles',
   treePosition: { row: 0, col: 1 },
   masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
+  unlocksTradition: 'tradition-bronze-craftsmanship',
 };
 
 export const FOREIGN_TRADE: CivicDef = {
@@ -35,6 +36,7 @@ export const FOREIGN_TRADE: CivicDef = {
   description: '+1 gold from trade routes',
   treePosition: { row: 2, col: 0 },
   effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'diplomatic' }],
+  unlocksTradition: 'tradition-trade-networks',
 };
 
 export const EARLY_EMPIRE: CivicDef = {

@@ -5,6 +5,7 @@ import type { GameState, ActiveEffect } from '../types/GameState';
  * 1. Current civilization's unique ability
  * 2. Leader's ability (always active)
  * 3. Legacy bonuses (from previous age civs)
+ * 4. Adopted traditions (EE1 — civic tree second layer)
  */
 export function getActiveEffects(state: GameState, playerId: string): ReadonlyArray<ActiveEffect> {
   const player = state.players.get(playerId);
@@ -31,6 +32,18 @@ export function getActiveEffects(state: GameState, playerId: string): ReadonlyAr
   // 3. Legacy bonuses (accumulated from previous age transitions)
   for (const legacy of player.legacyBonuses) {
     effects.push(legacy);
+  }
+
+  // 4. Adopted traditions (EE1 — civic tree second layer)
+  if (player.traditions && state.config.traditions) {
+    for (const traditionId of player.traditions) {
+      const tradition = state.config.traditions.get(traditionId);
+      if (tradition?.effect) {
+        for (const effect of tradition.effect) {
+          effects.push({ source: `tradition:${traditionId}`, effect });
+        }
+      }
+    }
   }
 
   return effects;

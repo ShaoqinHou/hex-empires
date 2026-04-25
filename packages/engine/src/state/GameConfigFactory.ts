@@ -65,6 +65,8 @@ import { ALL_COMMANDERS } from '../data/commanders/commanders';
 import type { CommanderUnitDef } from '../data/commanders/commanders';
 import { ALL_COMMANDER_PROMOTIONS } from '../data/commanders/promotion-trees';
 import type { CommanderPromotionDef } from '../types/Commander';
+import { ALL_TRADITIONS } from '../data/traditions';
+import type { TraditionDef } from '../types/Tradition';
 
 /** Build a GameConfig from all registered content data */
 export function createGameConfig(): GameConfig {
@@ -170,5 +172,8 @@ export function createGameConfig(): GameConfig {
   const commanderPromotions = new Map<string, CommanderPromotionDef>();
   for (const p of ALL_COMMANDER_PROMOTIONS) commanderPromotions.set(p.id, p);
 
-  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, espionageActions, treaties, relics, commanders, commanderPromotions, experimentalAchievements: false };
+  const traditions = new Map<string, TraditionDef>();
+  for (const t of ALL_TRADITIONS) traditions.set(t.id, t);
+
+  return { units, buildings, districts, technologies, civics, terrains, features, promotions, resources, governors, civilizations, leaders, improvements, pantheons, governments, policies, founderBeliefs, followerBeliefs, achievements, crises: ALL_CRISES, independentPowers, attributeNodes, narrativeEvents, discoveries, foundationChallenges, leaderChallenges, mementos, quarters, projects, naturalWonders, espionageActions, treaties, relics, commanders, commanderPromotions, traditions, experimentalAchievements: false };
 }

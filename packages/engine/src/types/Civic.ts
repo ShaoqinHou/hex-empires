@@ -30,4 +30,11 @@ export interface CivicDef {
    * Optional so existing CivicDef construction keeps compiling unchanged.
    */
   readonly effects?: ReadonlyArray<EffectDef>;
+  /**
+   * EE1: If set, completing this civic appends the named tradition ID to the
+   * player's traditions list (no duplicates). The tradition's effects are then
+   * applied via getActiveEffects() in EffectUtils.
+   * Optional so existing CivicDef construction compiles unchanged.
+   */
+  readonly unlocksTradition?: string;
 }

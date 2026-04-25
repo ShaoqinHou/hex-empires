@@ -554,3 +554,76 @@ describe('Y2.1: civic completion grants typed policy slots', () => {
     expect(nextPlayer.policySlotCounts?.diplomatic).toBe(1); // incremented
   });
 });
+
+// ── EE1: Traditions wire-up ──
+
+import { getYieldBonus } from '../../state/EffectUtils';
+
+describe('EE1: traditions unlock on civic completion', () => {
+  it('completing craftsmanship appends tradition-bronze-craftsmanship to player.traditions', () => {
+    // craftsmanship costs 40; start at 39 progress, 1 culture/turn from city → completes
+    const player = createTestPlayer({
+      currentCivic: 'craftsmanship',
+      civicProgress: 39,
+      researchedCivics: ['code_of_laws'],
+    });
+    const city = createTestCity();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.researchedCivics).toContain('craftsmanship');
+    expect(nextPlayer.traditions).toContain('tradition-bronze-craftsmanship');
+  });
+
+  it('completing craftsmanship twice does not duplicate the tradition', () => {
+    // Player already has the tradition; completing again (hypothetical re-research guard)
+    // In practice can't re-research, but if traditions is pre-seeded, the no-dup guard kicks in.
+    const player = createTestPlayer({
+      currentCivic: 'craftsmanship',
+      civicProgress: 39,
+      researchedCivics: ['code_of_laws'],
+      traditions: ['tradition-bronze-craftsmanship'],
+    });
+    const city = createTestCity();
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    const count = (nextPlayer.traditions ?? []).filter(t => t === 'tradition-bronze-craftsmanship').length;
+    expect(count).toBe(1);
+  });
+
+  it('completing a civic without unlocksTradition does not append any tradition', () => {
+    // code_of_laws has no unlocksTradition
+    const player = createTestPlayer({
+      currentCivic: 'code_of_laws',
+      civicProgress: 24,
+    });
+    const city = createTestCity({ buildings: ['monument'] });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.researchedCivics).toContain('code_of_laws');
+    expect(nextPlayer.traditions ?? []).toHaveLength(0);
+  });
+
+  it('tradition effects appear in getYieldBonus once adopted', () => {
+    // tradition-bronze-craftsmanship gives +1 production empire-wide
+    const player = createTestPlayer({
+      traditions: ['tradition-bronze-craftsmanship'],
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    const bonus = getYieldBonus(state, 'p1', 'production');
+    expect(bonus).toBeGreaterThanOrEqual(1);
+  });
+});
