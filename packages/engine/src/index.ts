@@ -47,6 +47,7 @@ export type {
   CrisisChoice,
   AgeState,
   RngState,
+  CodexState,
   GameState,
   DiplomacyProposal,
   GameAction,

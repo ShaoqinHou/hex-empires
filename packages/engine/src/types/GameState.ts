@@ -918,6 +918,27 @@ export interface RngState {
   readonly counter: number;
 }
 
+// ── Codex ──
+
+/**
+ * AA5.1 / tech-tree F-08: A single cultural codex artifact produced when a
+ * tech is researched while the player has a 'library' or 'museum' building in
+ * any of their cities. Codices are stored globally in GameState.codices and
+ * also tracked per-player via PlayerState.ownedCodices (existing field).
+ */
+export interface CodexState {
+  /** Unique codex identifier (e.g. "codex-<techId>-<playerId>-<turn>") */
+  readonly id: string;
+  /** The player who earned this codex */
+  readonly playerId: string;
+  /** City housing the building that generated this codex */
+  readonly cityId: string;
+  /** The building that hosted the codex event ('library' or 'museum') */
+  readonly buildingId: string;
+  /** Turn on which the tech was researched and codex was generated */
+  readonly addedTurn: number;
+}
+
 // ── Independent Powers ──
 
 /**
@@ -1048,6 +1069,18 @@ export interface GameState {
    * manages create/tick/resolve/remove.
    */
   readonly espionageOps?: ReadonlyMap<string, EspionageOpState>;
+
+  /**
+   * ── AA5.1 / tech-tree F-08: Global codex registry ──
+   *
+   * Maps codex id → CodexState. Populated by researchSystem when a tech is
+   * completed and the player has a city with a 'library' or 'museum' building.
+   * Each entry represents the cultural artifact of a discovery.
+   *
+   * Optional so existing GameState construction (tests, save files) keeps
+   * compiling unchanged. Systems treat absence as an empty Map.
+   */
+  readonly codices?: ReadonlyMap<string, CodexState>;
 }
 
 // ── Actions ──

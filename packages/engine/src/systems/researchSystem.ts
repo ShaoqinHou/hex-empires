@@ -1,4 +1,4 @@
-import type { GameState, GameAction, ActiveEffect, PlayerState } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, PlayerState, CodexState } from '../types/GameState';
 
 /**
  * ResearchSystem handles technology research and tech mastery.
@@ -34,6 +34,9 @@ const MASTERY_COST_MULTIPLIER = 0.8;
 
 /** Science contribution per displayed codex (VII baseline) */
 const SCIENCE_PER_CODEX = 2;
+
+/** Buildings that qualify a city to generate a codex on tech research. */
+const CODEX_BUILDINGS = ['library', 'museum'] as const;
 
 function handleSetResearch(state: GameState, techId: string): GameState {
   const player = state.players.get(state.currentPlayerId);
@@ -173,6 +176,51 @@ function handlePlaceCodex(
   return { ...state, players: updatedPlayers };
 }
 
+/**
+ * AA5.1: Generate a CodexState entry when a tech is researched and the player
+ * has a city with a 'library' or 'museum' building. Returns the updated
+ * GameState with the new codex added to state.codices.
+ *
+ * If no qualifying city exists, returns state unchanged.
+ */
+function generateCodexForTech(
+  state: GameState,
+  playerId: string,
+  techId: string,
+): GameState {
+  // Find the first city owned by this player that has a library or museum
+  let qualifyingCityId: string | null = null;
+  let qualifyingBuildingId: string | null = null;
+
+  for (const city of state.cities.values()) {
+    if (city.owner !== playerId) continue;
+    for (const buildingId of CODEX_BUILDINGS) {
+      if (city.buildings.includes(buildingId)) {
+        qualifyingCityId = city.id;
+        qualifyingBuildingId = buildingId;
+        break;
+      }
+    }
+    if (qualifyingCityId) break;
+  }
+
+  if (!qualifyingCityId || !qualifyingBuildingId) return state;
+
+  const codexId = `codex-${techId}-${playerId}-${state.turn}`;
+  const newCodex: CodexState = {
+    id: codexId,
+    playerId,
+    cityId: qualifyingCityId,
+    buildingId: qualifyingBuildingId,
+    addedTurn: state.turn,
+  };
+
+  const nextCodices = new Map(state.codices ?? new Map<string, CodexState>());
+  nextCodices.set(codexId, newCodex);
+
+  return { ...state, codices: nextCodices };
+}
+
 function processResearch(state: GameState): GameState {
   let next = state;
 
@@ -229,27 +277,31 @@ function processNormalResearch(state: GameState): GameState {
     const prevMap = new Map(player.techProgressMap ?? new Map<string, number>());
     prevMap.delete(player.currentResearch);
 
+    const completedTechId = player.currentResearch;
     updatedPlayers.set(player.id, {
       ...player,
-      researchedTechs: [...player.researchedTechs, player.currentResearch],
+      researchedTechs: [...player.researchedTechs, completedTechId],
       currentResearch: null,
       researchProgress: overflow, // overflow carries to next tech
       techProgressMap: prevMap,
     });
 
-    return {
+    const stateAfterResearch = {
       ...state,
       players: updatedPlayers,
       log: [...state.log, {
         turn: state.turn,
         playerId: player.id,
-        message: `Researched ${player.currentResearch}!`,
+        message: `Researched ${completedTechId}!`,
         type: 'research',
         severity: 'warning' as const,
         category: 'research' as const,
         panelTarget: 'tech' as const,
       }],
     };
+
+    // AA5.1: Generate codex if the player has a library or museum
+    return generateCodexForTech(stateAfterResearch, player.id, completedTechId);
   }
 
   // Accumulate progress
