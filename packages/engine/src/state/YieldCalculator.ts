@@ -4,6 +4,13 @@ import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 import { getYieldBonus } from './EffectUtils';
 
+/**
+ * F-10 (W8): Per-yield cap applied as a final clamp to city yields.
+ * No normal gameplay should hit this cap (cities rarely exceed 999 of any yield),
+ * but it prevents runaway exploit values from stacking errors.
+ */
+export const YIELD_CAP_PER_CITY = 999;
+
 /** Calculate total yields for a city from its territory tiles */
 export function calculateCityYields(city: CityState, state: GameState): YieldSet {
   let total = { ...EMPTY_YIELDS };
@@ -94,7 +101,24 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     }
   }
 
-  return total;
+  // F-10 (W8): Apply per-yield cap as final clamp to prevent runaway values.
+  return clampYields(total, YIELD_CAP_PER_CITY);
+}
+
+/**
+ * Clamp all yield values in a YieldSet to the given maximum.
+ */
+function clampYields(yields: YieldSet, cap: number): YieldSet {
+  return {
+    food:       Math.min(yields.food, cap),
+    production: Math.min(yields.production, cap),
+    gold:       Math.min(yields.gold, cap),
+    science:    Math.min(yields.science, cap),
+    culture:    Math.min(yields.culture, cap),
+    faith:      Math.min(yields.faith, cap),
+    influence:  Math.min(yields.influence, cap),
+    happiness:  Math.min(yields.happiness, cap),
+  };
 }
 
 /**

@@ -146,18 +146,40 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
       }
     }
   } else {
+    // F-11 (W8): Retreat mechanic — melee combat only.
+    // If defender HP drops below 25% and there is an adjacent unoccupied hex,
+    // move defender 1 hex away BEFORE final HP is committed to state.
+    let retreatPosition: HexCoord | null = null;
+    if (attackerRange === 0 && newDefenderHealth < 25) {
+      retreatPosition = findRetreatHex(defender.position, state, updatedUnits);
+    }
+
+    const finalDefenderPosition = retreatPosition ?? defender.position;
+
     updatedUnits.set(defender.id, {
       ...defender,
       health: newDefenderHealth,
       experience: defender.experience + 3,
+      position: finalDefenderPosition,
     });
-    logEntries.push({
-      turn: state.turn,
-      playerId: state.currentPlayerId,
-      message: `${attacker.typeId} attacked ${defender.typeId} (${newDefenderHealth}HP remaining)`,
-      type: 'combat',
-      severity: 'info',
-    });
+
+    if (retreatPosition) {
+      logEntries.push({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${defender.typeId} retreated to (${retreatPosition.q}, ${retreatPosition.r}) after taking heavy damage`,
+        type: 'combat',
+        severity: 'info',
+      });
+    } else {
+      logEntries.push({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${attacker.typeId} attacked ${defender.typeId} (${newDefenderHealth}HP remaining)`,
+        type: 'combat',
+        severity: 'info',
+      });
+    }
   }
 
   // Also increment kills if the attacker was killed (defender got the kill)
@@ -790,6 +812,38 @@ function buildInitialDistrictHPs(city: CityState): Map<string, number> {
   }
 
   return hps;
+}
+
+/**
+ * F-11 (W8): Find a retreat hex for a unit that has taken heavy melee damage.
+ *
+ * Returns the first adjacent passable (not occupied) hex, or null if no such
+ * hex exists (surrounded / no escape).
+ *
+ * "Passable" is defined as: the tile exists in the map AND no unit currently
+ * occupies that hex (using the live updatedUnits map so same-turn movements are visible).
+ */
+function findRetreatHex(
+  position: HexCoord,
+  state: GameState,
+  updatedUnits: Map<string, UnitState>,
+): HexCoord | null {
+  const adjacentHexes = neighbors(position);
+
+  // Build a set of occupied hex keys from the live unit map
+  const occupiedKeys = new Set<string>();
+  for (const unit of updatedUnits.values()) {
+    occupiedKeys.add(coordToKey(unit.position));
+  }
+
+  for (const hex of adjacentHexes) {
+    const key = coordToKey(hex);
+    // Tile must exist and not be occupied
+    if (!state.map.tiles.has(key)) continue;
+    if (occupiedKeys.has(key)) continue;
+    return hex;
+  }
+  return null;
 }
 
 /**

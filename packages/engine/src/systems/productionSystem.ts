@@ -38,6 +38,8 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
       return handleCancelBuildingPlacement(state, action.cityId);
     case 'PURCHASE_ITEM':
       return handlePurchaseItem(state, action.cityId, action.itemId, action.itemType);
+    case 'REPAIR_BUILDING':
+      return handleRepairBuilding(state, action.cityId, action.buildingId);
     case 'END_TURN':
       return processProduction(state);
     default:
@@ -182,6 +184,55 @@ function playerHasResource(state: GameState, playerId: string, resourceId: strin
     }
   }
   return false;
+}
+
+/**
+ * Handle REPAIR_BUILDING action (W8 — buildings F-12).
+ *
+ * Validates that the city exists, the current player owns it, and the building
+ * is present in city.buildings. Charges player gold = buildingDef.repairCost (defaults 50).
+ *
+ * NOTE: Full damage tracking (BuildingState.damaged field) is deferred. When it ships,
+ * also reset the damaged flag on the city building slot here.
+ */
+function handleRepairBuilding(
+  state: GameState,
+  cityId: string,
+  buildingId: string,
+): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return createInvalidResult(state, 'City not found', 'production');
+  if (city.owner !== state.currentPlayerId) return createInvalidResult(state, 'Not your city', 'production');
+  if (!city.buildings.includes(buildingId as BuildingId)) {
+    return createInvalidResult(state, `Building ${buildingId} not found in city`, 'production');
+  }
+
+  // NOTE: Full BuildingState.damaged tracking is deferred to a future phase.
+  // When it ships, validate that the building is actually damaged here.
+
+  const buildingDef = state.config.buildings.get(buildingId);
+  // repairCost is not yet on BuildingDef — default to 50 (W8 spec)
+  const repairCost = (buildingDef as (typeof buildingDef) & { readonly repairCost?: number })?.repairCost ?? 50;
+
+  const player = state.players.get(state.currentPlayerId);
+  if (!player || player.gold < repairCost) {
+    return createInvalidResult(state, `Not enough gold to repair (need ${repairCost})`, 'production');
+  }
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, { ...player, gold: player.gold - repairCost });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    lastValidation: null,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `Repaired ${buildingId} in ${city.name} (cost: ${repairCost} gold)`,
+      type: 'production',
+    }],
+  };
 }
 
 function handlePurchaseItem(

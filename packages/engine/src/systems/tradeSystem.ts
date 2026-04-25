@@ -189,6 +189,7 @@ function handleEndTurn(state: GameState): GameState {
   if (state.tradeRoutes.size === 0) return state;
 
   const updatedPlayers = new Map(state.players);
+  const updatedCities = new Map(state.cities);
 
   for (const route of state.tradeRoutes.values()) {
     const targetCity = state.cities.get(route.to);
@@ -208,18 +209,32 @@ function handleEndTurn(state: GameState): GameState {
       }
     }
 
-    // F-01: Destination city owner earns gold per resource slot × rate × sea
+    // F-01 (asymmetric yields — W8):
+    //   - Destination city owner earns gold per resource slot x rate x sea multiplier
+    //   - Origin player's home city earns +2 food per turn (Civ VII: origin gets
+    //     resources/food; destination gets gold — GDD audit §F-01)
     const resourceSlots = targetCity.assignedResources
       ? targetCity.assignedResources.length
       : 0;
     // Guarantee at least 1 gold per turn even when no resources are slotted
     const goldToDestination = Math.max(1, resourceSlots) * goldRate * seaMultiplier;
     addGold(updatedPlayers, targetCity.owner, goldToDestination);
+
+    // Food yield to origin city (home city of the trade-route owner)
+    const originCity = updatedCities.get(route.from);
+    if (originCity) {
+      const FOOD_PER_TRADE_ROUTE = 2;
+      updatedCities.set(route.from, {
+        ...originCity,
+        food: originCity.food + FOOD_PER_TRADE_ROUTE,
+      });
+    }
   }
 
   return {
     ...state,
     players: updatedPlayers,
+    cities: updatedCities,
   };
 }
 
@@ -311,10 +326,25 @@ function handlePlunderTradeRoute(
   const updatedUnits = new Map(state.units);
   updatedUnits.delete(caravanUnitId);
 
+  // F-10 (W8): Plunderer earns 50 gold + half the destination's per-turn yield.
+  // Per-turn yield = resourceSlots x goldRateForAge x seaMultiplier (same formula as END_TURN).
+  const updatedPlayers = new Map(state.players);
+  if (plunderer) {
+    const targetCity = state.cities.get(route.to);
+    const age = state.age.currentAge;
+    const goldRate = goldRateForAge(age);
+    const seaMultiplier = route.isSea ? 2 : 1;
+    const resourceSlots = targetCity?.assignedResources?.length ?? 0;
+    const perTurnYield = Math.max(1, resourceSlots) * goldRate * seaMultiplier;
+    const loot = 50 + Math.floor(perTurnYield / 2);
+    addGold(updatedPlayers, plunderer.owner, loot);
+  }
+
   return {
     ...state,
     tradeRoutes: updatedRoutes,
     units: updatedUnits,
+    players: updatedPlayers,
     log: [...state.log, {
       turn: state.turn,
       playerId: plunderer?.owner ?? route.owner,

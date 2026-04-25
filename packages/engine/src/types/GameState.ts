@@ -45,6 +45,14 @@ export interface HexTile {
    * Cleared (set to false) after excavation.
    */
   readonly hasArtifactSite?: boolean;
+  /**
+   * F-10: Uses remaining for bonus resource tiles.
+   * Bonus resources deplete after N harvests (default 5). Decremented by 1 the
+   * first time an improvement is built on this tile. When it reaches 0, the
+   * resourceId is cleared (resource depleted).
+   * Optional so existing HexTile construction keeps compiling unchanged.
+   */
+  readonly resourceUsesRemaining?: number;
 }
 
 export interface HexMap {
@@ -94,6 +102,13 @@ export interface UnitState {
 
 export type SettlementType = 'town' | 'city';
 
+/**
+ * F-07 (pop): Typed specialist categories matching Civ VII district model.
+ * - "urban": specialists assigned to urban (production/science/culture) district tiles.
+ * - "rural": specialists assigned to rural (food/growth) tiles.
+ */
+export type SpecialistType = 'urban' | 'rural';
+
 export type TownSpecialization =
   | 'growing_town'    // +50% growth rate
   | 'farming_town'    // +2 food
@@ -131,6 +146,14 @@ export interface CityState {
    * keeps compiling; systems that don't use spatial model rely on `specialists` alone.
    */
   readonly specialistsByTile?: ReadonlyMap<string, number>;
+  /**
+   * F-07 (pop): Per-type specialist counts — urban vs rural.
+   * `specialists` is always the sum of all values in this map.
+   * Updated by specialistSystem when a `type` field is provided in
+   * ASSIGN_SPECIALIST / UNASSIGN_SPECIALIST. Optional so existing
+   * CityState construction keeps compiling unchanged.
+   */
+  readonly specialistsByType?: ReadonlyMap<SpecialistType, number>;
   readonly districts: ReadonlyArray<DistrictId>; // IDs of districts this city has constructed
 
   /**
@@ -272,6 +295,15 @@ export interface PlayerState {
   readonly currentCivicMastery: string | null;         // civic currently being mastered
   readonly civicMasteryProgress: number;               // accumulated culture toward civic mastery
   readonly governors: ReadonlyArray<GovernorId>;       // IDs of recruited governors
+
+  /**
+   * F-13 (civic history): Ordered log of civic ids completed by this player
+   * (appended in completion order). Distinct from researchedCivics (which is
+   * an unordered set used for prerequisite checks). Enables historical-tracking
+   * UI without changing existing civic logic.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly completedCivics?: ReadonlyArray<string>;
 
   /**
    * ── M12 Integration — optional runtime fields for Religion & Government ──
@@ -524,10 +556,28 @@ export interface PlayerState {
  * Represents a pending growth-choice prompt produced when a city's population
  * grows. The player must either place an improvement (PLACE_IMPROVEMENT) or
  * assign a specialist (ASSIGN_SPECIALIST_FROM_GROWTH) to resolve it.
+ *
+ * F-12: extended with optional kind/improvementId/tileId for RESOLVE_GROWTH_CHOICE.
  */
 export interface PendingGrowthChoice {
   readonly cityId: string;
   readonly triggeredOnTurn: number;
+  /**
+   * F-12: resolution kind chosen by the player.
+   * "improvement" = build an improvement on tileId.
+   * "specialist"  = assign a specialist to the city.
+   * Absent on entries emitted before F-12 (backward compat).
+   */
+  readonly kind?: 'improvement' | 'specialist';
+  /**
+   * F-12: improvement to build (when kind === "improvement").
+   * Derived from terrain + resource by the engine.
+   */
+  readonly improvementId?: string;
+  /**
+   * F-12: tile to build on (when kind === "improvement").
+   */
+  readonly tileId?: { readonly q: number; readonly r: number };
 }
 
 // ── Diplomacy ──
@@ -965,6 +1015,19 @@ export type GameAction =
    * Full per-tile spatial model deferred to W3-02; for now city-level.
    */
   | { readonly type: 'ASSIGN_SPECIALIST_FROM_GROWTH'; readonly cityId: string }
+  /**
+   * F-12: Combined growth-choice resolution action.
+   * - kind === "improvement": builds improvementId (or derives it) on tileId.
+   * - kind === "specialist": assigns a specialist to the city (city-level).
+   * Clears the pending growth choice for cityId on success.
+   */
+  | {
+      readonly type: 'RESOLVE_GROWTH_CHOICE';
+      readonly cityId: string;
+      readonly kind: 'improvement' | 'specialist';
+      readonly improvementId?: string;
+      readonly tileId?: HexCoord;
+    }
   // ── Crisis phase (W2-05) ──
   /**
    * Append a policy to the current player's crisis policy slot list.
@@ -1027,6 +1090,15 @@ export type GameAction =
    * On success, the node effect is appended to player.legacyBonuses.
    */
   | { readonly type: 'SPEND_ATTRIBUTE_POINT'; readonly playerId: PlayerId; readonly nodeId: string }
+  // ── W7: Relic earn path ──
+  /**
+   * Award a relic to a player. Validates:
+   * - relicId exists in state.config.relics
+   * - player does not already own this relic (no duplicates)
+   * On success: appends relicId to player.relics.
+   * Triggered by FOUND_RELIGION (starting relic) and future missionary defeat (W8).
+   */
+  | { readonly type: 'EARN_RELIC'; readonly playerId: string; readonly relicId: string }
   // ── Celebrations (W3-03) ──
   /**
    * Player resolves a pending celebration choice by picking one of the two
