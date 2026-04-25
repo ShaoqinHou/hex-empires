@@ -192,6 +192,45 @@ describe('Y2.2: slotted policy effects applied in YieldCalculator', () => {
     const yieldsWithPolicy = calculateCityYields(city, testState);
     expect(yieldsWithPolicy.production - baseYields.production).toBe(2);
   });
+
+  it('Z1.1: removing the policy drops the +2 production effect (effect absent without slot)', () => {
+    // When a policy is NOT in slottedPolicies, it must not contribute yields.
+    const testPolicyId = 'test_prod_policy_z1';
+    const state = createTestState();
+    const city = makeCity();
+
+    const policies = new Map(state.config.policies);
+    policies.set(testPolicyId, {
+      id: testPolicyId,
+      name: 'Test Production Policy Z1',
+      category: 'economic' as const,
+      unlockCivic: 'code_of_laws',
+      bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 },
+      description: '+2 Production per city.',
+    });
+    const config = { ...state.config, policies };
+
+    // State WITH the policy slotted
+    const playersWithPolicy = new Map(state.players);
+    playersWithPolicy.set('p1', {
+      ...state.players.get('p1')!,
+      slottedPolicies: [testPolicyId, null, null, null],
+    });
+    const stateWith = { ...state, config, players: playersWithPolicy };
+
+    // State WITHOUT the policy (empty slots)
+    const playersWithout = new Map(state.players);
+    playersWithout.set('p1', {
+      ...state.players.get('p1')!,
+      slottedPolicies: [null, null, null, null],
+    });
+    const stateWithout = { ...state, config, players: playersWithout };
+
+    const yieldsWith = calculateCityYields(city, stateWith);
+    const yieldsWithout = calculateCityYields(city, stateWithout);
+
+    expect(yieldsWith.production - yieldsWithout.production).toBe(2);
+  });
 });
 
 // ── Y2.3: Tech-effect MODIFY_YIELD applied in YieldCalculator ──
@@ -229,6 +268,43 @@ describe('Y2.3: tech-effect yields applied in YieldCalculator', () => {
     const yieldsWithTech = calculateCityYields(city, testState);
     expect(yieldsWithTech.science - baseYields.science).toBe(1);
   });
+
+  it('Z1.2: tech without effects field causes no yield change', () => {
+    // A TechnologyDef with no effects array (effects is optional) should not crash or alter yields.
+    const state = createTestState();
+    const city = makeCity();
+
+    const baseYields = calculateCityYields(city, state);
+
+    const testTechId = 'test_no_effects_tech';
+    const technologies = new Map(state.config.technologies);
+    technologies.set(testTechId, {
+      id: testTechId,
+      name: 'Test No-Effects Tech',
+      age: 'antiquity' as const,
+      cost: 50,
+      prerequisites: [],
+      unlocks: [],
+      description: 'No persistent effects',
+      treePosition: { row: 0, col: 0 },
+      // effects deliberately omitted — optional field
+    });
+    const config = { ...state.config, technologies };
+
+    const players = new Map(state.players);
+    players.set('p1', {
+      ...state.players.get('p1')!,
+      researchedTechs: [testTechId as import('../../types/GameState').TechnologyId],
+    });
+    const testState = { ...state, config, players };
+
+    const yieldsWithTech = calculateCityYields(city, testState);
+    // No effects → yields should be identical to base
+    expect(yieldsWithTech.food).toBe(baseYields.food);
+    expect(yieldsWithTech.production).toBe(baseYields.production);
+    expect(yieldsWithTech.science).toBe(baseYields.science);
+    expect(yieldsWithTech.gold).toBe(baseYields.gold);
+  });
 });
 
 // ── Y2.4: localHappiness penalty ──
@@ -252,6 +328,23 @@ describe('Y2.4: localHappiness penalty in YieldCalculator', () => {
       expect(yieldsUnhappy.food / yieldsHappy.food).toBeGreaterThanOrEqual(0.75);
       expect(yieldsUnhappy.food / yieldsHappy.food).toBeLessThanOrEqual(1.0);
     }
+  });
+
+  it('Z1.3: city at 0 happiness has no penalty (yields unchanged vs neutral baseline)', () => {
+    // At happiness = 0, the multiplier would be 1 + 0 * 0.02 = 1.0 — no change.
+    // The code only applies the multiplier when localHappiness < 0.
+    const state = createTestState();
+    const cityNeutral = makeCity({ happiness: 0 });
+
+    // To confirm "no change" we compare 0-happiness against a city with +5 (both should yield same).
+    const cityMild = makeCity({ happiness: 5 });
+
+    const yieldsNeutral = calculateCityYields(cityNeutral, state);
+    const yieldsMild = calculateCityYields(cityMild, state);
+
+    expect(yieldsNeutral.food).toBe(yieldsMild.food);
+    expect(yieldsNeutral.production).toBe(yieldsMild.production);
+    expect(yieldsNeutral.gold).toBe(yieldsMild.gold);
   });
 
   it('city at +10 happiness has no bonus multiplier (positive happiness unaffected)', () => {

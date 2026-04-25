@@ -445,5 +445,45 @@ describe('DistrictAdjacency', () => {
       };
       expect(quarterBonus(city, state).production).toBe(0.5);
     });
+
+    it('Z1.4: specialist on tile A gives Quarter bonus to A; tile B without specialist gets no Quarter bonus', () => {
+      // Two Quarters in the same city:
+      //   - Tile A at (0,0): adjacent to a mountain, HAS a specialist → gets +50% extra
+      //   - Tile B at (3,0): adjacent to a mountain, NO specialist → gets zero extra
+      //
+      // We test each tile in isolation using a city with only one Quarter at a time.
+      const state = stateWithTiles([
+        makeTile({ coord: { q: 0, r: 0 } }),
+        makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+        makeTile({ coord: { q: 3, r: 0 } }),
+        makeTile({ coord: { q: 4, r: 0 }, feature: 'mountains' }),
+      ]);
+
+      const quarterA: QuarterV2 = {
+        cityId: 'c1', coord: { q: 0, r: 0 }, age: 'antiquity', kind: 'pure_age', buildingIds: [],
+      };
+      const quarterB: QuarterV2 = {
+        cityId: 'c1', coord: { q: 3, r: 0 }, age: 'antiquity', kind: 'pure_age', buildingIds: [],
+      };
+
+      // Tile A has a specialist; tile B has none.
+      const urbanA: UrbanTileV2 = { ...makeUrban('c1', { q: 0, r: 0 }, []), specialistCount: 1 };
+      const urbanB: UrbanTileV2 = { ...makeUrban('c1', { q: 3, r: 0 }, []), specialistCount: 0 };
+
+      // City with only Quarter A (specialist on A) — expects production extra = 0.5
+      const cityOnlyA: CityState = { ...makeCity('c1', [urbanA, urbanB]), quarters: [quarterA] };
+      const bonusOnlyA = quarterBonus(cityOnlyA, state);
+      expect(bonusOnlyA.production).toBe(0.5); // tile A: 1 mountain × 0.5
+
+      // City with only Quarter B (no specialist on B) — expects zero extra
+      const cityOnlyB: CityState = { ...makeCity('c1', [urbanA, urbanB]), quarters: [quarterB] };
+      const bonusOnlyB = quarterBonus(cityOnlyB, state);
+      expect(bonusOnlyB.production).toBe(0); // tile B: no specialist → no Quarter bonus
+
+      // City with BOTH Quarters — A contributes 0.5, B contributes 0, total = 0.5
+      const cityBoth: CityState = { ...makeCity('c1', [urbanA, urbanB]), quarters: [quarterA, quarterB] };
+      const bonusBoth = quarterBonus(cityBoth, state);
+      expect(bonusBoth.production).toBe(0.5); // only tile A fires
+    });
   });
 });
