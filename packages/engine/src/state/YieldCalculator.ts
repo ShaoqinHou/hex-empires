@@ -99,6 +99,32 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     influence: getYieldBonus(state, city.owner, 'influence'),
   });
 
+  // Y2.2: Slotted policy MODIFY_YIELD effects (both 'empire' and 'city' targets apply per city).
+  const player = state.players.get(city.owner);
+  if (player?.slottedPolicies) {
+    for (const policyId of player.slottedPolicies) {
+      if (!policyId) continue;
+      const policyDef = state.config.policies.get(policyId);
+      const bonus = policyDef?.bonus;
+      if (bonus?.type === 'MODIFY_YIELD') {
+        total = addYields(total, { [bonus.yield]: bonus.value });
+      }
+    }
+  }
+
+  // Y2.3: Tech-effect MODIFY_YIELD — iterate researchedTechs and apply any effects.
+  if (player?.researchedTechs) {
+    for (const techId of player.researchedTechs) {
+      const techDef = state.config.technologies.get(techId);
+      if (!techDef?.effects) continue;
+      for (const effect of techDef.effects) {
+        if (effect.type === 'MODIFY_YIELD') {
+          total = addYields(total, { [effect.yield]: effect.value });
+        }
+      }
+    }
+  }
+
   // F-06: Per-age yield bonuses from assigned resources (W4-05).
   // Each resource assigned to this city contributes yields from its bonusTable
   // row for the current age.
@@ -112,6 +138,24 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
         total = addYields(total, row.yields);
       }
     }
+  }
+
+  // Y2.4: localHappiness penalty — each unit of negative happiness reduces
+  // all yields by 2% (i.e. multiplier = 1 + localHappiness * 0.02, clamped to [0, 1]).
+  // city.happiness holds the current local happiness value.
+  const localHappiness = city.happiness;
+  if (localHappiness < 0) {
+    const multiplier = Math.max(0, 1 + localHappiness * 0.02);
+    total = {
+      food:       Math.floor(total.food * multiplier),
+      production: Math.floor(total.production * multiplier),
+      gold:       Math.floor(total.gold * multiplier),
+      science:    Math.floor(total.science * multiplier),
+      culture:    Math.floor(total.culture * multiplier),
+      faith:      Math.floor(total.faith * multiplier),
+      influence:  Math.floor(total.influence * multiplier),
+      happiness:  Math.floor(total.happiness * multiplier),
+    };
   }
 
   // F-10 (W8): Apply per-yield cap as final clamp to prevent runaway values.

@@ -208,32 +208,27 @@ describe('§3.2 — Growth rate modifiers', () => {
     },
   );
 
-  it.fails(
-    'R32d: deeply unhappy city (happiness ≤ -6) has reduced food growth rate',
-    () => {
-      // Rulebook §3.2 + §4.2: unhappiness should slow growth (yield output reduced by 2% per
-      // negative happiness point). Engine BUG: growthSystem blocks growth entirely at
-      // happiness<0 but does NOT apply any proportional rate reduction — it's binary.
-      // The rulebook semantics are a proportional slowdown, not a hard stop.
-      //
-      // Compare two same-config cities: happy (happiness=10) and unhappy (happiness=-6).
-      // The unhappy city's food accumulation should be STRICTLY less than the happy city
-      // (proportional slowdown), not merely equal or zero.
-      const territory = [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 }), coordToKey({ q: 3, r: 4 })];
-      const happyCity = createTestCity({ population: 1, food: 0, happiness: 10, territory });
-      const unhappyCity = createTestCity({ population: 1, food: 0, happiness: -6, territory });
+  it('R32d: deeply unhappy city (happiness ≤ -6) has reduced food growth rate', () => {
+    // Y2.4: YieldCalculator now applies proportional slowdown (-2% per unit unhappiness).
+    // city.happiness=-6 → multiplier=0.88 → 12% yield reduction.
+    //
+    // Compare two same-config cities: happy (happiness=10) and unhappy (happiness=-6).
+    // The unhappy city's food accumulation should be STRICTLY less than the happy city,
+    // and > 0 (proportional slowdown, not hard stop).
+    const territory = [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 }), coordToKey({ q: 3, r: 4 })];
+    const happyCity = createTestCity({ population: 1, food: 0, happiness: 10, territory });
+    const unhappyCity = createTestCity({ population: 1, food: 0, happiness: -6, territory });
 
-      const happyNext = growthSystem(createTestState({ cities: new Map([['c1', happyCity]]) }), { type: 'END_TURN' });
-      const unhappyNext = growthSystem(createTestState({ cities: new Map([['c1', unhappyCity]]) }), { type: 'END_TURN' });
+    const happyNext = growthSystem(createTestState({ cities: new Map([['c1', happyCity]]) }), { type: 'END_TURN' });
+    const unhappyNext = growthSystem(createTestState({ cities: new Map([['c1', unhappyCity]]) }), { type: 'END_TURN' });
 
-      const happyFood = happyNext.cities.get('c1')!.food;
-      const unhappyFood = unhappyNext.cities.get('c1')!.food;
+    const happyFood = happyNext.cities.get('c1')!.food;
+    const unhappyFood = unhappyNext.cities.get('c1')!.food;
 
-      // Rulebook: unhappiness of -6 → -12% yield. Expect strictly less food, but not zero.
-      expect(unhappyFood).toBeLessThan(happyFood);
-      expect(unhappyFood).toBeGreaterThan(0);
-    },
-  );
+    // Rulebook: unhappiness of -6 → -12% yield. Expect strictly less food, but not zero.
+    expect(unhappyFood).toBeLessThan(happyFood);
+    expect(unhappyFood).toBeGreaterThan(0);
+  });
 });
 
 describe('§3.3 — Population allocation & specialists', () => {

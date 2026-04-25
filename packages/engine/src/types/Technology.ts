@@ -19,4 +19,10 @@ export interface TechnologyDef {
    * researched again indefinitely (never added to researchedTechs).
    */
   readonly isFutureTech?: boolean;
+  /**
+   * Y2.3: Persistent yield effects applied while this tech is researched.
+   * MODIFY_YIELD effects are processed by YieldCalculator for all cities.
+   * Optional so existing TechnologyDef construction keeps compiling unchanged.
+   */
+  readonly effects?: ReadonlyArray<EffectDef>;
 }

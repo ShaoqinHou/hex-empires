@@ -157,3 +157,114 @@ describe('X3.1: YieldSet.happiness accumulates from buildings', () => {
     expect(yieldsWithAll.happiness).toBe(7);
   });
 });
+
+// ── Y2.2: Slotted policy MODIFY_YIELD effects ──
+
+describe('Y2.2: slotted policy effects applied in YieldCalculator', () => {
+  it('slotted +2 production policy increases city production by 2', () => {
+    const state = createTestState();
+    const city = makeCity();
+
+    // Base yields without policy
+    const baseYields = calculateCityYields(city, state);
+
+    // Inject a player with slottedPolicies containing urban_planning (+1 production per city)
+    // and a custom +2 production policy to keep the test independent of real policy data
+    const testPolicyId = 'test_prod_policy';
+    const policies = new Map(state.config.policies);
+    policies.set(testPolicyId, {
+      id: testPolicyId,
+      name: 'Test Production Policy',
+      category: 'economic' as const,
+      unlockCivic: 'code_of_laws',
+      bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 },
+      description: '+2 Production per city.',
+    });
+    const config = { ...state.config, policies };
+
+    const players = new Map(state.players);
+    players.set('p1', {
+      ...state.players.get('p1')!,
+      slottedPolicies: [testPolicyId, null, null, null],
+    });
+    const testState = { ...state, config, players };
+
+    const yieldsWithPolicy = calculateCityYields(city, testState);
+    expect(yieldsWithPolicy.production - baseYields.production).toBe(2);
+  });
+});
+
+// ── Y2.3: Tech-effect MODIFY_YIELD applied in YieldCalculator ──
+
+describe('Y2.3: tech-effect yields applied in YieldCalculator', () => {
+  it('researched tech with +1 science effect adds +1 science to city yields', () => {
+    const state = createTestState();
+    const city = makeCity();
+
+    const baseYields = calculateCityYields(city, state);
+
+    // Register a tech with a persistent +1 science effect
+    const testTechId = 'test_science_tech';
+    const technologies = new Map(state.config.technologies);
+    technologies.set(testTechId, {
+      id: testTechId,
+      name: 'Test Science Tech',
+      age: 'antiquity' as const,
+      cost: 50,
+      prerequisites: [],
+      unlocks: [],
+      description: '+1 science',
+      treePosition: { row: 0, col: 0 },
+      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 }],
+    });
+    const config = { ...state.config, technologies };
+
+    const players = new Map(state.players);
+    players.set('p1', {
+      ...state.players.get('p1')!,
+      researchedTechs: [testTechId as import('../../types/GameState').TechnologyId],
+    });
+    const testState = { ...state, config, players };
+
+    const yieldsWithTech = calculateCityYields(city, testState);
+    expect(yieldsWithTech.science - baseYields.science).toBe(1);
+  });
+});
+
+// ── Y2.4: localHappiness penalty ──
+
+describe('Y2.4: localHappiness penalty in YieldCalculator', () => {
+  it('city at -10 happiness has roughly 80% yield multiplier (floor applied)', () => {
+    // happiness=-10 → multiplier = 1 + (-10) * 0.02 = 0.8
+    const state = createTestState();
+    const cityHappy = makeCity({ happiness: 0 }); // neutral (no penalty)
+    const cityUnhappy = makeCity({ happiness: -10 });
+
+    const yieldsHappy = calculateCityYields(cityHappy, state);
+    const yieldsUnhappy = calculateCityYields(cityUnhappy, state);
+
+    // Food should be reduced by roughly 20% (floors applied)
+    // e.g. if baseFood = 5, unhappy should be floor(5 * 0.8) = 4
+    expect(yieldsUnhappy.food).toBeLessThan(yieldsHappy.food);
+    expect(yieldsUnhappy.production).toBeLessThan(yieldsHappy.production);
+    // Verify approximate multiplier: unhappy/happy ≈ 0.8 (within floor rounding)
+    if (yieldsHappy.food > 0) {
+      expect(yieldsUnhappy.food / yieldsHappy.food).toBeGreaterThanOrEqual(0.75);
+      expect(yieldsUnhappy.food / yieldsHappy.food).toBeLessThanOrEqual(1.0);
+    }
+  });
+
+  it('city at +10 happiness has no bonus multiplier (positive happiness unaffected)', () => {
+    const state = createTestState();
+    const cityNeutral = makeCity({ happiness: 0 });
+    const cityHappy = makeCity({ happiness: 10 });
+
+    const yieldsNeutral = calculateCityYields(cityNeutral, state);
+    const yieldsHappy = calculateCityYields(cityHappy, state);
+
+    // Positive happiness does NOT grant bonus yields
+    expect(yieldsHappy.food).toBe(yieldsNeutral.food);
+    expect(yieldsHappy.production).toBe(yieldsNeutral.production);
+    expect(yieldsHappy.gold).toBe(yieldsNeutral.gold);
+  });
+});
