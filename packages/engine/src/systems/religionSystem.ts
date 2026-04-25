@@ -411,9 +411,22 @@ function handleEarnRelic(
   const currentRelics: ReadonlyArray<string> = player.relics ?? [];
   if (currentRelics.includes(relicId)) return state;
 
+  // Z3.3: Increment relicsDisplayedCount when player owns a Cathedral or Reliquary.
+  // These buildings can display relics for yields.
+  const RELIC_DISPLAY_BUILDINGS = ['cathedral', 'reliquary'];
+  const playerHasRelicBuilding = [...state.cities.values()].some(
+    (city) =>
+      city.owner === playerId &&
+      city.buildings.some((b) => RELIC_DISPLAY_BUILDINGS.includes(b)),
+  );
+  const updatedRelicsDisplayedCount = playerHasRelicBuilding
+    ? (player.relicsDisplayedCount ?? 0) + 1
+    : (player.relicsDisplayedCount ?? 0);
+
   const updatedPlayer: PlayerState = {
     ...player,
     relics: [...currentRelics, relicId],
+    relicsDisplayedCount: updatedRelicsDisplayedCount,
   };
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);

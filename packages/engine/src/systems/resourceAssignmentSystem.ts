@@ -228,9 +228,17 @@ function handleAssign(
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, updatedCity);
 
+  // Z3.3: Increment resourcesAssigned counter on the player
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(playerId, {
+    ...player,
+    resourcesAssigned: (player.resourcesAssigned ?? 0) + 1,
+  });
+
   return {
     ...state,
     cities: updatedCities,
+    players: updatedPlayers,
   };
 }
 
@@ -261,6 +269,21 @@ function handleUnassign(
   };
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, updatedCity);
+
+  // Z3.3: Decrement resourcesAssigned counter on the player (clamp at 0)
+  const unassignPlayer = state.players.get(playerId);
+  if (unassignPlayer) {
+    const updatedPlayers = new Map(state.players);
+    updatedPlayers.set(playerId, {
+      ...unassignPlayer,
+      resourcesAssigned: Math.max(0, (unassignPlayer.resourcesAssigned ?? 0) - 1),
+    });
+    return {
+      ...state,
+      cities: updatedCities,
+      players: updatedPlayers,
+    };
+  }
 
   return {
     ...state,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
 import type { Age } from '@hex/engine';
 import { DramaModal } from './DramaModal';
@@ -9,6 +10,10 @@ interface AgeTransitionPanelProps {
 export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
   const { state, dispatch } = useGameState();
   const player = state.players.get(state.currentPlayerId);
+
+  // F-04: track which pending legacy bonuses the player has selected (max 2)
+  const [selectedBonusIds, setSelectedBonusIds] = useState<ReadonlyArray<string>>([]);
+
   if (!player) return null;
 
   const nextAge = getNextAge(player.age);
@@ -124,6 +129,111 @@ export function AgeTransitionPanel({ onResolve }: AgeTransitionPanelProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* F-04: Pending legacy bonus pick-2 section */}
+      {player.pendingLegacyBonuses && player.pendingLegacyBonuses.length > 0 && (
+        <div
+          className="mb-8 p-5 rounded-xl border"
+          style={{
+            background: 'linear-gradient(to right, rgba(6, 78, 59, 0.20), rgba(6, 95, 70, 0.20))',
+            borderColor: 'var(--panel-accent-gold-soft)',
+          }}
+        >
+          <h3 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: 'var(--panel-accent-gold-soft)' }}>
+            <span>🏅</span>
+            <span>Choose Your Legacy Bonuses (pick 2 of {player.pendingLegacyBonuses.length})</span>
+          </h3>
+          <p className="text-xs mb-3" style={{ color: 'var(--panel-muted-color)' }}>
+            These permanent bonuses carry into the next age. Select exactly 2, then confirm.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            {player.pendingLegacyBonuses.map(bonus => {
+              const isSelected = selectedBonusIds.includes(bonus.bonusId);
+              const atMax = selectedBonusIds.length >= 2 && !isSelected;
+              return (
+                <button
+                  key={bonus.bonusId}
+                  disabled={atMax}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedBonusIds(selectedBonusIds.filter(id => id !== bonus.bonusId));
+                    } else if (selectedBonusIds.length < 2) {
+                      setSelectedBonusIds([...selectedBonusIds, bonus.bonusId]);
+                    }
+                  }}
+                  className={`text-left p-3 rounded-lg border-2 transition-all ${atMax ? 'opacity-40' : 'hover:scale-[1.01]'}`}
+                  style={
+                    isSelected
+                      ? {
+                          backgroundColor: 'var(--panel-muted-bg)',
+                          borderColor: 'var(--panel-accent-gold-soft)',
+                          boxShadow: '0 0 8px rgba(251, 191, 36, 0.3)',
+                        }
+                      : {
+                          backgroundColor: 'var(--panel-muted-bg)',
+                          borderColor: 'var(--panel-border)',
+                        }
+                  }
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold mb-1 capitalize" style={{ color: 'var(--panel-accent-gold-soft)' }}>
+                        {bonus.axis} axis
+                      </div>
+                      <div className="text-sm" style={{ color: 'var(--panel-text-color)' }}>
+                        {bonus.description}
+                      </div>
+                      <div className="text-[10px] mt-1" style={{ color: 'var(--panel-muted-color)' }}>
+                        {bonus.effect.type === 'MODIFY_YIELD' && `+${bonus.effect.value} ${bonus.effect.yield}/turn`}
+                        {bonus.effect.type === 'MODIFY_COMBAT' && `+${bonus.effect.value} combat strength`}
+                        {bonus.effect.type === 'GRANT_UNIT' && `Free ${bonus.effect.unitId}`}
+                        {bonus.effect.type === 'UNLOCK_BUILDING' && `Unlocks ${bonus.effect.buildingId}`}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{ backgroundColor: 'var(--panel-accent-gold-soft)', color: 'var(--panel-turn-badge-text)' }}
+                      >
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            disabled={selectedBonusIds.length !== 2}
+            onClick={() => {
+              if (selectedBonusIds.length === 2) {
+                dispatch({ type: 'CHOOSE_LEGACY_BONUSES', picks: [...selectedBonusIds] });
+                setSelectedBonusIds([]);
+              }
+            }}
+            className="w-full py-2 rounded-lg font-semibold text-sm transition-all"
+            style={
+              selectedBonusIds.length === 2
+                ? {
+                    backgroundColor: 'var(--panel-accent-gold-soft)',
+                    color: 'var(--panel-turn-badge-text)',
+                    cursor: 'pointer',
+                  }
+                : {
+                    backgroundColor: 'var(--panel-muted-strong)',
+                    color: 'var(--panel-muted-color)',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }
+            }
+            data-testid="confirm-legacy-bonuses"
+          >
+            {selectedBonusIds.length === 2
+              ? 'Confirm Legacy Bonuses'
+              : `Select ${2 - selectedBonusIds.length} more bonus${2 - selectedBonusIds.length === 1 ? '' : 'es'}`}
+          </button>
         </div>
       )}
 

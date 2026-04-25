@@ -124,6 +124,18 @@ function handleFoundCity(
     originalOwner: undefined,
   };
 
+  // Z3.3: Increment distantLandPoints if founding on a Distant Lands tile
+  const updatedPlayers = new Map(state.players);
+  if (tile.isDistantLands) {
+    const founder = state.players.get(unit.owner);
+    if (founder) {
+      updatedPlayers.set(unit.owner, {
+        ...founder,
+        distantLandPoints: (founder.distantLandPoints ?? 0) + 1,
+      });
+    }
+  }
+
   // Remove settler unit
   const updatedUnits = new Map(state.units);
   updatedUnits.delete(unitId);
@@ -152,6 +164,7 @@ function handleFoundCity(
 
   return {
     ...state,
+    players: updatedPlayers,
     units: updatedUnits,
     cities: updatedCities,
     districts: updatedDistricts,

@@ -98,6 +98,11 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     crisisLegacyUnlocked: false,
     policySwapWindowOpen: false,
     governmentLockedForAge: false,
+    // Z3.2: Dedicated milestone fields — default 0
+    artifactsInMuseums: 0,
+    distantLandPoints: 0,
+    relicsDisplayedCount: 0,
+    resourcesAssigned: 0,
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
