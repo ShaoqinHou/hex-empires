@@ -182,20 +182,38 @@ const ANTIQUITY_CULTURE: LegacyPath = {
     {
       id: 'antiquity_culture_t1',
       tier: 1,
-      description: 'Build 2 Wonders', // GUESS (final is 7 per rulebook)
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 2,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy when field absent
+      description: 'Display 2 Artifacts in Museums (fallback: 2 Wonders built)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 2;
+        return totalWondersBuiltByPlayer(s, pid) >= 2;
+      },
     },
     {
       id: 'antiquity_culture_t2',
       tier: 2,
-      description: 'Build 4 Wonders', // GUESS
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 4,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy
+      description: 'Display 4 Artifacts in Museums (fallback: 4 Wonders built)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 4;
+        return totalWondersBuiltByPlayer(s, pid) >= 4;
+      },
     },
     {
       id: 'antiquity_culture_t3',
       tier: 3,
-      description: 'Wonders of the Ancient World: Build 7 Wonders',
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 7,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy
+      description: 'Wonders of the Ancient World: Display 7 Artifacts (fallback: 7 Wonders)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 7;
+        return totalWondersBuiltByPlayer(s, pid) >= 7;
+      },
     },
   ],
 };
@@ -232,20 +250,38 @@ const ANTIQUITY_ECONOMIC: LegacyPath = {
     {
       id: 'antiquity_economic_t1',
       tier: 1,
-      description: 'Earn 200 Gold cumulative (proxy for Resource assignment)', // PROXY: resources
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 200,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy when field absent
+      description: 'Assign 5 Resources to cities (fallback: 200 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 5;
+        return (p.totalGoldEarned ?? 0) >= 200;
+      },
     },
     {
       id: 'antiquity_economic_t2',
       tier: 2,
-      description: 'Earn 500 Gold cumulative (proxy for 10 Resources assigned)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 500,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Assign 10 Resources to cities (fallback: 500 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 10;
+        return (p.totalGoldEarned ?? 0) >= 500;
+      },
     },
     {
       id: 'antiquity_economic_t3',
       tier: 3,
-      description: 'Silk Roads: Earn 1000 Gold cumulative (proxy for 20+ Resources)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 1000,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Silk Roads: Assign 20 Resources to cities (fallback: 1000 Gold)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 20;
+        return (p.totalGoldEarned ?? 0) >= 1000;
+      },
     },
   ],
 };
@@ -285,31 +321,44 @@ const EXPLORATION_CULTURE: LegacyPath = {
     {
       id: 'exploration_culture_t1',
       tier: 1,
-      description: 'Collect 4 Relics (proxy: 100 Culture)', // F-09: relics when present, culture proxy fallback
+      // Z3.4: prefer relicsDisplayedCount (relics in Cathedral/Reliquary);
+      // fall back to relics.length, then culture proxy
+      description: 'Display 4 Relics in Cathedral/Reliquary (fallback: 4 relics acquired or 100 Culture)',
       check: (pid, s) => {
-        const relics = s.players.get(pid)?.relics;
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.relicsDisplayedCount !== undefined) return p.relicsDisplayedCount >= 4;
+        const relics = p.relics;
         if (relics && relics.length > 0) return relics.length >= 4;
-        return (s.players.get(pid)?.culture ?? 0) >= 100;
+        return (p.culture ?? 0) >= 100;
       },
     },
     {
       id: 'exploration_culture_t2',
       tier: 2,
-      description: 'Collect 8 Relics (proxy: 250 Culture)', // F-09
+      // Z3.4: prefer relicsDisplayedCount; fallbacks as above
+      description: 'Display 8 Relics in Cathedral/Reliquary (fallback: 8 relics or 250 Culture)',
       check: (pid, s) => {
-        const relics = s.players.get(pid)?.relics;
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.relicsDisplayedCount !== undefined) return p.relicsDisplayedCount >= 8;
+        const relics = p.relics;
         if (relics && relics.length > 0) return relics.length >= 8;
-        return (s.players.get(pid)?.culture ?? 0) >= 250;
+        return (p.culture ?? 0) >= 250;
       },
     },
     {
       id: 'exploration_culture_t3',
       tier: 3,
-      description: 'Toshakhana: Collect 12 Relics (proxy: 500 Culture)', // F-09
+      // Z3.4: prefer relicsDisplayedCount; fallbacks as above
+      description: 'Toshakhana: Display 12 Relics (fallback: 12 relics or 500 Culture)',
       check: (pid, s) => {
-        const relics = s.players.get(pid)?.relics;
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.relicsDisplayedCount !== undefined) return p.relicsDisplayedCount >= 12;
+        const relics = p.relics;
         if (relics && relics.length > 0) return relics.length >= 12;
-        return (s.players.get(pid)?.culture ?? 0) >= 500;
+        return (p.culture ?? 0) >= 500;
       },
     },
   ],
@@ -322,20 +371,39 @@ const EXPLORATION_MILITARY: LegacyPath = {
     {
       id: 'exploration_military_t1',
       tier: 1,
-      description: 'Defeat 6 enemy units this age (killsThisAge proxy for Distant-Lands points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 6,
+      // Z3.4: prefer distantLandPoints (cities founded on Distant Lands);
+      // fall back to killsThisAge proxy when field absent
+      description: 'Earn 4 Distant Land Points (fallback: 6 kills this age)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.distantLandPoints !== undefined) return p.distantLandPoints >= 4;
+        return (p.killsThisAge ?? p.totalKills ?? 0) >= 6;
+      },
     },
     {
       id: 'exploration_military_t2',
       tier: 2,
-      description: 'Defeat 10 enemy units this age (proxy)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 10,
+      // Z3.4: prefer distantLandPoints; fall back to kills proxy
+      description: 'Earn 8 Distant Land Points (fallback: 10 kills this age)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.distantLandPoints !== undefined) return p.distantLandPoints >= 8;
+        return (p.killsThisAge ?? p.totalKills ?? 0) >= 10;
+      },
     },
     {
       id: 'exploration_military_t3',
       tier: 3,
-      description: 'Non Sufficit Orbis: Defeat 15 enemy units this age (proxy for 12 Distant-Lands points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.killsThisAge ?? s.players.get(pid)?.totalKills ?? 0) >= 15,
+      // Z3.4: prefer distantLandPoints; fall back to kills proxy
+      description: 'Non Sufficit Orbis: Earn 12 Distant Land Points (fallback: 15 kills this age)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.distantLandPoints !== undefined) return p.distantLandPoints >= 12;
+        return (p.killsThisAge ?? p.totalKills ?? 0) >= 15;
+      },
     },
   ],
 };
@@ -347,20 +415,38 @@ const EXPLORATION_ECONOMIC: LegacyPath = {
     {
       id: 'exploration_economic_t1',
       tier: 1,
-      description: 'Earn 1500 Gold cumulative (proxy for 10 Treasure Fleet points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 1500,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Assign 15 Resources to cities (fallback: 1500 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 15;
+        return (p.totalGoldEarned ?? 0) >= 1500;
+      },
     },
     {
       id: 'exploration_economic_t2',
       tier: 2,
-      description: 'Earn 2500 Gold cumulative (proxy for 20 Treasure Fleet points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 2500,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Assign 25 Resources to cities (fallback: 2500 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 25;
+        return (p.totalGoldEarned ?? 0) >= 2500;
+      },
     },
     {
       id: 'exploration_economic_t3',
       tier: 3,
-      description: 'Treasure Fleets: Earn 4000 Gold cumulative (proxy for 30 Treasure points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 4000,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Treasure Fleets: Assign 40 Resources to cities (fallback: 4000 Gold)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 40;
+        return (p.totalGoldEarned ?? 0) >= 4000;
+      },
     },
   ],
 };
@@ -406,20 +492,38 @@ const MODERN_CULTURE: LegacyPath = {
     {
       id: 'modern_culture_t1',
       tier: 1,
-      description: 'Build 2 Modern Wonders (proxy for 5 Artifacts)', // PROXY: no Artifact system
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 2,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy when field absent
+      description: 'Display 5 Artifacts in Museums (fallback: 2 Wonders built)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 5;
+        return totalWondersBuiltByPlayer(s, pid) >= 2;
+      },
     },
     {
       id: 'modern_culture_t2',
       tier: 2,
-      description: 'Build 5 Wonders cumulative (proxy for 15 Artifacts)', // PROXY
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 5,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy
+      description: 'Display 15 Artifacts in Museums (fallback: 5 Wonders built)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 15;
+        return totalWondersBuiltByPlayer(s, pid) >= 5;
+      },
     },
     {
       id: 'modern_culture_t3',
       tier: 3,
-      description: 'World\'s Fair: Build 8 Wonders cumulative (proxy for World\'s Fair Wonder)', // PROXY
-      check: (pid, s) => totalWondersBuiltByPlayer(s, pid) >= 8,
+      // Z3.4: prefer artifactsInMuseums; fall back to wonder-count proxy
+      description: "World's Fair: Display 25 Artifacts in Museums (fallback: 8 Wonders built)",
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.artifactsInMuseums !== undefined) return p.artifactsInMuseums >= 25;
+        return totalWondersBuiltByPlayer(s, pid) >= 8;
+      },
     },
   ],
 };
@@ -456,20 +560,38 @@ const MODERN_ECONOMIC: LegacyPath = {
     {
       id: 'modern_economic_t1',
       tier: 1,
-      description: 'Earn 3000 Gold cumulative (proxy for 150 Railroad Tycoon points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 3000,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Assign 30 Resources to cities (fallback: 3000 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 30;
+        return (p.totalGoldEarned ?? 0) >= 3000;
+      },
     },
     {
       id: 'modern_economic_t2',
       tier: 2,
-      description: 'Earn 5000 Gold cumulative (proxy for 300 Railroad Tycoon points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 5000,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Assign 50 Resources to cities (fallback: 5000 Gold cumulative)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 50;
+        return (p.totalGoldEarned ?? 0) >= 5000;
+      },
     },
     {
       id: 'modern_economic_t3',
       tier: 3,
-      description: 'Railroad Tycoon: Earn 10000 Gold cumulative (proxy for 500 points + Banker visits)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalGoldEarned ?? 0) >= 10000,
+      // Z3.4: prefer resourcesAssigned; fall back to totalGoldEarned proxy
+      description: 'Railroad Tycoon: Assign 80 Resources to cities (fallback: 10000 Gold)',
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        if (p.resourcesAssigned !== undefined) return p.resourcesAssigned >= 80;
+        return (p.totalGoldEarned ?? 0) >= 10000;
+      },
     },
   ],
 };
