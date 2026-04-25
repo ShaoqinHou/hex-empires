@@ -167,6 +167,9 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     celebrationTurnsLeft: 0,
     celebrationBonus: 0,
     pendingCelebrationChoice: null,
+    // BB1.1 (F-f9e71910): clear darkAgeOptIn on transition so an Antiquity opt-in
+    // does not persist into Exploration. The choice is per-age, like goldenAgeChosen.
+    darkAgeOptIn: undefined,
   });
 
   const logEntries: GameEvent[] = [

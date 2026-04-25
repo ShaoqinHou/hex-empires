@@ -1394,4 +1394,23 @@ describe('AA3.3: score victory uses totalCareerLegacyPoints', () => {
     expect(next.players.get('p1')!.legacyPoints).toBe(0);
     expect(next.players.get('p1')!.totalCareerLegacyPoints).toBe(5);
   });
+
+  it('BB1.1: clears darkAgeOptIn on TRANSITION_AGE (opt-in does not persist to next age)', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      darkAgeOptIn: true,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const nextPlayer = next.players.get('p1')!;
+    // After transition the opt-in flag must be cleared (undefined), not still true
+    expect(nextPlayer.darkAgeOptIn).toBeUndefined();
+    // And the player has transitioned successfully
+    expect(nextPlayer.age).toBe('exploration');
+  });
 });
