@@ -365,12 +365,19 @@ function handleSpreadReligion(
   const updatedCities = new Map(state.cities);
   updatedCities.set(targetCityId, updatedCity);
 
-  const updatedUnit: typeof unit = {
-    ...unit,
-    spreadsRemaining: remaining - 1,
-  };
+  // Decrement charges then consume the missionary when depleted.
+  const newRemaining = remaining - 1;
   const updatedUnits = new Map(state.units);
-  updatedUnits.set(unitId, updatedUnit);
+  if (newRemaining <= 0) {
+    // Missionary expended — remove from the map.
+    updatedUnits.delete(unitId);
+  } else {
+    const updatedUnit: typeof unit = {
+      ...unit,
+      spreadsRemaining: newRemaining,
+    };
+    updatedUnits.set(unitId, updatedUnit);
+  }
 
   const event: GameEvent = {
     turn: state.turn,

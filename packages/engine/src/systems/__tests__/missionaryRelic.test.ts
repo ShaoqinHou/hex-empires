@@ -107,6 +107,64 @@ describe('SPREAD_RELIGION - missionary system (F-08)', () => {
     expect(next).toBe(stateWithUnit);
     expect(next.cities.get('c1')!.religionId).toBeUndefined();
   });
+
+  it('consumes the missionary when last charge is used', () => {
+    const { state, religionId } = foundReligionState();
+    // Only 1 charge remaining — next spread should consume the unit.
+    const missionary = createMissionary({ position: { q: 3, r: 2 }, spreadsRemaining: 1 });
+    const stateWithUnit = { ...state, units: new Map([['m1', missionary]]) };
+
+    const next = religionSystem(stateWithUnit, {
+      type: 'SPREAD_RELIGION',
+      unitId: 'm1',
+      targetCityId: 'c1',
+    });
+
+    // City should be converted.
+    expect(next.cities.get('c1')!.religionId).toBe(religionId);
+    // Missionary should be gone from the unit map.
+    expect(next.units.has('m1')).toBe(false);
+  });
+
+  it('accepts spread when missionary is on the same hex as the target city', () => {
+    const { state, religionId } = foundReligionState();
+    // City c1 is at { q: 3, r: 3 } — place missionary on same hex.
+    const missionary = createMissionary({ position: { q: 3, r: 3 } });
+    const stateWithUnit = { ...state, units: new Map([['m1', missionary]]) };
+
+    const next = religionSystem(stateWithUnit, {
+      type: 'SPREAD_RELIGION',
+      unitId: 'm1',
+      targetCityId: 'c1',
+    });
+
+    expect(next.cities.get('c1')!.religionId).toBe(religionId);
+    // Charge decremented, not consumed (started at 3).
+    expect(next.units.get('m1')!.spreadsRemaining).toBe(2);
+  });
+
+  it('rejects spread when owner has not founded a religion', () => {
+    // Build state WITHOUT founding a religion.
+    const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', position: { q: 3, r: 3 }, buildings: ['temple'] });
+    const base = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] })],
+      ]),
+      cities: new Map([['c1', city]]),
+    });
+    const missionary = createMissionary({ position: { q: 3, r: 2 } });
+    const stateWithUnit = { ...base, units: new Map([['m1', missionary]]) };
+
+    const next = religionSystem(stateWithUnit, {
+      type: 'SPREAD_RELIGION',
+      unitId: 'm1',
+      targetCityId: 'c1',
+    });
+
+    // No religion founded — state unchanged.
+    expect(next).toBe(stateWithUnit);
+    expect(next.cities.get('c1')!.religionId).toBeUndefined();
+  });
 });
 
 // ======================================================================

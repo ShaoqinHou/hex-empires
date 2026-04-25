@@ -825,3 +825,64 @@ describe('EE3.1: placed codices contribute to science per turn', () => {
   });
 });
 
+// ── EE3.2: Per-tech mastery bonus effects ─────────────────────────────────────
+
+describe('EE3.2: per-tech masteryEffect applied on mastery completion', () => {
+  it('EE3.2a: mastery completion applies masteryEffect as legacyBonus', () => {
+    // Mining has masteryEffect: MODIFY_YIELD empire production +1
+    // cost 25, mastery = ceil(25 * 0.8) = 20. Start at 19, pop=1 city → 2 science → done.
+    const player = createTestPlayer({
+      researchedTechs: ['mining'],
+      masteredTechs: [],
+      currentMastery: 'mining',
+      masteryProgress: 19,
+      legacyBonuses: [],
+    });
+    const city = createTestCity({ population: 1 });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    const next = researchSystem(state, { type: 'END_TURN' });
+    const bonuses = next.players.get('p1')!.legacyBonuses;
+    const masteryBonus = bonuses.find(b => b.source === 'mastery:mining');
+    expect(masteryBonus).toBeDefined();
+    expect(masteryBonus!.effect.type).toBe('MODIFY_YIELD');
+    if (masteryBonus!.effect.type === 'MODIFY_YIELD') {
+      expect(masteryBonus!.effect.yield).toBe('production');
+      expect(masteryBonus!.effect.value).toBe(1);
+      expect(masteryBonus!.effect.target).toBe('empire');
+    }
+  });
+
+  it('EE3.2b: mastery completion with no masteryEffect falls back to +1 science without error', () => {
+    // future_tech_antiquity has no masteryEffect — should complete and apply fallback
+    // cost 100, mastery = ceil(100 * 0.8) = 80. Start at 79, pop=1 → 2 science → done.
+    const player = createTestPlayer({
+      researchedTechs: ['future_tech_antiquity'],
+      masteredTechs: [],
+      currentMastery: 'future_tech_antiquity',
+      masteryProgress: 79,
+      legacyBonuses: [],
+    });
+    const city = createTestCity({ population: 1 });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+    // Must not throw — fallback applies generic +1 science
+    let next: typeof state;
+    expect(() => { next = researchSystem(state, { type: 'END_TURN' }); }).not.toThrow();
+    const p = next!.players.get('p1')!;
+    expect(p.masteredTechs).toContain('future_tech_antiquity');
+    expect(p.currentMastery).toBeNull();
+    // Fallback effect must exist
+    const fallbackBonus = p.legacyBonuses.find(b => b.source === 'mastery:future_tech_antiquity');
+    expect(fallbackBonus).toBeDefined();
+    if (fallbackBonus!.effect.type === 'MODIFY_YIELD') {
+      expect(fallbackBonus!.effect.yield).toBe('science');
+      expect(fallbackBonus!.effect.value).toBe(1);
+    }
+  });
+});
+

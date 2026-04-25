@@ -24,4 +24,11 @@ export interface UnitDef {
    * them from generic/mercenary commanders that any civ can produce.
    */
   readonly isNamedCommander?: boolean;
+  /**
+   * F-08: Initial number of spread-religion charges for religious units (Missionaries).
+   * When a unit is produced, its UnitState.spreadsRemaining is initialized to this value.
+   * If absent, defaults to 3 for units with the 'spread_religion' ability.
+   * Optional so existing UnitDef entries compile unchanged.
+   */
+  readonly religiousCharges?: number;
 }

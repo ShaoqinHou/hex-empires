@@ -275,6 +275,7 @@ export const MISSIONARY: UnitDef = {
   requiredTech: 'printing',
   upgradesTo: null,
   abilities: ['spread_religion'],
+  religiousCharges: 3,
 } as const;
 
 // ── CC3.1 — Exploration civilization unique units ──────────────────────────

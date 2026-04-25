@@ -1438,3 +1438,74 @@ describe('AA3.3: score victory uses totalCareerLegacyPoints', () => {
     expect(nextPlayer.age).toBe('exploration');
   });
 });
+
+describe('EE4.2: CHOOSE_LEGACY_BONUSES action handler', () => {
+  it('appends chosen bonuses to legacyBonuses (spread-append, not overwrite)', () => {
+    // Player already has 1 pre-existing legacy bonus; picks 1 from pending
+    const existingBonus = { source: 'civ:rome:legacyBonus', effect: { type: 'MODIFY_YIELD' as const, target: 'city' as const, yield: 'gold' as const, value: 2 } };
+    const pendingBonus = {
+      bonusId: 'golden-age:military:antiquity',
+      axis: 'military',
+      description: 'Military Golden Age bonus',
+      effect: { type: 'MODIFY_COMBAT' as const, target: 'all' as const, value: 5 },
+    };
+    const player = createTestPlayer({
+      legacyBonuses: [existingBonus],
+      pendingLegacyBonuses: [pendingBonus],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    const next = ageSystem(state, { type: 'CHOOSE_LEGACY_BONUSES', picks: ['golden-age:military:antiquity'] });
+    const nextPlayer = next.players.get('p1')!;
+    // Must keep the pre-existing bonus AND append the chosen one
+    expect(nextPlayer.legacyBonuses).toHaveLength(2);
+    expect(nextPlayer.legacyBonuses[0]).toEqual(existingBonus);
+    expect(nextPlayer.legacyBonuses[1].source).toBe('golden-age:military:antiquity');
+    // pendingLegacyBonuses must be cleared
+    expect(nextPlayer.pendingLegacyBonuses).toBeUndefined();
+  });
+
+  it('invalid bonusId is a no-op (returns state unchanged)', () => {
+    const pendingBonus = {
+      bonusId: 'civ:rome:legacyBonus',
+      axis: 'civ',
+      description: 'Rome legacy bonus',
+      effect: { type: 'MODIFY_YIELD' as const, target: 'city' as const, yield: 'science' as const, value: 1 },
+    };
+    const player = createTestPlayer({
+      legacyBonuses: [],
+      pendingLegacyBonuses: [pendingBonus],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+    // Dispatch with a bonusId that does NOT match any pending entry
+    const next = ageSystem(state, { type: 'CHOOSE_LEGACY_BONUSES', picks: ['nonexistent-bonus-id'] });
+    const nextPlayer = next.players.get('p1')!;
+    // legacyBonuses stays empty — nothing appended
+    expect(nextPlayer.legacyBonuses).toHaveLength(0);
+    // State reference should be unchanged (no-op)
+    expect(next).toBe(state);
+  });
+
+  it('legacy bonuses chosen in one age persist through a subsequent age transition', () => {
+    // Simulate: player picked a bonus after Antiquity→Exploration, then transitions to Modern
+    // The bonus earned in Exploration must still be present after the Modern transition.
+    const earnedEffect = { type: 'MODIFY_YIELD' as const, target: 'city' as const, yield: 'production' as const, value: 2 };
+    const player = createTestPlayer({
+      age: 'exploration',
+      civilizationId: 'spain',
+      ageProgress: 100,
+      legacyBonuses: [{ source: 'civ:spain:legacyBonus', effect: earnedEffect }],
+      pendingLegacyBonuses: undefined,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    // 'america' is a valid modern-age civ
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'america' });
+    const nextPlayer = next.players.get('p1')!;
+    // The bonus from the Exploration age must still be present (spread-append invariant)
+    expect(nextPlayer.legacyBonuses.some(b => b.source === 'civ:spain:legacyBonus')).toBe(true);
+    expect(nextPlayer.age).toBe('modern');
+  });
+});

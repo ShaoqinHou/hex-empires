@@ -220,6 +220,22 @@ export interface CityState {
   readonly religionId?: string | null;
 
   /**
+   * F-08: Count of urban district tiles converted to the player's religion
+   * via Missionary spread actions. Each urban spread increments this counter.
+   * Used to track per-city conversion progress (relic accumulation, city
+   * majority religion threshold). Optional — absent = 0.
+   */
+  readonly urbanConverted?: number;
+
+  /**
+   * F-08: Count of rural (improved) tiles converted to the player's religion
+   * via Missionary spread actions. Each rural spread increments this counter.
+   * Used alongside urbanConverted for majority-religion threshold checks.
+   * Optional — absent = 0.
+   */
+  readonly ruralConverted?: number;
+
+  /**
    * F-09: Relics currently displayed in this city's Reliquary buildings.
    * Each displayed relic contributes its faithPerTurn / culturePerTurn yields.
    * Optional so existing CityState construction keeps compiling unchanged.
