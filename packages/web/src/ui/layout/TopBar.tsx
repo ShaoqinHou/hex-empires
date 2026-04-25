@@ -184,6 +184,7 @@ export function TopBar() {
               <MenuButton label="💾 Save" onClick={handleSave} />
               <MenuButton label="📂 Load" onClick={() => { loadGame(); setShowMoreMenu(false); }} />
               <MenuButton label="🔊 Audio" panelId="audioSettings" onClick={() => openFromMenu('audioSettings')} />
+              <MenuButton label="🗿 Mementos (E)" panelId="mementos" onClick={() => openFromMenu('mementos')} />
               <MenuButton label="❓ Help (H)" panelId="help" onClick={() => openFromMenu('help')} />
             </div>
           )}

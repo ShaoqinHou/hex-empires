@@ -43,6 +43,7 @@ const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ 
 const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
 const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(m => ({ default: m.TradeRoutesPanel })));
 const AchievementsPanel = lazy(() => import('./ui/panels/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
+const MementoPanel = lazy(() => import('./ui/panels/MementoPanel').then(m => ({ default: m.MementoPanel })));
 
 function GameUI() {
   const { state: nullableState, lastValidation, clearValidation, selectedUnit, hoveredHex, isAltPressed, selectedCity, selectCity, combatPreview, combatPreviewPosition, isProcessingAI } = useGame();
@@ -242,6 +243,9 @@ onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
           {/* AchievementsPanel is experimental — only renders when the feature flag is on. */}
           {state.config.experimentalAchievements && activePanel === 'achievements' && (
             <AchievementsPanel onClose={closePanel} />
+          )}
+          {activePanel === 'mementos' && (
+            <MementoPanel onClose={closePanel} />
           )}
          </div>
         </Suspense>

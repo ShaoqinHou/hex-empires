@@ -18,11 +18,80 @@ import {
   ALL_UNITS,
   getReachable,
   getMovementCost,
+  evaluateLegends,
+  applyAccountDelta,
+  createDefaultAccountState,
 } from '@hex/engine';
+import type { AccountState } from '@hex/engine';
 import type { GameSetupConfig } from '@hex/engine';
 import type { TerrainDef, TerrainFeatureDef, UnitDef, CityState, SettlementType } from '@hex/engine';
 import type { ResourceDef } from '@hex/engine';
 import { ALL_RESOURCES } from '@hex/engine';
+
+// ── AccountState localStorage helpers ──
+//
+// AccountState contains ReadonlyMap<string, ...> fields which do not
+// round-trip through JSON.stringify/parse. We convert them to/from
+// plain objects at the boundary.
+
+interface SerializedAccountState {
+  foundationXP: number;
+  foundationLevel: number;
+  leaderXP: [string, number][];
+  leaderLevels: [string, number][];
+  unlockedMementos: string[];
+  unlockedAttributeNodes: [string, string[]][];
+  unlockedLegacyCards: [string, string[]][];
+  completedChallenges: string[];
+}
+
+function serializeAccount(account: AccountState): string {
+  const serializable: SerializedAccountState = {
+    foundationXP: account.foundationXP,
+    foundationLevel: account.foundationLevel,
+    leaderXP: [...account.leaderXP],
+    leaderLevels: [...account.leaderLevels],
+    unlockedMementos: [...account.unlockedMementos],
+    unlockedAttributeNodes: [...account.unlockedAttributeNodes].map(([k, v]) => [k, [...v]]),
+    unlockedLegacyCards: [...account.unlockedLegacyCards].map(([k, v]) => [k, [...v]]),
+    completedChallenges: [...account.completedChallenges],
+  };
+  return JSON.stringify(serializable);
+}
+
+function deserializeAccount(json: string): AccountState {
+  const raw = JSON.parse(json) as SerializedAccountState;
+  return {
+    foundationXP: raw.foundationXP ?? 0,
+    foundationLevel: raw.foundationLevel ?? 1,
+    leaderXP: new Map(raw.leaderXP ?? []),
+    leaderLevels: new Map(raw.leaderLevels ?? []),
+    unlockedMementos: raw.unlockedMementos ?? [],
+    unlockedAttributeNodes: new Map((raw.unlockedAttributeNodes ?? []).map(([k, v]) => [k, v])),
+    unlockedLegacyCards: new Map((raw.unlockedLegacyCards ?? []).map(([k, v]) => [k, v])),
+    completedChallenges: raw.completedChallenges ?? [],
+  };
+}
+
+const ACCOUNT_STORAGE_KEY = 'hex-empires-account';
+
+function loadAccountFromStorage(): AccountState {
+  try {
+    const json = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+    if (json) return deserializeAccount(json);
+  } catch {
+    // corrupt data — start fresh
+  }
+  return createDefaultAccountState();
+}
+
+function saveAccountToStorage(account: AccountState): void {
+  try {
+    localStorage.setItem(ACCOUNT_STORAGE_KEY, serializeAccount(account));
+  } catch {
+    // quota exceeded or private mode — silently ignore
+  }
+}
 
 // ── Engine singleton ──
 
@@ -83,6 +152,8 @@ interface GameContextValue {
   dispatch: (action: GameAction) => void;
   initGame: (config: GameSetupConfig) => void;
   isProcessingAI: boolean;
+  /** Current cross-session account state (Foundation XP, leader XP, mementos). */
+  account: AccountState;
   terrainRegistry: Registry<TerrainDef>;
   featureRegistry: Registry<TerrainFeatureDef>;
   unitRegistry: Registry<UnitDef>;
@@ -186,12 +257,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setLastValidation(null);
   }, []);
 
+  // AccountState — persisted in localStorage, drives Foundation XP + mementos.
+  // The ref is used for synchronous access inside the dispatch updater; the
+  // React state triggers re-renders when the account actually changes (on turn end).
+  // We load from localStorage in the lazy initializer so the value is correct
+  // on the very first render (before initGame is called).
+  const [account, setAccount] = useState<AccountState>(() => loadAccountFromStorage());
+  const accountRef = useRef<AccountState>(account);
+
   const initGame = useCallback((config: GameSetupConfig) => {
     // Optional deterministic seed via ?seed=<int> URL param — useful for E2E tests
     // that need stable starting positions across runs.
     const seedParam = new URLSearchParams(window.location.search).get('seed');
     const seed = seedParam ? Number(seedParam) : undefined;
-    const newState = createInitialState(config, Number.isFinite(seed) ? seed : undefined);
+    // Load persisted AccountState and pass it to createInitialState so
+    // equipped mementos can be applied at game start.
+    const loadedAccount = loadAccountFromStorage();
+    accountRef.current = loadedAccount;
+    setAccount(loadedAccount);
+    const newState = createInitialState(config, Number.isFinite(seed) ? seed : undefined, loadedAccount);
     setState(newState);
     setSelectedUnitId(null);
     setSelectedCityId(null);
@@ -226,9 +310,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    // After END_TURN, show an AI-thinking indicator, then process AI turns
-    // in the next macrotask so React re-renders the loading state first.
+    // After END_TURN, evaluate legends (cross-session meta-progression) and
+    // persist the updated AccountState to localStorage, then process AI turns.
     if (action.type === 'END_TURN') {
+      // Evaluate legends synchronously against the latest state before AI turns.
+      // Use functional setState to read the current state snapshot; update the
+      // account ref + React state + localStorage.
+      setState(prev => {
+        if (!prev) return prev;
+        const humanPlayerId = 'player1';
+        const { accountDelta } = evaluateLegends(prev, accountRef.current, humanPlayerId);
+        const updatedAccount = applyAccountDelta(accountRef.current, accountDelta);
+        accountRef.current = updatedAccount;
+        saveAccountToStorage(updatedAccount);
+        // Schedule React state update after this batch (can't call setAccount
+        // inside a setState updater directly — use Promise.resolve microtask).
+        Promise.resolve().then(() => setAccount(updatedAccount));
+        return prev; // legends don't mutate GameState itself
+      });
+
       setIsProcessingAI(true);
       setTimeout(() => {
         setState(prev => {
@@ -284,6 +384,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     dispatch,
     initGame,
     isProcessingAI,
+    account,
     terrainRegistry: registries.terrainRegistry,
     featureRegistry: registries.featureRegistry,
     unitRegistry,
@@ -310,7 +411,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     placementMode,
     enterPlacementMode,
     exitPlacementMode,
-  }), [state, dispatch, initGame, isProcessingAI, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation, placementMode, enterPlacementMode, exitPlacementMode]);
+  }), [state, dispatch, initGame, isProcessingAI, account, registries, selectedUnit, selectedHex, hoveredHex, isAltPressed, selectedCityId, selectedCity, selectCity, combatPreview, combatPreviewPosition, reachableHexes, saveGame, loadGame, lastValidation, clearValidation, placementMode, enterPlacementMode, exitPlacementMode]);
 
   // Expose game state for E2E testing (Playwright can read window.__gameState)
   useEffect(() => {

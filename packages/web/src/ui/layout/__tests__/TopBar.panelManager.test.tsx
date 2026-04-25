@@ -234,9 +234,9 @@ describe('TopBar — PanelManager wiring', () => {
     // cycle, so it now carries data-panel-trigger="audioSettings" like the rest.
     // Save and Load remain non-panel actions (they dispatch directly).
     const triggers = container.querySelectorAll('[data-panel-trigger]');
-    // 4 header buttons (tech/civics/diplomacy/age) + 10 menu items (tradeRoutes,
+    // 4 header buttons (tech/civics/diplomacy/age) + 11 menu items (tradeRoutes,
     // governors, religion, government, commanders, log, turnSummary, victoryProgress,
-    // audioSettings, help) = 14 total.
-    expect(triggers.length).toBe(14);
+    // audioSettings, mementos, help) = 15 total.
+    expect(triggers.length).toBe(15);
   });
 });
