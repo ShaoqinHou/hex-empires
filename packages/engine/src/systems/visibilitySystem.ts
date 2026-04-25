@@ -155,7 +155,11 @@ function revealAroundCoord(
 
   for (const hex of range(position, sightRange)) {
     const key = coordToKey(hex);
-    if (!state.map.tiles.has(key)) continue;
+    const tile = state.map.tiles.get(key);
+    if (!tile) continue;
+    // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
+    // Parity guard — same logic as recalcFullVisibility.
+    if (tile.isDistantLands && !player.distantLandsReachable) continue;
     // F-09: LOS occlusion — skip tiles blocked by mountains or forests
     if (!hasLineOfSight(position, hex, state)) continue;
     if (!visible.has(key)) { visible.add(key); changed = true; }

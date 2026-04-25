@@ -426,4 +426,94 @@ describe('visibilitySystem', () => {
       expect(vis1).toEqual(vis2);
     });
   });
+
+  describe('BB3.1: Distant Lands visibility gate — parity across all action branches', () => {
+    /**
+     * Helper: build a test state where tile (5,3) is marked isDistantLands=true.
+     * Player p1 does NOT have distantLandsReachable set.
+     * Unit u1 is at (3,3) with default sight range 2 — (5,3) is at distance 2.
+     */
+    function buildDistantLandsState() {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
+      ]);
+      const baseState = createTestState({ units });
+      const tiles = new Map(baseState.map.tiles);
+      const distantKey = coordToKey({ q: 5, r: 3 });
+      const distantTile = tiles.get(distantKey)!;
+      tiles.set(distantKey, { ...distantTile, isDistantLands: true });
+      return { ...baseState, map: { ...baseState.map, tiles } };
+    }
+
+    it('START_TURN: Distant Lands tile is hidden when player lacks distantLandsReachable', () => {
+      const state = buildDistantLandsState();
+      const next = visibilitySystem(state, { type: 'START_TURN' });
+      const visibility = next.players.get('p1')!.visibility;
+      // (5,3) is in range-2 of unit at (3,3) but is Distant Lands — must NOT be visible
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+      // Adjacent tile (4,3) is NOT Distant Lands — must be visible
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+    });
+
+    it('MOVE_UNIT: Distant Lands tile is hidden when player lacks distantLandsReachable', () => {
+      const state = buildDistantLandsState();
+      // Unit has already moved to (3,3) in state (position already updated by movementSystem)
+      const next = visibilitySystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 3, r: 3 }],
+      });
+      const visibility = next.players.get('p1')!.visibility;
+      // (5,3) is in sight range from (3,3) but Distant Lands — must NOT be revealed
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+      // (4,3) is not Distant Lands — should be visible
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+    });
+
+    it('FOUND_CITY: Distant Lands tile is hidden when player lacks distantLandsReachable', () => {
+      // Build state with a city at (3,3) — city sight radius 3 reaches (5,3) and (6,3)
+      const baseState = buildDistantLandsState();
+      const city: CityState = {
+        id: 'city1',
+        name: 'Rome',
+        owner: 'p1',
+        position: { q: 3, r: 3 },
+        population: 1,
+        food: 0,
+        productionQueue: [],
+        productionProgress: 0,
+        buildings: [],
+        territory: [coordToKey({ q: 3, r: 3 })],
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: true,
+        defenseHP: 100,
+        specialization: null,
+        specialists: 0,
+        districts: [],
+      };
+      const state = { ...baseState, cities: new Map([['city1', city]]) };
+      const next = visibilitySystem(state, { type: 'FOUND_CITY', unitId: 'u1', position: { q: 3, r: 3 }, name: 'Rome' });
+      const visibility = next.players.get('p1')!.visibility;
+      // (5,3) is in range-3 of city at (3,3) but Distant Lands — must NOT be visible
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+      // (4,3) is not Distant Lands — should be visible
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+    });
+
+    it('ATTACK_UNIT: Distant Lands tile is hidden when player lacks distantLandsReachable', () => {
+      const state = buildDistantLandsState();
+      // Simulate attacker at (3,3) — unit position already in state
+      const next = visibilitySystem(state, {
+        type: 'ATTACK_UNIT',
+        attackerId: 'u1',
+        targetId: 'u2',
+      });
+      const visibility = next.players.get('p1')!.visibility;
+      // (5,3) in sight range of attacker at (3,3) but Distant Lands — must NOT be revealed
+      expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);
+      // (4,3) is not Distant Lands — should be visible
+      expect(visibility.has(coordToKey({ q: 4, r: 3 }))).toBe(true);
+    });
+  });
 });
