@@ -9,7 +9,7 @@ import type { UrbanTileV2, RuralTileV2, QuarterV2 } from './DistrictOverhaul';
 import type { ReligionSlotState } from './Religion';
 import type { NotificationCategory, NotificationPanelTargetHint } from './Notification';
 import type { CommanderState } from './Commander';
-import type { EspionageOperation } from './Espionage';
+import type { EspionageOperation, EspionageOpState } from './Espionage';
 import type { ActiveTreaty } from './Treaty';
 
 // ── Turn ──
@@ -611,6 +611,21 @@ export interface PlayerState {
    * - false: skip dark age effects entirely
    */
   readonly darkAgeOptIn?: boolean;
+
+  // ── Z4: Counterespionage ──
+  /**
+   * Per-turn Influence drain committed to counterespionage (baseline 0).
+   * Each turn this amount is deducted from the player's Influence; it reduces
+   * the success probability of enemy espionage ops targeting this player.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly counterespionageInfluence?: number;
+  /**
+   * Detection bonus applied to rolls against enemy espionage ops targeting this player.
+   * Added to the base detection roll; higher values increase the chance that
+   * an incoming op is marked detected = true. Optional for backward compat.
+   */
+  readonly counterespionageDetectionBonus?: number;
 }
 
 /**
@@ -1023,6 +1038,16 @@ export interface GameState {
    * this map — commanders persist across ages (F-08).
    */
   readonly commanders?: ReadonlyMap<string, CommanderState>;
+
+  /**
+   * ── Z4: Active espionage operations (F-05 state machine) ──
+   *
+   * Maps op id → EspionageOpState for all active (not-yet-resolved) operations.
+   * Optional so existing GameState construction (tests, save files) compiles unchanged.
+   * Systems treat absence as an empty Map (no active ops). The espionageSystem
+   * manages create/tick/resolve/remove.
+   */
+  readonly espionageOps?: ReadonlyMap<string, EspionageOpState>;
 }
 
 // ── Actions ──
@@ -1317,6 +1342,12 @@ export type GameAction =
    * On success: increases counterInfluence on the operation, raising effective detection chance.
    */
   | { readonly type: 'COUNTER_ESPIONAGE'; readonly opId: string; readonly counterInfluence: number }
+  /**
+   * Z4: Cancel an in-progress espionage operation dispatched by the current player.
+   * Validates: opId exists in state.espionageOps, attackerPlayerId === currentPlayerId.
+   * On success: removes the op from state.espionageOps.
+   */
+  | { readonly type: 'CANCEL_ESPIONAGE'; readonly opId: string }
   // ── Y5: Treaties (F-06 scaffold) ──
   /**
    * Propose a treaty to another player.
