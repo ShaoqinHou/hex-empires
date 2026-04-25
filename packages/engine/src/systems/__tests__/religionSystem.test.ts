@@ -688,4 +688,34 @@ describe('religionSystem', () => {
       expect(next.players.get('p1')!.relics).toEqual(allRelicIds);
     });
   });
+
+  // ── Y5.4: Religion F-03 — FOUND_RELIGION must NOT deduct player.faith ──────
+  describe('Y5.4: FOUND_RELIGION does NOT deduct player.faith (VII has no Faith currency cost)', () => {
+    it('founding a religion leaves player.faith unchanged', () => {
+      // R5 verifier flagged that player.faith deduction was still present in
+      // FOUND_RELIGION. This test confirms the handler is faith-cost-free:
+      // player.faith before and after FOUND_RELIGION must be identical.
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const startingFaith = 250;
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: startingFaith, researchedCivics: ['piety'] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const action: ReligionAction = {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Buddhism',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      };
+      const next = religionSystem(state, action);
+      // Religion must have been founded successfully
+      expect(next.religion?.religions.length).toBe(1);
+      // Faith must not have been deducted — VII founding cost is zero
+      expect(next.players.get('p1')!.faith).toBe(startingFaith);
+    });
+  });
 });
