@@ -4,7 +4,7 @@
 // self-contained. Consumers (future Cycle C systems, tests) import
 // `ALL_GOVERNMENTS` and `ALL_POLICIES` from here.
 
-export type { GovernmentDef, PolicyCategory, PolicySlotCounts } from './governments';
+export type { GovernmentDef, GovernmentCelebrationBonus, PolicyCategory, PolicySlotCounts } from './governments';
 export {
   ALL_GOVERNMENTS,
   CLASSICAL_REPUBLIC,
@@ -14,6 +14,10 @@ export {
   PLUTOCRACY,
   THEOCRACY,
   ELECTIVE_REPUBLIC,
+  // F-04: Modern governments (Z1 additions)
+  AUTHORITARIANISM,
+  BUREAUCRATIC_MONARCHY,
+  REVOLUCION,
 } from './governments';
 
 export type { PolicyDef } from './policies';
