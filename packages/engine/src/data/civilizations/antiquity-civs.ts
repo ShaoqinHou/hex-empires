@@ -9,7 +9,7 @@ export const ROME: CivilizationDef = {
     description: 'Trade routes to your capital provide bonus gold. +1 production in all cities.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit legion when content batch lands
+  uniqueUnit: 'roman_legion',
   uniqueBuilding: 'bath',
   legacyBonus: {
     name: 'Roman Engineering',
@@ -28,8 +28,8 @@ export const EGYPT: CivilizationDef = {
     description: '+15% production toward wonders. Floodplains provide extra culture.',
     effects: [{ type: 'DISCOUNT_PRODUCTION', target: 'wonder', percent: 15 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit chariot_archer when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building sphinx when content batch lands
+  uniqueUnit: 'maryannu_chariot',
+  uniqueBuilding: 'pyramid',
   legacyBonus: {
     name: 'Monument Builders',
     description: '+2 culture in all cities in future ages',
@@ -47,8 +47,8 @@ export const GREECE: CivilizationDef = {
     description: 'One extra wildcard policy slot. +1 science in every city.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit hoplite when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building acropolis when content batch lands
+  uniqueUnit: 'hoplite',
+  uniqueBuilding: 'acropolis',
   legacyBonus: {
     name: 'Athenian Thought',
     description: '+2 science in all cities in future ages',
@@ -66,8 +66,8 @@ export const PERSIA: CivilizationDef = {
     description: '+2 gold and +1 culture in all cities during a Golden Age.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit immortal when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building pairidaeza when content batch lands
+  uniqueUnit: 'immortal',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'Royal Road',
     description: '+3 gold in all cities in future ages',

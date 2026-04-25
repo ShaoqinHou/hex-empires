@@ -274,6 +274,59 @@ export const JET_FIGHTER: UnitDef = {
   abilities: [],
 } as const;
 
+// ── CC3.1 — Modern civilization unique units ───────────────────────────────
+
+/** England unique unit. Replaces Infantry; +5 combat in friendly territory. */
+export const REDCOAT: UnitDef = {
+  id: 'redcoat',
+  name: 'Redcoat',
+  age: 'modern',
+  category: 'melee',
+  cost: 260,
+  combat: 60,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'rifling',
+  upgradesTo: null,
+  abilities: ['friendly_territory_bonus'],
+} as const;
+
+/** France unique unit. Replaces line infantry; +5 combat in capital territory. */
+export const GARDE_IMPERIALE: UnitDef = {
+  id: 'garde_imperiale',
+  name: 'Garde Imperiale',
+  age: 'modern',
+  category: 'melee',
+  cost: 270,
+  combat: 60,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'rifling',
+  upgradesTo: null,
+  abilities: ['capital_territory_bonus', 'elite_guard'],
+} as const;
+
+/** Russia unique unit. Replaces cavalry; +3 combat in own territory. */
+export const COSSACK: UnitDef = {
+  id: 'cossack',
+  name: 'Cossack',
+  age: 'modern',
+  category: 'cavalry',
+  cost: 280,
+  combat: 50,
+  rangedCombat: 0,
+  range: 0,
+  movement: 5,
+  sightRange: 3,
+  requiredTech: 'rifling',
+  upgradesTo: null,
+  abilities: ['own_territory_bonus', 'charge'],
+} as const;
+
 export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   INFANTRY,
   MACHINE_GUN,
@@ -292,4 +345,7 @@ export const ALL_MODERN_UNITS: ReadonlyArray<UnitDef> = [
   MECHANIZED_INFANTRY,
   HELICOPTER,
   JET_FIGHTER,
+  REDCOAT,
+  GARDE_IMPERIALE,
+  COSSACK,
 ] as const;

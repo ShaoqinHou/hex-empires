@@ -277,6 +277,62 @@ export const MISSIONARY: UnitDef = {
   abilities: ['spread_religion'],
 } as const;
 
+// ── CC3.1 — Exploration civilization unique units ──────────────────────────
+
+/** Rome unique unit. Stronger than Swordsman; bonus vs barbarians. Iron required. */
+export const ROMAN_LEGION: UnitDef = {
+  id: 'roman_legion',
+  name: 'Legion',
+  age: 'exploration',
+  category: 'melee',
+  cost: 100,
+  combat: 40,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'iron_working',
+  requiredResource: 'iron',
+  upgradesTo: 'musketman',
+  abilities: ['anti_barbarian', 'bonus_vs_barbarians'],
+} as const;
+
+/** Mongolia unique unit. Exploration cavalry with ranged attack; +2 movement over Horseman. */
+export const KESHIG: UnitDef = {
+  id: 'keshig',
+  name: 'Keshig',
+  age: 'exploration',
+  category: 'cavalry',
+  cost: 90,
+  combat: 35,
+  rangedCombat: 25,
+  range: 1,
+  movement: 6,
+  sightRange: 3,
+  requiredTech: 'archery',
+  requiredResource: 'horses',
+  upgradesTo: 'knight',
+  abilities: ['ranged_cavalry', 'trade_route_protection'],
+} as const;
+
+/** Spain unique unit. Replaces Musketman; bonus combat when distant from capital. */
+export const CONQUISTADOR: UnitDef = {
+  id: 'conquistador',
+  name: 'Conquistador',
+  age: 'exploration',
+  category: 'melee',
+  cost: 170,
+  combat: 55,
+  rangedCombat: 0,
+  range: 0,
+  movement: 3,
+  sightRange: 3,
+  requiredTech: 'gunpowder',
+  requiredResource: 'niter',
+  upgradesTo: null,
+  abilities: ['distant_lands_bonus', 'extra_sight'],
+} as const;
+
 export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   SWORDSMAN,
   CROSSBOWMAN,
@@ -295,4 +351,7 @@ export const ALL_EXPLORATION_UNITS: ReadonlyArray<UnitDef> = [
   CUIRASSIER,
   EXPLORER,
   MISSIONARY,
+  ROMAN_LEGION,
+  KESHIG,
+  CONQUISTADOR,
 ] as const;

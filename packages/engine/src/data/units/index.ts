@@ -6,6 +6,8 @@ export {
   BALLISTA, PHALANX, ANTIQUITY_HORSEMAN,
   CARAVAN, TRADE_SHIP,
   HEPHAESTION,
+  // CC3.1 antiquity unique units
+  HOPLITE, IMMORTAL, MARYANNU_CHARIOT,
 } from './antiquity-units';
 export {
   ALL_EXPLORATION_UNITS,
@@ -13,6 +15,8 @@ export {
   MUSKETMAN, BOMBARD, CANNON, SIEGE_TOWER, CARAVEL,
   QUADRIREME, CATAPULT, TREBUCHET, LANCER, CUIRASSIER,
   EXPLORER, MISSIONARY,
+  // CC3.1 exploration unique units
+  ROMAN_LEGION, KESHIG, CONQUISTADOR,
 } from './exploration-units';
 export {
   ALL_MODERN_UNITS,
@@ -21,6 +25,8 @@ export {
   DESTROYER, SUBMARINE, BOMBER, BATTLESHIP,
   PARATROOPERS, MECHANIZED_INFANTRY,
   SAM, MARINE, HELICOPTER, JET_FIGHTER,
+  // CC3.1 modern unique units
+  REDCOAT, GARDE_IMPERIALE, COSSACK,
 } from './modern-units';
 
 import { ALL_ANTIQUITY_UNITS } from './antiquity-units';

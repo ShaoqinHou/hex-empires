@@ -9,8 +9,8 @@ export const SPAIN: CivilizationDef = {
     description: 'Trade routes provide +3 gold.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit conquistador when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building mission when content batch lands
+  uniqueUnit: 'conquistador',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'Colonial Wealth',
     description: '+3 gold in all cities in future ages',
@@ -29,8 +29,8 @@ export const ENGLAND: CivilizationDef = {
     description: '+1 movement for all naval units.',
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'naval', value: 1 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit redcoat when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building royal_navy_dockyard when content batch lands
+  uniqueUnit: 'redcoat',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'Workshop of the World',
     description: '+2 production for coastal cities in future ages',
@@ -49,8 +49,8 @@ export const FRANCE: CivilizationDef = {
     description: '+2 culture per wonder in your empire.',
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit garde_imperiale when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building chateau when content batch lands
+  uniqueUnit: 'garde_imperiale',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'French Enlightenment',
     description: '+3 culture in all cities in future ages',
@@ -106,8 +106,8 @@ export const MONGOLIA: CivilizationDef = {
     description: '+3 movement for cavalry units.',
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'cavalry', value: 3 }],
   },
-  uniqueUnit: null, // TODO(content): add unique unit keshig when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building ordu when content batch lands
+  uniqueUnit: 'keshig',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'Steppe Legacy',
     description: '+1 movement for cavalry units in future ages',

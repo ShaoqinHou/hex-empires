@@ -275,6 +275,60 @@ export const HEPHAESTION: UnitDef = {
   isNamedCommander: true,
 } as const;
 
+// ── CC3.1 — Antiquity civilization unique units ────────────────────────────
+
+/** Greece unique unit. Replaces Phalanx; +3 combat vs cavalry (anti_cavalry_elite). */
+export const HOPLITE: UnitDef = {
+  id: 'hoplite',
+  name: 'Hoplite',
+  age: 'antiquity',
+  category: 'melee',
+  cost: 80,
+  combat: 31,
+  rangedCombat: 0,
+  range: 0,
+  movement: 2,
+  sightRange: 2,
+  requiredTech: 'bronze_working',
+  upgradesTo: 'pikeman',
+  abilities: ['anti_cavalry', 'formation', 'anti_cavalry_elite'],
+} as const;
+
+/** Persia unique unit. Replaces Archer; gains +2 movement over base Archer. */
+export const IMMORTAL: UnitDef = {
+  id: 'immortal',
+  name: 'Immortal',
+  age: 'antiquity',
+  category: 'ranged',
+  cost: 60,
+  combat: 12,
+  rangedCombat: 22,
+  range: 2,
+  movement: 4,
+  sightRange: 2,
+  requiredTech: 'bronze_working',
+  upgradesTo: 'crossbowman',
+  abilities: ['quick_march'],
+} as const;
+
+/** Egypt unique unit. Antiquity cavalry with ranged capability; faster than Chariot. */
+export const MARYANNU_CHARIOT: UnitDef = {
+  id: 'maryannu_chariot',
+  name: 'Maryannu Chariot Archer',
+  age: 'antiquity',
+  category: 'cavalry',
+  cost: 70,
+  combat: 22,
+  rangedCombat: 18,
+  range: 1,
+  movement: 5,
+  sightRange: 2,
+  requiredTech: 'wheel',
+  requiredResource: 'horses',
+  upgradesTo: 'horseman',
+  abilities: ['ranged_cavalry'],
+} as const;
+
 export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   WARRIOR,
   SLINGER,
@@ -292,4 +346,7 @@ export const ALL_ANTIQUITY_UNITS: ReadonlyArray<UnitDef> = [
   CARAVAN,
   TRADE_SHIP,
   HEPHAESTION,
+  HOPLITE,
+  IMMORTAL,
+  MARYANNU_CHARIOT,
 ] as const;

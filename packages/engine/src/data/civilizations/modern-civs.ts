@@ -57,8 +57,8 @@ export const RUSSIA: CivilizationDef = {
       { type: 'MODIFY_YIELD', target: 'tile', yield: 'production', value: 1 },
     ],
   },
-  uniqueUnit: null, // TODO(content): add unique unit cossack when content batch lands
-  uniqueBuilding: null, // TODO(content): add unique building lavra when content batch lands
+  uniqueUnit: 'cossack',
+  uniqueBuilding: null,
   legacyBonus: {
     name: 'Russian Orthodoxy',
     description: '+3 faith in all cities in future ages',
