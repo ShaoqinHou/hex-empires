@@ -349,7 +349,8 @@ describe('religionSystem', () => {
       expect(record.followerBeliefId).toBe('jesuit_education');
       expect(record.holyCityId).toBe('c1');
       expect(record.foundedOnTurn).toBe(12);
-      expect(next.log.length).toBe(state.log.length + 1);
+      // W7: FOUND_RELIGION now emits 2 events — religion-founded + starting-relic-awarded
+      expect(next.log.length).toBe(state.log.length + 2);
     });
 
     it('lazily initializes state.religion when absent on first successful FOUND_RELIGION', () => {
@@ -455,6 +456,194 @@ describe('religionSystem', () => {
     it('returns false for an unknown player id', () => {
       const state = createTestState();
       expect(canAdoptPantheon(state, 'missing', 'god_of_healing')).toBe(false);
+    });
+  });
+
+  // ── W7: EARN_RELIC handler ──────────────────────────────────────────────
+  describe('EARN_RELIC', () => {
+    it('appends relicId to player.relics when player has no relics yet', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      });
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(next.players.get('p1')!.relics).toEqual(['ark_of_the_covenant']);
+    });
+
+    it('appends relicId when player already has other relics', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', relics: ['shroud_of_turin'] })]]),
+      });
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(next.players.get('p1')!.relics).toEqual(['shroud_of_turin', 'ark_of_the_covenant']);
+    });
+
+    it('appends a legacy log event describing the acquisition', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', name: 'Rome' })]]),
+      });
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(next.log.length).toBe(state.log.length + 1);
+      const last = next.log[next.log.length - 1];
+      expect(last.type).toBe('legacy');
+      expect(last.playerId).toBe('p1');
+      expect(last.message).toContain('Ark of the Covenant');
+    });
+
+    it('returns state unchanged when relicId is not in state.config.relics', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      });
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'nonexistent_relic',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('returns state unchanged when player already has the relic (no duplicates)', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', relics: ['ark_of_the_covenant'] })]]),
+      });
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(next).toBe(state);
+      expect(next.players.get('p1')!.relics).toEqual(['ark_of_the_covenant']);
+    });
+
+    it('returns state unchanged when playerId is unknown', () => {
+      const state = createTestState();
+      const next = religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'ghost',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(next).toBe(state);
+    });
+
+    it('does not mutate the original state (immutability)', () => {
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      });
+      const frozenRelics = state.players.get('p1')!.relics;
+      religionSystem(state, {
+        type: 'EARN_RELIC',
+        playerId: 'p1',
+        relicId: 'ark_of_the_covenant',
+      });
+      expect(state.players.get('p1')!.relics).toBe(frozenRelics);
+    });
+  });
+
+  // ── W7: FOUND_RELIGION starting relic ──────────────────────────────────
+  describe('FOUND_RELIGION — starting relic (W7)', () => {
+    it('auto-awards the first unclaimed relic to the founding player', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500 })]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      const relics = next.players.get('p1')!.relics ?? [];
+      expect(relics.length).toBe(1);
+      const validRelicIds = [
+        'ark_of_the_covenant', 'shroud_of_turin', 'sacred_tooth',
+        'staff_of_moses', 'spear_of_destiny', 'holy_grail',
+      ];
+      expect(validRelicIds).toContain(relics[0]);
+    });
+
+    it('does not award the same relic twice if another player already has it', () => {
+      const cityA = createTestCity({ id: 'cA', owner: 'p1', name: 'Rome', position: { q: 0, r: 0 } });
+      const cityB = createTestCity({ id: 'cB', owner: 'p2', name: 'Athens', position: { q: 5, r: 0 } });
+      const p1AllButShroud = [
+        'ark_of_the_covenant', 'sacred_tooth', 'staff_of_moses',
+        'spear_of_destiny', 'holy_grail',
+      ];
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', relics: p1AllButShroud })],
+          ['p2', createTestPlayer({ id: 'p2', faith: 500 })],
+        ]),
+        cities: new Map([
+          ['cA', cityA],
+          ['cB', cityB],
+        ]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p2',
+        cityId: 'cB',
+        religionName: 'Olympism',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      const p2Relics = next.players.get('p2')!.relics ?? [];
+      expect(p2Relics).toEqual(['shroud_of_turin']);
+    });
+
+    it('emits a second log event for the relic award', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500 })]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      expect(next.log.length).toBe(state.log.length + 2);
+      const relicEvent = next.log[next.log.length - 1];
+      expect(relicEvent.type).toBe('legacy');
+      expect(relicEvent.playerId).toBe('p1');
+    });
+
+    it('gracefully skips relic award when all relics are already owned', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome' });
+      const allRelicIds = [
+        'ark_of_the_covenant', 'shroud_of_turin', 'sacred_tooth',
+        'staff_of_moses', 'spear_of_destiny', 'holy_grail',
+      ];
+      const state = createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, relics: allRelicIds })]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      expect(next.log.length).toBe(state.log.length + 1);
+      expect(next.players.get('p1')!.relics).toEqual(allRelicIds);
     });
   });
 });

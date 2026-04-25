@@ -963,6 +963,12 @@ export type GameAction =
        * (backward-compat path for legacy callers).
        */
       readonly tileId?: string;
+      /**
+       * F-07 (pop): typed specialist category for specialistsByType tracking.
+       * When present, specialistsByType[specialistType] is incremented.
+       * Optional so existing callers keep compiling unchanged.
+       */
+      readonly specialistType?: SpecialistType;
     }
   | {
       readonly type: 'UNASSIGN_SPECIALIST';
@@ -972,6 +978,12 @@ export type GameAction =
        * When present, specialist count on the tile is decremented.
        */
       readonly tileId?: string;
+      /**
+       * F-07 (pop): typed specialist category for specialistsByType tracking.
+       * When present, specialistsByType[specialistType] is decremented.
+       * Optional so existing callers keep compiling unchanged.
+       */
+      readonly specialistType?: SpecialistType;
     }
   | { readonly type: 'CREATE_TRADE_ROUTE'; readonly merchantId: UnitId; readonly targetCityId: CityId }
   | { readonly type: 'UPGRADE_DISTRICT'; readonly districtId: DistrictId }

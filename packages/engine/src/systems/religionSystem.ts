@@ -105,6 +105,7 @@ export function religionSystem(state: GameState, action: ReligionSystemAction): 
   if (action.type === 'ADOPT_PANTHEON') return handleAdoptPantheon(state, action);
   if (action.type === 'FOUND_RELIGION') return handleFoundReligion(state, action);
   if (action.type === 'SPREAD_RELIGION') return handleSpreadReligion(state, action);
+  if (action.type === 'EARN_RELIC') return handleEarnRelic(state, action);
   return state;
 }
 
@@ -243,8 +244,25 @@ function handleFoundReligion(
   // the religion slot on first use — pre-religion saves carry
   // `state.religion === undefined` and need no migration.
   // F-04: No faith deduction — founding a religion is free in Civ VII.
+
+  // W7: Award a starting relic — find the first relic in state.config.relics
+  // that no other player already owns. If none is available, skip gracefully.
+  const allRelics = state.config.relics ? [...state.config.relics.values()] : [];
+  const ownedRelicIds = new Set<string>();
+  for (const [, p] of state.players) {
+    for (const relicId of (p.relics ?? [])) {
+      ownedRelicIds.add(relicId);
+    }
+  }
+  const startingRelic = allRelics.find((r) => !ownedRelicIds.has(r.id));
+  const playerRelics: ReadonlyArray<string> = player.relics ?? [];
+  const updatedPlayerRelics: ReadonlyArray<string> = startingRelic
+    ? [...playerRelics, startingRelic.id]
+    : playerRelics;
+
   const updatedPlayer: PlayerState = {
     ...player,
+    relics: updatedPlayerRelics,
   };
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, updatedPlayer);
@@ -267,17 +285,27 @@ function handleFoundReligion(
     religions: [...existingReligions, newRecord],
   };
 
-  const event: GameEvent = {
-    turn: state.turn,
-    playerId,
-    message: `${player.name} founded ${religionName} in ${city.name}.`,
-    type: 'legacy',
-  };
+  const events: ReadonlyArray<GameEvent> = [
+    {
+      turn: state.turn,
+      playerId,
+      message: `${player.name} founded ${religionName} in ${city.name}.`,
+      type: 'legacy',
+    },
+    ...(startingRelic
+      ? [{
+          turn: state.turn,
+          playerId,
+          message: `${player.name} received the ${startingRelic.name} for founding a religion.`,
+          type: 'legacy' as const,
+        }]
+      : []),
+  ];
 
   return {
     ...state,
     players: updatedPlayers,
-    log: [...state.log, event],
+    log: [...state.log, ...events],
     religion: updatedReligionSlot,
   };
 }
@@ -349,6 +377,49 @@ function handleSpreadReligion(
     ...state,
     cities: updatedCities,
     units: updatedUnits,
+    log: [...state.log, event],
+  };
+}
+
+// ── EARN_RELIC ──────────────────────────────────────────────────────────
+
+// TODO(W7-future): wire defeat-missionary → EARN_RELIC trigger from combatSystem when W8 lands
+
+function handleEarnRelic(
+  state: GameState,
+  action: Extract<GameAction, { type: 'EARN_RELIC' }>,
+): GameState {
+  const { playerId, relicId } = action;
+
+  // Player must exist.
+  const player = state.players.get(playerId);
+  if (!player) return state;
+
+  // Relic must exist in config.
+  const relicDef = state.config.relics?.get(relicId);
+  if (!relicDef) return state;
+
+  // Player must not already have this relic.
+  const currentRelics: ReadonlyArray<string> = player.relics ?? [];
+  if (currentRelics.includes(relicId)) return state;
+
+  const updatedPlayer: PlayerState = {
+    ...player,
+    relics: [...currentRelics, relicId],
+  };
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(playerId, updatedPlayer);
+
+  const event: GameEvent = {
+    turn: state.turn,
+    playerId,
+    message: `${player.name} acquired the ${relicDef.name}.`,
+    type: 'legacy',
+  };
+
+  return {
+    ...state,
+    players: updatedPlayers,
     log: [...state.log, event],
   };
 }
