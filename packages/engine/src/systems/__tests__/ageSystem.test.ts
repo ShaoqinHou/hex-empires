@@ -1224,9 +1224,9 @@ describe('AA1.3: legacyPointsByAxis typed breakdown', () => {
   });
 
   it('cultural points do not affect the military axis', () => {
-    // culture: 100 triggers antiquity_culture_t1 (culture >= 100 fallback proxy)
+    // artifactsInMuseums: 2 triggers antiquity_culture_t1 (primary check: artifactsInMuseums >= 2)
     const player = createTestPlayer({
-      culture: 100,
+      artifactsInMuseums: 2,
       legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
       legacyPoints: 0,
       legacyPointsByAxis: { military: 0, economic: 0, science: 0, culture: 0 },
@@ -1234,8 +1234,8 @@ describe('AA1.3: legacyPointsByAxis typed breakdown', () => {
     const state = createTestState({ players: new Map([['p1', player]]) });
     const next = ageSystem(state, { type: 'END_TURN' });
     const byAxis = next.players.get('p1')!.legacyPointsByAxis!;
-    expect(byAxis.culture).toBeGreaterThan(0); // culture gained
-    expect(byAxis.military).toBe(0);           // military unaffected
+    expect(byAxis.culture).toBe(1);  // tier-1 milestone awards exactly 1 point
+    expect(byAxis.military).toBe(0); // military unaffected
   });
 });
 
