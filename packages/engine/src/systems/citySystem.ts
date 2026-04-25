@@ -26,6 +26,8 @@ export function citySystem(state: GameState, action: GameAction): GameState {
       return handlePurchaseTile(state, action.cityId, action.tile);
     case 'UPGRADE_SETTLEMENT':
       return handleUpgradeSettlement(state, action.cityId);
+    case 'TRANSITION_AGE':
+      return handleCityAgeTransition(state);
     default:
       return state;
   }
@@ -215,6 +217,49 @@ function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
       type: 'city',
     }],
   };
+}
+
+/**
+ * On TRANSITION_AGE: downgrade all non-capital cities owned by the
+ * transitioning player to town tier. Capital remains as 'city'.
+ *
+ * Per Civ VII GDD, age transitions reset settlements so that only
+ * the capital carries over at city tier; other settlements must be
+ * re-upgraded in the new age. This mirrors ageSystem's F-07 logic
+ * and exists as defense-in-depth so citySystem is self-consistent
+ * and testable in isolation regardless of pipeline ordering.
+ *
+ * Note: ageSystem also performs this downgrade in its TRANSITION_AGE
+ * handler (lines 229-260, including food reset + building obsolescence).
+ * Those additional operations (food reset, buildings) remain in ageSystem
+ * as they are not citySystem's concern. This handler only addresses the
+ * settlement-type downgrade.
+ */
+function handleCityAgeTransition(state: GameState): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  let citiesChanged = false;
+  const nextCities = new Map(state.cities);
+
+  for (const [cityId, city] of state.cities) {
+    // Only the transitioning player's cities are affected
+    if (city.owner !== player.id) continue;
+    // Capital stays as city
+    if (city.isCapital) continue;
+    // Already a town — no change needed
+    if (city.settlementType === 'town') continue;
+
+    nextCities.set(cityId, {
+      ...city,
+      settlementType: 'town' as const,
+      isTown: true,
+    });
+    citiesChanged = true;
+  }
+
+  if (!citiesChanged) return state;
+  return { ...state, cities: nextCities };
 }
 
 function handlePurchaseTile(state: GameState, cityId: string, tileCoord: HexCoord): GameState {

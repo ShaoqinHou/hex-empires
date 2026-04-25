@@ -499,4 +499,61 @@ describe('W2-02 settlement VII-parity', () => {
       expect(city.wasConquered).toBe(false);
     });
   });
+
+  describe('DD1.2: TRANSITION_AGE downgrades non-capital cities to town', () => {
+    const makeCity = (id: string, overrides: Partial<CityState> = {}): CityState => ({
+      id,
+      name: `City ${id}`,
+      owner: 'p1',
+      position: { q: 0, r: 0 },
+      population: 3,
+      food: 0,
+      productionQueue: [],
+      productionProgress: 0,
+      buildings: [],
+      territory: [],
+      settlementType: 'city' as const,
+      happiness: 10,
+      isCapital: false,
+      defenseHP: 100,
+      specialization: null,
+      specialists: 0,
+      districts: [],
+      ...overrides,
+    });
+
+    it('TRANSITION_AGE downgrades non-capital city to town', () => {
+      const nonCapital = makeCity('nc1', { isCapital: false, settlementType: 'city' });
+      const state = createTestState({ cities: new Map([['nc1', nonCapital]]) });
+      const next = citySystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const city = next.cities.get('nc1')!;
+      expect(city.settlementType).toBe('town');
+      expect(city.isTown).toBe(true);
+    });
+
+    it('TRANSITION_AGE preserves capital as city', () => {
+      const capital = makeCity('cap', { isCapital: true, settlementType: 'city' });
+      const state = createTestState({ cities: new Map([['cap', capital]]) });
+      const next = citySystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const city = next.cities.get('cap')!;
+      expect(city.settlementType).toBe('city');
+      expect(city.isTown).toBeFalsy();
+    });
+
+    it('TRANSITION_AGE does not affect cities owned by other players', () => {
+      const otherCity = makeCity('other', { owner: 'p2', isCapital: false, settlementType: 'city' });
+      const state = createTestState({
+        cities: new Map([['other', otherCity]]),
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1' })],
+          ['p2', createTestPlayer({ id: 'p2' })],
+        ]),
+      });
+      const next = citySystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      // p2's city is unchanged by p1's transition
+      expect(next.cities.get('other')!.settlementType).toBe('city');
+      // No change means state identity is preserved (no towns to downgrade for p1)
+      expect(next).toBe(state);
+    });
+  });
 });
