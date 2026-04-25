@@ -554,3 +554,57 @@ describe('AA2.3 civilian capture', () => {
     expect(next.log.some(e => e.message.includes('captured'))).toBe(true);
   });
 });
+
+// ── BB3.2: Civilian capture — all civilian categories captured identically ──
+// Spec (Civ-VII): settler, explorer, merchant, missionary are all category='civilian'
+// and must be captured (ownership transfer, movementLeft=0) when an enemy combat
+// unit moves onto their hex. Note: 'builder' does not exist as a unit type in this
+// codebase (civilian equivalents are settler/explorer/merchant/missionary).
+
+describe('BB3.2 civilian capture — full category audit', () => {
+  function captureState(captorTypeId: string, targetTypeId: string) {
+    const captor = createTestUnit({ id: 'captor', typeId: captorTypeId, owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 2 });
+    const target = createTestUnit({ id: 'target', typeId: targetTypeId, owner: 'p2', position: { q: 1, r: 0 } });
+    return createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      units: new Map([['captor', captor], ['target', target]]),
+    });
+  }
+
+  it('settler is captured — ownership transfers, movementLeft zeroed', () => {
+    const state = captureState('warrior', 'settler');
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'captor', path: [{ q: 1, r: 0 }] });
+    expect(next.units.get('target')!.owner).toBe('p1');
+    expect(next.units.get('target')!.movementLeft).toBe(0);
+    expect(next.log.some(e => e.message.includes('captured') && e.message.includes('settler'))).toBe(true);
+  });
+
+  it('explorer (exploration-age civilian) is captured — ownership transfers, movementLeft zeroed', () => {
+    // Explorer is the exploration-age civilian; 'builder' does not exist in this codebase.
+    const state = captureState('warrior', 'explorer');
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'captor', path: [{ q: 1, r: 0 }] });
+    expect(next.units.get('target')!.owner).toBe('p1');
+    expect(next.units.get('target')!.movementLeft).toBe(0);
+    expect(next.log.some(e => e.message.includes('captured') && e.message.includes('explorer'))).toBe(true);
+  });
+
+  it('missionary is captured — ownership transfers, movementLeft zeroed (same as civilian, not exempted)', () => {
+    const state = captureState('warrior', 'missionary');
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'captor', path: [{ q: 1, r: 0 }] });
+    expect(next.units.get('target')!.owner).toBe('p1');
+    expect(next.units.get('target')!.movementLeft).toBe(0);
+    expect(next.log.some(e => e.message.includes('captured') && e.message.includes('missionary'))).toBe(true);
+  });
+
+  it('merchant is captured — ownership transfers, movementLeft zeroed', () => {
+    const state = captureState('warrior', 'merchant');
+    const next = movementSystem(state, { type: 'MOVE_UNIT', unitId: 'captor', path: [{ q: 1, r: 0 }] });
+    expect(next.units.get('target')!.owner).toBe('p1');
+    expect(next.units.get('target')!.movementLeft).toBe(0);
+    expect(next.log.some(e => e.message.includes('captured') && e.message.includes('merchant'))).toBe(true);
+  });
+});
