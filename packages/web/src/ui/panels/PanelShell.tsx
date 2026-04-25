@@ -115,7 +115,7 @@ const backdropStyle: CSSProperties = {
   // --panel-backdrop preserved for any non-modal use; modal uses the
   // dedicated --panel-backdrop-modal radial gradient token.
   background: 'var(--panel-backdrop-modal)',
-  zIndex: 'var(--panel-z-modal)' as unknown as number,
+  zIndex: 'var(--panel-z-modal)',
 };
 
 const titleBarStyle: CSSProperties = {

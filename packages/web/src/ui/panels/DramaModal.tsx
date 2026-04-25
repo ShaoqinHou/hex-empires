@@ -70,7 +70,7 @@ const backdropBaseStyle: CSSProperties = {
   position: 'fixed',
   inset: 0,
   background: 'var(--drama-backdrop)',
-  zIndex: 'var(--panel-z-modal)' as unknown as number,
+  zIndex: 'var(--panel-z-modal)',
 };
 
 // ── Container ─────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function containerStyle(isWide: boolean): CSSProperties {
     borderRadius: 'var(--panel-radius)',
     boxShadow: 'var(--drama-frame-shadow)',
     color: 'var(--panel-text-color)',
-    zIndex: 'var(--panel-z-modal)' as unknown as number,
+    zIndex: 'var(--panel-z-modal)',
     display: 'flex',
     flexDirection: 'column',
   };

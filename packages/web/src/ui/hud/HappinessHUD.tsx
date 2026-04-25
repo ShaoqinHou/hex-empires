@@ -32,7 +32,7 @@ export function HappinessHUD() {
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
-        zIndex: 'var(--panel-z-info)' as unknown as number,
+        zIndex: 'var(--panel-z-info)',
         userSelect: 'none',
       }}
     >

@@ -293,4 +293,28 @@ describe('PanelShell', () => {
 
     expect(getByTestId('active-probe').textContent).toBe('none');
   });
+
+  // --- CC4.1: z-index CSS variable tokens (no double-cast) ---
+
+  it('applies a CSS variable token for z-index on the shell container (not a literal number)', () => {
+    const { getByTestId } = render(
+      <PanelShell id="tech" title="Tech Tree" onClose={() => {}} priority="overlay">
+        <div>x</div>
+      </PanelShell>,
+    );
+    const shell = getByTestId('panel-shell-tech');
+    // jsdom stores inline CSS variables as the raw string value.
+    // Assert it contains 'var(' to ensure we never regress to a literal number.
+    expect(shell.style.zIndex).toContain('var(');
+  });
+
+  it('applies a CSS variable token for z-index on the modal backdrop (not a literal number)', () => {
+    const { getByTestId } = render(
+      <PanelShell id="age" title="Age" onClose={() => {}} priority="modal">
+        <div>x</div>
+      </PanelShell>,
+    );
+    const backdrop = getByTestId('panel-backdrop-age');
+    expect(backdrop.style.zIndex).toContain('var(');
+  });
 });

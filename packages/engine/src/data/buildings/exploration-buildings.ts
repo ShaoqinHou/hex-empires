@@ -477,11 +477,34 @@ export const TRADING_POST: BuildingDef = {
   happinessCost: 0,
 } as const;
 
+// ── CC3.2 — Civilization unique buildings (exploration) ─────────────────────
+
+/**
+ * Songhai unique building. Replaces Temple; +2 faith, +1 trade route capacity.
+ * NOTE: Songhai civ is not yet in the civs roster; this building is pre-registered
+ * and can be wired to a future Songhai civ definition (uniqueBuilding: 'mosque').
+ */
+export const MOSQUE: BuildingDef = {
+  id: 'mosque',
+  name: 'Mosque',
+  age: 'exploration',
+  cost: 200,
+  maintenance: 2,
+  yields: { faith: 6, culture: 1 },
+  effects: ['+2 Faith', '+1 Trade Route capacity', '+1 Relic slot'],
+  requiredTech: 'printing',
+  category: 'culture',
+  happinessCost: 2,
+  isCivUnique: true,
+  civId: 'songhai',
+} as const;
+
 export const ALL_EXPLORATION_BUILDINGS: ReadonlyArray<BuildingDef> = [
   MARKET, WORKSHOP, MONASTERY, UNIVERSITY, OBSERVATORY,
   BANK, STOCK_EXCHANGE, BARRACKS, ARMORY, STAR_FORT, SHIPYARD, CATHEDRAL,
   GRISTMILL, SAWMILL, STONECUTTER, WHARF, INN, TEMPLE, MENAGERIE, BAZAAR, GUILDHALL, DUNGEON,
   PRINTING_PRESS, TRADING_POST,
+  MOSQUE,
   NOTRE_DAME, VENETIAN_ARSENAL, ALHAMBRA, TAJ_MAHAL, FORBIDDEN_CITY,
   ANGKOR_WAT, HAGIA_SOPHIA, GREAT_WALL, TERRACOTTA_ARMY, ST_BASILS_CATHEDRAL,
 ] as const;

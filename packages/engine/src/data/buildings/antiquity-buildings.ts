@@ -426,12 +426,51 @@ export const TEMPLE_OF_ARTEMIS: BuildingDef = {
   greatPersonPoints: { type: 'prophet', amount: 1 },
 } as const;
 
+// ── CC3.2 — Civilization unique buildings (antiquity) ───────────────────────
+
+/** Greece unique building. +2 culture, +1 science when adjacent to a Mountain tile. */
+export const ACROPOLIS: BuildingDef = {
+  id: 'acropolis',
+  name: 'Acropolis',
+  age: 'antiquity',
+  cost: 110,
+  maintenance: 1,
+  yields: { culture: 2, science: 1 },
+  effects: ['+2 Culture', '+1 Science', '+1 Science per adjacent Mountain tile'],
+  requiredTech: 'bronze_working',
+  category: 'culture',
+  happinessCost: 2,
+  isCivUnique: true,
+  civId: 'greece',
+} as const;
+
+/**
+ * Egypt unique building. Civ-unique wonder-like district building.
+ * +1 production in all Egyptian cities; provides +1 worker charge.
+ * Distinct from the PYRAMIDS world wonder.
+ */
+export const PYRAMID: BuildingDef = {
+  id: 'pyramid',
+  name: 'Pyramid',
+  age: 'antiquity',
+  cost: 200,
+  maintenance: 0,
+  yields: { production: 1, food: 1 },
+  effects: ['+1 Builder charge', '+1 Production per city empire-wide'],
+  requiredTech: 'masonry',
+  category: 'wonder',
+  happinessCost: 0,
+  isCivUnique: true,
+  civId: 'egypt',
+} as const;
+
 export const ALL_ANTIQUITY_BUILDINGS: ReadonlyArray<BuildingDef> = [
   PALACE, GRANARY, MONUMENT, WALLS, BARRACKS, LIBRARY,
   MARKET, WATERMILL, WORKSHOP, SHRINE,
   BATH, ARENA, ALTAR, VILLA, AMPHITHEATRE, GARDEN, BLACKSMITH, AQUEDUCT,
   STOREHOUSE, DOCKYARD,
   LIGHTHOUSE, FORUM,
+  ACROPOLIS, PYRAMID,
   PYRAMIDS, HANGING_GARDENS, COLOSSUS, STONEHENGE, ORACLE,
   GIZA, GREAT_LIBRARY, TEMPLE_OF_ARTEMIS,
 ] as const;

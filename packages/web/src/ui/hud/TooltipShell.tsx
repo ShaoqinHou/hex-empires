@@ -249,7 +249,7 @@ function baseShellStyle(tier: TooltipTier, interactive: boolean): CSSProperties 
     boxShadow: SHELL_SHADOW,
     color: SHELL_TEXT,
     padding: tier === 'detailed' ? SHELL_PAD_DETAILED : SHELL_PAD_COMPACT,
-    zIndex: SHELL_Z_INDEX as unknown as number,
+    zIndex: SHELL_Z_INDEX,
     pointerEvents: interactive ? 'auto' : 'none',
     userSelect: 'none',
     // Max widths per tier — S-03 table: compact 180/200/220, detailed 320/360/400.

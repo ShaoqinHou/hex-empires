@@ -163,7 +163,7 @@ export function Minimap({ cameraRef }: MinimapProps) {
       style={{
         border: '1px solid var(--panel-border)',
         backgroundColor: 'var(--panel-bg)',
-        zIndex: 'var(--hud-z-minimap)' as unknown as number,
+        zIndex: 'var(--hud-z-minimap)',
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
