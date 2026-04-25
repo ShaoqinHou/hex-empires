@@ -90,6 +90,10 @@ export function discoverySystem(state: GameState, action: GameAction): GameState
         },
       ],
     };
+  } else {
+    // reward.type === 'unit' with missing unitId, or unrecognised reward type:
+    // do not clear the tile and grant nothing
+    return state;
   }
 
   return {
