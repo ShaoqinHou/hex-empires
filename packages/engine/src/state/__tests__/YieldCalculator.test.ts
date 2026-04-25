@@ -399,3 +399,51 @@ describe('BB5.3: placed-codex science yield in calculateCityYields', () => {
     expect(yieldsWithUnplaced.science).toBe(yieldsNoCodex.science);
   });
 });
+
+describe('GG.3: river bonus belongs in adjacency layer only (F-03 fix)', () => {
+  it('a river tile in city territory does NOT add gold to base yields', () => {
+    // GDD §yields-adjacency F-03: river benefit is exclusively in the adjacency
+    // layer (DistrictAdjacency → +1 Food per adjacent building). The pre-adjacency
+    // +1 Gold per river tile in territory was a holdover — verified removed here.
+    const riverTileKey = coordToKey({ q: 3, r: 3 });
+    const riverTile: HexTile = {
+      coord: { q: 3, r: 3 },
+      terrain: 'grassland',
+      feature: null,
+      resource: null,
+      improvement: null,
+      building: null,
+      river: [0, 1], // non-empty river edge list
+      elevation: 0.5,
+      continent: 1,
+    };
+    const noRiverTile: HexTile = {
+      ...riverTile,
+      river: [],
+    };
+
+    const stateWithRiver = createTestState({
+      map: {
+        width: 10,
+        height: 10,
+        tiles: new Map([[riverTileKey, riverTile]]),
+        wrapX: false,
+      },
+    });
+    const stateNoRiver = createTestState({
+      map: {
+        width: 10,
+        height: 10,
+        tiles: new Map([[riverTileKey, noRiverTile]]),
+        wrapX: false,
+      },
+    });
+
+    const city = makeCity({ territory: [riverTileKey] });
+    const yieldsWithRiver = calculateCityYields(city, stateWithRiver);
+    const yieldsNoRiver = calculateCityYields(city, stateNoRiver);
+
+    // River must NOT add gold at the base layer
+    expect(yieldsWithRiver.gold).toBe(yieldsNoRiver.gold);
+  });
+});

@@ -43,10 +43,12 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
       total = addYields(total, improvementYields);
     }
 
-    // River bonus
-    if (tile.river.length > 0) {
-      total = addYields(total, { gold: 1 });
-    }
+    // River bonus intentionally omitted from the base tile-yield layer.
+    // Per GDD §yields-adjacency F-03: the river benefit belongs exclusively in
+    // the adjacency layer (DistrictAdjacency.computeAdjacencyBonus → +1 Food per
+    // adjacent river tile). The pre-adjacency +1 Gold river bonus that previously
+    // lived here was a holdover and caused double-attribution when
+    // CityYieldsWithAdjacency stacked both layers.
 
     // F-08: Natural wonder tile yields — if this tile is a natural wonder,
     // look up its def via state.config.naturalWonders and add its yields.

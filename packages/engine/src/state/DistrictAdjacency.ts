@@ -144,6 +144,10 @@ export function computeAdjacencyBonus(
 
     // +1 Food per adjacent river tile (any tile whose river edges list
     // is non-empty is considered a river tile for adjacency purposes).
+    // Per GDD §yields-adjacency F-03: this adjacency layer is the sole location
+    // for the river benefit. YieldCalculator intentionally does NOT add a river
+    // bonus at the base tile-yield level — doing so would double-count when
+    // CityYieldsWithAdjacency stacks both layers.
     if (terrainTile !== undefined && terrainTile.river.length > 0) {
       bonus = addYields(bonus, { food: 1 });
     }
@@ -307,6 +311,7 @@ function computeBaseAdjacencyWithoutSpecialist(
     if (terrainTile !== undefined && terrainTile.feature === 'mountains') {
       bonus = addYields(bonus, { production: 1 });
     }
+    // River: +1 Food (same rule as computeAdjacencyBonus; see GDD F-03 note there)
     if (terrainTile !== undefined && terrainTile.river.length > 0) {
       bonus = addYields(bonus, { food: 1 });
     }
