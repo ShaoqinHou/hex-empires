@@ -5,3 +5,5 @@
 - [In-flight work collision pattern](project_in_flight_work_collision.md) — failing tests from unrelated WIP (other work packages) are not scope regressions; GameState.ts may already have been committed by another agent
 - [Prior session may have already committed brief work](feedback_prior_session_committed.md) — check git show HEAD --stat before implementing; a prior agent may have committed the same files
 - [Linter reverts Edit/Write tool changes mid-session](feedback_linter_reverts_edits.md) — verify edits with grep after applying; fall back to Python file writes immediately if reverted
+- [Pre-commit hook absorbs staged files](feedback_precommit_absorbs_staged.md) — staged files may end up in another agent's commit; check git diff HEAD to verify
+- [Parallel RNG interference between state machines](feedback_parallel_rng_interference.md) — gate new state machines to avoid extra RNG draws shifting existing tests
