@@ -16,7 +16,7 @@
  */
 
 import type { UnitId } from './Ids';
-import type { UnitCategory } from './GameState';
+import type { UnitCategory, UnitState } from './GameState';
 
 // ── Branded IDs ──
 
@@ -157,8 +157,11 @@ export interface CommanderPromotionDef {
  *   stability across curve re-balancing.
  * - `unspentPromotionPicks` is the currency spent on promotions.
  * - `tree` is null until the first pick; commanders may pick from any tree.
- * - `attachedUnits` enforces the 4-unit pack cap (validated by system).
+ * - `attachedUnits` enforces the pack cap (4 for ASSEMBLE_ARMY, 6 for PACK_ARMY).
  * - `packed` means the pack moves as one unit this turn.
+ * - `packedUnitStates` stores full UnitState snapshots for units removed from
+ *   state.units by PACK_ARMY. Optional: absent when using ASSEMBLE_ARMY which
+ *   keeps units in state.units with packedInCommanderId set instead.
  */
 export interface CommanderState {
   readonly unitId: UnitId;
@@ -169,6 +172,12 @@ export interface CommanderState {
   readonly tree: CommanderTree | null;
   readonly attachedUnits: ReadonlyArray<UnitId>;
   readonly packed: boolean;
+  /**
+   * X4.1: Full unit snapshots for units physically removed from state.units
+   * by PACK_ARMY. Restored on UNPACK_ARMY. Absent when army was assembled via
+   * ASSEMBLE_ARMY (which leaves units in state.units).
+   */
+  readonly packedUnitStates?: ReadonlyArray<UnitState>;
 }
 
 // ── Aura evaluation output ──

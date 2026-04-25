@@ -515,6 +515,14 @@ export interface PlayerState {
    */
   readonly completedProjects?: ReadonlyArray<string>;
   /**
+   * X5.1: Operation Ivy capital-production progress (0-100).
+   * Advances each turn once the player has researched a Modern ideology civic
+   * (fascism, communism, or democracy) and has a capital city producing it.
+   * When it reaches 100 the player may dispatch COMPLETE_PROJECT for operation_ivy.
+   * Optional so existing PlayerState construction keeps compiling unchanged.
+   */
+  readonly operationIvyProgress?: number;
+  /**
    * Number of rival capitals that still need a World Bank Office established.
    * Initialized to (number of rivals) when the first World Bank Office project
    * is completed. Decremented by each COMPLETE_PROJECT with id 'world_bank_office'.
@@ -750,6 +758,32 @@ export interface CrisisState {
   readonly choices: ReadonlyArray<CrisisChoice>;
   readonly resolvedBy: PlayerId | null;
   readonly choiceMade: string | null;
+
+  // ── X5.2: 3-stage persistent crisis fields ──
+  /**
+   * Current stage of the crisis (1 = first warning at ~33% age progress,
+   * 2 = escalation at ~66%, 3 = final at ~100%). Optional so existing
+   * CrisisState construction keeps compiling unchanged.
+   */
+  readonly stage?: 1 | 2 | 3;
+  /**
+   * The turn on which the current stage started.
+   * Optional so existing CrisisState construction keeps compiling unchanged.
+   */
+  readonly stageStartedTurn?: number;
+  /**
+   * Per-player crisis policy slots. Maps playerId → array of PolicyIds slotted
+   * for this crisis. Optional so existing CrisisState construction keeps
+   * compiling unchanged.
+   */
+  readonly slottedPolicies?: ReadonlyMap<string, ReadonlyArray<string>>;
+  /**
+   * When true, at least one player has not yet slotted their crisis policies.
+   * END_TURN is blocked for the current player while pendingResolution is true
+   * AND the player has not slotted policies. Optional so existing CrisisState
+   * construction keeps compiling unchanged.
+   */
+  readonly pendingResolution?: boolean;
 }
 
 export interface CrisisChoice {
@@ -1040,13 +1074,19 @@ export type GameAction =
       readonly improvementId?: string;
       readonly tileId?: HexCoord;
     }
-  // ── Crisis phase (W2-05) ──
+  // ── Crisis phase (W2-05 / X5.2) ──
   /**
    * Append a policy to the current player's crisis policy slot list.
    * Blocked if: player has no active crisisPhase, if policyId already present,
    * or if crisisPolicies.length >= crisisPolicySlots.
    */
   | { readonly type: 'FORCE_CRISIS_POLICY'; readonly policyId: string }
+  /**
+   * X5.2: Slot a policy for the named 3-stage crisis.
+   * Records the policy under state.crises[i].slottedPolicies[playerId].
+   * Clears pendingResolution for this player once their required count is met.
+   */
+  | { readonly type: 'SLOT_CRISIS_POLICY'; readonly playerId: PlayerId; readonly crisisId: string; readonly policyId: string }
   // ── Independent Powers (W3-04) ──
   /** Spend influence to make progress toward suzerainty over an IP. */
   | { readonly type: 'BEFRIEND_INDEPENDENT'; readonly ipId: string; readonly influenceSpent: number }
@@ -1137,6 +1177,22 @@ export type GameAction =
    * Clears packedInCommanderId on each unit.
    */
   | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string }
+  // ── X4.1: Commander PACK/UNPACK (remove-from-map semantics, cap 6) ──
+  /**
+   * Pack up to 6 units adjacent to the commander into the army stack.
+   * Unlike ASSEMBLE_ARMY (which marks units with packedInCommanderId),
+   * PACK_ARMY physically removes the units from state.units and stores
+   * their IDs in CommanderState.attachedUnits.
+   * Validates: commander exists, all unitIds adjacent, all owned by same player,
+   * count ≤ 6, none already packed in a different commander.
+   */
+  | { readonly type: 'PACK_ARMY'; readonly commanderId: UnitId; readonly unitsToPack: ReadonlyArray<UnitId> }
+  /**
+   * Unpack the commander's army: restore packed units from CommanderState.attachedUnits
+   * back into state.units at the commander's hex or adjacent tiles.
+   * Validates: commander exists, is packed, at least one adjacent or own hex has room.
+   */
+  | { readonly type: 'UNPACK_ARMY'; readonly commanderId: UnitId }
   // ── W5-01: Modern Victory Projects ──
   /**
    * Complete a project in a city (or, for 0-cost projects like World Bank Office,
