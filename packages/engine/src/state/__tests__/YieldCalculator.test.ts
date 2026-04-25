@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateCityYields } from '../YieldCalculator';
 import { createTestState } from '../../systems/__tests__/helpers';
 import type { CityState, HexTile } from '../../types/GameState';
+import type { BuildingDef } from '../../types/Building';
 import type { NaturalWonderDef } from '../../types/NaturalWonder';
 import { coordToKey } from '../../hex/HexMath';
 
@@ -95,5 +96,64 @@ describe('F-08: natural wonder tile yields', () => {
     const yieldsNormal = calculateCityYields(city, state);
     // No wonder tile in the territory → science from yields only (zero from base grassland)
     expect(yieldsNormal.science).toBe(0);
+  });
+});
+
+describe('X3.1: YieldSet.happiness accumulates from buildings', () => {
+  it('happiness-providing building (Bath) contributes its happiness yield to calculateCityYields', () => {
+    // Bath: yields: { happiness: 2 }
+    const bath: BuildingDef = {
+      id: 'bath', name: 'Bath', age: 'antiquity', cost: 90, maintenance: 1,
+      yields: { happiness: 2 },
+      effects: [], requiredTech: 'construction', category: 'happiness', happinessCost: 0,
+    };
+    const state = createTestState();
+    const buildings = new Map(state.config.buildings);
+    buildings.set('bath', bath);
+    const config = { ...state.config, buildings };
+    const testState = { ...state, config };
+
+    const cityNoBath = makeCity({ buildings: [] });
+    const cityWithBath = makeCity({ buildings: ['bath'] });
+
+    const yieldsNoBath = calculateCityYields(cityNoBath, testState);
+    const yieldsWithBath = calculateCityYields(cityWithBath, testState);
+
+    // Bath adds +2 happiness
+    expect(yieldsWithBath.happiness - yieldsNoBath.happiness).toBe(2);
+  });
+
+  it('multiple happiness-providing buildings accumulate in YieldSet.happiness', () => {
+    // Bath (+2), Aqueduct (+3), Hanging Gardens (+2) = +7 total
+    const bath: BuildingDef = {
+      id: 'bath', name: 'Bath', age: 'antiquity', cost: 90, maintenance: 1,
+      yields: { happiness: 2 },
+      effects: [], requiredTech: 'construction', category: 'happiness', happinessCost: 0,
+    };
+    const aqueduct: BuildingDef = {
+      id: 'aqueduct', name: 'Aqueduct', age: 'antiquity', cost: 75, maintenance: 0,
+      yields: { happiness: 3 },
+      effects: [], requiredTech: 'construction', category: 'food', happinessCost: 0,
+    };
+    const hangingGardens: BuildingDef = {
+      id: 'hanging_gardens', name: 'Hanging Gardens', age: 'antiquity', cost: 350, maintenance: 0,
+      yields: { food: 8, happiness: 2 },
+      effects: [], requiredTech: 'irrigation', category: 'wonder', happinessCost: 0,
+      isWonder: true, isAgeless: true,
+    };
+
+    const state = createTestState();
+    const buildings = new Map(state.config.buildings);
+    buildings.set('bath', bath);
+    buildings.set('aqueduct', aqueduct);
+    buildings.set('hanging_gardens', hangingGardens);
+    const config = { ...state.config, buildings };
+    const testState = { ...state, config };
+
+    const cityWithAll = makeCity({ buildings: ['bath', 'aqueduct', 'hanging_gardens'] });
+    const yieldsWithAll = calculateCityYields(cityWithAll, testState);
+
+    // Bath +2, Aqueduct +3, Hanging Gardens +2 = 7 total happiness yield
+    expect(yieldsWithAll.happiness).toBe(7);
   });
 });

@@ -86,6 +86,8 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
   }
 
   // Civ/leader/legacy ability yield bonuses (MODIFY_YIELD with target: 'empire')
+  // All YieldType fields included so that MODIFY_YIELD effects for happiness and
+  // influence apply correctly (e.g. a leader ability granting +2 happiness empire-wide).
   total = addYields(total, {
     food: getYieldBonus(state, city.owner, 'food'),
     production: getYieldBonus(state, city.owner, 'production'),
@@ -93,6 +95,8 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     science: getYieldBonus(state, city.owner, 'science'),
     culture: getYieldBonus(state, city.owner, 'culture'),
     faith: getYieldBonus(state, city.owner, 'faith'),
+    happiness: getYieldBonus(state, city.owner, 'happiness'),
+    influence: getYieldBonus(state, city.owner, 'influence'),
   });
 
   // F-06: Per-age yield bonuses from assigned resources (W4-05).
