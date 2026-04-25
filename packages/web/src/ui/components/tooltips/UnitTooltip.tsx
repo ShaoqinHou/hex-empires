@@ -95,7 +95,7 @@ export function UnitTooltip({ unitDef, unitState, showState = false, promotions 
         title: 'Available Promotions',
         items: availablePromotions.slice(0, 3).map(p => ({
           label: p.name,
-          value: p.effect,
+          value: p.description,
         })),
       });
     }
