@@ -239,6 +239,13 @@ function handleCityAgeTransition(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
+  // Economic Golden Age exemption: players who completed the economic legacy
+  // path (legacyPaths.economic === 3) keep all their cities at city tier on
+  // age transition. This mirrors the same exemption in ageSystem; since
+  // citySystem runs before ageSystem in the pipeline, the guard must live here.
+  const hasEconomicGoldenAge = (player.legacyPaths?.economic ?? 0) === 3;
+  if (hasEconomicGoldenAge) return state;
+
   let citiesChanged = false;
   const nextCities = new Map(state.cities);
 
