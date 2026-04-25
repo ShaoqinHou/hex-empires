@@ -748,4 +748,59 @@ describe('religionSystem', () => {
       expect(next.players.get('p1')!.faith).toBe(0);
     });
   });
+
+  // ── FF3.1: Final Civ-VI-ism cleanup verification ────────────────────────────
+  describe('FF3.1: F-03/F-04 cleanup — no pantheon prerequisite, no faith cost', () => {
+    it('F-03: FOUND_RELIGION with Piety + Temple and no pantheon succeeds (no FAITH_COST gate)', () => {
+      // Validates that the pantheon prerequisite guard is gone from handleFoundReligion.
+      // A player with piety civic + temple but pantheonId=null (never adopted a pantheon)
+      // must be able to found a religion. faith is NOT deducted (F-04).
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const startFaith = 999;
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: startFaith, pantheonId: null, researchedCivics: ['piety'] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Taoism',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      // Must succeed even with no pantheon
+      expect(next.religion?.religions.length).toBe(1);
+      // F-04: faith unchanged (no FAITH_COST deduction)
+      expect(next.players.get('p1')!.faith).toBe(startFaith);
+    });
+
+    it('F-03/F-04: founderBelief stored in record is exactly what was passed in action, not pantheon-overridden', () => {
+      // Guards against effectiveFounderBelief = player.pantheonId ?? founderBelief
+      // pattern re-appearing. Even when the player has a different pantheonId,
+      // the religion record's founderBeliefId must equal the action's founderBelief.
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', faith: 100, pantheonId: 'god_of_war', researchedCivics: ['piety'] })],
+        ]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Stoicism',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+      expect(next.religion?.religions.length).toBe(1);
+      const record = next.religion!.religions[0];
+      // founderBeliefId must be 'world_church' (from action), not 'god_of_war' (from pantheonId)
+      expect(record.founderBeliefId).toBe('world_church');
+      expect(record.name).toBe('Stoicism');
+    });
+  });
 });
