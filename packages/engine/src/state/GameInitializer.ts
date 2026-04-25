@@ -103,6 +103,9 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     distantLandPoints: 0,
     relicsDisplayedCount: 0,
     resourcesAssigned: 0,
+    // Z4: Counterespionage fields — baseline 0 (no active defense)
+    counterespionageInfluence: 0,
+    counterespionageDetectionBonus: 0,
   });
 
   const makeUnit = (id: string, typeId: string, owner: string, pos: HexCoord, movement: number) => ({
@@ -195,6 +198,8 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     // W4-04: Commander state — empty Map at game start (commanders spawned
     // by production system or cheat commands register themselves here).
     commanders: new Map(),
+    // Z4: Espionage state machine — empty Map at game start.
+    espionageOps: new Map(),
   };
 
   // ── W3-06: Apply equipped mementos at game start ──
