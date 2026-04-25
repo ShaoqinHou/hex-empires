@@ -76,28 +76,28 @@ describe('Z1: military units exert ZoC on adjacent tiles (§6.8 bullet 1)', () =
     expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
   });
 
-  it('ranged units exert ZoC exactly like melee units', () => {
-    // Archer (category: 'ranged') at (2,-1). Same geometry — (1,0) must be ZoC.
+  it('ranged units do NOT exert ZoC (VII spec F-04: only melee/siege project ZoC)', () => {
+    // Archer (category: 'ranged') at (2,-1). Per VII spec only melee/siege project
+    // ZoC — mover should complete the full path to (2,0).
     const state = buildZoCScenario({ enemyTypeId: 'archer' });
     const next = movementSystem(state, {
       type: 'MOVE_UNIT',
       unitId: 'u1',
       path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
     });
-    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
   });
 
-  it('cavalry (enemy) exerts ZoC on adjacent tiles', () => {
-    // Enemy chariot (cavalry) at (2,-1). Rule §6.8 says "military units" exert
-    // ZoC — cavalry are military, so they still exert it. (They only IGNORE
-    // enemy ZoC when themselves moving.)
+  it('cavalry (enemy chariot) does NOT exert ZoC (VII spec F-04: only melee/siege project ZoC)', () => {
+    // Enemy chariot (category: 'cavalry') at (2,-1). Per VII spec only melee and
+    // siege project ZoC — cavalry does not. Mover should complete the full path.
     const state = buildZoCScenario({ enemyTypeId: 'chariot' });
     const next = movementSystem(state, {
       type: 'MOVE_UNIT',
       unitId: 'u1',
       path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
     });
-    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
   });
 
   it('civilian units do NOT exert ZoC', () => {
@@ -110,6 +110,31 @@ describe('Z1: military units exert ZoC on adjacent tiles (§6.8 bullet 1)', () =
       path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
     });
     expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
+  });
+
+  it('Z2.1: ranged enemy (archer) does NOT project ZoC — mover passes through freely', () => {
+    // VII spec F-04: only melee and siege project ZoC. An enemy archer at (2,-1)
+    // must NOT stop the mover at (1,0). Mover should reach (2,0).
+    const state = buildZoCScenario({ enemyTypeId: 'archer', moverMovement: 5 });
+    const next = movementSystem(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
+    });
+    expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
+    expect(next.units.get('u1')!.movementLeft).toBe(3);
+  });
+
+  it('Z2.1: melee enemy (warrior) DOES project ZoC — mover is stopped', () => {
+    // Melee units still project ZoC. Confirms the basic case is unaffected.
+    const state = buildZoCScenario({ enemyTypeId: 'warrior', moverMovement: 5 });
+    const next = movementSystem(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
+    });
+    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.units.get('u1')!.movementLeft).toBe(0);
   });
 
   it('unit moving only OUT of ZoC into a non-ZoC tile completes normally', () => {
@@ -224,8 +249,10 @@ describe('Z3: cavalry / Swift units ignore enemy ZoC (§6.8 bullet 3)', () => {
     expect(next.units.get('u1')!.movementLeft).toBe(3);
   });
 
-  it('non-cavalry ranged unit (archer) is still STOPPED by enemy ZoC', () => {
-    // Archer is category 'ranged', not 'cavalry'. Should obey ZoC like melee.
+  it('non-cavalry ranged unit (archer) is STOPPED by enemy melee ZoC', () => {
+    // Archer is category 'ranged', not 'cavalry'. It cannot ignore enemy ZoC
+    // when ENTERING a ZoC tile. (The enemy here is a warrior — melee — which DOES
+    // project ZoC. The mover is an archer who must still respect that ZoC.)
     const state = buildZoCScenario({ moverTypeId: 'archer', moverMovement: 5 });
     const next = movementSystem(state, {
       type: 'MOVE_UNIT',

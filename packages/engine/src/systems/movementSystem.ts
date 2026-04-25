@@ -358,8 +358,11 @@ function getStackClass(unit: UnitState, state: GameState): 'military' | 'civilia
 }
 
 /**
- * Check if a hex is in the Zone of Control of any enemy non-civilian unit.
- * ZoC = the 6 hexes adjacent to each enemy military unit.
+ * Check if a hex is in the Zone of Control of an enemy melee or siege unit.
+ * ZoC = the 6 hexes adjacent to each enemy melee/siege unit.
+ *
+ * Per VII spec (F-04): only melee and siege categories project ZoC.
+ * Ranged, cavalry, naval, air, civilian, religious, and support units do NOT.
  */
 function isInEnemyZoC(
   hex: HexCoord,
@@ -370,14 +373,14 @@ function isInEnemyZoC(
   const adjacentHexes = neighbors(hex);
   for (const adj of adjacentHexes) {
     const adjKey = coordToKey(adj);
-    // Check if any enemy non-civilian unit is on an adjacent hex
+    // Check if any enemy melee or siege unit is on an adjacent hex
     for (const [id, other] of state.units) {
       if (id === unitId) continue; // skip self
       if (other.owner === unitOwner) continue; // skip friendly units
       if (coordToKey(other.position) !== adjKey) continue;
-      // Check if the enemy unit is non-civilian
+      // VII spec: only melee and siege project ZoC; ranged/cavalry/air do not
       const otherDef = state.config.units.get(other.typeId);
-      if (otherDef && otherDef.category !== 'civilian') {
+      if (otherDef && (otherDef.category === 'melee' || otherDef.category === 'siege')) {
         return true;
       }
     }
