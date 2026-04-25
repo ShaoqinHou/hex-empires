@@ -357,9 +357,22 @@ describe('tradeSystem', () => {
     });
   });
 
-  // ── F-05 Diplomatic gate ──
-  describe('CREATE_TRADE_ROUTE — diplomatic gate (F-05)', () => {
-    it('rejects route when relation is hostile', () => {
+  // ── F-05 Diplomatic gate (FF3.2) ──
+  describe('CREATE_TRADE_ROUTE — diplomatic gate (F-05, FF3.2)', () => {
+    it('rejects route when at war (FF3.2 diplomatic gate)', () => {
+      // FF3.2: war is a hard gate — no route can be created while players are at war.
+      const state = withRelation(stateWithMerchantAndCities(), { status: 'war' });
+      const next = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      expect(next).toBe(state);
+      expect(next.tradeRoutes.size).toBe(0);
+    });
+
+    it('rejects route when relation is hostile (FF3.2 diplomatic gate)', () => {
+      // Hostile is the tier just below war; also blocked.
       const state = withRelation(stateWithMerchantAndCities(), { status: 'hostile' });
       const next = tradeSystem(state, {
         type: 'CREATE_TRADE_ROUTE',
@@ -369,14 +382,16 @@ describe('tradeSystem', () => {
       expect(next).toBe(state);
     });
 
-    it('rejects route when at war', () => {
-      const state = withRelation(stateWithMerchantAndCities(), { status: 'war' });
+    it('allows route between two players at peace (neutral status, FF3.2)', () => {
+      // FF3.2: neutral (default) is a peaceful relation — trade is permitted.
+      // Default relation in helpers is neutral, which represents "at peace".
+      const state = withRelation(stateWithMerchantAndCities(), { status: 'neutral' });
       const next = tradeSystem(state, {
         type: 'CREATE_TRADE_ROUTE',
         merchantId: 'm1',
         targetCityId: 'city2',
       });
-      expect(next).toBe(state);
+      expect(next.tradeRoutes.size).toBe(1);
     });
 
     it('allows route at unfriendly (below hostile)', () => {
@@ -390,39 +405,96 @@ describe('tradeSystem', () => {
     });
   });
 
-  // ── F-06 Civ-pair cap ──
-  describe('CREATE_TRADE_ROUTE — civ-pair cap (F-06)', () => {
-    it('rejects a second route between the same civ pair', () => {
-      const state = stateWithMerchantAndCities();
+  // ── F-06 Per-origin-city route cap (FF3.2) ──
+  describe('CREATE_TRADE_ROUTE — per-origin-city cap (F-06, FF3.2)', () => {
+    it('allows a 2nd route from the same origin city to a different destination (cap=2 per origin)', () => {
+      // FF3.2: cap is per origin city (=2). A city can hold up to 2 outbound routes
+      // to different destinations simultaneously.
+      const homeCity = makeCity({ id: 'city1', owner: 'p1', position: { q: 0, r: 0 } });
+      const foreignCity2 = makeCity({ id: 'city2', name: 'Athens', owner: 'p2', position: { q: 2, r: 0 } });
+      const foreignCity3 = makeCity({ id: 'city3', name: 'Sparta', owner: 'p3', position: { q: 4, r: 0 } });
 
-      // Create first route
-      const after1 = tradeSystem(state, {
+      const merchant1 = createTestUnit({ id: 'm1', typeId: 'merchant', owner: 'p1', position: { q: 1, r: 0 } });
+      const merchant2 = createTestUnit({ id: 'm2', typeId: 'merchant', owner: 'p1', position: { q: 3, r: 0 } }); // adjacent to city3
+
+      const base = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', gold: 100 })],
+          ['p2', createTestPlayer({ id: 'p2', gold: 50 })],
+          ['p3', createTestPlayer({ id: 'p3', gold: 50 })],
+        ]),
+        units: new Map([['m1', merchant1], ['m2', merchant2]]),
+        cities: new Map([['city1', homeCity], ['city2', foreignCity2], ['city3', foreignCity3]]),
+        tradeRoutes: new Map(),
+      });
+
+      // First route: city1 → city2
+      const after1 = tradeSystem(base, {
         type: 'CREATE_TRADE_ROUTE',
         merchantId: 'm1',
         targetCityId: 'city2',
       });
       expect(after1.tradeRoutes.size).toBe(1);
 
-      // Spawn a second merchant and try to create another route
-      const merchant2 = createTestUnit({
-        id: 'm2',
-        typeId: 'merchant',
-        owner: 'p1',
-        position: { q: 1, r: 0 },
-      });
-      const stateWith2Merchants = {
-        ...after1,
-        units: new Map([...after1.units, ['m2', merchant2]]),
-      };
-
-      const after2 = tradeSystem(stateWith2Merchants, {
+      // Second route: city1 → city3 (same origin, different destination)
+      const after2 = tradeSystem(after1, {
         type: 'CREATE_TRADE_ROUTE',
         merchantId: 'm2',
-        targetCityId: 'city2',
+        targetCityId: 'city3',
+      });
+      // 2nd route allowed (within cap of 2)
+      expect(after2.tradeRoutes.size).toBe(2);
+    });
+
+    it('rejects a 3rd route from the same origin city (cap=2 per origin)', () => {
+      // Two routes already exist from city1 → trying to add a 3rd hits the cap.
+      const homeCity = makeCity({ id: 'city1', owner: 'p1', position: { q: 0, r: 0 } });
+      const foreignCity2 = makeCity({ id: 'city2', name: 'Athens', owner: 'p2', position: { q: 2, r: 0 } });
+      const foreignCity3 = makeCity({ id: 'city3', name: 'Sparta', owner: 'p3', position: { q: 4, r: 0 } });
+      const foreignCity4 = makeCity({ id: 'city4', name: 'Corinth', owner: 'p4', position: { q: 6, r: 0 } });
+
+      const merchant1 = createTestUnit({ id: 'm1', typeId: 'merchant', owner: 'p1', position: { q: 1, r: 0 } });
+      const merchant2 = createTestUnit({ id: 'm2', typeId: 'merchant', owner: 'p1', position: { q: 3, r: 0 } });
+      const merchant3 = createTestUnit({ id: 'm3', typeId: 'merchant', owner: 'p1', position: { q: 5, r: 0 } });
+
+      const base = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1' })],
+          ['p2', createTestPlayer({ id: 'p2' })],
+          ['p3', createTestPlayer({ id: 'p3' })],
+          ['p4', createTestPlayer({ id: 'p4' })],
+        ]),
+        units: new Map([['m1', merchant1], ['m2', merchant2], ['m3', merchant3]]),
+        cities: new Map([
+          ['city1', homeCity], ['city2', foreignCity2],
+          ['city3', foreignCity3], ['city4', foreignCity4],
+        ]),
+        tradeRoutes: new Map(),
       });
 
-      // Still only 1 route (cap hit)
-      expect(after2.tradeRoutes.size).toBe(1);
+      // First route
+      const after1 = tradeSystem(base, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      expect(after1.tradeRoutes.size).toBe(1);
+
+      // Second route (different destination)
+      const after2 = tradeSystem(after1, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm2',
+        targetCityId: 'city3',
+      });
+      expect(after2.tradeRoutes.size).toBe(2);
+
+      // Attempt 3rd route — must be rejected (cap=2 per origin city)
+      const after3 = tradeSystem(after2, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm3',
+        targetCityId: 'city4',
+      });
+      expect(after3.tradeRoutes.size).toBe(2);
     });
   });
 

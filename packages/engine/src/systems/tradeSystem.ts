@@ -50,8 +50,13 @@ const SEA_RANGE: Record<'antiquity' | 'exploration' | 'modern', number> = {
   modern: 60,
 };
 
-/** Default maximum active routes between any given civ pair (either direction) */
-const CIV_PAIR_ROUTE_CAP = 1;
+/**
+ * FF3.2 (F-06): Maximum active routes departing from a single origin city.
+ * Cap = 2 per origin city (not per civ-pair). This allows a city to
+ * maintain two simultaneous outbound routes to different (or the same)
+ * foreign cities while still preventing unlimited route spam.
+ */
+const ORIGIN_CITY_ROUTE_CAP = 2;
 
 /**
  * TradeSystem — Civ VII-parity implementation (W2-06).
@@ -144,9 +149,9 @@ function handleCreateTradeRoute(
   const relation = state.diplomacy.relations.get(relKey) ?? defaultRelation();
   if (relation.status === 'hostile' || relation.status === 'war') return state;
 
-  // F-06: civ-pair route cap
-  const existingPairRoutes = countRoutesBetween(state, merchant.owner, targetCity.owner);
-  if (existingPairRoutes >= CIV_PAIR_ROUTE_CAP) return state;
+  // F-06: per-origin-city route cap (FF3.2)
+  const existingOriginRoutes = countRoutesFromOriginCity(state, homeCity);
+  if (existingOriginRoutes >= ORIGIN_CITY_ROUTE_CAP) return state;
 
   // Legacy duplicate-route guard (same exact city pair)
   for (const route of state.tradeRoutes.values()) {
@@ -420,20 +425,15 @@ function findNearestCity(
   return best;
 }
 
-/** Count total active routes between two players (either direction) */
-function countRoutesBetween(
-  state: GameState,
-  playerA: PlayerId,
-  playerB: PlayerId,
-): number {
+/**
+ * FF3.2 (F-06): Count active outbound routes departing from a specific origin city.
+ * Cap is per origin city, not per civ pair — this allows a civ to hold routes
+ * to multiple partners as long as no single city exceeds ORIGIN_CITY_ROUTE_CAP.
+ */
+function countRoutesFromOriginCity(state: GameState, originCityId: CityId): number {
   let count = 0;
   for (const route of state.tradeRoutes.values()) {
-    const targetCity = state.cities.get(route.to);
-    if (!targetCity) continue;
-    if (
-      (route.owner === playerA && targetCity.owner === playerB) ||
-      (route.owner === playerB && targetCity.owner === playerA)
-    ) {
+    if (route.from === originCityId) {
       count++;
     }
   }
