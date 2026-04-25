@@ -259,8 +259,10 @@ export { ALL_CRISES, PLAGUE, BARBARIAN_INVASION, NATURAL_DISASTER } from './data
 
 // Resource data
 export type { ResourceDef } from './data/resources';
-export type { ResourceType } from './types/Resource';
+export type { ResourceType, ResourceBonusRow } from './types/Resource';
 export { ALL_RESOURCES, WHEAT, CATTLE, STONE, IRON, HORSES, NITER, SILK, GEMS, SPICES, WINE } from './data/resources';
+// Resource bonus helpers (F-02: per-age bonus table)
+export { getResourceYieldForAge, getResourceHappinessForAge, getResourceBonusRow } from './state/ResourceBonusUtils';
 
 // Leader data
 export type { LeaderDef, PersonaDef, AgendaDef } from './data/leaders';
