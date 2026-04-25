@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computePlayerHappiness, applyHappinessAccumulator } from '../HappinessUtils';
+import { computePlayerHappiness, applyHappinessAccumulator, calculateCityHappiness } from '../HappinessUtils';
 import { createTestState, createTestPlayer } from '../../systems/__tests__/helpers';
 import type { CityState } from '../../types/GameState';
 import type { BuildingDef } from '../../types/Building';
@@ -76,5 +76,62 @@ describe('X3.2: applyHappinessAccumulator — immutable PlayerState update', () 
     // New state updated
     expect(updated.globalHappiness).toBe(25);
     expect(updated).not.toBe(player);
+  });
+});
+
+describe('BB1.4: calculateCityHappiness — happinessCost deduction (S8 gap)', () => {
+  /** Minimal BuildingDef with a specific happinessCost */
+  function makeBuildingDef(id: string, happinessCost: number): BuildingDef {
+    return {
+      id, name: id, age: 'antiquity', cost: 50, maintenance: 1,
+      yields: {},
+      effects: [], requiredTech: null, category: 'military', happinessCost,
+    };
+  }
+
+  it('city with 2 buildings totaling happinessCost=3 → happiness is reduced by 3', () => {
+    // building A: happinessCost=1, building B: happinessCost=2 → total=3
+    const buildingA = makeBuildingDef('barracks', 1);
+    const buildingB = makeBuildingDef('stable', 2);
+
+    const state = createTestState();
+    const buildings = new Map(state.config.buildings);
+    buildings.set('barracks', buildingA);
+    buildings.set('stable', buildingB);
+    const config = { ...state.config, buildings };
+
+    const city = makeCity({ buildings: ['barracks', 'stable'] });
+
+    // Baseline: same city with no buildings (no cost, no positive-yield bonus)
+    const baseCity = makeCity({ buildings: [] });
+
+    const testState = { ...state, config };
+
+    const baseHappiness = calculateCityHappiness(baseCity, testState);
+    const costHappiness = calculateCityHappiness(city, testState);
+
+    // buildings have no positive yields, so buildingBonus=0 for both.
+    // Only cost differs: costHappiness should be 3 less than base.
+    expect(costHappiness).toBe(baseHappiness - 3);
+  });
+
+  it('city with buildings having happinessCost=0 → happiness is unchanged vs baseline', () => {
+    const zeroBuilding = makeBuildingDef('granary', 0);
+
+    const state = createTestState();
+    const buildings = new Map(state.config.buildings);
+    buildings.set('granary', zeroBuilding);
+    const config = { ...state.config, buildings };
+
+    const city = makeCity({ buildings: ['granary'] });
+    const baseCity = makeCity({ buildings: [] });
+
+    const testState = { ...state, config };
+
+    const baseHappiness = calculateCityHappiness(baseCity, testState);
+    const withBuilding = calculateCityHappiness(city, testState);
+
+    // zeroBuilding has no positive yields (buildingBonus=0) and happinessCost=0 → no change
+    expect(withBuilding).toBe(baseHappiness);
   });
 });
