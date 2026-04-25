@@ -95,6 +95,21 @@ function techsResearched(state: GameState, playerId: PlayerId): number {
   return state.players.get(playerId)?.researchedTechs.length ?? 0;
 }
 
+/**
+ * F-03: Science legacy score.
+ * Primary metric: codexPlacements (codices placed in buildings).
+ * Formula: codexPlacements * 10 + researchedTechs * 1
+ * This makes codex placement the dominant driver while retaining researchedTechs
+ * as a meaningful (but secondary) contribution.
+ */
+function scienceLegacyScore(state: GameState, playerId: PlayerId): number {
+  const player = state.players.get(playerId);
+  if (!player) return 0;
+  const codexCount = player.codexPlacements?.length ?? 0;
+  const techCount = player.researchedTechs.length;
+  return codexCount * 10 + techCount * 1;
+}
+
 function civicsResearched(state: GameState, playerId: PlayerId): number {
   return state.players.get(playerId)?.researchedCivics.length ?? 0;
 }
@@ -134,30 +149,26 @@ const ANTIQUITY_SCIENCE: LegacyPath = {
     {
       id: 'antiquity_science_t1',
       tier: 1,
-      description: 'Display 3 Codices (fallback: Research 4 technologies)',
-      check: (pid, s) => {
-        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
-        if (codexCount > 0) return codexCount >= 3;
-        return techsResearched(s, pid) >= 4;
-      },
+      // F-03: primary = scienceLegacyScore (codices * 10 + techs * 1).
+      // Threshold 4: achievable with 4 techs (score=4) or 1 codex (score=10).
+      // Codex players reach this much earlier, making codex placement rewarding.
+      description: 'Science score 4 (codexPlacements*10 + techs*1; e.g. 4 techs or 1 codex)',
+      check: (pid, s) => scienceLegacyScore(s, pid) >= 4,
     },
     {
       id: 'antiquity_science_t2',
       tier: 2,
-      description: 'Display 6 Codices (fallback: Research 8 technologies)',
-      check: (pid, s) => {
-        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
-        if (codexCount > 0) return codexCount >= 6;
-        return techsResearched(s, pid) >= 8;
-      },
+      // Threshold 8: 8 techs or 1 codex + any techs.
+      description: 'Science score 8 (e.g. 8 techs or 1 codex)',
+      check: (pid, s) => scienceLegacyScore(s, pid) >= 8,
     },
     {
       id: 'antiquity_science_t3',
       tier: 3,
-      description: 'Display 10 Codices (fallback: Library in every owned city)',
+      // Threshold 100: 10 codices (score=100) or library fallback.
+      description: 'Science score 100 (e.g. 10 codices) or Library in every city',
       check: (pid, s) => {
-        const codexCount = s.players.get(pid)?.codexPlacements?.length ?? 0;
-        if (codexCount > 0) return codexCount >= 10;
+        if (scienceLegacyScore(s, pid) >= 100) return true;
         return hasBuildingInEveryCity(s, pid, 'library');
       },
     },
@@ -246,20 +257,23 @@ const EXPLORATION_SCIENCE: LegacyPath = {
     {
       id: 'exploration_science_t1',
       tier: 1,
-      description: 'Research 12 technologies total', // GUESS
-      check: (pid, s) => techsResearched(s, pid) >= 12,
+      // F-03: primary = scienceLegacyScore. Threshold 12: 12 techs (score=12) or 2 codices (score=20).
+      description: 'Science score 12 (codexPlacements*10 + techs*1; e.g. 12 techs or 2 codices)',
+      check: (pid, s) => scienceLegacyScore(s, pid) >= 12,
     },
     {
       id: 'exploration_science_t2',
       tier: 2,
-      description: 'Construct 3 Districts (proxy for high-yield districts)',
-      check: (pid, s) => totalDistrictsOwned(s, pid) >= 3,
+      // Threshold 16 or 3 Districts — districts track Enlightenment-era breadth
+      description: 'Science score 16 (e.g. 16 techs or 2 codices) or 3 Districts',
+      check: (pid, s) => scienceLegacyScore(s, pid) >= 16 || totalDistrictsOwned(s, pid) >= 3,
     },
     {
       id: 'exploration_science_t3',
       tier: 3,
-      description: 'Enlightenment: Own 5 Districts (proxy — no yield audit)', // PROXY
-      check: (pid, s) => totalDistrictsOwned(s, pid) >= 5,
+      // Threshold 20 or 5 Districts
+      description: 'Science score 20 or 5 Districts (Enlightenment proxy)',
+      check: (pid, s) => scienceLegacyScore(s, pid) >= 20 || totalDistrictsOwned(s, pid) >= 5,
     },
   ],
 };

@@ -341,14 +341,16 @@ function checkScore(state: GameState, playerId: string): VictoryProgress {
   const player = state.players.get(playerId);
   if (!player) return { type: 'score', progress: 0, achieved: false };
 
-  // F-06: Score victory triggers when modern age progress reaches 100%,
-  // not at a fixed turn limit. This ties game length to the age system.
+  // F-06: Score victory triggers when the Modern age progress reaches 100%.
+  // Gate: currentAge === "modern" AND ageProgress >= modernThreshold.
+  // The old turn-gate (turn >= 300) has been removed — only age-progress matters.
+  // (The outer victorySystem already short-circuits when state.victory.winner is set.)
   const modernThreshold = state.age.ageThresholds?.modern ?? 100;
   const ageProgressRatio = player.ageProgress / modernThreshold;
   const progress = Math.min(1, ageProgressRatio);
 
-  if (state.age.currentAge === 'modern' && ageProgressRatio >= 1.0 && !state.victory?.winner) {
-    // Calculate scores
+  if (state.age.currentAge === 'modern' && ageProgressRatio >= 1.0) {
+    // Calculate scores — player with the highest score wins
     const score = calculateScore(state, playerId);
     let isHighest = true;
     for (const [pid] of state.players) {

@@ -1,8 +1,9 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice } from '../types/GameState';
-import type { ResourceId } from '../types/Ids';
+import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice, HexTile } from '../types/GameState';
+import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
+import { deriveImprovementType } from '../state/ImprovementRules';
 
 // Re-export so existing callers (tests, barrel, web) continue to work.
 export { getGrowthThreshold } from '../state/GrowthUtils';
@@ -54,6 +55,11 @@ function handleSetSpecialization(
 export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_SPECIALIZATION') {
     return handleSetSpecialization(state, action.cityId, action.specialization);
+  }
+  if (action.type === 'RESOLVE_GROWTH_CHOICE') {
+    return handleResolveGrowthChoice(
+      state, action.cityId, action.kind, action.improvementId, action.tileId,
+    );
   }
   if (action.type !== 'END_TURN') return state;
 
@@ -179,6 +185,107 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   }
 
   return { ...state, cities: updatedCities, players: updatedPlayers };
+}
+
+/**
+ * F-12: Resolve a pending growth choice via a single RESOLVE_GROWTH_CHOICE action.
+ *
+ * kind === "specialist": increments city.specialists at city-level (same as
+ *   ASSIGN_SPECIALIST_FROM_GROWTH). Clears the pending growth choice.
+ *
+ * kind === "improvement": derives the improvement type from tile terrain/resource
+ *   (or uses improvementId if provided) and places it on tileId. Also handles
+ *   F-10 resource depletion: decrements resourceUsesRemaining by 1 when the tile
+ *   has a bonus resource; clears the resource when uses reach 0.
+ *
+ * NOTE (F-10): The PLACE_IMPROVEMENT action in improvementSystem.ts does NOT
+ * currently decrement resourceUsesRemaining. That wiring should be added to
+ * improvementSystem in a follow-up once the W8 productionSystem changes settle.
+ */
+function handleResolveGrowthChoice(
+  state: GameState,
+  cityId: string,
+  kind: 'improvement' | 'specialist',
+  improvementId: string | undefined,
+  tileCoord: { readonly q: number; readonly r: number } | undefined,
+): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.owner !== state.currentPlayerId) return state;
+
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // Verify there is a pending growth choice for this city
+  const hasPending = (player.pendingGrowthChoices ?? []).some(c => c.cityId === cityId);
+  if (!hasPending) return state;
+
+  // Clear the pending choice for this city
+  const newPending = (player.pendingGrowthChoices ?? []).filter(c => c.cityId !== cityId);
+  const updatedPlayer: PlayerState = { ...player, pendingGrowthChoices: newPending };
+  const updatedPlayers = new Map(state.players);
+
+  if (kind === 'specialist') {
+    if (city.specialists >= city.population - 1) return state;
+    const updatedCities = new Map(state.cities);
+    updatedCities.set(cityId, { ...city, specialists: city.specialists + 1 });
+    updatedPlayers.set(state.currentPlayerId, updatedPlayer);
+    return {
+      ...state,
+      cities: updatedCities,
+      players: updatedPlayers,
+      log: [...state.log, {
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: `${city.name}: growth resolved via specialist assignment (${city.specialists + 1} total)`,
+        type: 'city' as const,
+      }],
+    };
+  }
+
+  // kind === "improvement"
+  if (!tileCoord) return state;
+  const tileKey = coordToKey(tileCoord);
+  const currentTile = state.map.tiles.get(tileKey);
+  if (!currentTile) return state;
+  if (currentTile.improvement) return state; // already improved
+
+  // Use explicit improvementId or derive from terrain + resource
+  const resolvedImprovementId: ImprovementId | null =
+    (improvementId as ImprovementId | undefined) ?? deriveImprovementType(currentTile, state);
+  if (!resolvedImprovementId) return state;
+
+  // F-10: Resource depletion — decrement resourceUsesRemaining by 1 on first harvest.
+  const DEFAULT_RESOURCE_USES = 5;
+  let updatedTileData: HexTile = { ...currentTile, improvement: resolvedImprovementId };
+  if (currentTile.resource !== null) {
+    const usesLeft = currentTile.resourceUsesRemaining ?? DEFAULT_RESOURCE_USES;
+    const newUses = usesLeft - 1;
+    if (newUses <= 0) {
+      updatedTileData = { ...updatedTileData, resource: null, resourceUsesRemaining: 0 };
+    } else {
+      updatedTileData = { ...updatedTileData, resourceUsesRemaining: newUses };
+    }
+  }
+
+  const updatedTiles = new Map(state.map.tiles);
+  updatedTiles.set(tileKey, updatedTileData);
+  updatedPlayers.set(state.currentPlayerId, updatedPlayer);
+
+  const improvementDef = state.config.improvements.get(resolvedImprovementId);
+  const improvementName = improvementDef?.name ?? resolvedImprovementId;
+
+  return {
+    ...state,
+    map: { ...state.map, tiles: updatedTiles },
+    players: updatedPlayers,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: state.currentPlayerId,
+      message: `${city.name}: growth resolved via ${improvementName} at (${tileCoord.q}, ${tileCoord.r})`,
+      type: 'production' as const,
+    }],
+  };
 }
 
 /**

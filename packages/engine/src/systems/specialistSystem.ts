@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, PlayerState } from '../types/GameState';
+import type { GameState, GameAction, CityState, PlayerState, SpecialistType } from '../types/GameState';
 import type { HexKey } from '../types/HexCoord';
 
 /**
@@ -25,9 +25,9 @@ import type { HexKey } from '../types/HexCoord';
 export function specialistSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'ASSIGN_SPECIALIST':
-      return handleAssign(state, action.cityId, action.tileId);
+      return handleAssign(state, action.cityId, action.tileId, action.specialistType);
     case 'UNASSIGN_SPECIALIST':
-      return handleUnassign(state, action.cityId, action.tileId);
+      return handleUnassign(state, action.cityId, action.tileId, action.specialistType);
     case 'ASSIGN_SPECIALIST_FROM_GROWTH':
       return handleAssignFromGrowth(state, action.cityId);
     default:
@@ -62,12 +62,26 @@ export function canAssignSpecialist(
   return true;
 }
 
-function handleAssign(state: GameState, cityId: string, tileId?: string): GameState {
+function handleAssign(
+  state: GameState,
+  cityId: string,
+  tileId?: string,
+  specialistType?: SpecialistType,
+): GameState {
   const city = state.cities.get(cityId);
   if (!city) return state;
   if (city.owner !== state.currentPlayerId) return state;
 
   if (!canAssignSpecialist(city, tileId)) return state;
+
+  // F-07: Update specialistsByType when specialistType is provided
+  const newSpecialistsByType: ReadonlyMap<SpecialistType, number> | undefined = specialistType !== undefined
+    ? (() => {
+        const next = new Map(city.specialistsByType ?? new Map<SpecialistType, number>());
+        next.set(specialistType, (next.get(specialistType) ?? 0) + 1);
+        return next;
+      })()
+    : city.specialistsByType;
 
   // Update specialistsByTile when tileId is provided
   let newSpecialistsByTile = city.specialistsByTile;
@@ -89,6 +103,7 @@ function handleAssign(state: GameState, cityId: string, tileId?: string): GameSt
         ...city,
         specialists: city.specialists + 1,
         specialistsByTile: newSpecialistsByTile,
+        specialistsByType: newSpecialistsByType,
         urbanTiles: nextUrbanTiles,
       };
       const updatedCities = new Map(state.cities);
@@ -111,6 +126,7 @@ function handleAssign(state: GameState, cityId: string, tileId?: string): GameSt
     ...city,
     specialists: city.specialists + 1,
     specialistsByTile: newSpecialistsByTile,
+    specialistsByType: newSpecialistsByType,
   };
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, updatedCity);
@@ -127,13 +143,32 @@ function handleAssign(state: GameState, cityId: string, tileId?: string): GameSt
   };
 }
 
-function handleUnassign(state: GameState, cityId: string, tileId?: string): GameState {
+function handleUnassign(
+  state: GameState,
+  cityId: string,
+  tileId?: string,
+  specialistType?: SpecialistType,
+): GameState {
   const city = state.cities.get(cityId);
   if (!city) return state;
   if (city.owner !== state.currentPlayerId) return state;
 
   // Can't go below 0 specialists
   if (city.specialists <= 0) return state;
+
+  // F-07: Update specialistsByType when specialistType is provided
+  const newSpecialistsByType: ReadonlyMap<SpecialistType, number> | undefined = specialistType !== undefined
+    ? (() => {
+        const next = new Map(city.specialistsByType ?? new Map<SpecialistType, number>());
+        const current = next.get(specialistType) ?? 0;
+        if (current <= 1) {
+          next.delete(specialistType);
+        } else {
+          next.set(specialistType, current - 1);
+        }
+        return next;
+      })()
+    : city.specialistsByType;
 
   // Update specialistsByTile when tileId is provided
   let newSpecialistsByTile = city.specialistsByTile;
@@ -165,6 +200,7 @@ function handleUnassign(state: GameState, cityId: string, tileId?: string): Game
         ...city,
         specialists: city.specialists - 1,
         specialistsByTile: newSpecialistsByTile,
+        specialistsByType: newSpecialistsByType,
         urbanTiles: nextUrbanTiles,
       };
       const updatedCities = new Map(state.cities);
@@ -187,6 +223,7 @@ function handleUnassign(state: GameState, cityId: string, tileId?: string): Game
     ...city,
     specialists: city.specialists - 1,
     specialistsByTile: newSpecialistsByTile,
+    specialistsByType: newSpecialistsByType,
   };
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, updatedCity);
