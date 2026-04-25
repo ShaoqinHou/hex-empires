@@ -1,4 +1,5 @@
 import type { GameState, GameAction, ActiveEffect, PlayerState, PolicySlotType, EffectDef } from '../types/GameState';
+import { getYieldBonus } from '../state/EffectUtils';
 
 /**
  * CivicSystem handles civic research (parallel to tech tree, uses culture).
@@ -110,8 +111,11 @@ function processNormalCivicResearch(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player || !player.currentCivic) return state;
 
-  // Calculate culture per turn from cities/buildings
+  // Calculate culture per turn from cities/buildings + MODIFY_YIELD effects
+  // (civ unique ability, leader ability, legacy bonuses, traditions — via getYieldBonus).
+  // The yield bonus is added once per city to mirror YieldCalculator.calculateCityYields.
   let culturePerTurn = 0;
+  const cultureYieldBonus = getYieldBonus(state, player.id, 'culture');
   for (const city of state.cities.values()) {
     if (city.owner !== player.id) continue;
     culturePerTurn += 1; // base 1 culture per city
@@ -121,6 +125,7 @@ function processNormalCivicResearch(state: GameState): GameState {
         culturePerTurn += buildingDef.yields.culture;
       }
     }
+    culturePerTurn += cultureYieldBonus;
   }
 
   // Minimum 1 culture per turn if the player has any cities
@@ -203,6 +208,7 @@ function processCivicMasteryResearch(state: GameState): GameState {
   if (!player || !player.currentCivicMastery) return state;
 
   let culturePerTurn = 0;
+  const masteryYieldBonus = getYieldBonus(state, player.id, 'culture');
   for (const city of state.cities.values()) {
     if (city.owner !== player.id) continue;
     culturePerTurn += 1;
@@ -212,6 +218,7 @@ function processCivicMasteryResearch(state: GameState): GameState {
         culturePerTurn += buildingDef.yields.culture;
       }
     }
+    culturePerTurn += masteryYieldBonus;
   }
 
   if (culturePerTurn === 0) {

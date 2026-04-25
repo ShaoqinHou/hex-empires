@@ -641,4 +641,53 @@ describe('EE1: traditions unlock on civic completion', () => {
     const bonus = getYieldBonus(state, 'p1', 'production');
     expect(bonus).toBeGreaterThanOrEqual(1);
   });
+
+  describe('GG.1: MODIFY_YIELD culture effects included in culturePerTurn', () => {
+    it('culturePerTurn includes +2 culture from a legacyBonus MODIFY_YIELD effect', () => {
+      // Player has 1 city (base 1 culture/turn) and a +2 culture legacyBonus.
+      // Expected: civicProgress goes from 0 to 3 (1 base + 2 effect), not 1.
+      const player = createTestPlayer({
+        currentCivic: 'code_of_laws',
+        civicProgress: 0,
+        legacyBonuses: [{
+          source: 'test-effect',
+          effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+        }],
+      });
+      const city = createTestCity();
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = civicSystem(state, { type: 'END_TURN' });
+      // Without the fix: civicProgress = 1 (base only)
+      // With the fix: civicProgress = 1 (base) + 2 (MODIFY_YIELD effect) = 3
+      expect(next.players.get('p1')!.civicProgress).toBe(3);
+    });
+
+    it('mastery culturePerTurn includes MODIFY_YIELD effects', () => {
+      // code_of_laws costs 25, mastery cost = ceil(25 * 0.8) = 20.
+      // Player has legacyBonus +2 culture; 1 city (base 1/turn) → 3/turn.
+      // Start at progress 17 → 17 + 3 = 20 → mastery complete.
+      const player = createTestPlayer({
+        researchedCivics: ['code_of_laws'],
+        masteredCivics: [],
+        currentCivicMastery: 'code_of_laws',
+        civicMasteryProgress: 17,
+        legacyBonuses: [{
+          source: 'test-effect',
+          effect: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+        }],
+      });
+      const city = createTestCity();
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+      const next = civicSystem(state, { type: 'END_TURN' });
+      // Without the fix: 17 + 1 = 18 < 20, no completion
+      // With the fix: 17 + 3 = 20 >= 20, mastery complete
+      expect(next.players.get('p1')!.masteredCivics).toContain('code_of_laws');
+    });
+  });
 });
