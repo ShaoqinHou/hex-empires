@@ -350,6 +350,52 @@ describe('movementSystem', () => {
       expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
       expect(next.units.get('u1')!.movementLeft).toBe(0);
     });
+
+    it('ranged enemy (archer) does NOT project ZoC — mover passes freely (F-04 spec)', () => {
+      // VII spec §6.8: only melee and siege units project ZoC.
+      // Enemy archer (category: 'ranged') at (2,-1). Mover warrior walks
+      // (0,0) → (1,0) → (2,0). Since archer is ranged, (1,0) is NOT a ZoC
+      // tile — mover should reach (2,0) with movement remaining.
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 5, typeId: 'warrior' })],
+        ['u2', createTestUnit({ id: 'u2', owner: 'p2', position: { q: 2, r: -1 }, movementLeft: 2, typeId: 'archer' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
+      });
+      // Ranged enemy does not stop movement — reaches full destination
+      expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
+      expect(next.units.get('u1')!.movementLeft).toBe(3); // 5 MP - 2 grassland steps
+    });
+
+    it('melee enemy (warrior) DOES project ZoC — mover is stopped (F-04 regression)', () => {
+      // Melee units still project ZoC per §6.8. Confirms existing behavior is
+      // unaffected by any ranged-ZoC fix.
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, movementLeft: 5, typeId: 'warrior' })],
+        ['u2', createTestUnit({ id: 'u2', owner: 'p2', position: { q: 2, r: -1 }, movementLeft: 2, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 1, r: 0 }, { q: 2, r: 0 }],
+      });
+      // Melee enemy stops the mover at (1,0), movement zeroed
+      expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+      expect(next.units.get('u1')!.movementLeft).toBe(0);
+    });
   });
 
   describe('UPGRADE_UNIT', () => {
