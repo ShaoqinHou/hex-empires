@@ -43,6 +43,7 @@ export const TOTALITARIANISM: CivicDef = {
   description: '+10 combat strength, -2 happiness',
   treePosition: { row: 0, col: 1 },
   ideologyBranch: 'fascism',
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
 };
 
 export const ENVIRONMENTALISM: CivicDef = {
@@ -67,6 +68,7 @@ export const GLOBALIZATION: CivicDef = {
   description: '+4 gold from trade routes',
   treePosition: { row: 1, col: 2 },
   ideologyBranch: 'democracy',
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'economic' }],
 };
 
 export const FUTURE_CIVIC: CivicDef = {
@@ -114,6 +116,7 @@ export const ENLIGHTENMENT: CivicDef = {
     'Liberty, reason, and the consent of the governed. Unlocks the Elective Republic government.',
   treePosition: { row: 1, col: 1 },
   masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 3 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'diplomatic' }],
 };
 
 /**
@@ -131,6 +134,7 @@ export const CLASS_STRUGGLE: CivicDef = {
     'Organises society along the axis of productive labour versus capital. Unlocks the Communism government when defined.',
   treePosition: { row: 2, col: 2 },
   ideologyBranch: 'communism',
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' }],
 };
 
 export const ALL_MODERN_CIVICS: ReadonlyArray<CivicDef> = [

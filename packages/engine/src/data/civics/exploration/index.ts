@@ -22,6 +22,7 @@ export const MERCANTILISM: CivicDef = {
   description: '+3 gold from trade routes',
   treePosition: { row: 2, col: 0 },
   masteryUnlocks: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'economic' }],
 };
 
 export const DIVINE_RIGHT: CivicDef = {
@@ -44,6 +45,7 @@ export const EXPLORATION_CIVIC: CivicDef = {
   unlocks: [],
   description: '+1 naval movement',
   treePosition: { row: 2, col: 1 },
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
 };
 
 export const REFORMED_CHURCH: CivicDef = {
@@ -89,6 +91,7 @@ export const NATIONALISM: CivicDef = {
   description: '+5 combat strength in own territory',
   treePosition: { row: 1, col: 4 },
   masteryUnlocks: [{ type: 'MODIFY_COMBAT', target: 'all', value: 3 }],
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
 };
 
 /**
@@ -106,6 +109,7 @@ export const FEUDALISM: CivicDef = {
   description:
     'Binds land, loyalty, and service into a hierarchy of lords and vassals. Unlocks the Feudal Monarchy government.',
   treePosition: { row: 1, col: 1 },
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'military' }],
 };
 
 /**
@@ -122,6 +126,7 @@ export const SCHOLASTICISM: CivicDef = {
   description:
     'Synthesises faith and reason into a unified ecclesiastical doctrine. Unlocks the Theocracy government.',
   treePosition: { row: 0, col: 3 },
+  effects: [{ type: 'GRANT_POLICY_SLOT', slotType: 'diplomatic' }],
 };
 
 export const ALL_EXPLORATION_CIVICS: ReadonlyArray<CivicDef> = [
