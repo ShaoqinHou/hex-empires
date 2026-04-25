@@ -769,4 +769,144 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
     expect(celebrateOnce(7)).toBe(7);
     expect(celebrateOnce(9)).toBe(7);
   });
+
+  // ── FF2: slottedPolicies extension on celebration (policy slot grant wire-up) ──
+
+  it('FF2: valid celebration pick extends slottedPolicies with one extra null slot', () => {
+    // Player starts with 2-slot government (classical_republic); after celebration
+    // the array should grow to length 3 (one extra bonus slot appended as null).
+    const player = {
+      ...createTestPlayer({ id: 'p1' }),
+      governmentId: 'classical_republic',
+      slottedPolicies: [null, null], // base 2 slots
+      pendingCelebrationChoice: { governmentId: 'classical_republic' },
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 0,
+    } as ReturnType<typeof createTestPlayer> & {
+      governmentId: string;
+      slottedPolicies: Array<string | null>;
+      pendingCelebrationChoice: { governmentId: string };
+      socialPolicySlots: number;
+    };
+    const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    const updated = next.players.get('p1')!;
+    const slots = (updated as typeof updated & { slottedPolicies: Array<string | null> }).slottedPolicies;
+    // Array grew by 1
+    expect(slots).toHaveLength(3);
+    // The new entry is null (empty slot, ready to be filled)
+    expect(slots[2]).toBeNull();
+    // Original slots preserved
+    expect(slots[0]).toBeNull();
+    expect(slots[1]).toBeNull();
+  });
+
+  it('FF2: celebration pick with already-filled slots preserves existing policies and appends null', () => {
+    // Player has 2 filled slots; celebration should extend to 3 without wiping them.
+    const player = {
+      ...createTestPlayer({ id: 'p1', researchedCivics: ['code_of_laws'] }),
+      governmentId: 'classical_republic',
+      slottedPolicies: ['discipline', 'urban_planning'], // both filled
+      pendingCelebrationChoice: { governmentId: 'classical_republic' },
+      celebrationCount: 1,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 1,
+    } as ReturnType<typeof createTestPlayer> & {
+      governmentId: string;
+      slottedPolicies: Array<string | null>;
+      pendingCelebrationChoice: { governmentId: string };
+      socialPolicySlots: number;
+    };
+    const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-wonder',
+    });
+    const updated = next.players.get('p1')!;
+    const slots = (updated as typeof updated & { slottedPolicies: Array<string | null> }).slottedPolicies;
+    expect(slots).toHaveLength(3);
+    expect(slots[0]).toBe('discipline');
+    expect(slots[1]).toBe('urban_planning');
+    expect(slots[2]).toBeNull(); // new bonus slot
+  });
+
+  it('FF2: player without government fields (no slottedPolicies) still gets socialPolicySlots increment but no slottedPolicies change', () => {
+    // Player has pendingCelebrationChoice but NO slottedPolicies field (pre-government schema).
+    // socialPolicySlots should still increment; slottedPolicies stays absent.
+    const player = {
+      ...createTestPlayer({ id: 'p1' }),
+      governmentId: null, // no government
+      pendingCelebrationChoice: { governmentId: 'classical_republic' },
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 0,
+      // Note: slottedPolicies intentionally NOT set — simulating pre-government schema
+    } as ReturnType<typeof createTestPlayer> & {
+      governmentId: null;
+      pendingCelebrationChoice: { governmentId: string };
+      socialPolicySlots: number;
+    };
+    const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    const updated = next.players.get('p1')!;
+    // socialPolicySlots still increments
+    expect((updated as typeof updated & { socialPolicySlots: number }).socialPolicySlots).toBe(1);
+    // slottedPolicies not injected
+    expect((updated as typeof updated & { slottedPolicies?: unknown }).slottedPolicies).toBeUndefined();
+  });
+
+  it('FF2: two consecutive celebrations grant two extra slots (slottedPolicies grows by 2)', () => {
+    // First celebration: 2 base slots → 3
+    // Second celebration: 3 slots → 4
+    function celebrateWith(
+      baseSlots: Array<string | null>,
+      socialPolicySlots: number,
+      celebrationCount: number,
+    ): Array<string | null> {
+      const player = {
+        ...createTestPlayer({ id: 'p1' }),
+        governmentId: 'classical_republic',
+        slottedPolicies: baseSlots,
+        pendingCelebrationChoice: { governmentId: 'classical_republic' },
+        celebrationCount,
+        celebrationBonus: 0,
+        celebrationTurnsLeft: 0,
+        socialPolicySlots,
+      } as ReturnType<typeof createTestPlayer> & {
+        governmentId: string;
+        slottedPolicies: Array<string | null>;
+        pendingCelebrationChoice: { governmentId: string };
+        socialPolicySlots: number;
+      };
+      const st = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+      const next = governmentSystem(st, {
+        type: 'PICK_CELEBRATION_BONUS',
+        playerId: 'p1',
+        bonusId: 'classical-rep-culture',
+      });
+      const u = next.players.get('p1')!;
+      return (u as typeof u & { slottedPolicies: Array<string | null> }).slottedPolicies;
+    }
+
+    // First celebration: 2 → 3
+    const afterFirst = celebrateWith([null, null], 0, 0);
+    expect(afterFirst).toHaveLength(3);
+
+    // Second celebration: feed the 3-slot array back in
+    const afterSecond = celebrateWith(afterFirst, 1, 1);
+    expect(afterSecond).toHaveLength(4);
+  });
 });

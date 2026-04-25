@@ -313,6 +313,16 @@ function applyPickCelebrationBonus(
 
   // BB1.5 (S10): cap celebrationCount at 7 — threshold effects stop after the 7th celebration
   const MAX_CELEBRATION_COUNT = 7;
+
+  // FF2: extend the flat slottedPolicies array with one extra null slot so the
+  // new bonus slot is immediately slottable. socialPolicySlots tracks the count;
+  // slottedPolicies carries the actual entries. Both must stay in sync.
+  // Only applicable when the player already has the Government fields (flat array model).
+  const extendedSlottedPolicies: ReadonlyArray<PolicyId | null> | undefined =
+    hasGovernmentFields(player)
+      ? [...(player.slottedPolicies as ReadonlyArray<PolicyId | null>), null]
+      : undefined;
+
   const updated: PlayerState = {
     ...player,
     activeCelebrationBonus: bonusId,
@@ -320,10 +330,14 @@ function applyPickCelebrationBonus(
     // celebrationBonus (old percent field) — keep backward compat but also set to 10
     celebrationBonus: 10,
     celebrationCount: Math.min(MAX_CELEBRATION_COUNT, player.celebrationCount + 1),
-    // F-04: increment social policy slots
+    // F-04: increment social policy slots counter
     socialPolicySlots: (player.socialPolicySlots ?? 0) + 1,
     // Clear the pending prompt
     pendingCelebrationChoice: null,
+    // FF2: extend slot array if present
+    ...(extendedSlottedPolicies !== undefined
+      ? { slottedPolicies: extendedSlottedPolicies }
+      : {}),
   };
 
   return updatePlayer(state, playerId, updated);
