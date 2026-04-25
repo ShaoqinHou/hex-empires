@@ -533,6 +533,13 @@ function checkLegacyMilestones(state: GameState): GameState {
   // F-07: career total never resets
   const newCareerTotal = (player.totalCareerLegacyPoints ?? 0) + totalGain;
 
+  // AA3.2 (F-11): milestone acceleration also pushes the global ageProgressMeter.
+  // The meter accumulates all players' milestone bonuses (+10 per milestone gain),
+  // enabling the compression dynamic: slower players get pushed into the next age
+  // when faster players complete milestones ahead of schedule.
+  const meterBoost = totalGain * 10;
+  const newAgeProgressMeter = (state.ageProgressMeter ?? 0) + meterBoost;
+
   // Always increment ageProgress by +1 per turn (natural age advancement)
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
@@ -559,6 +566,8 @@ function checkLegacyMilestones(state: GameState): GameState {
     ...state,
     players: updatedPlayers,
     log: logEntries,
+    // AA3.2: update global meter (no-op if no milestone gained this turn)
+    ...(meterBoost > 0 ? { ageProgressMeter: newAgeProgressMeter } : {}),
   };
 }
 
