@@ -43,20 +43,33 @@ Anti-pattern: stopping mid-list with "Phase 1 done — should I continue?" when 
 Model selection:
 - **Parent session**: prefer Sonnet (`claude --model sonnet`). Orchestration — spawning, cherry-picking, test runs, push, status writeups — is Sonnet-grade work. An Opus parent doing orchestration burns ~5× the tokens with no quality gain.
 - **Design + architecture subagents**: Opus. `designer.md` is Opus-backed and should be invoked for specs that involve real design judgment (palette systems, grid rules, interaction model, crisis-response choice design). This is where Opus earns its keep.
-- **Implementation / fix / review subagents (primary)**: **GLM via `claude-glm`** — see `~/.claude/docs/glm-delegation.md`. Runs on Z.ai subscription (separate budget pool from Anthropic). Self-contained Bash invocation: `claude-glm --add-dir /absolute/path -p '<prompt>'`. Use `run_in_background: true` for parallel fan-out. GLM can edit files + commit + run tests. Saves Anthropic budget on mechanical workpack execution.
-- **Implementation / fix / review subagents (fallback)**: Sonnet via `Agent({ subagent_type: "implementer", model: "sonnet" })` — use when GLM hits its own limits, or when the task needs Anthropic-only server tools (web_search, advisor).
+- **Implementation / fix / review subagents (primary)**: **Sonnet via `Agent({ subagent_type: "implementer" | "fixer" | "reviewer", model: "sonnet" })`**. Default for all bulk implementation work. Native Anthropic — same budget pool as parent, but Sonnet is ~5× cheaper than Opus. Spawn 3-5 in parallel for disjoint workpacks (one Agent message, multiple tool calls). Use `run_in_background: true` for fan-out and react to completion notifications.
+- **Implementation / fix / review subagents (escape hatch)**: **GLM via `claude-glm`** — only when worth it: extremely mechanical batch refactors where Sonnet's reasoning is wasted, OR Anthropic budget is exhausted and we want to keep going on Z.ai's separate budget pool. See `~/.claude/docs/glm-delegation.md`. **Concurrency cap: ~3 parallel GLM jobs** (rate-limit floor; sometimes 5 is fine but 3 is the safe default).
 - **Dispute resolution**: Opus. `arbiter.md` handles reviewer/fixer conflicts.
-- Rule of thumb: Opus enters only when a decision is genuinely hard and the output will be used for several later phases. Never Opus for work Sonnet handles equally. **Prefer GLM over Sonnet** for bulk implementation if the task is well-scoped and mechanical — it's a cheaper budget pool.
+- Rule of thumb: Opus only when reasoning is genuinely hard and the output feeds several later phases (rare). Sonnet for the 95% case. GLM only when explicitly warranted.
 
-### GLM delegation (confirmed 2026-04-20)
+### Rate-limit recovery — never stop (mandatory in full-auto mode)
 
-Validated pattern: fire 5 implementer workpacks in parallel via `claude-glm` in background Bash jobs. Each GLM process is one-shot (zero memory), accepts self-contained briefs, can write files + commit. Return via stdout at end.
+If a subagent or Bash spawn returns rate-limit or 429:
+
+1. **Note the failed task** — log which workpack failed in a TodoWrite item or a state file.
+2. **Schedule a wakeup** — `ScheduleWakeup({ delaySeconds: 1800, prompt: "<same /loop or task prompt>" , reason: "rate-limit recovery"})`. 1800s (30 min) is a good first probe — pays one cache miss but covers most short-window throttles.
+3. **Continue any work that doesn't need the throttled provider** — e.g. if Anthropic is throttled but local tests + grep + Bash are unblocked, run those.
+4. **On wakeup**: probe with a tiny call (one `Agent(prompt: "say READY")` or one `claude-glm -p "say READY"`); if recovered, re-fire the failed workpack.
+5. **If still throttled**: re-schedule (1800s again, escalate to 3600s after 2 retries).
+6. **Never end the turn silently** when work is queued. If everything is blocked AND rate-limited AND no progress can be made, write the state to `.claude/workflow/_loop-state.md` and ScheduleWakeup once more.
+
+### GLM delegation (escape-hatch reference, confirmed 2026-04-20 — 2026-04-25)
+
+Validated pattern: fire ≤3 implementer workpacks in parallel via `claude-glm` in background Bash jobs. Each GLM process is one-shot (zero memory), accepts self-contained briefs, can write files + commit. Return via stdout at end.
 
 Spawn shape:
 ```bash
 claude-glm --add-dir /c/Users/housh/Documents/monoWeb/hex-empires -p '<SELF_CONTAINED_BRIEF>' 2>&1 | tail -30
 ```
 Use `run_in_background: true` for parallelism. No task-notification system (unlike Anthropic Agent); poll output file or wait for Bash completion event.
+
+Note (2026-04-25): user prefers Sonnet workers for quality/budget reasons. GLM is escape-hatch only. Concurrency cap ~3, sometimes 5; 429s mean concurrency-limited not request-count-limited.
 
 Good fit: 90% of W1–Y5 workpacks (typed refactors, action additions, data cleanup, UI scaffolds).
 Bad fit: tasks requiring access to this conversation's memory, web_search, or the PanelManager/HUDManager hot-reload magic.
