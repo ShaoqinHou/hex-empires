@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCombatPreview, calculateCityCombatPreview, getAttackableUnits, getAttackableCities } from '../CombatPreview';
+import { computeEffectiveCS } from '../CombatAnalytics';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
 
 describe('calculateCombatPreview', () => {
@@ -582,5 +583,43 @@ describe('getAttackableCities', () => {
 
     expect(attackable.length).toBe(1);
     expect(attackable[0].cityId).toBe('c1');
+  });
+});
+
+describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
+  it('preview attackerStrength uses computeEffectiveCS(base, hp) — single shared formula', () => {
+    // A warrior at 75 HP attacks an adjacent enemy.
+    // Warrior base combat = 20 (from test config). computeEffectiveCS(20, 75) = floor(20 * 75/100) = 15.
+    // Preview attackerStrength should equal computeEffectiveCS(base, hp) (no other modifiers in this clean scenario).
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 75 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const state = createTestState({ units });
+    const preview = calculateCombatPreview(state, 'a1', 'd1');
+
+    expect(preview.canAttack).toBe(true);
+    // Retrieve attacker's base CS from state.config (same as CombatPreview uses internally)
+    const warriorBase = state.config.units.get('warrior')?.combat ?? 20;
+    const expectedEffectiveCS = computeEffectiveCS(warriorBase, 75);
+    // Preview strength includes effective CS as its foundation; verify they use the same formula.
+    // (No terrain/flanking/support/commander bonuses in this scenario — clean unit vs unit.)
+    expect(preview.attackerStrength).toBe(expectedEffectiveCS);
+  });
+
+  it('preview defenderStrength degrades with HP (same formula as attacker)', () => {
+    // Defender at 50 HP: computeEffectiveCS(base, 50) = floor(base * 0.5)
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 50 })],
+    ]);
+    const state = createTestState({ units });
+    const preview = calculateCombatPreview(state, 'a1', 'd1');
+
+    expect(preview.canAttack).toBe(true);
+    const warriorBase = state.config.units.get('warrior')?.combat ?? 20;
+    const expectedDefenderCS = computeEffectiveCS(warriorBase, 50);
+    // Defender strength = computeEffectiveCS on flat grassland, not fortified
+    expect(preview.defenderStrength).toBe(expectedDefenderCS);
   });
 });
