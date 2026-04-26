@@ -72,11 +72,17 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
               const cap = calculateEffectiveSettlementCap(state, state.currentPlayerId);
               const overCap = playerCities.length > cap;
               return (
-                <div>
-                  <span style={{ color: 'var(--panel-muted-color)' }}>Settlements:</span>
-                  <span className="ml-1 font-bold" style={overCap ? { color: 'var(--color-health-low)' } : undefined}>
+                <div data-testid="turn-summary-settlement-cap">
+                  <span style={{ color: 'var(--panel-muted-color)' }}>Settlement cap:</span>
+                  <span
+                    className="ml-1 font-bold"
+                    style={{ color: overCap ? 'var(--color-warning)' : undefined }}
+                  >
                     {playerCities.length} / {cap}
                   </span>
+                  {overCap && (
+                    <span className="ml-1 text-xs" style={{ color: 'var(--color-warning)' }}>⚠</span>
+                  )}
                 </div>
               );
             })()}

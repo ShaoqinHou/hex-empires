@@ -2,7 +2,7 @@ import { useGameState } from '../../providers/GameProvider';
 // Phase 4.3: gold rule + chrome bar tokens.
 import './chrome-bars.css';
 import { getYieldIcon } from '@web/assets';
-import { calculateResourceChanges, allUnitsHaveActed } from '@hex/engine';
+import { calculateResourceChanges, allUnitsHaveActed, calculateEffectiveSettlementCap } from '@hex/engine';
 import type { TechnologyDef, CivicDef } from '@hex/engine';
 import { ResourceChangeBadge, WarningIndicator } from '../components/ResourceChangeBadge';
 import { useState, useRef } from 'react';
@@ -81,6 +81,11 @@ export function TopBar() {
     u => u.owner === state.currentPlayerId && u.movementLeft > 0 && !u.fortified
   ).length;
 
+  // Settlement cap: count of cities/towns owned by the current player vs. effective cap.
+  const settlementCount = [...state.cities.values()].filter(c => c.owner === state.currentPlayerId).length;
+  const settlementCap = calculateEffectiveSettlementCap(state, state.currentPlayerId);
+  const settlementOverCap = settlementCount > settlementCap;
+
   // Closes overflow menu and toggles the panel — hoisted so menu items stay slim.
   const openFromMenu = (id: PanelId) => {
     togglePanel(id);
@@ -139,6 +144,26 @@ export function TopBar() {
         )}
 
         <WarningIndicator summary={resourceChanges} />
+
+        {/* Settlement cap chip — HH5 (settlements F-09) */}
+        <div
+          data-testid="settlement-cap-chip"
+          className="flex items-center gap-1"
+          title={settlementOverCap
+            ? `Settlements over cap! Happiness penalty active. (${settlementCount} / ${settlementCap})`
+            : `Settlements: ${settlementCount} / ${settlementCap}`}
+        >
+          <span className="text-xs">🏘</span>
+          <span
+            className="font-mono text-xs font-bold"
+            style={{ color: settlementOverCap ? 'var(--color-warning)' : 'var(--color-text-muted)' }}
+          >
+            {settlementCount}/{settlementCap}
+          </span>
+          {settlementOverCap && (
+            <span className="text-xs" style={{ color: 'var(--color-warning)' }}>⚠</span>
+          )}
+        </div>
       </div>
 
       {/* Right: Panel buttons + End Turn.
