@@ -810,5 +810,68 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
   }
 
   if (!changed) return state;
-  return { ...state, diplomacy: { relations: updatedRelations } };
+
+  // F-13: Auto-resolve pending peace offers when war-exhaustion conditions are met.
+  // Condition: turnsAtWar >= 5 OR |warSupport| <= 20 for the relationship pair.
+  // Allows unilateral PROPOSE_PEACE to finalise without a separate ACCEPT_PEACE dispatch
+  // once the war has run its course.
+  const pendingOffers = state.diplomacy.pendingPeaceOffers ?? [];
+  const resolvedOfferIds = new Set<string>();
+
+  for (const offer of pendingOffers) {
+    const key = getRelationKey(offer.proposerId, offer.targetId);
+    const rel = updatedRelations.get(key);
+    if (!rel || rel.status !== 'war') continue;
+
+    const absWarSupport = Math.abs(rel.warSupport);
+    const qualifies = rel.turnsAtWar >= 5 || absWarSupport <= 20;
+    if (!qualifies) continue;
+
+    // Resolve the offer: end war, reset counters, apply relationship bump + ledger entry.
+    const newRelationship = clampRelationship(rel.relationship + 10);
+    let resolvedRel: DiplomacyRelation = {
+      ...rel,
+      status: getStatusFromRelationship(newRelationship),
+      turnsAtPeace: 0,
+      turnsAtWar: 0,
+      warSupport: 0,
+      warDeclarer: null,
+      isSurpriseWar: false,
+      relationship: newRelationship,
+      peaceCooldownUntilTurn: undefined,
+    };
+    resolvedRel = appendLedgerEntry(resolvedRel, {
+      id: 'made_peace',
+      value: 10,
+      turnApplied: state.turn,
+      turnExpires: state.turn + 20,
+      reason: 'Recently made peace',
+    });
+    updatedRelations.set(key, resolvedRel);
+    resolvedOfferIds.add(offer.id);
+  }
+
+  const remainingOffers = pendingOffers.filter(o => !resolvedOfferIds.has(o.id));
+  const autoLog = resolvedOfferIds.size > 0
+    ? pendingOffers
+        .filter(o => resolvedOfferIds.has(o.id))
+        .map(o => ({
+          turn: state.turn,
+          playerId: o.proposerId,
+          message: `Peace auto-accepted between ${o.proposerId} and ${o.targetId} (war exhaustion)`,
+          type: 'diplomacy' as const,
+          category: 'diplomatic' as const,
+          panelTarget: 'diplomacy' as const,
+        }))
+    : [];
+
+  return {
+    ...state,
+    diplomacy: {
+      ...state.diplomacy,
+      relations: updatedRelations,
+      pendingPeaceOffers: remainingOffers,
+    },
+    log: autoLog.length > 0 ? [...state.log, ...autoLog] : state.log,
+  };
 }
