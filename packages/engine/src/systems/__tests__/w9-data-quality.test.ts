@@ -290,9 +290,24 @@ describe('F-13: completedCivics civic history', () => {
 // ── F-03: Science legacy score (codex primary) ────────────────────────────────
 
 describe('F-03: Science legacy uses codex-primary score', () => {
-  it('4 techs (no codices) satisfies antiquity science tier 1 (score=4 >= 4)', () => {
+  it('4 techs (no codices) → antiquity science tier 0 (F-03: tech count no longer contributes)', () => {
+    // F-03 fix: scienceLegacyScore returns codexPlacements.length only.
+    // 4 techs with 0 codex placements → score=0 → tier 0.
     const player = createTestPlayer({
       researchedTechs: ['pottery', 'writing', 'bronze_working', 'mining'],
+    });
+    const state = createTestState({ players: new Map([['p1', player]]) });
+
+    const legacyEntries = scoreLegacyPaths('p1', state);
+    const antiquityScience = legacyEntries.find(e => e.axis === 'science' && e.age === 'antiquity')!;
+
+    expect(antiquityScience.tiersCompleted).toBe(0);
+  });
+
+  it('1 codex (no techs) satisfies antiquity science tier 1 (F-03: codex-only proxy, score=1 >= 1)', () => {
+    const player = createTestPlayer({
+      researchedTechs: [],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
     });
     const state = createTestState({ players: new Map([['p1', player]]) });
 

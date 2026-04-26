@@ -109,9 +109,10 @@ describe('ageSystem', () => {
       expect(next.players.get('p1')!.legacyPoints).toBe(1);
     });
 
-    it('awards science milestone for techs researched', () => {
+    it('awards science milestone for codex placements (F-03 fix: codex-only proxy)', () => {
+      // F-03: tech count no longer drives science legacy; codexPlacements.length is the proxy.
       const player = createTestPlayer({
-        researchedTechs: ['a', 'b', 'c', 'd', 'e'],
+        codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
         legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
         legacyPoints: 0,
       });
@@ -1088,12 +1089,12 @@ describe('F-14: mastered techs and civics persist across age transitions', () =>
 // document and guard the behaviour).
 describe('X5.3 — legacy path reconciliation: ageSystem mirrors scoreLegacyPaths', () => {
   it('X5.3 legacy milestone: ageSystem END_TURN legacyPaths matches scoreLegacyPaths result', () => {
-    // Player has 4 techs → antiquity_science_t1 passes (scienceLegacyScore >= 4)
+    // F-03: 1 codexPlacement → antiquity_science_t1 passes (codexPlacements.length >= 1).
     // scoreLegacyPaths should return tiersCompleted=1 for antiquity/science path.
     // ageSystem END_TURN (checkLegacyMilestones) must agree.
     const player = createTestPlayer({
       id: 'p1',
-      researchedTechs: ['pottery', 'mining', 'animal_husbandry', 'irrigation'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
       legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
       legacyPoints: 0,
     });
@@ -1105,7 +1106,7 @@ describe('X5.3 — legacy path reconciliation: ageSystem mirrors scoreLegacyPath
     // scoreLegacyPaths is the authoritative predicate-based scorer
     const pathResults = scoreLegacyPaths('p1', state);
     const antiquitySciencePath = pathResults.find(p => p.axis === 'science' && p.age === 'antiquity');
-    // 4 techs → scienceLegacyScore = 4 → tier 1 should be satisfied
+    // 1 codexPlacement → science tier 1 should be satisfied
     expect(antiquitySciencePath?.tiersCompleted).toBeGreaterThanOrEqual(1);
 
     // ageSystem END_TURN calls checkLegacyMilestones which calls scoreLegacyPaths
@@ -1113,7 +1114,7 @@ describe('X5.3 — legacy path reconciliation: ageSystem mirrors scoreLegacyPath
     const updatedPlayer = next.players.get('p1')!;
     // legacyPaths.science should reflect the tier completed (1 or more)
     expect(updatedPlayer.legacyPaths.science).toBeGreaterThanOrEqual(antiquitySciencePath?.tiersCompleted ?? 0);
-    // legacyPoints must be 1 (exactly one science tier gained from 4 techs)
+    // legacyPoints must be 1 (exactly one science tier gained)
     expect(updatedPlayer.legacyPoints).toBe(1);
   });
 

@@ -361,11 +361,12 @@ describe('victorySystem', () => {
       }
     });
 
-    it('player with 4+ researched techs has tiersCompleted >= 1 on Antiquity Science axis', () => {
+    it('player with 1 codexPlacement has tiersCompleted >= 1 on Antiquity Science axis (F-03: codex-only proxy)', () => {
+      // F-03 fix: tech count no longer drives science legacy; codexPlacements required.
       const players = new Map([
         ['p1', createTestPlayer({
           id: 'p1',
-          researchedTechs: ['pottery', 'writing', 'bronze_working', 'mining'],
+          codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
         })],
         ['p2', createTestPlayer({ id: 'p2' })],
       ]);

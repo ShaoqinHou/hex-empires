@@ -109,9 +109,10 @@ describe('Z3.1 — ageSystem/LegacyPaths predicate reconciliation', () => {
   });
 
   it('science axis: ageSystem legacyPaths.science matches scoreLegacyPaths tier', () => {
-    // 4 techs → antiquity_science_t1 (scienceLegacyScore >= 4)
+    // F-03 fix: codex placements only drive science legacy (tech count no longer contributes).
+    // 1 codexPlacement → antiquity_science_t1 (codexPlacements.length >= 1).
     const player = createTestPlayer({
-      researchedTechs: ['pottery', 'writing', 'mining', 'animal_husbandry'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
       legacyPaths: { military: 0, economic: 0, science: 0, culture: 0 },
       legacyPoints: 0,
     });
@@ -151,12 +152,12 @@ describe('Z3.1 — ageSystem/LegacyPaths predicate reconciliation', () => {
 
   it('all 4 axes: scoreLegacyPaths and ageSystem produce identical tier results for a hand-crafted state', () => {
     // Hand-crafted state that should satisfy:
-    //   science  tier 1: 4 techs
+    //   science  tier 1: 1 codexPlacement (F-03: codex-only proxy)
     //   military tier 1: 3 kills
     //   economic tier 1: totalGoldEarned 200 (fallback, no resourcesAssigned)
     //   culture  tier 0: no wonders, culture=0, no artifacts
     const player = createTestPlayer({
-      researchedTechs: ['pottery', 'writing', 'mining', 'animal_husbandry'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
       totalKills: 3,
       killsThisAge: 3,
       totalGoldEarned: 200,

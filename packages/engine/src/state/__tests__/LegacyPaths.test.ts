@@ -152,29 +152,53 @@ describe('scoreLegacyPaths — milestone satisfaction', () => {
     return entry!.tiersCompleted;
   }
 
-  it('4 techs researched → Antiquity Science tiersCompleted >= 1', () => {
-    const state = stateWithPlayer({
-      researchedTechs: ['t1', 't2', 't3', 't4'],
-    });
-    expect(progressFor(state, 'antiquity', 'science')).toBeGreaterThanOrEqual(1);
+  // F-03 fix: tech count alone does NOT drive antiquity science legacy — only codices do.
+  it('4 techs researched but no codices → Antiquity Science tiersCompleted === 0', () => {
+    const state = stateWithPlayer({ researchedTechs: ['t1', 't2', 't3', 't4'] });
+    expect(progressFor(state, 'antiquity', 'science')).toBe(0);
   });
 
-  it('8 techs researched → Antiquity Science tiersCompleted >= 2', () => {
+  it('1 codexPlacement (fallback) → Antiquity Science tier 1 satisfied', () => {
     const state = stateWithPlayer({
-      researchedTechs: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
     });
-    expect(progressFor(state, 'antiquity', 'science')).toBeGreaterThanOrEqual(2);
+    expect(progressFor(state, 'antiquity', 'science')).toBe(1);
   });
 
-  it('library in every owned city → Antiquity Science tier 3 satisfied', () => {
-    const c1 = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
-    const c2 = cityWith({ id: 'c2', owner: 'p1', buildings: ['library', 'granary'] });
-    const state = stateWithPlayer({ researchedTechs: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'] }, [c1, c2]);
-    // tier 1 (4 techs) + tier 2 (8 techs) + tier 3 (library in every city) all satisfied
+  it('3 codexPlacements (fallback) → Antiquity Science tier 2 satisfied', () => {
+    const state = stateWithPlayer({
+      codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+      ],
+    });
+    expect(progressFor(state, 'antiquity', 'science')).toBe(2);
+  });
+
+  it('6 codexPlacements (fallback) → Antiquity Science all 3 tiers satisfied', () => {
+    const state = stateWithPlayer({
+      codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx4', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx5', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx6', buildingId: 'library', cityId: 'c1' },
+      ],
+    });
     expect(progressFor(state, 'antiquity', 'science')).toBe(3);
   });
 
-  it('library missing in one city → Antiquity Science tier 3 NOT satisfied', () => {
+  it('library in every owned city (no codices) → only tier-3 fallback satisfied (1 milestone)', () => {
+    const c1 = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
+    const c2 = cityWith({ id: 'c2', owner: 'p1', buildings: ['library', 'granary'] });
+    const state = stateWithPlayer({}, [c1, c2]);
+    // tier1(>=1 codex)=false, tier2(>=3)=false, tier3(library-in-every-city)=true → 1 satisfied
+    expect(progressFor(state, 'antiquity', 'science')).toBe(1);
+  });
+
+  it('library missing in one city (no codices) → Antiquity Science tier-3 fallback NOT satisfied', () => {
     const c1 = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
     const c2 = cityWith({ id: 'c2', owner: 'p1', buildings: [] });
     const state = stateWithPlayer({}, [c1, c2]);
@@ -263,7 +287,18 @@ describe('scoreLegacyPaths — milestone satisfaction', () => {
   it('only counts cities owned by the given player for library check', () => {
     const p1City = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
     const p2City = cityWith({ id: 'c2', owner: 'p2', buildings: [] });
-    const p1 = createTestPlayer({ id: 'p1', researchedTechs: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] });
+    // F-03: 6 codexPlacements satisfies t1+t2+t3 outright; library-in-every-city is a t3 fallback.
+    const p1 = createTestPlayer({
+      id: 'p1',
+      codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx4', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx5', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx6', buildingId: 'library', cityId: 'c1' },
+      ],
+    });
     const p2 = createTestPlayer({ id: 'p2', name: 'P2' });
     const state = createTestState({
       players: new Map([['p1', p1], ['p2', p2]]),
@@ -271,7 +306,7 @@ describe('scoreLegacyPaths — milestone satisfaction', () => {
     });
     const out = scoreLegacyPaths('p1', state);
     const sci = out.find((e) => e.age === 'antiquity' && e.axis === 'science');
-    // p1 has 8 techs (t1+t2) and library in its only city (t3) → all 3
+    // p1 has 6 codexPlacements → t1(>=1)+t2(>=3)+t3(>=6) → all 3
     expect(sci?.tiersCompleted).toBe(3);
   });
 });

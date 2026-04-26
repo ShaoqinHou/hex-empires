@@ -77,9 +77,10 @@ describe('playerAchievedMilestones — empty / unknown cases', () => {
 });
 
 describe('playerAchievedMilestones — milestone emission', () => {
-  it('4 antiquity-era techs → includes Antiquity Science tier-1 milestone', () => {
+  it('1 codexPlacement → includes Antiquity Science tier-1 milestone (F-03: codex-only proxy)', () => {
+    // F-03 fix: tech count no longer drives science legacy; codexPlacements required.
     const state = stateWithPlayer({
-      researchedTechs: ['pottery', 'writing', 'mining', 'animal_husbandry'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
     });
     const out = playerAchievedMilestones('p1', state);
     const match = out.find(
@@ -88,15 +89,19 @@ describe('playerAchievedMilestones — milestone emission', () => {
     expect(match).toBeDefined();
     expect(match?.pathId).toBe('antiquity_science');
     expect(match?.description.length).toBeGreaterThan(0);
-    // Only tier 1 — not tier 2 (requires 8 techs)
+    // Only tier 1 — not tier 2 (requires 3 codices)
     expect(
       out.some((m) => m.age === 'antiquity' && m.axis === 'science' && m.tier === 2),
     ).toBe(false);
   });
 
-  it('8 techs → emits tier 1 and tier 2 (cumulative), not tier 3', () => {
+  it('3 codexPlacements → emits tier 1 and tier 2 (cumulative), not tier 3 (F-03)', () => {
     const state = stateWithPlayer({
-      researchedTechs: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'],
+      codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+      ],
     });
     const out = playerAchievedMilestones('p1', state);
     const antiquityScience = out.filter(
@@ -106,12 +111,17 @@ describe('playerAchievedMilestones — milestone emission', () => {
     expect(antiquityScience.map((m) => m.tier).sort()).toEqual([1, 2]);
   });
 
-  it('all 3 antiquity-science tiers satisfied emits 3 records in tier order', () => {
-    const c1 = cityWith({ id: 'c1', owner: 'p1', buildings: ['library'] });
-    const state = stateWithPlayer(
-      { researchedTechs: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] },
-      [c1],
-    );
+  it('6 codexPlacements → all 3 antiquity-science tiers satisfied, emits 3 records in tier order (F-03)', () => {
+    const state = stateWithPlayer({
+      codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx4', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx5', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx6', buildingId: 'library', cityId: 'c1' },
+      ],
+    });
     const out = playerAchievedMilestones('p1', state);
     const antSci = out.filter(
       (m) => m.age === 'antiquity' && m.axis === 'science',
@@ -154,6 +164,17 @@ describe('playerAchievedMilestones — milestone emission', () => {
         totalGoldEarned: 100_000,
         totalKills: 100,
         culture: 10_000,
+        // F-03: codex placements drive science legacy (tech count no longer contributes).
+        // 7 codexPlacements saturates exploration_science_t3 (>= 7) and all lower tiers.
+        codexPlacements: [
+          { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx4', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx5', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx6', buildingId: 'library', cityId: 'c1' },
+          { codexId: 'cx7', buildingId: 'library', cityId: 'c1' },
+        ],
         researchedTechs: [
           'industrialization', 'scientific_theory', 'rifling',
           'steam_power', 'electricity', 'replaceable_parts',
@@ -207,8 +228,8 @@ describe('empireMilestoneSummary', () => {
   });
 
   it('sums achievements correctly across axes and ages', () => {
-    // p1: 4 techs + 600 culture + 3000 gold + 20 kills
-    //   antiquity_science: 4 techs → tier 1 (1)
+    // p1: 1 codexPlacement + 600 culture + 3000 gold + 20 kills
+    //   antiquity_science: 1 codex → tier 1 (F-03: codex-only proxy) (1)
     //   exploration_culture: 600 culture → all 3 tiers (3)
     //   exploration_economic: 3000 gold ≥ 2500 → tiers 1+2 (2)
     //   antiquity_economic: 3000 gold ≥ 1000 → 3 tiers (3)
@@ -217,7 +238,7 @@ describe('empireMilestoneSummary', () => {
     //   antiquity_military: 20 kills ≥ 3, 0 cities → tier 1 only (1)
     //   modern_military: 20 kills ≥ 20 → tiers 1+2 (2)
     const state = stateWithPlayer({
-      researchedTechs: ['t1', 't2', 't3', 't4'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
       culture: 600,
       totalGoldEarned: 3000,
       totalKills: 20,
@@ -238,7 +259,7 @@ describe('empireMilestoneSummary', () => {
 
   it('each player counted independently — no cross-contamination', () => {
     const state = stateWithManyPlayers([
-      { id: 'p1', player: { researchedTechs: ['t1', 't2', 't3', 't4'] } },
+      { id: 'p1', player: { codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }] } },
       { id: 'p2' },
     ]);
     const summary = empireMilestoneSummary(state);
@@ -250,7 +271,11 @@ describe('empireMilestoneSummary', () => {
 describe('milestoneLeaderboard — dense rank', () => {
   it('two players with different totals → dense ranks 1 and 2', () => {
     const state = stateWithManyPlayers([
-      { id: 'p1', player: { researchedTechs: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'] } },
+      { id: 'p1', player: { codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+      ] } },
       { id: 'p2' },
     ]);
     const board = milestoneLeaderboard(state);
@@ -263,11 +288,11 @@ describe('milestoneLeaderboard — dense rank', () => {
   });
 
   it('ties share a rank; the next distinct value gets the immediately following rank', () => {
-    // p1 and p2 both fresh → tie. p3 has 4 techs → ahead.
+    // p1 and p2 both fresh → tie. p3 has 1 codex → ahead.
     const state = stateWithManyPlayers([
       { id: 'p1' },
       { id: 'p2' },
-      { id: 'p3', player: { researchedTechs: ['a', 'b', 'c', 'd'] } },
+      { id: 'p3', player: { codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }] } },
     ]);
     const board = milestoneLeaderboard(state);
     expect(board.length).toBe(3);
@@ -283,8 +308,12 @@ describe('milestoneLeaderboard — dense rank', () => {
   it('sorted descending by totalAchieved', () => {
     const state = stateWithManyPlayers([
       { id: 'a' },
-      { id: 'b', player: { researchedTechs: ['t1', 't2', 't3', 't4'] } },
-      { id: 'c', player: { researchedTechs: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8'] } },
+      { id: 'b', player: { codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }] } },
+      { id: 'c', player: { codexPlacements: [
+        { codexId: 'cx1', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx2', buildingId: 'library', cityId: 'c1' },
+        { codexId: 'cx3', buildingId: 'library', cityId: 'c1' },
+      ] } },
     ]);
     const board = milestoneLeaderboard(state);
     for (let i = 0; i + 1 < board.length; i++) {
@@ -301,7 +330,7 @@ describe('milestoneLeaderboard — dense rank', () => {
 describe('cross-check against ALL_LEGACY_PATHS', () => {
   it('every emitted achievement references a valid (age, axis) pair in ALL_LEGACY_PATHS', () => {
     const state = stateWithPlayer({
-      researchedTechs: ['a', 'b', 'c', 'd'],
+      codexPlacements: [{ codexId: 'cx1', buildingId: 'library', cityId: 'c1' }],
       culture: 600,
       totalGoldEarned: 2000,
       totalKills: 10,
