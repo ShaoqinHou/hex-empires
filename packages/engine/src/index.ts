@@ -36,6 +36,7 @@ export type {
   DiplomaticSanction,
   DiplomacyRelation,
   DiplomacyState,
+  OpinionModifier,
   EffectTarget,
   EffectDef,
   ActiveEffect,

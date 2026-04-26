@@ -696,6 +696,17 @@ export interface DiplomaticSanction {
   readonly targetId: string; // the player whose yields are penalized
 }
 
+/**
+ * F-11: A single contributing modifier to the diplomatic relationship score.
+ */
+export interface OpinionModifier {
+  readonly id: string;
+  readonly value: number;
+  readonly turnApplied: number;
+  readonly turnExpires?: number;
+  readonly reason: string;
+}
+
 export interface DiplomacyRelation {
   readonly status: DiplomaticStatus;
   readonly relationship: number;        // -100 to +100 drives status stage
@@ -721,6 +732,8 @@ export interface DiplomacyRelation {
    * Optional so existing DiplomacyRelation construction keeps compiling.
    */
   readonly peaceCooldownUntilTurn?: number;
+  /** F-11: Diplomatic Ledger. Optional so existing construction compiles. */
+  readonly ledger?: ReadonlyArray<OpinionModifier>;
 }
 
 /**

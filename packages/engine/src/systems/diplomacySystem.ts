@@ -1,5 +1,24 @@
-import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect, PeaceOffer } from '../types/GameState';
+import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect, PeaceOffer, OpinionModifier } from '../types/GameState';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
+
+/** F-11: Max ledger entries per relationship pair (oldest discarded when exceeded). */
+const MAX_LEDGER_ENTRIES = 50;
+
+/**
+ * F-11: Append an OpinionModifier to a relation's ledger.
+ * Returns a new relation object (immutable). Caps at MAX_LEDGER_ENTRIES.
+ */
+function appendLedgerEntry(
+  relation: DiplomacyRelation,
+  entry: OpinionModifier,
+): DiplomacyRelation {
+  const existing = relation.ledger ?? [];
+  const updated = [...existing, entry];
+  const capped = updated.length > MAX_LEDGER_ENTRIES
+    ? updated.slice(updated.length - MAX_LEDGER_ENTRIES)
+    : updated;
+  return { ...relation, ledger: capped };
+}
 
 /**
  * DiplomacySystem handles diplomatic proposals between players.
@@ -135,6 +154,14 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         relationship: clampRelationship(currentRelation.relationship - 40),
       };
 
+      // F-11: append ledger entry for war declaration
+      newRelation = appendLedgerEntry(newRelation, {
+        id: isSurprise ? 'surprise_war' : 'declared_war',
+        value: -40,
+        turnApplied: state.turn,
+        reason: isSurprise ? 'Declared surprise war on us' : 'Declared war on us',
+      });
+
       // Deduct Influence for the declaration.
       const updatedRelations = new Map(state.diplomacy.relations);
       updatedRelations.set(relationKey, newRelation);
@@ -245,6 +272,13 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         relationship: clampRelationship(currentRelation.relationship + 15),
       };
       newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
+      // F-11: append ledger entry for alliance
+      newRelation = appendLedgerEntry(newRelation, {
+        id: 'formed_alliance',
+        value: 15,
+        turnApplied: state.turn,
+        reason: 'Formed an alliance',
+      });
       logMessage = `Formed alliance with ${targetId}`;
       break;
     }
@@ -259,6 +293,14 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         relationship: clampRelationship(currentRelation.relationship - 60),
       };
       newRelation = { ...newRelation, status: getStatusFromRelationship(newRelation.relationship) };
+      // F-11: append ledger entry for denouncement (expires after 30 turns)
+      newRelation = appendLedgerEntry(newRelation, {
+        id: 'denounced',
+        value: -60,
+        turnApplied: state.turn,
+        turnExpires: state.turn + 30,
+        reason: 'Denounced us',
+      });
       logMessage = `Denounced ${targetId}`;
       break;
     }
@@ -408,11 +450,17 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
     // Rejection: negative relationship delta, no active endeavor created,
     // and source player (proposer) loses Influence for the failed initiative.
     const newRelationship = clampRelationship(currentRelation.relationship + RELATIONSHIP_DELTA_REJECT);
-    updatedRelations.set(relationKey, {
-      ...currentRelation,
-      relationship: newRelationship,
-      status: getStatusFromRelationship(newRelationship),
-    });
+    const rejectedRelation = appendLedgerEntry(
+      { ...currentRelation, relationship: newRelationship, status: getStatusFromRelationship(newRelationship) },
+      {
+        id: 'endeavor_rejected',
+        value: RELATIONSHIP_DELTA_REJECT,
+        turnApplied: state.turn,
+        turnExpires: state.turn + 15,
+        reason: `Rejected our ${endeavor.endeavorType} endeavor`,
+      },
+    );
+    updatedRelations.set(relationKey, rejectedRelation);
 
     // Drain Influence from the proposer
     const updatedPlayers = new Map(state.players);
@@ -447,12 +495,24 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
     const newRelationship = clampRelationship(currentRelation.relationship + delta);
     const newEndeavor: DiplomaticEndeavor = { type: endeavor.endeavorType, turnsRemaining: ENDEAVOR_DURATION, sourceId: endeavor.sourceId };
 
-    updatedRelations.set(relationKey, {
-      ...currentRelation,
-      relationship: newRelationship,
-      status: getStatusFromRelationship(newRelationship),
-      activeEndeavors: [...currentRelation.activeEndeavors, newEndeavor],
-    });
+    const acceptedRelation = appendLedgerEntry(
+      {
+        ...currentRelation,
+        relationship: newRelationship,
+        status: getStatusFromRelationship(newRelationship),
+        activeEndeavors: [...currentRelation.activeEndeavors, newEndeavor],
+      },
+      {
+        id: response === 'support' ? 'endeavor_supported' : 'endeavor_accepted',
+        value: delta,
+        turnApplied: state.turn,
+        turnExpires: state.turn + ENDEAVOR_DURATION,
+        reason: response === 'support'
+          ? `Supported our ${endeavor.endeavorType} endeavor`
+          : `Accepted our ${endeavor.endeavorType} endeavor`,
+      },
+    );
+    updatedRelations.set(relationKey, acceptedRelation);
 
     const responseLabel = response === 'support' ? 'Supported' : 'Accepted';
     logMessage = `${responseLabel} ${endeavor.endeavorType} endeavor from ${endeavor.sourceId}`;
@@ -526,7 +586,7 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
   const currentRelation = state.diplomacy.relations.get(relationKey) ?? defaultRelation();
 
   const newSanction: DiplomaticSanction = { type: sanctionType, turnsRemaining: SANCTION_DURATION, targetId };
-  const updatedRelation: DiplomacyRelation = {
+  let updatedRelation: DiplomacyRelation = {
     ...currentRelation,
     activeSanctions: [...currentRelation.activeSanctions, newSanction],
   };
@@ -578,7 +638,7 @@ function handleAcceptPeace(state: GameState, offerId: string): GameState {
   if (currentRelation.status !== 'war') return state;
 
   const newRelationship = clampRelationship(currentRelation.relationship + 10);
-  const updatedRelation: DiplomacyRelation = {
+  let updatedRelation: DiplomacyRelation = {
     ...currentRelation,
     status: getStatusFromRelationship(newRelationship),
     turnsAtPeace: 0,
@@ -589,6 +649,15 @@ function handleAcceptPeace(state: GameState, offerId: string): GameState {
     relationship: newRelationship,
     peaceCooldownUntilTurn: undefined,
   };
+
+  // F-11: append ledger entry for peace acceptance (expires after 20 turns)
+  updatedRelation = appendLedgerEntry(updatedRelation, {
+    id: 'made_peace',
+    value: 10,
+    turnApplied: state.turn,
+    turnExpires: state.turn + 20,
+    reason: 'Recently made peace',
+  });
 
   const updatedRelations = new Map(state.diplomacy.relations);
   updatedRelations.set(relationKey, updatedRelation);
@@ -722,6 +791,19 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
       .map(s => ({ ...s, turnsRemaining: s.turnsRemaining - 1 }))
       .filter(s => s.turnsRemaining > 0);
     updated.activeSanctions = updatedSanctions;
+
+    // F-11: prune expired ledger entries and recompute relationship as sum of remaining modifiers.
+    if (rel.ledger !== undefined) {
+      const activeLedger = rel.ledger.filter(
+        (m: OpinionModifier) => m.turnExpires === undefined || m.turnExpires > state.turn,
+      );
+      const ledgerSum = activeLedger.reduce((acc: number, m: OpinionModifier) => acc + m.value, 0);
+      updated.ledger = activeLedger;
+      if (activeLedger.length > 0) {
+        updated.relationship = clampRelationship(ledgerSum);
+        updated.status = getStatusFromRelationship(updated.relationship);
+      }
+    }
 
     updatedRelations.set(key, updated);
     changed = true;

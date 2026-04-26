@@ -32,6 +32,7 @@ export type {
   DiplomaticSanction,
   DiplomacyRelation,
   DiplomacyState,
+  OpinionModifier,
   PendingEndeavor,
   EffectTarget,
   EffectDef,

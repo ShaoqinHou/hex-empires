@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameState } from '../../providers/GameProvider';
-import type { PlayerId, DiplomaticStatus, DiplomacyRelation, IndependentPowerState } from '@hex/engine';
+import type { PlayerId, DiplomaticStatus, DiplomacyRelation, IndependentPowerState, OpinionModifier } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 import { RelationshipGauge } from '../components/RelationshipGauge';
 
@@ -309,7 +309,13 @@ function PlayersTab({ currentPlayerId, dispatch }: PlayersTabProps) {
                 )}
               </div>
 
-              {recentEvents.length > 0 && (
+              {/* F-11: Diplomatic Ledger */}
+              {relation?.ledger && relation.ledger.length > 0 && (
+                <LedgerSection ledger={relation.ledger} />
+              )}
+
+              {/* Fallback: recent log events when no ledger entries exist */}
+              {(!relation?.ledger || relation.ledger.length === 0) && recentEvents.length > 0 && (
                 <div className="pt-2 mt-1" style={{ borderTop: '1px solid var(--panel-border)' }}>
                   <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--panel-muted-color)' }}>
                     Recent
@@ -568,6 +574,53 @@ function LeadersTab({ currentPlayerId }: LeadersTabProps) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── F-11: Diplomatic Ledger section ──────────────────────────────────────────
+interface LedgerSectionProps {
+  readonly ledger: ReadonlyArray<OpinionModifier>;
+}
+
+function LedgerSection({ ledger }: LedgerSectionProps) {
+  // Show most recent entries first; cap display at 8 for readability
+  const visible = [...ledger].reverse().slice(0, 8);
+
+  return (
+    <div className="pt-2 mt-1" style={{ borderTop: '1px solid var(--panel-border)' }}>
+      <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--panel-muted-color)' }}>
+        Diplomatic Ledger
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {visible.map((entry, idx) => (
+          <div
+            key={`${entry.id}-${entry.turnApplied}-${idx}`}
+            className="flex items-center justify-between text-[10px]"
+          >
+            <span style={{ color: 'var(--panel-muted-color)' }}>
+              T{entry.turnApplied}: {entry.reason}
+              {entry.turnExpires !== undefined && (
+                <span style={{ color: 'var(--panel-muted-color)', opacity: 0.6 }}>
+                  {' '}(expires T{entry.turnExpires})
+                </span>
+              )}
+            </span>
+            <span
+              style={{
+                fontWeight: 700,
+                minWidth: '2.5rem',
+                textAlign: 'right',
+                color: entry.value >= 0
+                  ? 'var(--color-food, #4ade80)'
+                  : 'var(--color-danger, var(--color-health-low, #f87171))',
+              }}
+            >
+              {entry.value >= 0 ? '+' : ''}{entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

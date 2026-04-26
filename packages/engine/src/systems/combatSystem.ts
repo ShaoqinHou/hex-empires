@@ -1,4 +1,4 @@
-import type { GameState, GameAction, UnitState, HexTile, CityState } from '../types/GameState';
+import type { GameState, GameAction, UnitState, HexTile, CityState, DiplomacyRelation } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
@@ -7,6 +7,7 @@ import { getCombatBonus } from '../state/EffectUtils';
 import { computeEffectiveCS } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 import type { ActiveTreaty } from '../types/Treaty';
+import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
 /**
  * AA2.2 (F-06): denounce_military_presence — -25% multiplicative CS penalty.
@@ -607,6 +608,7 @@ function handleAttackCity(
   const updatedCities = new Map(state.cities);
   const updatedPlayers = new Map(state.players);
   const updatedRoutes = new Map(state.tradeRoutes);
+  const updatedDiplomacyRelations = new Map(state.diplomacy.relations);
   const logEntries = [...state.log];
 
   // Update attacker
@@ -680,6 +682,22 @@ function handleAttackCity(
       severity: captureIsOwnLoss ? 'critical' : 'warning',
       blocksTurn: captureIsOwnLoss ? true : undefined,
     });
+
+    // F-11: append "city_captured" opinion modifier to this pair's ledger
+    if (previousOwner !== attacker.owner) {
+      const capRelKey = getRelationKey(previousOwner, attacker.owner);
+      const capRelCurrent: DiplomacyRelation = updatedDiplomacyRelations.get(capRelKey) ?? defaultRelation();
+      const existingLedger = capRelCurrent.ledger ?? [];
+      const newEntry = {
+        id: 'city_captured',
+        value: -40,
+        turnApplied: state.turn,
+        turnExpires: state.turn + 30,
+        reason: `Captured our city (${city.name})`,
+      };
+      const updatedLedger = [...existingLedger, newEntry].slice(-50);
+      updatedDiplomacyRelations.set(capRelKey, { ...capRelCurrent, ledger: updatedLedger });
+    }
   } else {
     // City not captured — update defenseHP
     updatedCities.set(city.id, {
@@ -702,6 +720,7 @@ function handleAttackCity(
     cities: updatedCities,
     players: updatedPlayers,
     tradeRoutes: updatedRoutes,
+    diplomacy: { ...state.diplomacy, relations: updatedDiplomacyRelations },
     log: logEntries,
     rng: currentRng,
     lastValidation: null,
