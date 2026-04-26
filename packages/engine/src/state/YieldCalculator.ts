@@ -1,8 +1,9 @@
-import type { GameState, CityState, TownSpecialization } from '../types/GameState';
+import type { GameState, CityState, TownSpecialization, TownFocus } from '../types/GameState';
 import type { GameConfig } from '../types/GameConfig';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 import { getYieldBonus } from './EffectUtils';
+import { neighbors, coordToKey } from '../hex/HexMath';
 
 /**
  * F-10 (W8): Per-yield cap applied as a final clamp to city yields.
@@ -60,12 +61,38 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     }
   }
 
+  // JJ4 (map-terrain F-07): Natural wonder adjacency effect — for each
+  // natural wonder tile in city territory that has an adjacencyEffect, add
+  // that yield bonus once per neighbor tile that is ALSO in city territory.
+  // This models the wonder's "aura" radiating to surrounding worked tiles.
+  const territorySet = new Set<string>(city.territory);
+  for (const hexKey of city.territory) {
+    const tile = state.map.tiles.get(hexKey);
+    if (!tile?.naturalWonderId) continue;
+    const wonderDef = state.config.naturalWonders.get(tile.naturalWonderId);
+    if (!wonderDef?.adjacencyEffect) continue;
+    const { yield: yieldType, value } = wonderDef.adjacencyEffect;
+    for (const neighborCoord of neighbors(tile.coord)) {
+      const neighborKey = coordToKey(neighborCoord);
+      if (territorySet.has(neighborKey)) {
+        total = addYields(total, { [yieldType]: value });
+      }
+    }
+  }
+
   // City center always produces at least 2 food, 1 production
   total = addYields(total, { food: 2, production: 1 });
 
   // Town specialization yield bonuses
   if (city.specialization !== null) {
     total = addYields(total, getSpecializationYields(city.specialization));
+  }
+
+  // F-10 (settlements): Town focus yield bonuses.
+  // townFocus is a toggleable per-turn mode (distinct from the permanent specialization).
+  // Absent or 'growing' = standard behaviour (no extra bonus; growth rate handled in growthSystem).
+  if (city.settlementType === 'town' && city.townFocus !== undefined && city.townFocus !== 'growing') {
+    total = addYields(total, getTownFocusYields(city.townFocus, city, state));
   }
 
   // Specialist yields: each specialist produces +2 science and +2 culture.
@@ -188,6 +215,45 @@ function clampYields(yields: YieldSet, cap: number): YieldSet {
     influence:  Math.min(yields.influence, cap),
     happiness:  Math.min(yields.happiness, cap),
   };
+}
+
+/**
+ * F-10 (settlements): Yield bonuses granted by the toggleable town focus.
+ * Called only when townFocus is defined and not 'growing'.
+ *
+ * Rules:
+ *   'production' → +1 production per 2 territory tiles (food surplus channeled
+ *                  into output; approximated as a simple territory-tile count)
+ *   'trade'      → +1 gold per trade route originating from this town
+ *   'science'    → +1 science per population point
+ *   'farming'    → +1 food per worked territory tile (simple territory count)
+ *   'growing'    → no explicit yield bonus (growth rate handled in growthSystem)
+ */
+export function getTownFocusYields(
+  focus: TownFocus,
+  city: CityState,
+  state: GameState,
+): Partial<YieldSet> {
+  switch (focus) {
+    case 'production': {
+      const tileCount = city.territory.length;
+      return { production: Math.floor(tileCount / 2) };
+    }
+    case 'trade': {
+      let routeCount = 0;
+      for (const route of state.tradeRoutes.values()) {
+        if (route.from === city.id) routeCount++;
+      }
+      return { gold: routeCount };
+    }
+    case 'science':
+      return { science: city.population };
+    case 'farming':
+      return { food: city.territory.length };
+    case 'growing':
+    default:
+      return {};
+  }
 }
 
 /**

@@ -2,7 +2,8 @@ import type { HexCoord, HexKey } from '../types/HexCoord';
 import type { HexMap, HexTile, RngState } from '../types/GameState';
 import type { TerrainDef, TerrainFeatureDef, TerrainId, FeatureId } from '../types/Terrain';
 import type { ResourceDef } from '../data/resources';
-import { coordToKey, neighbors } from './HexMath';
+import type { NaturalWonderDef } from '../types/NaturalWonder';
+import { coordToKey, neighbors, distance } from './HexMath';
 import { fractalNoise2D, nextRandom, createRng } from '../state/SeededRng';
 import { Registry } from '../registry/Registry';
 
@@ -23,6 +24,19 @@ const DEFAULT_OPTIONS: MapGenOptions = {
 };
 
 /**
+ * Minimum hex distance between two placed natural wonders.
+ * Keeps wonders spread across the map rather than clustered.
+ */
+const MIN_WONDER_SEPARATION = 6;
+
+/**
+ * Water terrain IDs that cannot host a land natural wonder.
+ */
+const WATER_TERRAIN_IDS: ReadonlySet<string> = new Set<string>([
+  'ocean', 'coast', 'deep_ocean', 'reef',
+]);
+
+/**
  * Generate a hex map with terrain using multi-octave noise.
  * Uses offset coordinates internally, converts to axial for output.
  */
@@ -31,6 +45,7 @@ export function generateMap(
   featureRegistry: Registry<TerrainFeatureDef>,
   options: Partial<MapGenOptions> = {},
   resources: ReadonlyArray<ResourceDef> = [],
+  naturalWonders: ReadonlyArray<NaturalWonderDef> = [],
 ): HexMap {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const tiles = new Map<HexKey, HexTile>();
@@ -116,12 +131,133 @@ export function generateMap(
   // The flag is optional; tiles that do not qualify simply omit it.
   computeFreshWaterFlags(tiles);
 
+  // JJ4 (map-terrain F-07): Natural wonder placement pass.
+  // Places 3-5 wonders from the provided array on suitable land tiles,
+  // keeping each wonder at least MIN_WONDER_SEPARATION hexes from every other.
+  // Uses the seeded RNG so placement is deterministic per seed.
+  if (naturalWonders.length > 0) {
+    placeNaturalWonders(tiles, opts.seed, naturalWonders);
+  }
+
   return {
     width: opts.width,
     height: opts.height,
     tiles,
     wrapX: opts.wrapX,
   };
+}
+
+/**
+ * JJ4 (map-terrain F-07): Place natural wonders on the tile map.
+ *
+ * Algorithm:
+ * 1. Collect all land tile keys (non-water terrain) as candidates.
+ * 2. Shuffle the candidate list with the seeded RNG.
+ * 3. Walk shuffled candidates; for each, attempt to place the next un-placed
+ *    wonder if the tile is at least MIN_WONDER_SEPARATION hexes from every
+ *    already-placed wonder.
+ * 4. Stop when 3–5 wonders are placed or candidates are exhausted.
+ *
+ * Mutates `tiles` in-place (map is not yet frozen at this call site).
+ * Uses seeded RNG exclusively — NEVER Math.random().
+ */
+function placeNaturalWonders(
+  tiles: Map<HexKey, HexTile>,
+  seed: number,
+  wonderDefs: ReadonlyArray<NaturalWonderDef>,
+): void {
+  // Collect land tile keys — water tiles are not eligible
+  const landKeys: HexKey[] = [];
+  for (const [key, tile] of tiles) {
+    if (!WATER_TERRAIN_IDS.has(tile.terrain)) {
+      landKeys.push(key);
+    }
+  }
+
+  if (landKeys.length === 0) return;
+
+  // Shuffle land keys deterministically using seeded RNG
+  let rng = createRng(seed + 50000);
+  const shuffled = [...landKeys];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const { value, rng: nextRng } = nextRandom(rng);
+    rng = nextRng;
+    const j = Math.floor(value * (i + 1));
+    const tmp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = tmp;
+  }
+
+  // Pick 3–5 wonders; shuffle wonder order so each game picks different ones
+  const targetCount = Math.min(wonderDefs.length, 5);
+  const minCount = Math.min(wonderDefs.length, 3);
+
+  const shuffledWonders = [...wonderDefs];
+  for (let i = shuffledWonders.length - 1; i > 0; i--) {
+    const { value, rng: nextRng } = nextRandom(rng);
+    rng = nextRng;
+    const j = Math.floor(value * (i + 1));
+    const tmp = shuffledWonders[i];
+    shuffledWonders[i] = shuffledWonders[j];
+    shuffledWonders[j] = tmp;
+  }
+
+  const placedCoords: HexCoord[] = [];
+  let wonderIdx = 0;
+  let placedCount = 0;
+
+  for (const key of shuffled) {
+    if (placedCount >= targetCount) break;
+    if (wonderIdx >= shuffledWonders.length) break;
+
+    const tile = tiles.get(key);
+    if (!tile) continue;
+    if (tile.naturalWonderId) continue; // already occupied
+
+    const coord = tile.coord;
+    let tooClose = false;
+    for (const placed of placedCoords) {
+      if (distance(coord, placed) < MIN_WONDER_SEPARATION) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
+
+    const wonderDef = shuffledWonders[wonderIdx];
+    tiles.set(key, { ...tile, isNaturalWonder: true, naturalWonderId: wonderDef.id });
+    placedCoords.push(coord);
+    wonderIdx++;
+    placedCount++;
+  }
+
+  // Second pass with relaxed separation if we fell short of the minimum
+  if (placedCount < minCount) {
+    const relaxedSep = Math.floor(MIN_WONDER_SEPARATION / 2);
+    for (const key of shuffled) {
+      if (placedCount >= minCount) break;
+      if (wonderIdx >= shuffledWonders.length) break;
+
+      const tile = tiles.get(key);
+      if (!tile || tile.naturalWonderId) continue;
+
+      const coord = tile.coord;
+      let tooClose = false;
+      for (const placed of placedCoords) {
+        if (distance(coord, placed) < relaxedSep) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (tooClose) continue;
+
+      const wonderDef = shuffledWonders[wonderIdx];
+      tiles.set(key, { ...tile, isNaturalWonder: true, naturalWonderId: wonderDef.id });
+      placedCoords.push(coord);
+      wonderIdx++;
+      placedCount++;
+    }
+  }
 }
 
 /**

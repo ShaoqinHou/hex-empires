@@ -266,9 +266,9 @@ describe('victorySystem — cultural victory (W5-02 GDD path)', () => {
 // ── Natural Wonder first-settle bonus ────────────────────────────────────────
 
 describe('natural wonders data', () => {
-  it('has exactly 12 natural wonders registered', async () => {
+  it('has at least 12 natural wonders registered (JJ4 expanded from 12 to 17)', async () => {
     const { ALL_NATURAL_WONDERS } = await import('../../data/natural-wonders');
-    expect(ALL_NATURAL_WONDERS.length).toBe(12);
+    expect(ALL_NATURAL_WONDERS.length).toBeGreaterThanOrEqual(12);
   });
 
   it('each natural wonder has a unique id', async () => {

@@ -120,6 +120,19 @@ export type TownSpecialization =
   | 'urban_center'    // +1 food, +1 production, +1 gold
   | 'factory_town';   // +3 production
 
+/**
+ * F-10 (settlements): Toggleable town focus — the mode a town operates in
+ * this turn. Unlike TownSpecialization (a permanent one-time choice that
+ * unlocks at pop 7), TownFocus can be changed freely by the player.
+ *
+ * 'growing'    — default; standard food and production yields, prioritises growth
+ * 'production' — food surplus converts to production (+1 production per 2 excess food)
+ * 'trade'      — +1 gold per assigned trade route
+ * 'science'    — +1 science per population point
+ * 'farming'    — +1 food per worked territory tile
+ */
+export type TownFocus = 'growing' | 'production' | 'trade' | 'science' | 'farming';
+
 export interface CityState {
   readonly id: CityId;
   readonly name: string;
@@ -211,6 +224,14 @@ export interface CityState {
    * Optional so existing CityState construction keeps compiling unchanged.
    */
   readonly isTown?: boolean;
+
+  /**
+   * F-10 (settlements): Toggleable town focus. Determines per-turn yield
+   * behaviour for towns. Can be changed freely via SET_TOWN_FOCUS action.
+   * Only meaningful when settlementType === 'town'. Absent / undefined = 'growing'.
+   * Optional so existing CityState construction keeps compiling unchanged.
+   */
+  readonly townFocus?: TownFocus;
 
   /**
    * F-08: The religion currently dominant in this city (set by SPREAD_RELIGION).
@@ -1189,6 +1210,7 @@ export type GameAction =
   | { readonly type: 'SET_MASTERY'; readonly techId: TechnologyId }
   | { readonly type: 'SET_CIVIC_MASTERY'; readonly civicId: string }
   | { readonly type: 'SET_SPECIALIZATION'; readonly cityId: CityId; readonly specialization: TownSpecialization }
+  | { readonly type: 'SET_TOWN_FOCUS'; readonly cityId: CityId; readonly focus: TownFocus }
   | {
       readonly type: 'ASSIGN_SPECIALIST';
       readonly cityId: CityId;
