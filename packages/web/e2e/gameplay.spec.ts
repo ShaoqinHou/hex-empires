@@ -220,13 +220,13 @@ test.describe('Phase 2: Initial Game State', () => {
     // EXPECT: At least 1 AI player
     expect(state!.players.length).toBeGreaterThanOrEqual(2);
 
-    // EXPECT: Player has 4 starting units
+    // EXPECT: Player has 3 starting units (builder was retired in W1-C-rework)
     const playerUnits = state!.units.filter(u => u.owner === state!.currentPlayerId);
-    expect(playerUnits.length).toBe(4);
+    expect(playerUnits.length).toBe(3);
 
-    // EXPECT: Starting units are settler, builder, warrior, scout
+    // EXPECT: Starting units are settler, warrior, scout
     const unitTypes = playerUnits.map(u => u.typeId).sort();
-    expect(unitTypes).toEqual(['builder', 'scout', 'settler', 'warrior']);
+    expect(unitTypes).toEqual(['scout', 'settler', 'warrior']);
 
     // EXPECT: All units at full health
     for (const unit of playerUnits) {
