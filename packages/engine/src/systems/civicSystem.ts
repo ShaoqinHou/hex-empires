@@ -162,6 +162,30 @@ function processNormalCivicResearch(state: GameState): GameState {
       ? { traditions: [...currentTraditions, unlockedTraditionId] }
       : {};
 
+    // KK2 (F-09): Completing Mysticism awards an unclaimed relic to the player.
+    // Uses the same first-unclaimed strategy as FOUND_RELIGION.
+    const isMysticism = completedCivicId === 'mysticism';
+    const mysticismRelicGrant: { relics?: ReadonlyArray<string> } = {};
+    let mysticismRelicEvent: (typeof state.log)[number] | null = null;
+    if (isMysticism && state.config.relics) {
+      const allRelics = [...state.config.relics.values()];
+      const ownedRelicIds = new Set<string>();
+      for (const [, p] of state.players) {
+        for (const rid of (p.relics ?? [])) ownedRelicIds.add(rid);
+      }
+      const grantedRelic = allRelics.find((r) => !ownedRelicIds.has(r.id));
+      if (grantedRelic) {
+        const currentRelics: ReadonlyArray<string> = player.relics ?? [];
+        mysticismRelicGrant.relics = [...currentRelics, grantedRelic.id];
+        mysticismRelicEvent = {
+          turn: state.turn,
+          playerId: player.id,
+          message: `${player.name} received a relic (${grantedRelic.name}) for completing the Mysticism civic.`,
+          type: 'legacy' as const,
+        };
+      }
+    }
+
     const updatedPlayers = new Map(state.players);
     updatedPlayers.set(player.id, {
       ...player,
@@ -177,19 +201,27 @@ function processNormalCivicResearch(state: GameState): GameState {
       ...(updatedSlotCounts !== null ? { policySlotCounts: updatedSlotCounts } : {}),
       // EE1: Conditionally append tradition ID (no duplicates)
       ...traditionsUpdate,
+      // KK2 (F-09): Relic grant on Mysticism completion
+      ...mysticismRelicGrant,
     });
+
+    const completionLog: (typeof state.log)[number] = {
+      turn: state.turn,
+      playerId: player.id,
+      message: `Completed civic: ${player.currentCivic}!`,
+      type: 'civic',
+      category: 'civic' as const,
+      panelTarget: 'civics' as const,
+    };
 
     return {
       ...state,
       players: updatedPlayers,
-      log: [...state.log, {
-        turn: state.turn,
-        playerId: player.id,
-        message: `Completed civic: ${player.currentCivic}!`,
-        type: 'civic',
-        category: 'civic' as const,
-        panelTarget: 'civics' as const,
-      }],
+      log: [
+        ...state.log,
+        completionLog,
+        ...(mysticismRelicEvent !== null ? [mysticismRelicEvent] : []),
+      ],
     };
   }
 

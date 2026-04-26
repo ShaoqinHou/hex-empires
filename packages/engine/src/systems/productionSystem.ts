@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, UnitState, HexTile, ProductionItem } from '../types/GameState';
+import type { GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import { coordToKey } from '../hex/HexMath';
@@ -367,6 +367,8 @@ function processProduction(state: GameState): GameState {
   const newLog = [...state.log];
   let changed = false;
   let mapChanged = false;
+  // KK2 (F-09): Track player relic grants when religious wonders are built.
+  let updatedPlayers: Map<string, PlayerState> | null = null;
 
   for (const [cityId, city] of state.cities) {
     if (city.owner !== state.currentPlayerId) continue;
@@ -508,6 +510,34 @@ function processProduction(state: GameState): GameState {
         if (isWonder) {
           updatedBuiltWonders = [...(updatedBuiltWonders ?? state.builtWonders), currentItem.id as BuildingId];
         }
+
+        // KK2 (F-09): Religious wonders (those that generate prophet great-person
+        // points) award an unclaimed relic to the builder on completion.
+        const isReligiousWonder = isWonder && buildingDef?.greatPersonPoints?.type === 'prophet';
+        if (isReligiousWonder && state.config.relics) {
+          const ownerId = currentCity.owner;
+          const ownerPlayer = (updatedPlayers ?? state.players).get(ownerId);
+          if (ownerPlayer) {
+            const allRelics = [...state.config.relics.values()];
+            const ownedRelicIds = new Set<string>();
+            for (const [, p] of (updatedPlayers ?? state.players)) {
+              for (const rid of (p.relics ?? [])) ownedRelicIds.add(rid);
+            }
+            const grantedRelic = allRelics.find((r) => !ownedRelicIds.has(r.id));
+            if (grantedRelic) {
+              const currentRelics: ReadonlyArray<string> = ownerPlayer.relics ?? [];
+              const nextPlayer: PlayerState = { ...ownerPlayer, relics: [...currentRelics, grantedRelic.id] };
+              if (updatedPlayers === null) updatedPlayers = new Map(state.players);
+              updatedPlayers.set(ownerId, nextPlayer);
+              newLog.push({
+                turn: state.turn,
+                playerId: ownerId,
+                message: `${ownerPlayer.name} received a relic (${grantedRelic.name}) for building ${buildingDef?.name ?? currentItem.id}.`,
+                type: 'legacy' as const,
+              });
+            }
+          }
+        }
       } else if (currentItem.type === 'district') {
         // District production complete - trigger placement mode
         // For now, we'll just log it and remove from queue
@@ -537,7 +567,7 @@ function processProduction(state: GameState): GameState {
     }
   }
 
-  if (!changed && updatedUnits.size === state.units.size && !mapChanged && updatedBuiltWonders === null) {
+  if (!changed && updatedUnits.size === state.units.size && !mapChanged && updatedBuiltWonders === null && updatedPlayers === null) {
     return state;
   }
 
@@ -554,6 +584,8 @@ function processProduction(state: GameState): GameState {
     log: newLog,
     builtWonders: updatedBuiltWonders ?? state.builtWonders,
     lastValidation: null,
+    // KK2 (F-09): Propagate relic grants from religious wonder builds
+    ...(updatedPlayers !== null ? { players: updatedPlayers } : {}),
   };
 }
 

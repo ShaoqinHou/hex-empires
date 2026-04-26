@@ -12,7 +12,7 @@
  */
 
 import { useGameState } from '../../providers/GameProvider';
-import type { PlayerState, CityId } from '@hex/engine';
+import type { PlayerState, CityId, RelicDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
 import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
@@ -90,6 +90,12 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
     pantheon === null ? PANTHEON_COST : myReligion === null ? RELIGION_COST : null;
   const faithProgress =
     faithMilestone !== null ? Math.min(faith / faithMilestone, 1) : 1;
+
+  // KK2 (F-09): Collect relic definitions for relics the player owns.
+  const playerRelicIds: ReadonlyArray<string> = player?.relics ?? [];
+  const relics: ReadonlyArray<RelicDef> = playerRelicIds
+    .map((id) => state.config.relics?.get(id))
+    .filter((r): r is RelicDef => r !== undefined);
 
   return (
     <PanelShell id="religion" title="Religion" onClose={onClose} priority="overlay">
@@ -194,7 +200,7 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
         </section>
 
         {/* ── Religion section ── */}
-        <section className="py-3" data-testid="religion-panel-religion-section">
+        <section className="py-3" style={DIVIDER} data-testid="religion-panel-religion-section">
           <SectionHeader title="Religion" />
           {myReligion !== null ? (
             <div data-testid="religion-panel-religion" className="mt-1">
@@ -229,6 +235,72 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
                 title="No religion founded yet"
                 description="Adopt a pantheon first, then accumulate 200 faith to found your religion."
               />
+            </div>
+          )}
+        </section>
+
+
+        {/* -- Relics section (KK2 / F-09) -- */}
+        <section className="py-3" data-testid="religion-panel-relics-section">
+          <SectionHeader title="Relics" />
+          {relics.length > 0 ? (
+            <div className="flex flex-col gap-1.5 mt-1" data-testid="religion-panel-relics-list">
+              {relics.map((relic) => (
+                <div
+                  key={relic.id}
+                  className="p-2 rounded"
+                  style={{
+                    border: '1px solid var(--panel-border)',
+                    backgroundColor: 'color-mix(in srgb, var(--panel-bg) 60%, transparent)',
+                  }}
+                >
+                  <div
+                    className="text-[11px] font-semibold"
+                    style={{ color: 'var(--panel-text-color)' }}
+                  >
+                    {relic.name}
+                  </div>
+                  <div
+                    className="text-[10px] leading-tight mt-0.5"
+                    style={{ color: 'var(--panel-muted-color)' }}
+                  >
+                    {relic.description}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <span
+                      className="text-[9px] inline-block px-1"
+                      style={{
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '2px',
+                        color: 'var(--color-faith, var(--color-culture))',
+                      }}
+                    >
+                      +{relic.faithPerTurn} faith/turn
+                    </span>
+                    {relic.culturePerTurn > 0 && (
+                      <span
+                        className="text-[9px] inline-block px-1"
+                        style={{
+                          border: '1px solid var(--panel-border)',
+                          borderRadius: '2px',
+                          color: 'var(--color-culture)',
+                        }}
+                      >
+                        +{relic.culturePerTurn} culture/turn
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div data-testid="religion-panel-relics-empty" className="mt-1">
+              <div className="text-sm" style={{ color: 'var(--panel-muted-color)' }}>
+                No relics collected yet
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--panel-muted-color)' }}>
+                Found a religion or complete Mysticism to earn relics.
+              </div>
             </div>
           )}
         </section>

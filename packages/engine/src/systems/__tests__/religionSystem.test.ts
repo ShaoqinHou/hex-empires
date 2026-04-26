@@ -3,6 +3,7 @@ import { religionSystem, canAdoptPantheon } from '../religionSystem';
 import type { ReligionAction, ReligionRecord } from '../../types/Religion';
 import type { CityState, GameState } from '../../types/GameState';
 import { createTestState, createTestPlayer } from './helpers';
+import { ALL_RELICS } from '../../data/relics';
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
   return {
@@ -668,10 +669,8 @@ describe('religionSystem', () => {
 
     it('gracefully skips relic award when all relics are already owned', () => {
       const city = createTestCity({ id: 'c1', owner: 'p1', name: 'Rome', buildings: ['temple'] });
-      const allRelicIds = [
-        'ark_of_the_covenant', 'shroud_of_turin', 'sacred_tooth',
-        'staff_of_moses', 'spear_of_destiny', 'holy_grail',
-      ];
+      // Use the full ALL_RELICS list so the test stays correct as new relics are added.
+      const allRelicIds = ALL_RELICS.map((r) => r.id);
       const state = createTestState({
         players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 500, relics: allRelicIds, researchedCivics: ['piety'] })]]),
         cities: new Map([['c1', city]]),

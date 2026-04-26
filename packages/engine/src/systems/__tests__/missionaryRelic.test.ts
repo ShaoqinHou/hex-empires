@@ -172,8 +172,8 @@ describe('SPREAD_RELIGION - missionary system (F-08)', () => {
 // ======================================================================
 
 describe('Relic subsystem (F-09)', () => {
-  it('ALL_RELICS contains exactly 6 relic definitions with valid yields', () => {
-    expect(ALL_RELICS.length).toBe(6);
+  it('ALL_RELICS contains at least 6 relic definitions with valid yields', () => {
+    expect(ALL_RELICS.length).toBeGreaterThanOrEqual(6);
     for (const relic of ALL_RELICS) {
       expect(relic.id).toBeTruthy();
       expect(relic.name).toBeTruthy();

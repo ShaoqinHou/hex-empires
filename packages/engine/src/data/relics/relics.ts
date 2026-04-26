@@ -48,6 +48,40 @@ export const HOLY_GRAIL_RELIC: RelicDef = {
   culturePerTurn: 3,
 } as const;
 
+// KK2 (F-09): Four additional relics expanding the relic pool to 10 entries.
+
+export const BUDDHAS_BOWL: RelicDef = {
+  id: 'buddhas_bowl',
+  name: "Buddha's Alms Bowl",
+  description: 'The begging bowl of Gautama Buddha, said to have miraculous healing powers.',
+  faithPerTurn: 3,
+  culturePerTurn: 2,
+} as const;
+
+export const MAHABHARATA_MANUSCRIPT: RelicDef = {
+  id: 'mahabharata_manuscript',
+  name: 'Mahabharata Manuscript',
+  description: 'An ancient illuminated copy of the great Hindu epic, revered as sacred scripture.',
+  faithPerTurn: 2,
+  culturePerTurn: 4,
+} as const;
+
+export const BOOK_OF_THE_DEAD: RelicDef = {
+  id: 'book_of_the_dead',
+  name: 'Book of the Dead',
+  description: 'An Egyptian funerary text containing spells for navigating the afterlife.',
+  faithPerTurn: 3,
+  culturePerTurn: 3,
+} as const;
+
+export const MOUNT_SINAI_TABLETS: RelicDef = {
+  id: 'mount_sinai_tablets',
+  name: 'Mount Sinai Tablets',
+  description: 'The stone tablets on which the divine commandments were inscribed.',
+  faithPerTurn: 4,
+  culturePerTurn: 2,
+} as const;
+
 export const ALL_RELICS: ReadonlyArray<RelicDef> = [
   ARK_OF_COVENANT,
   SHROUD,
@@ -55,4 +89,8 @@ export const ALL_RELICS: ReadonlyArray<RelicDef> = [
   STAFF_OF_MOSES,
   SPEAR_OF_DESTINY,
   HOLY_GRAIL_RELIC,
+  BUDDHAS_BOWL,
+  MAHABHARATA_MANUSCRIPT,
+  BOOK_OF_THE_DEAD,
+  MOUNT_SINAI_TABLETS,
 ] as const;
