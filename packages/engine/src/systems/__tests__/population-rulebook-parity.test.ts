@@ -98,15 +98,15 @@ describe('§3.1 — Growth threshold formula (quadratic post-patch)', () => {
   });
 
   it('R31b: food accumulates turn-to-turn when surplus is positive and below threshold', () => {
-    // pop=1, threshold=30, yield=11 food (3 grassland × 3 + city center 2), consumption=2 → surplus=9.
-    // Two ticks should leave food near 18, far below threshold 30, and the city should not grow.
+    // pop=1, threshold=30, yield=8 food (3 grassland × 2 + city center 2) (II2 F-10), consumption=2 → surplus=6.
+    // Two ticks should leave food near 12, far below threshold 30, and the city should not grow.
     const city = createTestCity({ population: 1, food: 0 });
     const state = createTestState({ cities: new Map([['c1', city]]) });
     const tick1 = growthSystem(state, { type: 'END_TURN' });
     const c1 = tick1.cities.get('c1')!;
     expect(c1.population).toBe(1);
-    // Per docstring above: yield=11, consumption=2 → surplus=9. After tick1: food = 0 + 9 = 9.
-    expect(c1.food).toBe(9);
+    // Per docstring above: yield=8, consumption=2 → surplus=6. After tick1: food = 0 + 6 = 6.
+    expect(c1.food).toBe(6);
     const foodAfterTick1 = c1.food;
 
     // Run the second tick with the state from the first.
@@ -118,14 +118,14 @@ describe('§3.1 — Growth threshold formula (quadratic post-patch)', () => {
   });
 
   it('R31: pop=1 with enough food crosses threshold and grows to pop=2 on END_TURN', () => {
-    // threshold = 30. Start at food = 25, surplus = 9 (yield 11 − consumption 2). 25+9=34 ≥ 30 → grow.
+    // threshold = 30. Start at food = 25, surplus = 6 (yield 8 − consumption 2) (II2 F-10). 25+6=31 ≥ 30 → grow.
     const city = createTestCity({ population: 1, food: 25 });
     const state = createTestState({ cities: new Map([['c1', city]]) });
     const next = growthSystem(state, { type: 'END_TURN' });
     const updated = next.cities.get('c1')!;
     expect(updated.population).toBe(2);
-    // Leftover food = 34 − 30 = 4.
-    expect(updated.food).toBe(4);
+    // Leftover food = 31 − 30 = 1.
+    expect(updated.food).toBe(1);
   });
 });
 
@@ -227,10 +227,10 @@ describe('§3.2 — Growth rate modifiers', () => {
     const unhappyFood = unhappyNext.cities.get('c1')!.food;
 
     // Rulebook: unhappiness of -6 → multiplier=max(0,1+(-6)*0.02)=0.88 → 12% yield reduction.
-    // happyCity (happiness=10): Math.floor(11*1.2)=13 food, consumption=2, surplus=11 → food=11.
-    // unhappyCity (happiness=-6): Math.floor(11*0.88)=9 food, consumption=2, surplus=7 → food=7.
+    // happyCity (happiness=10): base food=8 (3 grassland×2 + center 2, II2 F-10), no penalty → surplus=6 → food=6.
+    // unhappyCity (happiness=-6): Math.floor(8*0.88)=Math.floor(7.04)=7 food, consumption=2, surplus=5 → food=5.
     expect(unhappyFood).toBeLessThan(happyFood);
-    expect(unhappyFood).toBe(7);
+    expect(unhappyFood).toBe(5);
   });
 });
 

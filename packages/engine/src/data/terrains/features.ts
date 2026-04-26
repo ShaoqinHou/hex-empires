@@ -42,10 +42,16 @@ export const JUNGLE: TerrainFeatureDef = {
   id: 'jungle',
   name: 'Jungle',
   movementCostModifier: 1,
-  defenseBonusModifier: 0,    // F-08: standardized to flat bonus (was 0.25 multiplicative)
-  flatDefenseBonus: 2,        // F-08: +2 CS to defenders (rulebook §6.4 vegetated terrain)
+  // II2 (F-08): standardized to percentage convention (0.25 = +25% CS, same as forest —
+  // both are vegetated terrain per rulebook §6.4). Removed flatDefenseBonus.
+  defenseBonusModifier: 0.25,
+  flatDefenseBonus: 0,
   depletesMovement: true,     // F-03: binary deplete-all movement (§6.3)
-  yieldModifiers: { production: 2, science: 1 },
+  // II2 (F-06): Civ VII canon — jungle feature gives +1F +1S (was +2P +1S).
+  // Science is flat (not age-conditional) for simplicity; note: vanilla Civ VII
+  // gates jungle science on Modern era, but engine lacks age-conditional feature
+  // yields — using flat +1S is the simplest correct approximation.
+  yieldModifiers: { food: 1, science: 1 },
   blocksMovement: false,
   color: '#1a4a0f',
   modifier: 'vegetated', // W4-02: biome modifier annotation

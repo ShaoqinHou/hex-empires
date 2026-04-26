@@ -163,8 +163,8 @@ describe('calculateCombatPreview', () => {
     ]);
     const stateBase = createTestState({ units });
 
-    // Put defender on jungle (flatDefenseBonus: 2 per F-08 standardization).
-    // Jungle, hills, and forest all use flat CS bonuses (rulebook §6.4).
+    // Put defender on jungle (II2 F-08: defenseBonusModifier=0.25 = +25% CS).
+    // Jungle uses percentage convention same as hills and forest (rulebook §6.4).
     const tilesJungle = new Map(stateBase.map.tiles);
     setTile(tilesJungle, { q: 4, r: 3 }, 'grassland', 'jungle');
     const stateJungle = { ...stateBase, map: { ...stateBase.map, tiles: tilesJungle } };
@@ -172,7 +172,7 @@ describe('calculateCombatPreview', () => {
     const preview = calculateCombatPreview(stateJungle, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);
-    expect(preview.modifiers.terrainDefenseBonus).toBe(2); // jungle flatDefenseBonus=2; percent=0 → Math.round(0*100)+2=2
+    expect(preview.modifiers.terrainDefenseBonus).toBe(25); // jungle defenseBonusModifier=0.25; Math.round(0.25*100)+0=25
   });
 
   it('includes river penalty in modifiers', () => {

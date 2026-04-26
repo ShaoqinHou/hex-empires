@@ -5,7 +5,8 @@ export const GRASSLAND: TerrainDef = {
   name: 'Grassland',
   movementCost: 1,
   defenseBonus: 0,
-  baseYields: { food: 3, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
+  // II2 (F-10): Civ VII canon — 2F 0P 0G (was 3F)
+  baseYields: { food: 2, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
   isPassable: true,
   isWater: false,
   color: '#5c9e4a',
@@ -18,7 +19,8 @@ export const PLAINS: TerrainDef = {
   name: 'Plains',
   movementCost: 1,
   defenseBonus: 0,
-  baseYields: { food: 2, production: 1, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
+  // II2 (F-10): Civ VII canon — 1F 1P 0G (was 2F 1P)
+  baseYields: { food: 1, production: 1, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
   isPassable: true,
   isWater: false,
   color: '#a8b84e',
@@ -31,7 +33,8 @@ export const DESERT: TerrainDef = {
   name: 'Desert',
   movementCost: 1,
   defenseBonus: 0,
-  baseYields: { food: 2, production: 1, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
+  // II2 (F-10): Civ VII canon — 0F 0P 0G (was 2F 1P); floodplains feature gives +3F
+  baseYields: { food: 0, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
   isPassable: true,
   isWater: false,
   color: '#e8d48b',
@@ -44,7 +47,8 @@ export const TUNDRA: TerrainDef = {
   name: 'Tundra',
   movementCost: 1,
   defenseBonus: 0,
-  baseYields: { food: 3, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
+  // II2 (F-10): Civ VII canon — 1F 0P 0G (was 3F)
+  baseYields: { food: 1, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
   isPassable: true,
   isWater: false,
   color: '#9eb89a',
@@ -53,18 +57,17 @@ export const TUNDRA: TerrainDef = {
 } as const;
 
 /**
- * W4-02: SNOW is retained for backward compatibility with existing map data and
- * save files but is now represented as tundra biome with no special modifier.
- * New maps should prefer TUNDRA; SNOW will be phased out in a future refactor.
- *
- * @deprecated Use TUNDRA (biome:'tundra') for new map generation. SNOW is kept
- * only for existing data compatibility.
+ * II2 (F-06): Snow is a standalone terrain in Civ VII — distinct from tundra.
+ * Cold barren terrain with no base yields; biome is tundra as it shares the
+ * polar zone. Used at poles and high-latitude maps.
+ * Yields: 0F 0P 0G (correct Civ VII canon).
  */
 export const SNOW: TerrainDef = {
   id: 'snow',
   name: 'Snow',
   movementCost: 1,
   defenseBonus: 0,
+  // II2 (F-10): Civ VII canon — 0F 0P 0G (correct)
   baseYields: { food: 0, production: 0, gold: 0, science: 0, culture: 0, faith: 0, influence: 0, happiness: 0 },
   isPassable: true,
   isWater: false,

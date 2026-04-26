@@ -210,27 +210,31 @@ export function getSpecializationYields(specialization: TownSpecialization): Par
 }
 
 function getTerrainYields(terrain: string): Partial<YieldSet> {
+  // II2 (F-10): values updated to Civ VII canon. Must stay in sync with
+  // packages/engine/src/data/terrains/base-terrains.ts baseYields fields.
   const table: Record<string, Partial<YieldSet>> = {
-    grassland: { food: 3 },
-    plains: { food: 2, production: 1 },
-    desert: { food: 2, production: 1 },
-    tundra: { food: 3 },
-    snow: {},
-    coast: { food: 1, gold: 1 },
-    ocean: { food: 1 },
+    grassland: { food: 2 },                 // 2F 0P 0G
+    plains:    { food: 1, production: 1 },  // 1F 1P 0G
+    desert:    {},                           // 0F 0P 0G (floodplains feature adds 3F)
+    tundra:    { food: 1 },                 // 1F 0P 0G
+    snow:      {},                           // 0F 0P 0G
+    coast:     { food: 1, gold: 1 },
+    ocean:     { food: 1 },
   };
   return table[terrain] ?? {};
 }
 
 function getFeatureYieldModifiers(feature: string): Partial<YieldSet> {
+  // II2 (F-06): jungle updated to +1F +1S (Civ VII canon). Must stay in sync with
+  // packages/engine/src/data/terrains/features.ts JUNGLE.yieldModifiers.
   const table: Record<string, Partial<YieldSet>> = {
-    hills: { production: 1 },
-    forest: { production: 1 },
-    jungle: { production: 2, science: 1 },
-    marsh: { food: 1 },
+    hills:       { production: 1 },
+    forest:      { production: 1 },
+    jungle:      { food: 1, science: 1 },  // +1F +1S (was +2P +1S)
+    marsh:       { food: 1 },
     floodplains: { food: 3 },
-    oasis: { food: 3, gold: 1 },
-    reef: { food: 1, production: 1 },
+    oasis:       { food: 3, gold: 1 },
+    reef:        { food: 1, production: 1 },
   };
   return table[feature] ?? {};
 }

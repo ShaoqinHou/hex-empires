@@ -35,10 +35,10 @@ describe('growthSystem', () => {
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
-    // territory: 3 grassland tiles × 3 food = 9; city center bonus +2 = 11 total
-    // consumed: population(1) * 2 = 2; surplus = 9; newFood = 0 + 9 = 9
+    // territory: 3 grassland tiles × 2 food = 6; city center bonus +2 = 8 total (II2 F-10)
+    // consumed: population(1) * 2 = 2; surplus = 6; newFood = 0 + 6 = 6
     const updatedCity = next.cities.get('c1')!;
-    expect(updatedCity.food).toBe(9);
+    expect(updatedCity.food).toBe(6);
   });
 
   it('grows population when food reaches threshold', () => {
@@ -129,8 +129,8 @@ describe('calculateCityYields', () => {
       cities: new Map([['c1', city]]),
     });
     const yields = calculateCityYields(city, state);
-    // 3 grassland tiles (3 food each) + city center (2+1) = 11 food, 1 prod
-    expect(yields.food).toBeGreaterThanOrEqual(9);
+    // 3 grassland tiles (2 food each, II2 F-10) + city center bonus 2 = 8 food, 1 prod
+    expect(yields.food).toBeGreaterThanOrEqual(8);
   });
 });
 
