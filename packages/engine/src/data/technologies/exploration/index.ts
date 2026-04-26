@@ -234,13 +234,18 @@ export const METAL_CASTING: TechnologyDef = {
   masteryCodexCount: 1,
 };
 
-/** F-13: Repeatable Future Tech for Exploration age. Available once all other techs are researched. */
+/** F-13: Repeatable Future Tech for Exploration age. Available once ALL other exploration techs are researched. */
 export const FUTURE_TECH_EXPLORATION: TechnologyDef = {
   id: 'future_tech_exploration',
   name: 'Future Tech',
   age: 'exploration',
   cost: 100,
-  prerequisites: ['economics', 'military_science'],
+  prerequisites: [
+    'printing', 'apprenticeship', 'gunpowder', 'banking',
+    'education', 'astronomy', 'military_tactics', 'metallurgy',
+    'cartography', 'economics', 'military_science', 'siege_tactics',
+    'machinery', 'castles', 'feudalism', 'guilds', 'shipbuilding', 'metal_casting',
+  ],
   unlocks: [],
   description: 'Repeatable tech granting +10 age progress',
   treePosition: { row: 6, col: 5 },

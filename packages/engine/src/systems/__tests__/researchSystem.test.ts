@@ -64,11 +64,16 @@ describe('researchSystem', () => {
       expect(next.players.get('p1')!.currentResearch).toBe('writing');
     });
 
-    it('F-13: allows future tech when prerequisites are met', () => {
-      // future_tech_antiquity requires mathematics + iron_working
+    it('F-13: allows future tech when ALL non-future prerequisites are met', () => {
+      // future_tech_antiquity requires ALL 18 non-future antiquity techs (F-13 fix)
       const player = createTestPlayer({
         age: 'antiquity',
-        researchedTechs: ['mathematics', 'iron_working'],
+        researchedTechs: [
+          'pottery', 'animal_husbandry', 'mining', 'sailing',
+          'archery', 'writing', 'masonry', 'bronze_working', 'wheel',
+          'irrigation', 'currency', 'construction', 'iron_working', 'mathematics',
+          'agriculture', 'engineering', 'military_training', 'navigation',
+        ],
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_antiquity' });
@@ -78,7 +83,7 @@ describe('researchSystem', () => {
     it('F-13: rejects future tech when prerequisites are not met', () => {
       const player = createTestPlayer({
         age: 'antiquity',
-        researchedTechs: ['mathematics'], // missing iron_working
+        researchedTechs: ['mathematics'], // missing all other techs
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_antiquity' });
@@ -704,9 +709,19 @@ describe('researchSystem', () => {
   });
 });
 
-// ── Z2.4: Future Tech Modern — 2-prereq gate ──
+// ── Z2.4: Future Tech Modern — all-prereq gate (F-13 fix) ──
 
-describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', () => {
+/** All 23 non-future modern tech IDs (F-13: Future Tech requires ALL age techs) */
+const ALL_MODERN_NON_FUTURE_TECHS = [
+  'scientific_theory', 'rifling', 'industrialization',
+  'steam_power', 'electricity', 'replaceable_parts',
+  'flight', 'nuclear_fission', 'combined_arms', 'rocketry',
+  'mass_consumption', 'mass_media', 'amphibious_warfare', 'radar',
+  'academics', 'military_science_modern', 'urbanization', 'combustion',
+  'radio', 'mass_production', 'mobilization', 'armor', 'aerodynamics',
+] as const;
+
+describe('Z2.4: future_tech_modern requires ALL non-future modern techs (F-13)', () => {
   it('rejects future_tech_modern when neither prereq is researched', () => {
     const player = createTestPlayer({ age: 'modern', researchedTechs: [] });
     const state = createTestState({ players: new Map([['p1', player]]) });
@@ -716,7 +731,7 @@ describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', ()
     expect(next).toBe(state);
   });
 
-  it('rejects future_tech_modern when only rocketry is researched (missing nuclear_fission)', () => {
+  it('rejects future_tech_modern when only rocketry is researched (missing others)', () => {
     const player = createTestPlayer({
       age: 'modern',
       researchedTechs: ['rocketry'],
@@ -727,7 +742,7 @@ describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', ()
     expect(next).toBe(state);
   });
 
-  it('rejects future_tech_modern when only nuclear_fission is researched (missing rocketry)', () => {
+  it('rejects future_tech_modern when only nuclear_fission is researched (missing others)', () => {
     const player = createTestPlayer({
       age: 'modern',
       researchedTechs: ['nuclear_fission'],
@@ -738,10 +753,10 @@ describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', ()
     expect(next).toBe(state);
   });
 
-  it('allows future_tech_modern once both rocketry AND nuclear_fission are researched', () => {
+  it('allows future_tech_modern once ALL non-future modern techs are researched', () => {
     const player = createTestPlayer({
       age: 'modern',
-      researchedTechs: ['rocketry', 'nuclear_fission'],
+      researchedTechs: [...ALL_MODERN_NON_FUTURE_TECHS],
     });
     const state = createTestState({ players: new Map([['p1', player]]) });
     const next = researchSystem(state, { type: 'SET_RESEARCH', techId: 'future_tech_modern' });
@@ -753,7 +768,7 @@ describe('Z2.4: future_tech_modern requires both rocketry + nuclear_fission', ()
     // Turn 1: 95 + 7 = 102 >= 100 → complete. Grants +10 ageProgress.
     const player = createTestPlayer({
       age: 'modern',
-      researchedTechs: ['rocketry', 'nuclear_fission'],
+      researchedTechs: [...ALL_MODERN_NON_FUTURE_TECHS],
       currentResearch: 'future_tech_modern',
       researchProgress: 95,
       ageProgress: 0,

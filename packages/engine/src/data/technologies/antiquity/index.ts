@@ -234,13 +234,18 @@ export const NAVIGATION: TechnologyDef = {
   masteryCodexCount: 1,
 };
 
-/** F-13: Repeatable Future Tech for Antiquity age. Available once all other techs are researched. */
+/** F-13: Repeatable Future Tech for Antiquity age. Available once ALL other antiquity techs are researched. */
 export const FUTURE_TECH_ANTIQUITY: TechnologyDef = {
   id: 'future_tech_antiquity',
   name: 'Future Tech',
   age: 'antiquity',
   cost: 100,
-  prerequisites: ['mathematics', 'iron_working'],
+  prerequisites: [
+    'pottery', 'animal_husbandry', 'mining', 'sailing',
+    'archery', 'writing', 'masonry', 'bronze_working', 'wheel',
+    'irrigation', 'currency', 'construction', 'iron_working', 'mathematics',
+    'agriculture', 'engineering', 'military_training', 'navigation',
+  ],
   unlocks: [],
   description: 'Repeatable tech granting +10 age progress',
   treePosition: { row: 5, col: 5 },
