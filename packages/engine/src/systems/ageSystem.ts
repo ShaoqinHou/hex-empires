@@ -326,7 +326,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
         const tile = nextTiles.get(hexKey);
         if (!tile || tile.improvement === null) continue;
         const improvDef = state.config.improvements.get(tile.improvement);
-        if (improvDef && improvDef.ageless === false) {
+        if (improvDef && improvDef.isAgeless === false) {
           nextTiles.set(hexKey, { ...tile, improvement: null });
           tilesChanged = true;
         }

@@ -130,7 +130,7 @@ describe('calculateCityYields', () => {
     });
     const yields = calculateCityYields(city, state);
     // 3 grassland tiles (2 food each, II2 F-10) + city center bonus 2 = 8 food, 1 prod
-    expect(yields.food).toBeGreaterThanOrEqual(8);
+    expect(yields.food).toBe(8);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization, PlayerState, PendingGrowthChoice, HexTile } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, HexTile } from '../types/GameState';
 import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
@@ -39,6 +39,29 @@ function handleSetSpecialization(
 }
 
 /**
+ * F-10 (settlements): Set the toggleable town focus for a town.
+ * Unlike SET_SPECIALIZATION (permanent), this action can be repeated freely.
+ * Constraints:
+ * - Settlement must be a town
+ * - Owner must match the current player
+ */
+function handleSetTownFocus(
+  state: GameState,
+  cityId: string,
+  focus: TownFocus,
+): GameState {
+  const city = state.cities.get(cityId);
+  if (!city) return state;
+  if (city.owner !== state.currentPlayerId) return state;
+  if (city.settlementType !== 'town') return state;
+
+  const updatedCity: CityState = { ...city, townFocus: focus };
+  const updatedCities = new Map(state.cities);
+  updatedCities.set(cityId, updatedCity);
+  return { ...state, cities: updatedCities };
+}
+
+/**
  * GrowthSystem processes city growth on END_TURN.
  * Each city:
  * 1. Calculates food yield from territory
@@ -55,6 +78,9 @@ function handleSetSpecialization(
 export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_SPECIALIZATION') {
     return handleSetSpecialization(state, action.cityId, action.specialization);
+  }
+  if (action.type === 'SET_TOWN_FOCUS') {
+    return handleSetTownFocus(state, action.cityId, action.focus);
   }
   if (action.type === 'RESOLVE_GROWTH_CHOICE') {
     return handleResolveGrowthChoice(
@@ -184,7 +210,30 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     updatedPlayers = playersMap;
   }
 
-  return { ...state, cities: updatedCities, players: updatedPlayers };
+  // F-10: Emit a log event (category: 'info') for each newly acquired resource so
+  // the player sees a "You gained access to X" notification in the HUD.
+  let updatedLog = state.log;
+  if (newResourceAcquisitions.size > 0) {
+    const newEntries: typeof state.log = [];
+    for (const [playerId, resourceIds] of newResourceAcquisitions) {
+      for (const resourceId of resourceIds) {
+        const resourceDef = state.config.resources.get(resourceId);
+        const resourceName = resourceDef?.name ?? resourceId;
+        newEntries.push({
+          turn: state.turn,
+          playerId,
+          message: `You gained access to ${resourceName}.`,
+          type: 'city',
+          category: 'info',
+        });
+      }
+    }
+    if (newEntries.length > 0) {
+      updatedLog = [...state.log, ...newEntries];
+    }
+  }
+
+  return { ...state, cities: updatedCities, players: updatedPlayers, log: updatedLog };
 }
 
 /**

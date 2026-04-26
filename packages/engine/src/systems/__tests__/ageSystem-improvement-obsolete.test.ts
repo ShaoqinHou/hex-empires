@@ -84,8 +84,7 @@ describe('ageSystem — improvement obsolescence on TRANSITION_AGE', () => {
     const logEntry = next.log.find(e =>
       e.message?.includes('Era-dependent improvements removed'),
     );
-    expect(logEntry).toBeDefined();
-    expect(logEntry!.type).toBe('age');
+    expect(logEntry?.type).toBe('age');
   });
 
   it('does not modify map when no non-ageless improvements are present', () => {

@@ -89,7 +89,7 @@ describe('Y5.5: civ-unique improvements — civId references', () => {
   it('civ-unique improvements have ageless flag set', () => {
     const civUnique = ALL_IMPROVEMENTS.filter((i) => !!i.civId);
     for (const imp of civUnique) {
-      expect(imp.ageless, `${imp.id} (civ-unique) should have ageless=true`).toBe(true);
+      expect(imp.isAgeless, `${imp.id} (civ-unique) should have isAgeless=true`).toBe(true);
     }
   });
 });

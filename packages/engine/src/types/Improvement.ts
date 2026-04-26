@@ -26,7 +26,7 @@ export interface ImprovementDef {
    * improvements are not cleared when the player's civilization changes.
    * Roads are the canonical ageless improvement.
    */
-  readonly ageless?: boolean;
+  readonly isAgeless?: boolean;
   /**
    * When set, this improvement is exclusive to the given civilization.
    * Only players whose current civId matches can build it.

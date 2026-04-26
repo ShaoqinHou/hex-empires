@@ -10,7 +10,7 @@ export const FARM: ImprovementDef = {
   },
   yields: { food: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
 } as const;
 
 export const MINE: ImprovementDef = {
@@ -25,7 +25,7 @@ export const MINE: ImprovementDef = {
   },
   yields: { production: 1 },
   modifier: { defense: 0.25 },
-  ageless: true,
+  isAgeless: true,
 } as const;
 
 export const PASTURE: ImprovementDef = {
@@ -38,7 +38,7 @@ export const PASTURE: ImprovementDef = {
   },
   yields: { food: 1, production: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
 } as const;
 
 export const PLANTATION: ImprovementDef = {
@@ -53,7 +53,7 @@ export const PLANTATION: ImprovementDef = {
   },
   yields: { gold: 1 },
   modifier: {},
-  ageless: false,  // era-dependent (colonial economy)
+  isAgeless: false,  // era-dependent (colonial economy)
 } as const;
 
 export const QUARRY: ImprovementDef = {
@@ -67,7 +67,7 @@ export const QUARRY: ImprovementDef = {
   },
   yields: { production: 1 },
   modifier: { defense: 0.5 },
-  ageless: true,
+  isAgeless: true,
 } as const;
 
 export const CAMP: ImprovementDef = {
@@ -81,7 +81,7 @@ export const CAMP: ImprovementDef = {
   },
   yields: { food: 1, gold: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
 } as const;
 
 // ── Civ-unique rural improvements ──
@@ -96,7 +96,7 @@ export const BARAY: ImprovementDef = {
   },
   yields: { food: 2, faith: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'khmer',
 } as const;
 
@@ -111,7 +111,7 @@ export const GREAT_WALL: ImprovementDef = {
   },
   yields: { gold: 1, culture: 1 },
   modifier: { defense: 0.5 },
-  ageless: true,
+  isAgeless: true,
   civId: 'china',
 } as const;
 
@@ -125,7 +125,7 @@ export const PAIRIDAEZA: ImprovementDef = {
   },
   yields: { culture: 1, gold: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'persia',
 } as const;
 
@@ -139,7 +139,7 @@ export const POTKOP: ImprovementDef = {
   },
   yields: { food: 1, production: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'mississippian',
 } as const;
 
@@ -153,7 +153,7 @@ export const TERRACE_FARM: ImprovementDef = {
   },
   yields: { food: 2, production: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'inca',
 } as const;
 
@@ -168,7 +168,7 @@ export const SEOWON: ImprovementDef = {
   },
   yields: { science: 3 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'korea',
 } as const;
 
@@ -182,7 +182,7 @@ export const FEITORIA: ImprovementDef = {
   },
   yields: { gold: 3 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'portugal',
 } as const;
 
@@ -196,7 +196,7 @@ export const OPEN_AIR_MUSEUM: ImprovementDef = {
   },
   yields: { culture: 3 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'sweden',
 } as const;
 
@@ -210,7 +210,7 @@ export const OUTBACK_STATION: ImprovementDef = {
   },
   yields: { food: 2, production: 1 },
   modifier: {},
-  ageless: true,
+  isAgeless: true,
   civId: 'australia',
 } as const;
 

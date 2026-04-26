@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scoreLegacyPaths } from '../LegacyPaths';
 import { createTestState, createTestPlayer } from '../../systems/__tests__/helpers';
-import { coordToKey } from '../../hex/HexMath';
 import type { CodexState } from '../../types/GameState';
 
 /**
@@ -166,6 +165,6 @@ describe('LegacyPaths — science legacy uses Codex count (F-09)', () => {
         ['cx2', makeCodex('cx2', 'c1')],
       ]),
     };
-    expect(progressFor(state, 'exploration', 'science')).toBeGreaterThanOrEqual(1);
+    expect(progressFor(state, 'exploration', 'science')).toBe(1);
   });
 });
