@@ -1468,6 +1468,18 @@ export type GameAction =
   | { readonly type: 'SPREAD_RELIGION'; readonly unitId: UnitId; readonly targetCityId: CityId }
   // ── F-06: Dark Age opt-in ──
   | { readonly type: 'CHOOSE_DARK_AGE'; readonly optIn: boolean }
+  // ── legacy-paths F-05: explicit Golden Age axis selection (1 per transition) ──
+  /**
+   * Player explicitly selects which legacy axis triggers their Golden Age bonus
+   * at the upcoming age transition. Must be dispatched before TRANSITION_AGE.
+   *
+   * Validates:
+   * - Player's legacyPaths[axis] === 3 (only tier-3 axes qualify).
+   * - goldenAgeChosen is null for this player (no duplicate selection).
+   * On success: sets player.goldenAgeChosen = axis.
+   * Rejected silently (state unchanged) if already chosen or axis not at tier 3.
+   */
+  | { readonly type: 'CHOOSE_GOLDEN_AGE_AXIS'; readonly axis: 'military' | 'economic' | 'science' | 'culture' }
   // ── EE5.2: Discovery tile mechanic ──
   /**
    * A unit explicitly explores a discovery tile, applying its reward immediately

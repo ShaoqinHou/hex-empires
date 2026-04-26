@@ -19,6 +19,8 @@ export function ageSystem(state: GameState, action: GameAction): GameState {
       return handleChooseLegacyBonuses(state, action.picks);
     case 'CHOOSE_DARK_AGE':
       return handleChooseDarkAge(state, action.optIn);
+    case 'CHOOSE_GOLDEN_AGE_AXIS':
+      return handleChooseGoldenAgeAxis(state, action.axis);
     default:
       return state;
   }
@@ -373,8 +375,12 @@ interface GoldenDarkResult {
  *   milestones === 0 -> Dark Age effect (all dark ages still apply)
  *   otherwise -> Normal (no special effect)
  *
- * Golden age cap: pick the axis named in `goldenAgeChosen` if it has tier 3;
- * otherwise the first tier-3 axis (military → economic → science → culture).
+ * Golden age cap (legacy-paths F-05, anti-snowball):
+ * - If goldenAgeChosen is set and that axis is at tier 3 → grant that axis.
+ * - If goldenAgeChosen is null AND exactly ONE axis is at tier 3 → auto-grant it
+ *   (no ambiguity, no choice needed).
+ * - If goldenAgeChosen is null AND multiple axes are at tier 3 → grant NONE;
+ *   the player must dispatch CHOOSE_GOLDEN_AGE_AXIS before TRANSITION_AGE.
  * Dark ages are uncapped — all tier-0 axes apply.
  */
 function getGoldenDarkAgeEffects(
@@ -390,17 +396,17 @@ function getGoldenDarkAgeEffects(
 
   // F-05: Determine the single allowed golden age axis.
   const axes: ReadonlyArray<'military' | 'economic' | 'science' | 'culture'> = ['military', 'economic', 'science', 'culture'];
+  const tier3Axes = axes.filter(ax => paths[ax] === 3);
   let goldenAxisGranted: 'military' | 'economic' | 'science' | 'culture' | null = null;
   if (goldenAgeChosen != null && paths[goldenAgeChosen] === 3) {
+    // Explicit player choice: honour it.
     goldenAxisGranted = goldenAgeChosen;
-  } else {
-    for (const ax of axes) {
-      if (paths[ax] === 3) {
-        goldenAxisGranted = ax;
-        break;
-      }
-    }
+  } else if (goldenAgeChosen == null && tier3Axes.length === 1) {
+    // Exactly one qualifying axis: auto-grant (no ambiguity).
+    goldenAxisGranted = tier3Axes[0];
   }
+  // If goldenAgeChosen == null AND tier3Axes.length > 1: leave goldenAxisGranted null.
+  // The player must dispatch CHOOSE_GOLDEN_AGE_AXIS before TRANSITION_AGE (F-05 cap).
 
   // Military path
   if (paths.military === 3 && goldenAxisGranted === 'military') {
@@ -632,6 +638,45 @@ function handleChooseDarkAge(state: GameState, optIn: boolean): GameState {
       turn: state.turn,
       playerId: player.id,
       message: optIn ? 'Embracing dark age effects.' : 'Declining dark age effects.',
+      type: 'age' as const,
+    }],
+  };
+}
+
+/**
+ * legacy-paths F-05: Handle CHOOSE_GOLDEN_AGE_AXIS.
+ *
+ * Records the player's explicit choice of which legacy axis triggers their
+ * Golden Age bonus at the upcoming TRANSITION_AGE. Must be dispatched before
+ * TRANSITION_AGE; only one choice is allowed per age (idempotency guard).
+ *
+ * Silently no-ops if:
+ * - The player's legacyPaths[axis] !== 3 (axis not at tier 3 — doesn't qualify).
+ * - goldenAgeChosen is already set (no duplicate selection within the same age).
+ */
+function handleChooseGoldenAgeAxis(
+  state: GameState,
+  axis: 'military' | 'economic' | 'science' | 'culture',
+): GameState {
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+
+  // Guard: axis must be at tier 3
+  if (player.legacyPaths[axis] !== 3) return state;
+
+  // Guard: no duplicate selection (golden age already chosen for this transition)
+  if (player.goldenAgeChosen != null) return state;
+
+  const updatedPlayers = new Map(state.players);
+  updatedPlayers.set(player.id, { ...player, goldenAgeChosen: axis });
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    log: [...state.log, {
+      turn: state.turn,
+      playerId: player.id,
+      message: `Chose ${axis} axis for Golden Age bonus.`,
       type: 'age' as const,
     }],
   };

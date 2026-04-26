@@ -374,8 +374,9 @@ describe('ageSystem', () => {
       expect(next.log.some(e => e.message.includes('Culture Dark Age'))).toBe(true);
     });
 
-    it('F-05: golden age cap — at most 1 golden age per transition even with all-4 tier-3', () => {
-      // GDD §12: only 1 golden age can fire per transition (F-05 cap).
+    it('F-05: golden age cap — no auto-pick when multiple axes qualify and no explicit choice', () => {
+      // legacy-paths F-05: with multiple tier-3 axes and no goldenAgeChosen, no golden age
+      // fires — the player must dispatch CHOOSE_GOLDEN_AGE_AXIS first (anti-snowball cap).
       const player = createTestPlayer({
         age: 'antiquity',
         civilizationId: 'rome',
@@ -389,12 +390,30 @@ describe('ageSystem', () => {
         age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
       });
       const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-      // F-04: golden age effects now in pendingLegacyBonuses
+      const pending = next.players.get('p1')!.pendingLegacyBonuses ?? [];
+      // F-05: no golden age bonus is granted without an explicit axis choice
+      expect(pending.filter(b => b.bonusId.includes('golden-age')).length).toBe(0);
+      expect(next.log.filter(e => e.message.includes('Golden Age')).length).toBe(0);
+    });
+
+    it('F-05: single tier-3 axis auto-grants without explicit choice', () => {
+      // When exactly one axis qualifies, auto-grant is unambiguous and correct.
+      const player = createTestPlayer({
+        age: 'antiquity',
+        civilizationId: 'rome',
+        ageProgress: 50,
+        legacyPoints: 0,
+        legacyBonuses: [],
+        legacyPaths: { military: 3, economic: 1, science: 1, culture: 1 },
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+      });
+      const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const pending = next.players.get('p1')!.pendingLegacyBonuses!;
-      // F-05: only 1 golden age effect granted (first eligible axis: military)
       expect(pending.filter(b => b.bonusId.includes('golden-age')).length).toBe(1);
       expect(pending.some(b => b.bonusId.includes('golden-age:military'))).toBe(true);
-      expect(next.log.filter(e => e.message.includes('Golden Age')).length).toBe(1);
     });
 
     it('F-05: goldenAgeChosen overrides default selection order', () => {
