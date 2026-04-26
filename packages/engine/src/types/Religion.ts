@@ -262,18 +262,6 @@ export type ReligionAction =
 export const PANTHEON_DEFAULT_FAITH_COST = 25 as const;
 
 /**
- * Default Faith cost to found a religion. Actual value may scale by
- * game speed or age; see design §9.
- */
-export const RELIGION_FOUND_FAITH_COST = 200 as const;
-
-/**
- * Default Faith cost to enhance a founded religion (adds enhancer +
- * worship beliefs).
- */
-export const RELIGION_ENHANCE_FAITH_COST = 400 as const;
-
-/**
  * Base hex range at which a city contributes religious pressure to
  * neighbors every turn.
  */

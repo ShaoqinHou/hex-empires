@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   PANTHEON_DEFAULT_FAITH_COST,
-  RELIGION_FOUND_FAITH_COST,
-  RELIGION_ENHANCE_FAITH_COST,
   RELIGIOUS_PRESSURE_RADIUS,
   MAX_RELIGION_BELIEFS,
 } from '../../types/Religion';
@@ -248,10 +246,8 @@ describe('Religion types — compile-time shape tests', () => {
     expect(kinds.size).toBe(6);
   });
 
-  it('exposes rulebook constants for faith costs and pressure range', () => {
+  it('exposes rulebook constants for pantheon faith cost, pressure range, and max beliefs', () => {
     expect(PANTHEON_DEFAULT_FAITH_COST).toBe(25);
-    expect(RELIGION_FOUND_FAITH_COST).toBe(200);
-    expect(RELIGION_ENHANCE_FAITH_COST).toBe(400);
     expect(RELIGIOUS_PRESSURE_RADIUS).toBe(10);
     expect(MAX_RELIGION_BELIEFS).toBe(4);
   });
