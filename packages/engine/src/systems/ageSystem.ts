@@ -312,6 +312,39 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     }
   }
 
+  // II3.1 (tile-improvements F-06): Improvement obsolescence on age transition.
+  // For each tile in the transitioning player's city territories, remove improvements
+  // whose ageless flag is explicitly false. Ageless improvements (farms, mines, etc.)
+  // persist. Improvements with ageless === undefined also persist (safe default).
+  let updatedMap = state.map;
+  {
+    const nextTiles = new Map(state.map.tiles);
+    let tilesChanged = false;
+    for (const city of updatedCities.values()) {
+      if (city.owner !== player.id) continue;
+      for (const hexKey of city.territory) {
+        const tile = nextTiles.get(hexKey);
+        if (!tile || tile.improvement === null) continue;
+        const improvDef = state.config.improvements.get(tile.improvement);
+        if (improvDef && improvDef.ageless === false) {
+          nextTiles.set(hexKey, { ...tile, improvement: null });
+          tilesChanged = true;
+        }
+      }
+    }
+    if (tilesChanged) {
+      updatedMap = { ...state.map, tiles: nextTiles };
+      logEntries.push({
+        turn: state.turn,
+        playerId: state.currentPlayerId,
+        message: 'Era-dependent improvements removed from tiles on age transition.',
+        type: 'age' as const,
+        category: 'age' as const,
+        panelTarget: 'age' as const,
+      });
+    }
+  }
+
   // W4-04 (F-08): state.commanders is intentionally NOT reset here.
   // Commander state (XP, promotions, packed army) persists across age transitions.
   // The spread `...state` below preserves the commanders map unchanged.
@@ -323,6 +356,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
 
   return {
     ...state,
+    map: updatedMap,
     players: updatedPlayers,
     cities: updatedCities,
     age: { ...state.age, currentAge: nextAge, activeCrisisType },

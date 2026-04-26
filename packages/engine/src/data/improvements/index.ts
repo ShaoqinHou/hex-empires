@@ -10,6 +10,7 @@ export const FARM: ImprovementDef = {
   },
   yields: { food: 1 },
   modifier: {},
+  ageless: true,
 } as const;
 
 export const MINE: ImprovementDef = {
@@ -24,6 +25,7 @@ export const MINE: ImprovementDef = {
   },
   yields: { production: 1 },
   modifier: { defense: 0.25 },
+  ageless: true,
 } as const;
 
 export const PASTURE: ImprovementDef = {
@@ -36,6 +38,7 @@ export const PASTURE: ImprovementDef = {
   },
   yields: { food: 1, production: 1 },
   modifier: {},
+  ageless: true,
 } as const;
 
 export const PLANTATION: ImprovementDef = {
@@ -50,6 +53,7 @@ export const PLANTATION: ImprovementDef = {
   },
   yields: { gold: 1 },
   modifier: {},
+  ageless: false,  // era-dependent (colonial economy)
 } as const;
 
 export const QUARRY: ImprovementDef = {
@@ -63,6 +67,7 @@ export const QUARRY: ImprovementDef = {
   },
   yields: { production: 1 },
   modifier: { defense: 0.5 },
+  ageless: true,
 } as const;
 
 export const CAMP: ImprovementDef = {
@@ -76,6 +81,7 @@ export const CAMP: ImprovementDef = {
   },
   yields: { food: 1, gold: 1 },
   modifier: {},
+  ageless: true,
 } as const;
 
 // ── Civ-unique rural improvements ──
