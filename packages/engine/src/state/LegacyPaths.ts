@@ -569,14 +569,25 @@ const MODERN_MILITARY: LegacyPath = {
     {
       id: 'modern_military_t1',
       tier: 1,
-      description: 'Defeat 10 enemy units (proxy for 10 Ideology points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 10,
+      // F-09: killsThisAge resets at TRANSITION_AGE; use it to avoid cross-age bleed.
+      // Fallback to totalKills for saves predating the killsThisAge field.
+      description: 'Defeat 10 enemy units this age (proxy for 10 Ideology points)', // PROXY
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        return (p.killsThisAge ?? p.totalKills ?? 0) >= 10;
+      },
     },
     {
       id: 'modern_military_t2',
       tier: 2,
-      description: 'Defeat 20 enemy units (proxy for 20 Ideology points)', // PROXY
-      check: (pid, s) => (s.players.get(pid)?.totalKills ?? 0) >= 20,
+      // F-09: same killsThisAge-first logic as tier 1.
+      description: 'Defeat 20 enemy units this age (proxy for 20 Ideology points)', // PROXY
+      check: (pid, s) => {
+        const p = s.players.get(pid);
+        if (!p) return false;
+        return (p.killsThisAge ?? p.totalKills ?? 0) >= 20;
+      },
     },
     {
       id: 'modern_military_t3',
