@@ -14,7 +14,7 @@ export const AUGUSTUS: LeaderDef = {
     effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 5 }],
   },
   agendas: AUGUSTUS_AGENDAS,
-  startingBias: 'grassland',
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'rome',
 
   primaryAttributes: ['economic', 'militaristic'],
@@ -64,7 +64,7 @@ export const CLEOPATRA: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 }],
   },
   agendas: CLEOPATRA_AGENDAS,
-  startingBias: 'floodplains',
+  startingBias: ['navigable_river', 'floodplains', 'desert'],
   historicalCivId: 'egypt',
 
   primaryAttributes: ['diplomatic', 'economic'],
@@ -81,11 +81,16 @@ export const PERICLES: LeaderDef = {
   name: 'Pericles',
   ability: {
     name: 'Surrounded by Glory',
-    description: '+5% culture per city-state you are suzerain of.',
-    // TODO(W3-04 F-08): dynamic multiplier pending attribute system (W3-07). Currently flat +2 culture.
-    effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 }],
+    // Civ VII canon (independent-powers F-08): Pericles' "Delian League" grants +5% culture
+    // per city-state he is Suzerain of. A flat MODIFY_YIELD misrepresents per-suzerain scaling;
+    // the effects array is intentionally empty until the IndependentPower system (F-01/F-02)
+    // and PlayerState.suzerainties (F-04) exist to support MODIFY_YIELD_PER_SUZERAIN.
+    // TODO(independent-powers F-08): add MODIFY_YIELD_PER_SUZERAIN once engine support lands.
+    description: '+5% culture per city-state you are Suzerain of (Delian League).',
+    effects: [],
   },
   agendas: PERICLES_AGENDAS,
+  startingBias: ['coast', 'grassland'],
   historicalCivId: 'greece',
 
   primaryAttributes: ['cultural', 'diplomatic'],
@@ -106,6 +111,7 @@ export const CYRUS: LeaderDef = {
     effects: [{ type: 'MODIFY_MOVEMENT', target: 'all', value: 2 }],
   },
   agendas: CYRUS_AGENDAS,
+  startingBias: ['plains', 'hills', 'desert'],
   historicalCivId: 'persia',
 
   primaryAttributes: ['militaristic', 'diplomatic'],
@@ -126,6 +132,7 @@ export const GANDHI: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 3 }],
   },
   agendas: GANDHI_AGENDAS,
+  startingBias: ['grassland', 'plains', 'tropical'],
   historicalCivId: 'india',
 
   primaryAttributes: ['cultural', 'scientific'],
@@ -145,6 +152,7 @@ export const QIN_SHI_HUANG: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 1 }],
   },
   agendas: QIN_SHI_HUANG_AGENDAS,
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'china',
 
   primaryAttributes: ['militaristic', 'economic'],
@@ -167,7 +175,7 @@ export const ALEXANDER: LeaderDef = {
     ],
   },
   agendas: ALEXANDER_AGENDAS,
-  startingBias: 'hills',
+  startingBias: ['coast', 'hills', 'plains'],
   historicalCivId: 'greece',
 
   primaryAttributes: ['militaristic', 'expansionist'],
@@ -187,6 +195,7 @@ export const HATSHEPSUT: LeaderDef = {
     effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 }],
   },
   agendas: HATSHEPSUT_AGENDAS,
+  startingBias: ['desert', 'navigable_river', 'floodplains'],
   historicalCivId: 'egypt',
 
   primaryAttributes: ['cultural', 'economic'],
@@ -207,7 +216,7 @@ export const GENGHIS_KHAN: LeaderDef = {
     effects: [{ type: 'MODIFY_COMBAT', target: 'cavalry', value: 10 }],
   },
   agendas: GENGHIS_KHAN_AGENDAS,
-  startingBias: 'plains',
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'mongolia',
 
   primaryAttributes: ['militaristic', 'expansionist'],
@@ -231,7 +240,7 @@ export const CONFUCIUS: LeaderDef = {
     ],
   },
   agendas: CONFUCIUS_AGENDAS,
-  startingBias: 'grassland',
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'china',
   primaryAttributes: ['scientific', 'cultural'],
 };
@@ -255,7 +264,7 @@ export const IBN_BATTUTA: LeaderDef = {
     ],
   },
   agendas: IBN_BATTUTA_AGENDAS,
-  startingBias: 'desert',
+  startingBias: ['coast', 'desert', 'plains'],
   historicalCivId: 'ottoman',
   primaryAttributes: ['economic', 'expansionist'],
 };
@@ -278,7 +287,7 @@ export const HARRIET_TUBMAN: LeaderDef = {
     ],
   },
   agendas: HARRIET_TUBMAN_AGENDAS,
-  startingBias: 'grassland',
+  startingBias: ['grassland', 'plains', 'forest'],
   historicalCivId: 'america',
   primaryAttributes: ['militaristic', 'diplomatic'],
 };
@@ -302,7 +311,7 @@ export const NAPOLEON: LeaderDef = {
     ],
   },
   agendas: NAPOLEON_AGENDAS,
-  startingBias: 'plains',
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'france',
   primaryAttributes: ['militaristic', 'cultural'],
 };
@@ -325,7 +334,7 @@ export const TECUMSEH: LeaderDef = {
     ],
   },
   agendas: TECUMSEH_AGENDAS,
-  startingBias: 'plains',
+  startingBias: ['plains', 'grassland', 'forest'],
   historicalCivId: 'america',
   primaryAttributes: ['militaristic', 'diplomatic'],
 };
@@ -348,7 +357,7 @@ export const NAPOLEON_REVOLUTIONARY: LeaderDef = {
     ],
   },
   agendas: NAPOLEON_REVOLUTIONARY_AGENDAS,
-  startingBias: 'plains',
+  startingBias: ['plains', 'grassland'],
   historicalCivId: 'france',
   primaryAttributes: ['militaristic', 'expansionist'],
 };

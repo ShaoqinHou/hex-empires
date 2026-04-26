@@ -1,7 +1,24 @@
 import type { EffectDef } from '../../types/GameState';
 import type { AttributeType } from '../../types/Attribute';
-import type { TerrainId, FeatureId } from '../../types/Terrain';
 import type { CivilizationId } from '../../types/Ids';
+
+/**
+ * F-09: Union of terrain and feature identifiers that are meaningful as
+ * starting-location biases. Kept as a named type so the UI and map generator
+ * can reference it without depending on the full TerrainId / FeatureId unions.
+ */
+export type TerrainBiomeBias =
+  | 'coast'
+  | 'plains'
+  | 'grassland'
+  | 'desert'
+  | 'tundra'
+  | 'forest'
+  | 'mountains'
+  | 'navigable_river'
+  | 'floodplains'
+  | 'hills'
+  | 'tropical';
 
 /**
  * F-04: A leader's agenda drives AI diplomatic behaviour. Each agenda has a
@@ -52,11 +69,11 @@ export interface LeaderDef {
    */
   readonly primaryAttributes: readonly [AttributeType, AttributeType];
   /**
-   * F-09: Preferred starting terrain or feature. Used by map generator to place
-   * the leader's starting settlement near this terrain/feature type.
-   * Accepts TerrainId (e.g. 'grassland') or FeatureId (e.g. 'hills', 'forest').
+   * F-09: Preferred starting terrain or feature types. Used by map generator to
+   * place the leader's starting settlement near tiles matching any of these
+   * biome/feature types. Multiple entries are checked in order (first match wins).
    */
-  readonly startingBias?: TerrainId | FeatureId;
+  readonly startingBias?: ReadonlyArray<TerrainBiomeBias>;
   /**
    * F-09: The civilization this leader is historically associated with.
    * Used by the UI to show historical pairings and by the random leader
