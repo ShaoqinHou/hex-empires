@@ -223,10 +223,9 @@ describe('Relic subsystem (F-09)', () => {
     const stateLastTurn = { ...state, currentPlayerId: lastPlayerId };
     const next = victorySystem(stateLastTurn, { type: 'END_TURN' });
 
-    const p1Progress = next.victory.progress.get('p1');
-    expect(p1Progress).toBeDefined();
-    const cultureProgress = p1Progress!.find(p => p.type === 'culture');
-    expect(cultureProgress).toBeDefined();
-    expect(cultureProgress!.progress).toBeGreaterThan(0);
+    expect(next.victory.progress.has('p1')).toBe(true);
+    const p1Progress = next.victory.progress.get('p1')!;
+    const cultureProgress = p1Progress.find(p => p.type === 'culture');
+    expect(cultureProgress?.progress).toBeGreaterThan(0);
   });
 });
