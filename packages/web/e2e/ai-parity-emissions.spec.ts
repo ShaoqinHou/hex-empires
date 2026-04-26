@@ -40,6 +40,16 @@ async function dispatch(page: Page, action: Record<string, unknown>) {
   await page.waitForTimeout(60);
 }
 
+/**
+ * KK1.1 — Extended dismissBlockingEvents.
+ *
+ * Handles all conditions that prevent END_TURN from advancing state.turn:
+ *   1. Log events with blocksTurn === true (starvation, critical warnings)
+ *   2. Legacy crisisPhase gate — FORCE_CRISIS_POLICY fills remaining slots
+ *   3. X5.2 per-crisis pendingResolution gate — SLOT_CRISIS_POLICY clears it
+ *   4. pendingCelebrationChoice — PICK_CELEBRATION_BONUS clears it
+ *   5. transitionPhase blocking (F-01) — TRANSITION_AGE with first available civ
+ */
 async function dismissBlockingEvents(page: Page) {
   await page.evaluate(() => {
     const s = (window as any).__gameState;
@@ -47,13 +57,72 @@ async function dismissBlockingEvents(page: Page) {
     if (!s || !d) return;
     const pid: string = s.currentPlayerId;
     const t: number = s.turn;
+
+    // 1. Dismiss log events with blocksTurn === true (e.g. starvation warnings)
     for (const e of (s.log as Array<Record<string, unknown>>)) {
       if (e['blocksTurn'] === true && e['dismissed'] !== true && e['turn'] === t && e['playerId'] === pid) {
         d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
       }
     }
+
+    const currentPlayer = (s.players as Map<string, Record<string, unknown>>).get(pid);
+    if (!currentPlayer) return;
+
+    // 2. Auto-slot crisis policies (legacy crisisPhase gate in turnSystem)
+    const crisisPhase = currentPlayer['crisisPhase'] as string | undefined;
+    const crisisPolicies = (currentPlayer['crisisPolicies'] as string[] | undefined) ?? [];
+    const crisisPolicySlots = (currentPlayer['crisisPolicySlots'] as number | undefined) ?? 0;
+    if (crisisPhase && crisisPhase !== 'none' && crisisPhase !== 'resolved' && crisisPolicies.length < crisisPolicySlots) {
+      const needed = crisisPolicySlots - crisisPolicies.length;
+      for (let i = 0; i < needed; i++) {
+        d({ type: 'FORCE_CRISIS_POLICY', policyId: `auto_policy_${i}` });
+      }
+    }
+
+    // 3. Auto-slot for X5.2 per-crisis pendingResolution gate (SLOT_CRISIS_POLICY)
+    const crises = (s as { crises?: Array<Record<string, unknown>> }).crises ?? [];
+    for (const crisis of crises) {
+      if (!crisis['active'] || crisis['resolvedBy'] !== null) continue;
+      if (!crisis['pendingResolution']) continue;
+      const crisisId = crisis['id'] as string;
+      const slottedMap = crisis['slottedPolicies'] as Map<string, string[]> | undefined;
+      const already = slottedMap?.get(pid) ?? [];
+      if (already.length === 0) {
+        d({ type: 'SLOT_CRISIS_POLICY', playerId: pid, crisisId, policyId: 'auto_slot' });
+      }
+    }
+
+    // 4. Auto-pick celebration bonus if pending (non-blocking but clear it)
+    const celebrationPending = currentPlayer['pendingCelebrationChoice'] as { governmentId?: string } | null | undefined;
+    if (celebrationPending) {
+      const govId = celebrationPending['governmentId'];
+      const govDef = govId ? (s as any).config?.governments?.get?.(govId) : undefined;
+      const bonuses = (govDef?.celebrationBonuses as Array<{ id: string }> | undefined) ?? [];
+      const bonusId = bonuses.length > 0 ? bonuses[0].id : 'productivity';
+      d({ type: 'PICK_CELEBRATION_BONUS', playerId: pid, bonusId });
+    }
+
+    // 5. Auto-transition age if transitionPhase is blocking this player (F-01)
+    // transitionPhase === 'pending' | 'in-progress' blocks END_TURN
+    const transitionPhase = (s['transitionPhase'] as string | undefined);
+    const playersReady = (s['playersReadyToTransition'] as string[] | undefined) ?? [];
+    if ((transitionPhase === 'pending' || transitionPhase === 'in-progress') && !playersReady.includes(pid)) {
+      const playerAge = currentPlayer['age'] as string | undefined;
+      const nextAge = playerAge === 'antiquity' ? 'exploration' : playerAge === 'exploration' ? 'modern' : null;
+      if (nextAge) {
+        const civMap = (s as any).config?.civilizations as Map<string, { age: string; id: string }> | undefined;
+        if (civMap) {
+          for (const [, civ] of civMap) {
+            if (civ.age === nextAge) {
+              d({ type: 'TRANSITION_AGE', newCivId: civ.id });
+              break;
+            }
+          }
+        }
+      }
+    }
   });
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(120);
 }
 
 async function advance(page: Page, n: number) {
