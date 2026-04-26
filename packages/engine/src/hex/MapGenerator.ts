@@ -2,7 +2,7 @@ import type { HexCoord, HexKey } from '../types/HexCoord';
 import type { HexMap, HexTile, RngState } from '../types/GameState';
 import type { TerrainDef, TerrainFeatureDef, TerrainId, FeatureId } from '../types/Terrain';
 import type { ResourceDef } from '../data/resources';
-import { coordToKey } from './HexMath';
+import { coordToKey, neighbors } from './HexMath';
 import { fractalNoise2D, nextRandom, createRng } from '../state/SeededRng';
 import { Registry } from '../registry/Registry';
 
@@ -106,12 +106,90 @@ export function generateMap(
     }
   }
 
+  // HH3 (map-terrain F-11): Fresh-water flag pass.
+  // A tile has fresh water when it is:
+  //   (a) a lake tile                 — freshwater body by definition
+  //   (b) a navigable_river tile      — traversable river = fresh water
+  //   (c) a tile with river edges     — border of a river
+  //   (d) adjacent to a tile that satisfies (a), (b), or (c)
+  // Ocean and coast tiles are NOT considered fresh water even if river-adjacent.
+  // The flag is optional; tiles that do not qualify simply omit it.
+  computeFreshWaterFlags(tiles);
+
   return {
     width: opts.width,
     height: opts.height,
     tiles,
     wrapX: opts.wrapX,
   };
+}
+
+/**
+ * Terrain types that are themselves fresh-water sources.
+ * A tile with one of these terrains directly has fresh water.
+ * Ocean and coast are salt water and do NOT count.
+ */
+const FRESH_WATER_TERRAINS: ReadonlySet<string> = new Set<string>(['lake', 'navigable_river']);
+
+/**
+ * Terrain types that are NOT fresh water and cannot inherit fresh water from
+ * river-adjacency (salt water). These may still be river-adjacent in the data
+ * model but fresh water does not apply to them for game purposes.
+ */
+const SALT_WATER_TERRAINS: ReadonlySet<string> = new Set<string>(['ocean', 'coast', 'deep_ocean', 'reef']);
+
+/**
+ * HH3 (map-terrain F-11): Mutate the tiles map in-place to set `hasFreshWater`
+ * on tiles that qualify. Called once after tile generation; tiles are not yet
+ * frozen at this point (they're plain objects in a mutable Map).
+ *
+ * A tile is a "primary" fresh-water source when:
+ *  - Its terrain is 'lake' or 'navigable_river', OR
+ *  - It has at least one river edge (river.length > 0)
+ *
+ * A tile inherits fresh water when it is adjacent to a primary source AND its
+ * own terrain is not salt water (ocean / coast / deep_ocean / reef).
+ *
+ * The flag is never set on salt-water tiles (the map key simply won't have it).
+ */
+function computeFreshWaterFlags(tiles: Map<HexKey, HexTile>): void {
+  // First pass: identify all primary fresh-water tile keys
+  const primaryFreshWaterKeys = new Set<HexKey>();
+  for (const [key, tile] of tiles) {
+    if (FRESH_WATER_TERRAINS.has(tile.terrain) || tile.river.length > 0) {
+      primaryFreshWaterKeys.add(key);
+    }
+  }
+
+  // Second pass: set hasFreshWater on primaries and their non-salt-water neighbors
+  const toFlag = new Set<HexKey>();
+
+  for (const primaryKey of primaryFreshWaterKeys) {
+    const primaryTile = tiles.get(primaryKey);
+    if (!primaryTile) continue;
+
+    // The primary source tile itself gets the flag (unless it's salt water)
+    if (!SALT_WATER_TERRAINS.has(primaryTile.terrain)) {
+      toFlag.add(primaryKey);
+    }
+
+    // Neighbors of the primary source inherit fresh water
+    for (const neighborCoord of neighbors(primaryTile.coord)) {
+      const neighborKey = coordToKey(neighborCoord);
+      const neighborTile = tiles.get(neighborKey);
+      if (!neighborTile) continue;
+      if (SALT_WATER_TERRAINS.has(neighborTile.terrain)) continue;
+      toFlag.add(neighborKey);
+    }
+  }
+
+  // Apply flags — replace the tile objects with updated copies (immutable pattern)
+  for (const key of toFlag) {
+    const tile = tiles.get(key);
+    if (tile && tile.hasFreshWater !== true) {
+      tiles.set(key, { ...tile, hasFreshWater: true });
+    }
+  }
 }
 
 function pickTerrain(

@@ -1,6 +1,7 @@
 import type { GameState, CityState, PlayerState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
 import { calculateCityYields } from './YieldCalculator';
+import { isFreshWater } from './MapAnalytics';
 
 /** Number of free settlements before happiness penalty applies (Civ VII: 4) */
 const FREE_SETTLEMENT_CAP = 4;
@@ -67,10 +68,12 @@ export function calculateCityHappiness(city: CityState, state: GameState): numbe
     }
   }
 
-  // Fresh water bonus: +3 happiness if city center tile has rivers
+  // Fresh water bonus: +3 happiness if city center tile has fresh water.
+  // Uses isFreshWater() which checks hasFreshWater flag first (HH3/F-11),
+  // then falls back to river-edge heuristic for pre-flag tiles.
   let freshWaterBonus = 0;
   const centerTile = state.map.tiles.get(coordToKey(city.position));
-  if (centerTile && centerTile.river.length > 0) {
+  if (centerTile && isFreshWater(centerTile)) {
     freshWaterBonus = 3;
   }
 

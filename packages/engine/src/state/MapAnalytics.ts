@@ -112,3 +112,23 @@ export function passableLandTiles(state: GameState): number {
   }
   return count;
 }
+
+/**
+ * Returns true when a tile has been marked as a fresh-water source.
+ *
+ * Fresh water includes:
+ *  - Tiles directly on a river (river array non-empty)
+ *  - Tiles with terrain 'lake' or 'navigable_river'
+ *  - Tiles adjacent to any of the above (set at map-gen time via hasFreshWater)
+ *
+ * Uses the explicit `hasFreshWater` flag when present; falls back to the
+ * river-edge heuristic for tiles that pre-date flag computation (e.g. minimal
+ * test states constructed without the flag).
+ *
+ * HH3 (map-terrain F-11): canonical fresh-water determination.
+ */
+export function isFreshWater(tile: HexTile): boolean {
+  if (tile.hasFreshWater === true) return true;
+  // Fallback for pre-flag tiles: a tile with river edges is fresh water
+  return tile.river.length > 0;
+}
