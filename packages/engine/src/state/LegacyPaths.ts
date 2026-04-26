@@ -94,10 +94,6 @@ function hasBuildingInEveryCity(state: GameState, playerId: PlayerId, buildingId
   return cities.every((c) => c.buildings.includes(buildingId));
 }
 
-function techsResearched(state: GameState, playerId: PlayerId): number {
-  return state.players.get(playerId)?.researchedTechs.length ?? 0;
-}
-
 /**
  * BB5.4: Count PLACED codices in state.codices that belong to the player.
  * "Placed" means codex.placedInCityId is set (the codex is slotted in a building).
@@ -118,18 +114,17 @@ function placedCodicesCount(state: GameState, playerId: PlayerId): number {
 }
 
 /**
- * F-03: Science legacy score.
- * Primary metric: codexPlacements (codices placed in buildings).
- * Formula: codexPlacements * 10 + researchedTechs * 1
- * This makes codex placement the dominant driver while retaining researchedTechs
- * as a meaningful (but secondary) contribution.
+ * II3.2 (tech-tree F-09): Science legacy score — codex placements only.
+ * The previous formula (codexPlacements * 10 + researchedTechs * 1) allowed raw
+ * tech count to substitute for codex placement, which diverges from Civ VII.
+ * Tech count no longer contributes (F-09 fix).
+ *
+ * Returns player.codexPlacements.length as fallback for saves predating state.codices.
  */
 function scienceLegacyScore(state: GameState, playerId: PlayerId): number {
   const player = state.players.get(playerId);
   if (!player) return 0;
-  const codexCount = player.codexPlacements?.length ?? 0;
-  const techCount = player.researchedTechs.length;
-  return codexCount * 10 + techCount * 1;
+  return player.codexPlacements?.length ?? 0;
 }
 
 function civicsResearched(state: GameState, playerId: PlayerId): number {
@@ -171,33 +166,33 @@ const ANTIQUITY_SCIENCE: LegacyPath = {
     {
       id: 'antiquity_science_t1',
       tier: 1,
-      // BB5.4: prefer placedCodicesCount (codices slotted in buildings) when state.codices
-      // is present; fall back to scienceLegacyScore (codexPlacements*10 + techs*1) proxy.
-      // Placing a codex is the canonical requirement — unplaced codices don't qualify.
-      description: 'Place 1 Codex in a Library or Museum (fallback: science score 4)',
+      // BB5.4 + II3.2 (F-09): prefer placedCodicesCount when state.codices is present.
+      // Fallback: codexPlacements.length >= 1 (tech count no longer contributes).
+      description: 'Place 1 Codex in a Library or Museum (fallback: 1 codexPlacement)',
       check: (pid, s) => {
         if (s.codices) return placedCodicesCount(s, pid) >= 1;
-        return scienceLegacyScore(s, pid) >= 4;
+        return scienceLegacyScore(s, pid) >= 1;
       },
     },
     {
       id: 'antiquity_science_t2',
       tier: 2,
-      // BB5.4: prefer placedCodicesCount; fallback to scienceLegacyScore.
-      description: 'Place 3 Codices in Libraries or Museums (fallback: science score 8)',
+      // BB5.4 + II3.2: prefer placedCodicesCount; fallback: codexPlacements.length >= 3.
+      description: 'Place 3 Codices in Libraries or Museums (fallback: 3 codexPlacements)',
       check: (pid, s) => {
         if (s.codices) return placedCodicesCount(s, pid) >= 3;
-        return scienceLegacyScore(s, pid) >= 8;
+        return scienceLegacyScore(s, pid) >= 3;
       },
     },
     {
       id: 'antiquity_science_t3',
       tier: 3,
-      // BB5.4: prefer placedCodicesCount; fallback to scienceLegacyScore or library.
-      description: 'Place 6 Codices in Libraries or Museums (fallback: science score 100 or Library in every city)',
+      // BB5.4 + II3.2: prefer placedCodicesCount; fallback: codexPlacements.length >= 6
+      // OR Library in every city (infrastructure check for saves with no codex tracking).
+      description: 'Place 6 Codices in Libraries or Museums (fallback: 6 codexPlacements or Library in every city)',
       check: (pid, s) => {
         if (s.codices) return placedCodicesCount(s, pid) >= 6;
-        if (scienceLegacyScore(s, pid) >= 100) return true;
+        if (scienceLegacyScore(s, pid) >= 6) return true;
         return hasBuildingInEveryCity(s, pid, 'library');
       },
     },
@@ -322,23 +317,33 @@ const EXPLORATION_SCIENCE: LegacyPath = {
     {
       id: 'exploration_science_t1',
       tier: 1,
-      // F-03: primary = scienceLegacyScore. Threshold 12: 12 techs (score=12) or 2 codices (score=20).
-      description: 'Science score 12 (codexPlacements*10 + techs*1; e.g. 12 techs or 2 codices)',
-      check: (pid, s) => scienceLegacyScore(s, pid) >= 12,
+      // II3.2 (F-09): prefer placedCodicesCount when state.codices is present.
+      // Fallback: codexPlacements.length >= 2 or 3 Districts (Enlightenment breadth proxy).
+      description: 'Place 2 Codices (fallback: 2 codexPlacements or 3 Districts)',
+      check: (pid, s) => {
+        if (s.codices) return placedCodicesCount(s, pid) >= 2;
+        return scienceLegacyScore(s, pid) >= 2 || totalDistrictsOwned(s, pid) >= 3;
+      },
     },
     {
       id: 'exploration_science_t2',
       tier: 2,
-      // Threshold 16 or 3 Districts — districts track Enlightenment-era breadth
-      description: 'Science score 16 (e.g. 16 techs or 2 codices) or 3 Districts',
-      check: (pid, s) => scienceLegacyScore(s, pid) >= 16 || totalDistrictsOwned(s, pid) >= 3,
+      // II3.2 (F-09): prefer placedCodicesCount; fallback: codexPlacements >= 4 or 5 Districts.
+      description: 'Place 4 Codices (fallback: 4 codexPlacements or 5 Districts)',
+      check: (pid, s) => {
+        if (s.codices) return placedCodicesCount(s, pid) >= 4;
+        return scienceLegacyScore(s, pid) >= 4 || totalDistrictsOwned(s, pid) >= 5;
+      },
     },
     {
       id: 'exploration_science_t3',
       tier: 3,
-      // Threshold 20 or 5 Districts
-      description: 'Science score 20 or 5 Districts (Enlightenment proxy)',
-      check: (pid, s) => scienceLegacyScore(s, pid) >= 20 || totalDistrictsOwned(s, pid) >= 5,
+      // II3.2 (F-09): prefer placedCodicesCount; fallback: codexPlacements >= 7 or 8 Districts.
+      description: 'Place 7 Codices (fallback: 7 codexPlacements or 8 Districts — Enlightenment proxy)',
+      check: (pid, s) => {
+        if (s.codices) return placedCodicesCount(s, pid) >= 7;
+        return scienceLegacyScore(s, pid) >= 7 || totalDistrictsOwned(s, pid) >= 8;
+      },
     },
   ],
 };
