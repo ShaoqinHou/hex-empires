@@ -178,6 +178,14 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
         </div>
       )}
 
+      {/* Town focus selector — only shown for towns (F-10) */}
+      {isTown && (
+        <TownFocusSelector
+          currentFocus={(city.townFocus as TownFocusMode | undefined) ?? 'growing'}
+          onFocusChange={(focus) => dispatch({ type: 'SET_TOWN_FOCUS', cityId: city.id, focus })}
+        />
+      )}
+
       {/* ── Compact Resource Ledger ──────────────────────────────────── */}
       <div className="city-resource-ledger">
         <div className="city-resource-ledger__label">
@@ -522,6 +530,62 @@ function HeroProgressBar({ value, max }: { value: number; max: number }) {
         className="city-hero-production__bar-fill"
         style={{ width: `${pct}%` }}
       />
+    </div>
+  );
+}
+
+// ── Town Focus Selector (F-10) ────────────────────────────────────────────────
+// Displayed only for towns. Lets the player toggle between five yield modes.
+// Unlike TownSpecialization (permanent), focus can be changed freely each turn.
+
+type TownFocusMode = 'growing' | 'production' | 'trade' | 'science' | 'farming';
+
+interface TownFocusSelectorProps {
+  readonly currentFocus: TownFocusMode;
+  readonly onFocusChange: (focus: TownFocusMode) => void;
+}
+
+const TOWN_FOCUS_OPTIONS: ReadonlyArray<{ id: TownFocusMode; label: string; hint: string }> = [
+  { id: 'growing',    label: 'Growing',    hint: 'Default — prioritises food and population growth' },
+  { id: 'production', label: 'Production', hint: '+1 production per 2 territory tiles' },
+  { id: 'trade',      label: 'Trade',      hint: '+1 gold per outgoing trade route' },
+  { id: 'science',    label: 'Science',    hint: '+1 science per population point' },
+  { id: 'farming',    label: 'Farming',    hint: '+1 food per territory tile' },
+];
+
+function TownFocusSelector({ currentFocus, onFocusChange }: TownFocusSelectorProps) {
+  return (
+    <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
+      <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--panel-muted-color)' }}>
+        Town Focus
+      </h3>
+      <div className="flex flex-col gap-1">
+        {TOWN_FOCUS_OPTIONS.map((opt) => {
+          const isActive = currentFocus === opt.id;
+          return (
+            <button
+              key={opt.id}
+              className="flex items-center justify-between px-3 py-1.5 rounded text-xs cursor-pointer text-left"
+              style={{
+                backgroundColor: isActive
+                  ? 'color-mix(in srgb, var(--panel-accent-gold) 18%, transparent)'
+                  : 'var(--color-bg)',
+                border: isActive
+                  ? '1px solid var(--panel-accent-gold)'
+                  : '1px solid var(--panel-border)',
+                color: isActive ? 'var(--panel-accent-gold)' : 'var(--panel-text-color)',
+              }}
+              title={opt.hint}
+              onClick={() => {
+                if (!isActive) onFocusChange(opt.id);
+              }}
+            >
+              <span className="font-bold">{isActive ? '● ' : '○ '}{opt.label}</span>
+              <span style={{ color: 'var(--panel-muted-color)', fontSize: '10px' }}>{opt.hint}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
