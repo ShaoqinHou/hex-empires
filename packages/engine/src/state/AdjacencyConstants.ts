@@ -36,3 +36,11 @@ export const RESOURCE_ADJACENCY_PER_NEIGHBOR: Partial<YieldSet> = {
 
 /** Multiplier coefficient for specialist-assigned tile's adjacency bonus. */
 export const SPECIALIST_AMPLIFIER = 0.5;
+
+/**
+ * Maximum number of specialists that contribute to adjacency amplification
+ * (KK3.2 — population-specialists F-03).
+ * With SPECIALIST_AMPLIFIER = 0.5 and this cap = 2, the maximum multiplier is
+ * 1 + 0.5 × 2 = 2.0 (i.e. 100% bonus cap).
+ */
+export const SPECIALIST_AMPLIFIER_MAX_COUNT = 2;

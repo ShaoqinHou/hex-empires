@@ -7,6 +7,7 @@ import { EMPTY_YIELDS, addYields } from '../types/Yields';
 import { neighbors, coordToKey } from '../hex/HexMath';
 import {
   SPECIALIST_AMPLIFIER,
+  SPECIALIST_AMPLIFIER_MAX_COUNT,
   WONDER_ADJACENCY_PER_NEIGHBOR,
   NATURAL_WONDER_ADJACENCY_PER_NEIGHBOR,
   COASTAL_ADJACENCY_PER_NEIGHBOR,
@@ -209,13 +210,16 @@ export function computeAdjacencyBonus(
     }
   }
 
-  // W3-02: Specialist amplification — if specialists are assigned to this
-  // urban tile, multiply the base adjacency by (1 + SPECIALIST_AMPLIFIER * count).
+  // W3-02 / KK3.2: Specialist amplification — if specialists are assigned to
+  // this urban tile, multiply the base adjacency by
+  // (1 + SPECIALIST_AMPLIFIER * effectiveCount) where effectiveCount is capped
+  // at SPECIALIST_AMPLIFIER_MAX_COUNT (= 2), giving a maximum multiplier of 2.0.
   const tileKey = coordToKey(tile);
   const urbanTile = city.urbanTiles?.get(tileKey as HexKey);
   const specialistCount = urbanTile?.specialistCount ?? 0;
   if (specialistCount > 0) {
-    const multiplier = 1 + SPECIALIST_AMPLIFIER * specialistCount;
+    const cappedCount = Math.min(specialistCount, SPECIALIST_AMPLIFIER_MAX_COUNT);
+    const multiplier = 1 + SPECIALIST_AMPLIFIER * cappedCount;
     bonus = {
       food: bonus.food * multiplier,
       production: bonus.production * multiplier,
