@@ -67,8 +67,38 @@ export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefi
 }
 
 /**
+ * Age baselines for policy slots (civic-tree F-10).
+ * Each age guarantees a minimum number of wildcard policy slots regardless
+ * of which government the player adopts.
+ *
+ * Effective slot count = max(governmentDef.policySlots.total, ageBaseline)
+ */
+export const AGE_POLICY_SLOT_BASELINE: Readonly<Record<string, number>> = {
+  antiquity: 2,
+  exploration: 4,
+  modern: 6,
+} as const;
+
+/**
+ * Returns the effective total policy slot count for a player:
+ * max(government.policySlots.total, age baseline).
+ *
+ * When the government grants fewer slots than the age baseline, the baseline
+ * wins — the age itself guarantees a minimum slot floor.
+ * When the government grants MORE than the baseline, the government wins.
+ */
+export function effectivePolicySlotCount(
+  gov: GovernmentDef,
+  age: string,
+): number {
+  const baseline = AGE_POLICY_SLOT_BASELINE[age] ?? 0;
+  return Math.max(gov.policySlots.total, baseline);
+}
+
+/**
  * Pure validator: can the player adopt the named Government?
  * - Government must exist.
+ * - Government's age must match the current game age (civic-tree F-07 age-gate).
  * - Player's `researchedCivics` must include the Government's unlockCivic.
  * - Player must not already be on that Government.
  * - Player must not have `governmentLockedForAge === true`.
@@ -87,6 +117,10 @@ export function canAdoptGovernment(
   const gov = findGovernment(governmentId, state.config);
   if (!gov) return false;
 
+  // Age-gate (civic-tree F-07): government must belong to the current age.
+  // A player in Antiquity cannot adopt a Modern government such as Communism.
+  if (gov.age !== state.age.currentAge) return false;
+
   if (!player.researchedCivics.includes(gov.unlockCivic)) return false;
 
   if (
@@ -104,7 +138,8 @@ export function canAdoptGovernment(
  * - Player must have a government.
  * - `policySwapWindowOpen` must be true (W2-03 GP F-08).
  * - Policy must exist and be unlocked.
- * - Slot index must be within bounds (0..total-1).
+ * - Slot index must be within bounds (0..effectiveTotal-1) where effective
+ *   total = max(gov.policySlots.total, age baseline) (civic-tree F-10).
  * - All slots are wildcard — no category match required.
  */
 export function canSlotPolicy(
@@ -130,8 +165,9 @@ export function canSlotPolicy(
   // Policy must be unlocked via its prerequisite civic
   if (!player.researchedCivics.includes(policy.unlockCivic)) return false;
 
-  // Slot index bounds check (no category — all wildcard)
-  const total = gov.policySlots.total;
+  // Slot index bounds check (no category — all wildcard).
+  // Use effective slot count = max(gov.policySlots.total, age baseline) (F-10).
+  const total = effectivePolicySlotCount(gov, state.age.currentAge);
   if (slotIndex < 0 || slotIndex >= total) return false;
 
   return true;
@@ -140,14 +176,17 @@ export function canSlotPolicy(
 // ── Reducers ──
 
 /**
- * Produce a fresh, empty flat slot array for the given Government's total
- * slot count. Slots reset on Government change.
+ * Produce a fresh, empty flat slot array for the given Government.
+ * Length = max(gov.policySlots.total, age baseline) (civic-tree F-10).
+ * Slots reset on Government change.
  */
 function emptySlotArray(
   government: GovernmentDef | undefined,
+  age: string,
 ): ReadonlyArray<PolicyId | null> {
   if (!government) return [];
-  return new Array<PolicyId | null>(government.policySlots.total).fill(null);
+  const total = effectivePolicySlotCount(government, age);
+  return new Array<PolicyId | null>(total).fill(null);
 }
 
 function updatePlayer(
@@ -179,7 +218,8 @@ function applyAdoptGovernment(
   const updated: PlayerWithGovernment = {
     ...player,
     governmentId,
-    slottedPolicies: emptySlotArray(gov),
+    // Slot count = max(gov.policySlots.total, age baseline) (civic-tree F-10)
+    slottedPolicies: emptySlotArray(gov, state.age.currentAge),
     // Lock this player's government for the rest of the age (W2-03 CT F-07)
     governmentLockedForAge: true,
   };
@@ -203,7 +243,8 @@ function applySlotPolicy(
   const gov = findGovernment(player.governmentId!, state.config);
   if (!gov) return state;
 
-  const total = gov.policySlots.total;
+  // Use effective slot count (max of gov slots and age baseline — F-10)
+  const total = effectivePolicySlotCount(gov, state.age.currentAge);
   const current = player.slottedPolicies;
   const next: Array<PolicyId | null> = new Array<PolicyId | null>(total).fill(null);
   for (let i = 0; i < total; i++) {
@@ -234,7 +275,8 @@ function applyUnslotPolicy(
   const gov = findGovernment(player.governmentId, state.config);
   if (!gov) return state;
 
-  const total = gov.policySlots.total;
+  // Use effective slot count (max of gov slots and age baseline — F-10)
+  const total = effectivePolicySlotCount(gov, state.age.currentAge);
   if (slotIndex < 0 || slotIndex >= total) return state;
 
   const current = player.slottedPolicies;
