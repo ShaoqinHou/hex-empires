@@ -256,7 +256,7 @@ export const IBN_BATTUTA: LeaderDef = {
   id: 'ibn_battuta',
   name: 'Ibn Battuta',
   ability: {
-    name: 'Travels of Ibn Battuta',
+    name: 'Rihla',
     description: '+2 gold per trade route. Scouts and explorers gain +1 movement.',
     effects: [
       { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 2 },
@@ -327,7 +327,7 @@ export const TECUMSEH: LeaderDef = {
   id: 'tecumseh',
   name: 'Tecumseh',
   ability: {
-    name: 'Pan-Confederacy',
+    name: 'Forge a Confederacy',
     description: '+3 combat strength when fighting adjacent to friendly units. Independent powers are befriended 25% faster.',
     effects: [
       { type: 'MODIFY_COMBAT', target: 'melee', value: 3 },
