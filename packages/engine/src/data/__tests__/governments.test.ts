@@ -71,9 +71,9 @@ const VALID_AGES: ReadonlySet<Age> = new Set<Age>(['antiquity', 'exploration', '
 // ── Governments ──
 
 describe('ALL_GOVERNMENTS', () => {
-  it('contains between 8 and 14 governments (Z1 added 3 Modern: AUTHORITARIANISM/BUREAUCRATIC_MONARCHY/REVOLUCION)', () => {
+  it('contains between 8 and 16 governments (II4.1 added 3 Exploration crisis-locked: REVOLUTIONARY_REPUBLIC/REVOLUTIONARY_AUTHORITARIANISM/CONSTITUTIONAL_MONARCHY)', () => {
     expect(ALL_GOVERNMENTS.length).toBeGreaterThanOrEqual(8);
-    expect(ALL_GOVERNMENTS.length).toBeLessThanOrEqual(14);
+    expect(ALL_GOVERNMENTS.length).toBeLessThanOrEqual(16);
   });
 
   it('has unique ids', () => {
@@ -137,6 +137,45 @@ describe('ALL_GOVERNMENTS', () => {
         isValidEffect(g.legacyBonus),
         `government ${g.id} has invalid legacyBonus ${JSON.stringify(g.legacyBonus)}`,
       ).toBe(true);
+    }
+  });
+
+  // II4.1 — Exploration crisis-locked governments (government-policies F-04)
+  it('revolutionary_republic exists with correct fields', () => {
+    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'revolutionary_republic');
+    expect(g).toBeDefined();
+    expect(g!.name).toBe('Revolutionary Republic');
+    expect(g!.age).toBe('exploration');
+    expect(g!.policySlots.total).toBe(3);
+  });
+
+  it('revolutionary_authoritarianism exists with correct fields', () => {
+    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'revolutionary_authoritarianism');
+    expect(g).toBeDefined();
+    expect(g!.name).toBe('Revolutionary Authoritarianism');
+    expect(g!.age).toBe('exploration');
+    expect(g!.policySlots.total).toBe(3);
+  });
+
+  it('constitutional_monarchy exists with correct fields', () => {
+    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'constitutional_monarchy');
+    expect(g).toBeDefined();
+    expect(g!.name).toBe('Constitutional Monarchy');
+    expect(g!.age).toBe('exploration');
+    expect(g!.policySlots.total).toBe(3);
+  });
+
+  it('has exactly 6 exploration-age governments (3 standard + 3 crisis-locked)', () => {
+    const explorationGovs = ALL_GOVERNMENTS.filter((g) => g.age === 'exploration');
+    expect(explorationGovs.length).toBe(6);
+  });
+
+  it('three exploration crisis-locked governments all reference nationalism civic', () => {
+    const crisisLocked = ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'];
+    for (const id of crisisLocked) {
+      const g = ALL_GOVERNMENTS.find((gov) => gov.id === id);
+      expect(g, `${id} must exist`).toBeDefined();
+      expect(g!.unlockCivic, `${id} unlockCivic must be nationalism`).toBe('nationalism');
     }
   });
 });

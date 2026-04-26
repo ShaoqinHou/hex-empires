@@ -197,6 +197,81 @@ export const THEOCRACY: GovernmentDef = {
   ],
 };
 
+// ── Exploration crisis-locked (II4.1 — government-policies F-04) ──
+// These three governments are gated by the end-of-Exploration Revolutions
+// crisis. `unlockCivic` is set to `nationalism` (the terminal Exploration civic)
+// as a proxy gate; the crisis system is responsible for the true unlock
+// condition (specific Revolutions resolution path).
+
+export const REVOLUTIONARY_REPUBLIC: GovernmentDef = {
+  id: 'revolutionary_republic',
+  name: 'Revolutionary Republic',
+  age: 'exploration',
+  unlockCivic: 'nationalism',
+  policySlots: { total: 3 },
+  legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
+  description:
+    'Born of popular revolution. +1 Policy Slot on adoption. Crisis-locked: available only via specific Revolutions crisis outcomes.',
+  celebrationBonuses: [
+    {
+      id: 'rev-republic-policy',
+      name: '+1 Policy Slot for 10 turns',
+      description: 'Empire gains an additional wildcard policy slot for the celebration window.',
+    },
+    {
+      id: 'rev-republic-culture',
+      name: '+20% Culture for 10 turns',
+      description: 'Empire culture output increased by 20% for the celebration window.',
+    },
+  ],
+};
+
+export const REVOLUTIONARY_AUTHORITARIANISM: GovernmentDef = {
+  id: 'revolutionary_authoritarianism',
+  name: 'Revolutionary Authoritarianism',
+  age: 'exploration',
+  unlockCivic: 'nationalism',
+  policySlots: { total: 3 },
+  legacyBonus: { type: 'MODIFY_COMBAT', target: 'all', value: 3 },
+  description:
+    'Authoritarian revolution that trades economic stability for military power. Crisis-locked: available only via specific Revolutions crisis outcomes.',
+  celebrationBonuses: [
+    {
+      id: 'rev-auth-military',
+      name: '+30% Military Production for 10 turns',
+      description: 'All military unit production increased by 30% for the celebration window.',
+    },
+    {
+      id: 'rev-auth-gold',
+      name: '-10% Gold (wartime levy) for 10 turns',
+      description: 'Empire gold output reduced by 10% as resources are directed toward the war effort.',
+    },
+  ],
+};
+
+export const CONSTITUTIONAL_MONARCHY: GovernmentDef = {
+  id: 'constitutional_monarchy',
+  name: 'Constitutional Monarchy',
+  age: 'exploration',
+  unlockCivic: 'nationalism',
+  policySlots: { total: 3 },
+  legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 3 },
+  description:
+    'Stability-focused constitutional government with a royal executive. Crisis-locked: available only via specific Revolutions crisis outcomes.',
+  celebrationBonuses: [
+    {
+      id: 'const-monarchy-happiness',
+      name: '+2 Happiness per City for 10 turns',
+      description: 'All cities receive +2 happiness for the celebration window.',
+    },
+    {
+      id: 'const-monarchy-policy',
+      name: '+1 Policy Slot for 10 turns',
+      description: 'Empire gains an additional wildcard policy slot for the celebration window.',
+    },
+  ],
+};
+
 // ── Modern ──
 
 export const ELECTIVE_REPUBLIC: GovernmentDef = {
@@ -303,6 +378,9 @@ export const ALL_GOVERNMENTS: ReadonlyArray<GovernmentDef> = [
   FEUDAL_MONARCHY,
   PLUTOCRACY,
   THEOCRACY,
+  REVOLUTIONARY_REPUBLIC,
+  REVOLUTIONARY_AUTHORITARIANISM,
+  CONSTITUTIONAL_MONARCHY,
   ELECTIVE_REPUBLIC,
   AUTHORITARIANISM,
   BUREAUCRATIC_MONARCHY,
