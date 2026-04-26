@@ -235,9 +235,11 @@ describe('§3.2 — Growth rate modifiers', () => {
 });
 
 describe('§3.3 — Population allocation & specialists', () => {
-  it('R33a: specialist food cost handled in growthSystem (not YieldCalculator)', () => {
-    // F-02: specialist food cost (2 per specialist) is consolidated in
-    // growthSystem.foodConsumed, no longer deducted from calculateCityYields.
+  it('R33a: specialist food cost deducted in YieldCalculator (KK3.1 — F-02)', () => {
+    // KK3.1: specialist food cost (2 per specialist) is now deducted in
+    // calculateCityYields so the reported food/turn already reflects specialist
+    // maintenance. growthSystem.foodConsumed no longer adds the specialist
+    // component — it only uses population × 2.
     const base = createTestCity({ population: 5, specialists: 0 });
     const withOne = createTestCity({ population: 5, specialists: 1 });
     const withThree = createTestCity({ population: 5, specialists: 3 });
@@ -247,9 +249,9 @@ describe('§3.3 — Population allocation & specialists', () => {
     const oneYields = calculateCityYields(withOne, state);
     const threeYields = calculateCityYields(withThree, state);
 
-    // YieldCalculator no longer deducts specialist food — all three should match
-    expect(oneYields.food).toBe(baseYields.food);
-    expect(threeYields.food).toBe(baseYields.food);
+    // 1 specialist: −2 food; 3 specialists: −6 food
+    expect(baseYields.food - oneYields.food).toBe(2);
+    expect(baseYields.food - threeYields.food).toBe(6);
   });
 
   it('R33b: each specialist subtracts 2 happiness from city happiness', () => {

@@ -145,9 +145,9 @@ describe('specialistSystem', () => {
       expect(yieldsOne.culture).toBe(yieldsNone.culture + 2);
       expect(yieldsTwo.culture).toBe(yieldsNone.culture + 4);
 
-      // B3: food cost moved to growthSystem.foodConsumed (F-02) — not in yields
-      expect(yieldsOne.food).toBe(yieldsNone.food);
-      expect(yieldsTwo.food).toBe(yieldsNone.food);
+      // KK3.1: food cost now in YieldCalculator (F-02) — deducted from yields
+      expect(yieldsNone.food - yieldsOne.food).toBe(2);  // 1 specialist: -2 food
+      expect(yieldsNone.food - yieldsTwo.food).toBe(4);  // 2 specialists: -4 food
       // Production unaffected
       expect(yieldsOne.production).toBe(yieldsNone.production);
     });

@@ -104,10 +104,12 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const age: Age = player?.age ?? state.age.currentAge;
 
     const yields = calculateCityYieldsWithAdjacency(city, state);
-    // F-02: specialists cost 2 food each per turn (Civ VII §spec).
-    // Food cost is consolidated here (not in YieldCalculator) so the surplus
-    // calculation and starvation check both account for specialist maintenance.
-    const foodConsumed = city.population * 2 + city.specialists * 2;
+    // Specialist food cost (−2 per specialist) is now deducted inside
+    // YieldCalculator.calculateCityYields (KK3.1 — population-specialists F-02),
+    // so `yields.food` already reflects the specialist maintenance reduction.
+    // foodConsumed tracks only the population hunger component; adding the
+    // specialist component here would double-count it.
+    const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
     const newFood = city.food + foodSurplus;
     const baseThreshold = _getGrowthThreshold(city.population, age);

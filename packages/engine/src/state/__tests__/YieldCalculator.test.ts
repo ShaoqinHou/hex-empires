@@ -17,7 +17,7 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
   };
 }
 
-describe('B3: specialist yields (food cost moved to growthSystem F-02)', () => {
+describe('B3: specialist yields (KK3.1 — food cost now in YieldCalculator F-02)', () => {
   it('city with no specialists has no specialist bonus', () => {
     const state = createTestState();
     const city = makeCity({ specialists: 0 });
@@ -25,7 +25,7 @@ describe('B3: specialist yields (food cost moved to growthSystem F-02)', () => {
     expect(yields.food).toBeGreaterThan(0);
   });
 
-  it('specialists do NOT deduct food from yields (cost moved to growthSystem)', () => {
+  it('specialists deduct 2 food/turn each from city yields (KK3.1)', () => {
     const state = createTestState();
     const cityNoSpec = makeCity({ specialists: 0 });
     const cityWith2Spec = makeCity({ specialists: 2 });
@@ -33,8 +33,8 @@ describe('B3: specialist yields (food cost moved to growthSystem F-02)', () => {
     const yieldsNoSpec = calculateCityYields(cityNoSpec, state);
     const yields2Spec = calculateCityYields(cityWith2Spec, state);
 
-    // Food cost is handled in growthSystem.foodConsumed, not here
-    expect(yieldsNoSpec.food).toBe(yields2Spec.food);
+    // 2 specialists: −4 food (2 per specialist)
+    expect(yieldsNoSpec.food - yields2Spec.food).toBe(4);
   });
 
   it('specialists produce +2 science and +2 culture each', () => {
