@@ -185,11 +185,24 @@ export function computeAdjacencyBonus(
       if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
-      // F-06: Wonder adjacency — +2 culture, +1 science per neighbor urban tile with a player-built wonder
+      // F-06: Wonder adjacency — per-wonder adjacencyEffect when defined; generic fallback otherwise.
+      // targetCategory: 'urban'  → only apply when the evaluated tile (at `tile`) has buildings.
+      // targetCategory: 'all'    → always apply within the adjacency context.
       for (const bid of neighbourUrban.buildings) {
         const bDef = state.config.buildings.get(bid);
-        if (bDef?.isWonder) {
-          bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+        if (bDef?.isWonder === true) {
+          if (bDef.adjacencyEffect !== undefined) {
+            const effect = bDef.adjacencyEffect;
+            const currentUrban = urbanTileAt(city, tile);
+            const targetQualifies =
+              effect.targetCategory === 'all' ||
+              (currentUrban !== undefined && currentUrban.buildings.length > 0);
+            if (targetQualifies) {
+              bonus = addYields(bonus, { [effect.yield]: effect.value });
+            }
+          } else {
+            bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+          }
           break; // one wonder adjacency per neighbor tile
         }
       }
@@ -345,11 +358,22 @@ function computeBaseAdjacencyWithoutSpecialist(
       if (tileHasBuilding(neighbourUrban, (id) => isCommercialBuilding(state, id), state)) {
         bonus = addYields(bonus, { gold: 1 });
       }
-      // F-06: Wonder adjacency (same rule as computeAdjacencyBonus)
+      // F-06: Wonder adjacency (same rule as computeAdjacencyBonus — per-wonder or generic fallback)
       for (const bid of neighbourUrban.buildings) {
         const bDef = state.config.buildings.get(bid);
-        if (bDef?.isWonder) {
-          bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+        if (bDef?.isWonder === true) {
+          if (bDef.adjacencyEffect !== undefined) {
+            const effect = bDef.adjacencyEffect;
+            const currentUrban = urbanTileAt(city, tile);
+            const targetQualifies =
+              effect.targetCategory === 'all' ||
+              (currentUrban !== undefined && currentUrban.buildings.length > 0);
+            if (targetQualifies) {
+              bonus = addYields(bonus, { [effect.yield]: effect.value });
+            }
+          } else {
+            bonus = addYields(bonus, WONDER_ADJACENCY_PER_NEIGHBOR);
+          }
           break;
         }
       }

@@ -1,4 +1,4 @@
-import type { YieldSet } from './Yields';
+import type { YieldSet, YieldType } from './Yields';
 
 export interface BuildingDef {
   readonly id: string;
@@ -36,4 +36,19 @@ export interface BuildingDef {
   readonly civId?: string;
   /** Civic research prerequisite (parity with District.requiredCivic) */
   readonly requiredCivic?: string;
+  /**
+   * F-06: Per-wonder adjacency effect. When this wonder is built on an urban
+   * tile, neighboring tiles of the specified category receive the given yield
+   * bonus. When absent, wonders use the generic WONDER_ADJACENCY_PER_NEIGHBOR
+   * constant (+2 culture, +1 science).
+   *
+   * targetCategory:
+   *   'all'    — any neighboring urban tile benefits (no building prerequisite)
+   *   'urban'  — only neighboring tiles that have at least one building
+   */
+  readonly adjacencyEffect?: {
+    readonly yield: YieldType;
+    readonly value: number;
+    readonly targetCategory: 'all' | 'urban';
+  };
 }

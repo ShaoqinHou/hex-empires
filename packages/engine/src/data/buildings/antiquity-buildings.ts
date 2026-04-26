@@ -151,6 +151,7 @@ export const PYRAMIDS: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'engineer', amount: 1 },
+  adjacencyEffect: { yield: 'faith', value: 2, targetCategory: 'urban' },
 } as const;
 
 export const HANGING_GARDENS: BuildingDef = {
@@ -167,6 +168,7 @@ export const HANGING_GARDENS: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
+  adjacencyEffect: { yield: 'food', value: 1, targetCategory: 'all' },
 } as const;
 
 export const COLOSSUS: BuildingDef = {
@@ -183,6 +185,7 @@ export const COLOSSUS: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'merchant', amount: 1 },
+  // No adjacencyEffect — falls back to generic WONDER_ADJACENCY_PER_NEIGHBOR (+2 culture, +1 science)
 } as const;
 
 export const STONEHENGE: BuildingDef = {
@@ -199,6 +202,7 @@ export const STONEHENGE: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'prophet', amount: 1 },
+  adjacencyEffect: { yield: 'faith', value: 1, targetCategory: 'all' },
 } as const;
 
 export const ORACLE: BuildingDef = {
@@ -215,6 +219,7 @@ export const ORACLE: BuildingDef = {
   isWonder: true,
   isAgeless: true,
   greatPersonPoints: { type: 'writer', amount: 1 },
+  adjacencyEffect: { yield: 'culture', value: 1, targetCategory: 'all' },
 } as const;
 
 export const BATH: BuildingDef = {
@@ -355,6 +360,7 @@ export const GREAT_LIBRARY: BuildingDef = {
   isAgeless: true,
   greatPersonPoints: { type: 'scientist', amount: 1 },
   codexSlots: 4,
+  adjacencyEffect: { yield: 'science', value: 2, targetCategory: 'urban' },
 } as const;
 
 export const STOREHOUSE: BuildingDef = {
