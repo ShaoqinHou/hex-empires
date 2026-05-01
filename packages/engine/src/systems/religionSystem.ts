@@ -1,9 +1,6 @@
 /**
- * religionSystem — standalone pure system for religion actions.
- *
- * This is cycle C of the Religion & Pantheons mechanic: a pure
- * `(state, action) => state` function that is NOT yet wired into the
- * `GameEngine` pipeline. Wiring happens in cycle D.
+ * religionSystem — pure system for religion actions in the GameEngine
+ * pipeline.
  *
  * Scope for this cycle:
  *  - `ADOPT_PANTHEON` (the "found pantheon" action in the design doc):
@@ -16,8 +13,11 @@
  *    / F-04). Writes a `ReligionRecord` to `state.religion.religions`,
  *    lazily initializing the optional slot on first use (pre-religion saves
  *    migrate as `undefined` → fresh empty slot on first successful action).
- *  - All other actions — SPREAD_RELIGION, ENHANCE_RELIGION, etc. — are
- *    pass-through no-ops in this cycle.
+ *  - `SPREAD_RELIGION`: consumes Missionary spread charges and sets the
+ *    target city's dominant religion.
+ *  - `EARN_RELIC`: grants a unique relic and updates displayed-relic count.
+ *  - Other design-surface actions, such as `ENHANCE_RELIGION`, remain
+ *    pass-through no-ops until their dedicated implementation cycles.
  *
  * Graceful no-op behaviour: if `PlayerState` does not expose `faith`
  * (i.e. the schema has been trimmed in some future refactor), the
@@ -43,10 +43,9 @@ import { distance } from '../hex/HexMath';
 
 /**
  * Widened action type accepted by religionSystem. The pipeline's
- * canonical `GameAction` does not yet include `ReligionAction`; cycle D
- * will unify them. For now religionSystem accepts either so callers
- * (and tests) may dispatch `ReligionAction` shapes directly without the
- * system stripping types.
+ * canonical `GameAction` includes the implemented religion actions;
+ * `ReligionAction` keeps older design-surface tests and pending actions
+ * typeable while they are retired or promoted.
  */
 export type ReligionSystemAction = GameAction | ReligionAction;
 
@@ -117,8 +116,8 @@ function handleAdoptPantheon(
   state: GameState,
   action: Extract<ReligionAction, { type: 'ADOPT_PANTHEON' }>,
 ): GameState {
-  // F-10: Modern age religion freeze — no new pantheons in the modern age.
-  if (state.age.currentAge === 'modern') return state;
+  // F-02: Pantheons only apply in Antiquity.
+  if (state.age.currentAge !== 'antiquity') return state;
 
   const { playerId, pantheonId } = action;
   const player = state.players.get(playerId);

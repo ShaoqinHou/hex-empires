@@ -103,6 +103,12 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   const pendingLegacyBonuses = eligible.slice(0, 4);
 
   const updatedPlayers = new Map(state.players);
+  const shouldDropPantheon = player.age !== 'modern';
+  const updatedReligionSlot = (shouldDropPantheon &&
+    state.religion !== undefined &&
+    state.religion.pantheonClaims !== undefined)
+    ? { religions: state.religion.religions }
+    : state.religion;
 
   // Apply immediate gold penalty from economic dark age
   let goldAdjustment = 0;
@@ -154,8 +160,8 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     governmentLockedForAge: false,
     // Clear ideology for new age
     ideology: null,
-    // ── Religion — pantheon only clears on Antiquity→Exploration (§18) ──
-    pantheonId: (state.age.currentAge === 'antiquity') ? null : player.pantheonId,
+    // ── Religion — pantheons are Antiquity-only and do not carry forward. ──
+    pantheonId: shouldDropPantheon ? null : player.pantheonId,
     // ── Attribute points (W3-07) — award 1 point per age transition ──
     // attributeTree and wildcard/non-wildcard pools are intentionally NOT reset
     // (the only in-game upgrade system that persists across ages).
@@ -379,6 +385,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     age: { ...state.age, currentAge: nextAge, activeCrisisType },
     rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
+    ...(updatedReligionSlot !== state.religion ? { religion: updatedReligionSlot } : {}),
     ...(updatedIPMap !== undefined ? { independentPowers: updatedIPMap } : {}),
     // F-01: clear tracking when all players have transitioned, otherwise mark pending
     transitionPhase: allReady ? 'none' as const : 'pending' as const,

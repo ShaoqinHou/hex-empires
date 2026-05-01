@@ -22,9 +22,9 @@ import type { EffectDef } from '../../types/GameState';
  * every city that has the religion as its dominant faith, regardless
  * of owner. One per religion.
  *
- * The `faithCost` is the Faith surcharge paid on top of the base
- * religion-founding cost to slot this belief. All bonuses use existing
- * `EffectDef` variants only.
+ * `faithCost` is legacy content metadata; the current Civ VII founding
+ * handler does not charge Faith to found a religion or pick this belief.
+ * All bonuses use existing `EffectDef` variants only.
  */
 export interface FollowerBeliefDef {
   readonly id: string;

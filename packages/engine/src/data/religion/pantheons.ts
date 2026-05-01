@@ -3,7 +3,7 @@
  *
  * Each `PantheonDef` grants a single empire-wide `EffectDef` bonus once
  * the player crosses the `faithCost` threshold. Picks are first-come-
- * first-served and persist through age transitions.
+ * first-served and are discarded when the player leaves Antiquity.
  *
  * Bonuses here only use `EffectDef` variants that already exist on
  * `packages/engine/src/types/GameState.ts` — no new effect variants are

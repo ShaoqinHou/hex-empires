@@ -2,13 +2,11 @@
  * ReligionPanel — read-only display of the human player's religion state.
  *
  * Shows:
- *   • Faith pool + progress bar toward the next milestone (pantheon or religion).
- *   • Pantheon  — name + bonus description (if adopted), else a read-only
+ *   • Faith pool + Antiquity pantheon progress, when applicable.
+ *   • Pantheon  — name + bonus description (if adopted), else an Antiquity-only
  *                 grid of available pantheons with cost badges.
  *   • Religion  — name, holy city, founder belief, follower belief (if any),
  *                 else an EmptyState prompt.
- *
- * NOT wired into App.tsx. This panel is intentionally un-integrated.
  */
 
 import { useGameState } from '../../providers/GameProvider';
@@ -57,7 +55,6 @@ function lookupCityName(
 
 const DIVIDER: React.CSSProperties = { borderBottom: '1px solid var(--color-border)' };
 const PANTHEON_COST = 25;
-const RELIGION_COST = 200;
 
 export function ReligionPanel({ onClose }: ReligionPanelProps) {
   const { state } = useGameState();
@@ -85,9 +82,9 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
     ...state.config.pantheons.values(),
   ] as ReadonlyArray<PantheonDefLike>;
 
-  // Faith progress toward next milestone
-  const faithMilestone =
-    pantheon === null ? PANTHEON_COST : myReligion === null ? RELIGION_COST : null;
+  // Faith progress toward the Antiquity pantheon pick.
+  const canStillAdoptPantheon = state.age.currentAge === 'antiquity' && pantheon === null;
+  const faithMilestone = canStillAdoptPantheon ? PANTHEON_COST : null;
   const faithProgress =
     faithMilestone !== null ? Math.min(faith / faithMilestone, 1) : 1;
 
@@ -125,7 +122,7 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
                 label={`${faith} / ${faithMilestone}`}
               />
               <div className="text-[10px] mt-0.5" style={{ color: 'var(--panel-muted-color)' }}>
-                {pantheon === null ? 'toward adopting a pantheon' : 'toward founding a religion'}
+                toward adopting a pantheon
               </div>
             </div>
           )}
@@ -152,9 +149,11 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
                 className="text-xs leading-snug mt-0.5 mb-2"
                 style={{ color: 'var(--panel-muted-color)' }}
               >
-                Adopt one when you have {PANTHEON_COST} faith.
+                {canStillAdoptPantheon
+                  ? `Adopt one when you have ${PANTHEON_COST} faith.`
+                  : 'Pantheons are only available during Antiquity.'}
               </div>
-              {allPantheons.length > 0 && (
+              {canStillAdoptPantheon && allPantheons.length > 0 && (
                 <div
                   className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto"
                   aria-label="Available pantheons — choose one when you have 25 faith"
@@ -233,7 +232,7 @@ export function ReligionPanel({ onClose }: ReligionPanelProps) {
               <EmptyState
                 icon="☪"
                 title="No religion founded yet"
-                description="Adopt a pantheon first, then accumulate 200 faith to found your religion."
+                description="Research Piety and build a Temple to found a religion."
               />
             </div>
           )}

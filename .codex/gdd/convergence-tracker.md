@@ -32,7 +32,7 @@
 | mementos | `.codex/gdd/audits/mementos.md` | 6 | 0M / 0C / 0D / 6X / 0E |
 | narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 0M / 0C / 0D / 7X / 0E |
 | population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 5M / 3C / 1D / 0X / 0E |
-| religion | `.codex/gdd/audits/religion.md` | 13 | 2M / 2C / 5D / 3X / 1E |
+| religion | `.codex/gdd/audits/religion.md` | 13 | 7M / 4C / 2D / 0X / 0E |
 | resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
 | settlements | `.codex/gdd/audits/settlements.md` | 11 | 7M / 2C / 0D / 2X / 0E |
 | tech-tree | `.codex/gdd/audits/tech-tree.md` | 14 | 1M / 3C / 4D / 4X / 2E |
@@ -126,12 +126,12 @@
 | population-specialists | F-03 | Specialist adjacency amplification exists but depends on spa | ≈ CLOSE | M | `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/Cit |
 | population-specialists | F-04 | Specialists have a per-urban-tile map, with legacy city-wide | ≈ CLOSE | L | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/specialis |
 | population-specialists | F-08 | Population growth creates a resolvable improvement-or-specia | ✓ MATCH | M | `packages/engine/src/systems/growthSystem.ts`, `packages/engine/src/systems/turn |
-| religion | F-01 | Pantheon missing Mysticism Civic prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:68–84,115–178 |
-| religion | F-02 | Pantheon persists across age transition | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler); packa |
-| religion | F-03 | Religion founding requires Pantheon prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:204–205 |
-| religion | F-04 | Religion founding costs 200 Faith | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:47,208 |
-| religion | F-08 | Missionary system entirely absent | ⊘ MISSING | L | Not found in any engine or UI file. |
-| religion | F-09 | Relic system and Cultural Legacy Path connection absent | ⊘ MISSING | M | Not found. |
+| religion | F-01 | Pantheon Mysticism prerequisite | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:66-81,127-134` |
+| religion | F-02 | Pantheons are Antiquity-only | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:117-120`; `packages/engine/src/sy |
+| religion | F-03 | Religion founding has no pantheon prerequisite | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:212-221` |
+| religion | F-04 | Religion founding has no Faith cost | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:217,252-253`; `packages/web/src/u |
+| religion | F-08 | Missionary spread exists but is simplified | ≈ CLOSE | L | `packages/engine/src/systems/religionSystem.ts:319-394`; `packages/engine/src/ty |
+| religion | F-09 | Relic pipeline exists but Reliquary rules are incomplete | ≈ CLOSE | M | `packages/engine/src/systems/religionSystem.ts:263-279,397-438`; `packages/engin |
 | resources | F-01 | Resource taxonomy uses Civ-VI vocabulary | ⚠ DIVERGED | M | `packages/engine/src/types/Resource.ts:6`, `packages/engine/src/data/resources/i |
 | resources | F-02 | ResourceDef has no per-age bonus table | ⚠ DIVERGED | M | `packages/engine/src/types/Resource.ts:7-9` |
 | resources | F-03 | Empire resources provide no combat strength modifier | ⊘ MISSING | L | `packages/engine/src/types/Resource.ts`, `packages/engine/src/systems/resourceSy |
@@ -244,10 +244,11 @@
 | population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts` |
 | population-specialists | F-07 | growthEventCount resets on age transition | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts`, `packages/engine/src/systems/growthS |
 | population-specialists | F-09 | Specialist cap is per-tile when spatial data exists; cap-inc | ≈ CLOSE | M | `packages/engine/src/systems/specialistSystem.ts`, `packages/engine/src/types/Ga |
-| religion | F-05 | Belief slots are Founder + Follower only | ≈ CLOSE | M | packages/engine/src/systems/religionSystem.ts:246–252 (ReligionRecord shape) |
-| religion | F-06 | Pantheon content catalog diverges from VII | ≈ CLOSE | M | packages/engine/src/data/religion/pantheons.ts:15–180 |
-| religion | F-07 | Pantheon effects apply empire-wide (Altar-gating absent) | ⚠ DIVERGED | M | packages/engine/src/data/religion/pantheons.ts (all entries use target city or t |
-| religion | F-10 | Modern age religion freeze absent | ⊘ MISSING | S | packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler). |
+| religion | F-05 | Belief slots are Founder + Follower only | ≈ CLOSE | M | `packages/engine/src/types/Religion.ts:284-296`; `packages/engine/src/systems/re |
+| religion | F-06 | Pantheon content catalog diverges from VII | ≈ CLOSE | M | `packages/engine/src/data/religion/pantheons.ts` |
+| religion | F-07 | Pantheon Altar gating absent | ⚠ DIVERGED | M | `packages/engine/src/data/religion/pantheons.ts`; `packages/engine/src/systems/e |
+| religion | F-10 | Modern religion freeze is not enforced for spread | ⚠ DIVERGED | S | `packages/engine/src/systems/religionSystem.ts:203-204,319-394`; `packages/engin |
+| religion | F-12 | Belief uniqueness per game enforced | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:238-250` |
 | resources | F-05 | resourceAssignmentSystem not wired into GameEngine pipeline | ⚠ DIVERGED | S | `packages/engine/src/systems/resourceAssignmentSystem.ts:7-11` |
 | resources | F-07 | No resource acquisition trigger on settlement border expansi | ⊘ MISSING | M | `packages/engine/src/systems/` (no handler for border-expand + resource tile) |
 | resources | F-08 | Treasure Fleet resource category entirely absent | ⊘ MISSING | L | `packages/engine/src/data/resources/index.ts`, `packages/engine/src/types/Resour |
@@ -315,7 +316,8 @@
 | legends | F-08 | `AchievementsPanel` models Legends UI incorrectly | ⚠ DIVERGED | M | `AchievementsPanel.tsx` |
 | map-terrain | F-09 | Fog of war lacks terrain occlusion | ≈ CLOSE | M | `systems/visibilitySystem.ts:67-79` |
 | map-terrain | F-12 | TerrainId is open string; WATER_TERRAINS is magic-string set | ✗ EXTRA | S | `types/Terrain.ts:3`, `state/MapAnalytics.ts:15` |
-| religion | F-11 | ReligionPanel not wired into App.tsx | ✗ EXTRA | S | packages/web/src/ui/panels/ReligionPanel.tsx:11 — comment: NOT wired into App.ts |
+| religion | F-11 | Religion panel is reachable | ✓ MATCH | S | `packages/web/src/App.tsx`; `packages/web/src/ui/panelRegistry.ts`; `packages/we |
+| religion | F-13 | Immutable state patterns in religionSystem | ✓ MATCH | S | `packages/engine/src/systems/religionSystem.ts:152-181,257-307,365-394,423-438` |
 | resources | F-04 | No unit production gates exist | ✓ MATCH | UNK | `packages/engine/src/systems/resourceSystem.ts`, production pipeline |
 | resources | F-10 | Resource acquisition notification/UI path entirely absent | ⊘ MISSING | M | no engine handler; no UI surface |
 | resources | F-11 | CityState `assignedResources` / PlayerState `ownedResources` | ✗ EXTRA | S | `packages/engine/src/types/GameState.ts` (CityState, PlayerState) |
@@ -348,11 +350,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 39 |
-| CLOSE | 52 |
-| DIVERGED | 71 |
-| MISSING | 105 |
-| EXTRA | 19 |
+| MATCH | 44 |
+| CLOSE | 54 |
+| DIVERGED | 68 |
+| MISSING | 102 |
+| EXTRA | 18 |
 | **Total findings** | **286** |
 
 

@@ -100,6 +100,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     crises: [],
     log: [],
     config: createGameConfig(),
+    age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     ...overrides,
   } as unknown as GameState;
 }
@@ -130,6 +131,22 @@ describe('ReligionPanel', () => {
     expect(queryByTestId('religion-panel-pantheon')).toBeNull();
   });
 
+  it('does not show pantheon adoption as available after Antiquity', () => {
+    const player = makePlayer({ age: 'exploration', pantheonId: undefined, faith: 100 });
+    setMockState(makeState({
+      players: new Map([[player.id, player]]),
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+    }));
+
+    const { getByTestId, queryByLabelText } = render(
+      <ReligionPanel onClose={() => {}} />,
+    );
+
+    const empty = getByTestId('religion-panel-pantheon-empty');
+    expect(empty.textContent).toContain('Pantheons are only available during Antiquity.');
+    expect(queryByLabelText('Available pantheons — choose one when you have 25 faith')).toBeNull();
+  });
+
   it('renders the pantheon name + description when player.pantheonId is set', () => {
     const player = makePlayer({ pantheonId: 'god_of_war', faith: 30 });
     setMockState(makeState({ players: new Map([[player.id, player]]) }));
@@ -155,7 +172,8 @@ describe('ReligionPanel', () => {
 
     const empty = getByTestId('religion-panel-religion-empty');
     expect(empty.textContent).toContain('No religion founded yet');
-    expect(empty.textContent).toContain('200 faith');
+    expect(empty.textContent).toContain('Research Piety');
+    expect(empty.textContent).toContain('Temple');
     expect(queryByTestId('religion-panel-religion')).toBeNull();
   });
 

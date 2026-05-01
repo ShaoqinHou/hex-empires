@@ -300,8 +300,50 @@ describe('A7: government/policy/pantheon wipe + city.assignedResources persist (
     expect(next.players.get('p1')!.pantheonId).toBeNull();
   });
 
-  it('pantheonId persists on Exploration→Modern transition (§18 — only wipes at Antiquity)', () => {
-    // §18: pantheon carries forward past the Exploration→Modern boundary.
+  it('pantheonClaims are cleared on Antiquity→Exploration, but founded religions are preserved', () => {
+    const player = readyToTransitionPlayer({ pantheonId: 'god_of_war' });
+    const foundedReligion = {
+      id: 'religion.p1.world_church',
+      name: 'World Faith',
+      founderPlayerId: 'p1',
+      founderBeliefId: 'world_church',
+      followerBeliefId: 'jesuit_education',
+      holyCityId: 'c1',
+      foundedOnTurn: 3,
+    };
+    const state = readyToTransitionState(player, {
+      religion: {
+        religions: [foundedReligion],
+        pantheonClaims: new Map([['god_of_war', 'p1']]),
+      },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+
+    expect(next.religion).toBeDefined();
+    expect(next.religion!.pantheonClaims).toBeUndefined();
+    expect(next.religion!.religions).toEqual([foundedReligion]);
+    expect(next.players.get('p1')!.pantheonId).toBeNull();
+  });
+
+  it('clears the transitioning player pantheon even when the global age already advanced', () => {
+    const player = readyToTransitionPlayer({ id: 'p2', pantheonId: 'god_of_war' });
+    const state = readyToTransitionState(player, {
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+      playersReadyToTransition: ['p1'],
+      religion: {
+        religions: [],
+        pantheonClaims: new Map([['god_of_war', 'p2']]),
+      },
+    });
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+
+    expect(next.players.get('p2')!.pantheonId).toBeNull();
+    expect(next.religion?.pantheonClaims).toBeUndefined();
+  });
+
+  it('clears stale pantheonId on Exploration→Modern transition (§18 / F-02)', () => {
+    // §18/F-02: pantheons are Antiquity-only. This also cleans old saves
+    // that entered Exploration before the boundary clear existed.
     const explorationPlayer = readyToTransitionPlayer({
       age: 'exploration',
       ageProgress: 100,
@@ -310,8 +352,9 @@ describe('A7: government/policy/pantheon wipe + city.assignedResources persist (
     const state = readyToTransitionState(explorationPlayer, {
       age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
     });
-    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'france' });
-    expect(next.players.get('p1')!.pantheonId).toBe('god_of_war');
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'america' });
+    expect(next.players.get('p1')!.age).toBe('modern');
+    expect(next.players.get('p1')!.pantheonId).toBeNull();
   });
 
   it('city.assignedResources persist across the transition', () => {

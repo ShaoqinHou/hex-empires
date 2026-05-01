@@ -147,6 +147,27 @@ describe('religionSystem', () => {
   });
 
   describe('ADOPT_PANTHEON — invalid (state unchanged)', () => {
+    it('returns state unchanged when age is Exploration even with Mysticism and enough faith', () => {
+      const state = createTestState({
+        age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+        players: new Map([[
+          'p1',
+          createTestPlayer({
+            id: 'p1',
+            faith: 40,
+            researchedCivics: ['mysticism'],
+          }),
+        ]]),
+      });
+      const next = religionSystem(state, {
+        type: 'ADOPT_PANTHEON',
+        playerId: 'p1',
+        pantheonId: 'god_of_war',
+      });
+      expect(next).toBe(state);
+      expect(next.players.get('p1')!.faith).toBe(40);
+    });
+
     it('returns state unchanged when pantheonId is not in the catalog', () => {
       const state = createTestState({
         players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 100 })]]),

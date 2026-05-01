@@ -5,22 +5,19 @@
  *
  * Civ VII layers religion in two tiers:
  *
- * 1. **Pantheons** — first-tier, unlocked when a player's Faith pool
- *    crosses a threshold; grants a single passive bonus to all cities
- *    owned by that player. One pantheon per player, permanent for the
- *    rest of the game (it survives age transitions).
+ * 1. **Pantheons** — first-tier Antiquity bonus, unlocked when a player's
+ *    Faith pool crosses a threshold; grants a single passive bonus until
+ *    the Antiquity -> Exploration age transition discards it.
  *
- * 2. **Religions** — second-tier, founded by spending Faith at a
- *    specific city (typically the one containing a Holy Site / Temple).
+ * 2. **Religions** — second-tier, founded after researching Piety and
+ *    building a Temple in the holy city candidate.
  *    A religion has 1 founding belief, and gains up to 3 more beliefs
  *    over time as followers accumulate. Religions spread to other
- *    cities via Missionary / Apostle units and passive pressure from
- *    neighboring cities and trade routes.
+ *    cities via Missionary units.
  *
- * None of the existing engine systems touch religion beyond the `faith`
- * yield; the actions and state defined here are picked up in a later
- * cycle. See `.codex/workflow/design/religion-system.md` for the full
- * plan and §18 of the rulebook (merged later) for the in-game rules.
+ * The runtime engine currently uses the slimmer `ReligionRecord` and
+ * `ReligionSlotState` shapes below; the broader interfaces in this file
+ * remain design scaffolding for future religion expansion.
  *
  * Rulebook gap: `.codex/workflow/design/rulebook-gaps.md` §M2, §6.
  */
@@ -74,8 +71,8 @@ export type BeliefCategory = 'follower' | 'founder' | 'enhancer' | 'worship';
 // ── Definition types (content) ──
 
 /**
- * A Pantheon is a first-tier bonus picked once per player. Exactly one
- * `bonus` effect applies empire-wide for the rest of the game.
+ * A Pantheon is a first-tier Antiquity bonus picked once per player.
+ * Exactly one `bonus` effect applies until the player leaves Antiquity.
  *
  * `faithCost` is the Faith pool threshold that unlocks the pick. Picks
  * are first-come-first-served: once a pantheon is chosen by one player
@@ -160,8 +157,8 @@ export interface CityReligiousState {
  * - `pantheonId`  — null until picked. Picked once, never changed.
  * - `religionId`  — null if this player has not founded a religion.
  *                   Multiple players may end up with null if religion
- *                   slots are exhausted before they could afford the
- *                   founding cost.
+ *                   slots are exhausted before they complete the Piety
+ *                   and Temple prerequisites.
  * - `missionaryCharges` — reserved for cycle C; tracks how many spread
  *                   uses a player's outstanding Missionary/Apostle
  *                   units have left. Kept on the player rather than
@@ -209,9 +206,8 @@ export interface ReligionState {
  * added to `GameAction` — they live here as types until the system
  * file lands.
  *
- * `SPREAD_RELIGION` is notionally emitted by the system each turn
- * (not a player action), but typing it here keeps the dispatch surface
- * uniform and simplifies tests.
+ * `SPREAD_RELIGION` is emitted when a Missionary spends a spread charge.
+ * Typing it here keeps the dispatch surface uniform and simplifies tests.
  */
 export type ReligionAction =
   | {
@@ -316,7 +312,7 @@ export interface ReligionRecord {
  *
  * Uniqueness of founder/follower beliefs is enforced by religionSystem
  * via linear scan of `religions`; `pantheonClaims` records the same
- * uniqueness for pantheons once ADOPT_PANTHEON wires through.
+ * uniqueness for pantheons.
  */
 export interface ReligionSlotState {
   readonly religions: ReadonlyArray<ReligionRecord>;

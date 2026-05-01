@@ -1,21 +1,27 @@
-# Religion — hex-empires Audit
+# Religion -- hex-empires Audit
 
-**System slug:** religion
+**System slug:** `religion`
 **GDD doc:** [systems/religion.md](../systems/religion.md)
-**Audit date:** 2026-04-19
-**Auditor:** claude-sonnet-4-6
-**Version target:** Firaxis patch 1.3.0 (per commitment.md)
+**Audit date:** `2026-05-02`
+**Auditor:** `codex-gpt-5.5-lead`
+**Version target:** Firaxis patch 1.3.0 (per source-target.md; official drift flagged there)
 
 ---
 
 ## Engine files audited
 
-- packages/engine/src/systems/religionSystem.ts (lines 1–273)
-- packages/engine/src/data/religion/pantheons.ts
-- packages/engine/src/data/religion/founder-beliefs.ts
-- packages/engine/src/data/religion/follower-beliefs.ts
-- packages/engine/src/data/religion/index.ts
-- packages/web/src/ui/panels/ReligionPanel.tsx
+- `packages/engine/src/systems/religionSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/types/GameState.ts`
+- `packages/engine/src/types/Religion.ts`
+- `packages/engine/src/data/religion/pantheons.ts`
+- `packages/engine/src/data/religion/founder-beliefs.ts`
+- `packages/engine/src/data/religion/follower-beliefs.ts`
+- `packages/engine/src/data/relics.ts`
+- `packages/engine/src/data/units/exploration-units.ts`
+- `packages/web/src/ui/panels/ReligionPanel.tsx`
+- `packages/web/src/ui/panelRegistry.ts`
+- `packages/web/src/ui/layout/TopBar.tsx`
 
 ---
 
@@ -23,233 +29,200 @@
 
 | Status | Count |
 |---|---|
-| MATCH — code does what VII does | 3 |
-| CLOSE — right shape, wrong specifics | 2 |
-| DIVERGED — fundamentally different (Civ-VI-ism or custom) | 4 |
-| MISSING — GDD describes, engine lacks | 3 |
-| EXTRA — engine has, VII/GDD does not | 1 |
+| MATCH | 7 |
+| CLOSE | 4 |
+| DIVERGED | 2 |
+| MISSING | 0 |
+| EXTRA | 0 |
 
-**Total findings:** 13 (3 MATCH, 2 CLOSE, 4 DIVERGED, 3 MISSING, 1 EXTRA)
+**Total findings:** 13
 
 ---
 
 ## Detailed findings
 
-### F-01: Pantheon missing Mysticism Civic prerequisite — DIVERGED
+### F-01: Pantheon Mysticism prerequisite -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts:68–84,115–178
-**GDD reference:** systems/religion.md § Pantheon (Antiquity Age)
+**Location:** `packages/engine/src/systems/religionSystem.ts:66-81,127-134`
+**GDD reference:** `systems/religion.md` § Pantheon (Antiquity Age)
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Pantheon adoption is gated on the Mysticism Civic being researched (then 25 Faith is spent).
-**Engine does:** canAdoptPantheon checks player.faith >= pantheon.faithCost only. No civic-research guard — a player can dispatch ADOPT_PANTHEON at any game turn regardless of civic progress.
-**Gap:** Missing Mysticism Civic prerequisite check. The Faith cost (25) is correct; the trigger condition is not enforced.
-**Recommendation:** Add guard in handleAdoptPantheon: verify player.civicsResearched includes mysticism. If PlayerState lacks that field, add a TODO comment and open a tracker issue.
+**VII says:** Pantheon adoption is gated on researching Mysticism, then spending 25 Faith.
+**Engine does:** `canAdoptPantheon` and `handleAdoptPantheon` both require `researchedCivics` to include `mysticism`, require a valid pantheon, and require enough Faith.
+**Gap:** None for the local prerequisite.
+**Recommendation:** Keep validator and handler checks in sync if Mysticism is renamed or moved between civic/tech systems.
 
 ---
 
-### F-02: Pantheon persists across age transition — DIVERGED (Critical VII departure)
+### F-02: Pantheons are Antiquity-only -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler); packages/engine/src/data/religion/pantheons.ts:9 comment states bonuses persist through age transitions
-**GDD reference:** systems/religion.md § VII-specific — Pantheons do NOT persist to Exploration. Once Antiquity ends, the Pantheon is discarded.
+**Location:** `packages/engine/src/systems/religionSystem.ts:117-120`; `packages/engine/src/systems/ageSystem.ts:106-113,163-164,388`
+**GDD reference:** `systems/religion.md` § VII-specific -- Pantheons do NOT persist to Exploration
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Pantheon is discarded at Antiquity → Exploration transition. No carry-forward.
-**Engine does:** pantheons.ts header comment explicitly states bonuses persist through age transitions. No TRANSITION_AGE handler clears player.pantheonId or state.religion.pantheonClaims.
-**Gap:** Engine explicitly contradicts VII. The comment in pantheons.ts documents the wrong behavior as intentional.
-**Recommendation:** Add TRANSITION_AGE handler in religionSystem.ts that, on Antiquity → Exploration, clears player.pantheonId for all players and resets state.religion.pantheonClaims. Correct the pantheons.ts header comment.
+**VII says:** Pantheons apply only during Antiquity and are discarded at the age boundary.
+**Engine does:** `ADOPT_PANTHEON` is rejected outside Antiquity. `TRANSITION_AGE` clears the transitioning player's `pantheonId` whenever they leave Antiquity and removes `state.religion.pantheonClaims` while preserving founded religions.
+**Gap:** None for lifecycle clearing. Pantheon effects still need Altar gating (F-07).
+**Recommendation:** Keep the age-transition regression tests with the implementation, especially the sequential-player case where global age may already be Exploration.
 
 ---
 
-### F-03: Religion founding requires Pantheon prerequisite — DIVERGED (Critical VII departure)
+### F-03: Religion founding has no pantheon prerequisite -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts:204–205
-**GDD reference:** systems/religion.md § Religion Founding (Exploration Age) and § VII-specific — Pantheon and Religion are fully decoupled
+**Location:** `packages/engine/src/systems/religionSystem.ts:212-221`
+**GDD reference:** `systems/religion.md` § Religion Founding and § VII-specific -- Pantheon and Religion are decoupled
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Religion founding requires (1) Piety Civic researched and (2) first Temple constructed. No pantheon prerequisite whatsoever.
-**Engine does:** handleFoundReligion line 205 checks if (!player.pantheonId) return state — silently blocks religion founding if the player never adopted a pantheon. This is the Civ VI pantheon-to-religion pipeline that VII explicitly severed.
-**Gap:** A player who skips Pantheons in Antiquity cannot found a Religion in Exploration. This is the single most critical VII divergence in the system.
-**Recommendation:** Remove the if (!player.pantheonId) return state guard entirely. Replace with a Piety Civic research check and a Temple ownership check (player has at least one city with a Temple).
+**VII says:** Religion founding requires Piety and a Temple, not a prior pantheon.
+**Engine does:** `FOUND_RELIGION` has no `player.pantheonId` guard and explicitly validates Piety instead.
+**Gap:** None for the pantheon decoupling rule.
+**Recommendation:** Keep tests that found a religion with `pantheonId` unset.
 
 ---
 
-### F-04: Religion founding costs 200 Faith — DIVERGED
+### F-04: Religion founding has no Faith cost -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts:47,208
-**GDD reference:** systems/religion.md § Religion Founding and § VII-specific — No Faith purchasing currency.
+**Location:** `packages/engine/src/systems/religionSystem.ts:217,252-253`; `packages/web/src/ui/panels/ReligionPanel.tsx:230-236`
+**GDD reference:** `systems/religion.md` § VII-specific -- No Faith purchasing currency for founding religion
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Religion is founded by building a Temple (production cost). No Faith deduction at founding. Faith currency was removed in VII.
-**Engine does:** FOUND_RELIGION_FAITH_COST = 200 is deducted from player.faith on FOUND_RELIGION. Faith is a required scarce currency for religion founding.
-**Gap:** Faith-as-founding-currency is a Civ VI holdover. VII gates founding on civic + building, not Faith accumulation.
-**Recommendation:** Remove FOUND_RELIGION_FAITH_COST constant and its deduction from handleFoundReligion. If Faith currency is fully removed in VII, player.faith field should also be retired; flag as a GDD open question.
+**VII says:** Religion is founded through Piety and Temple construction. Faith is not deducted at founding.
+**Engine does:** `FOUND_RELIGION` does not deduct Faith, and the UI empty state now points players to Piety plus Temple instead of a 200-Faith threshold.
+**Gap:** The belief data still carries legacy `faithCost` metadata, but the founding handler does not charge it.
+**Recommendation:** Remove or rename belief `faithCost` fields during the belief-catalog overhaul so content metadata cannot be mistaken for live founding cost.
 
 ---
 
-### F-05: Belief slots are Founder + Follower only — CLOSE (missing Reliquary + Enhancer)
+### F-05: Belief slots are Founder + Follower only -- CLOSE
 
-**Location:** packages/engine/src/systems/religionSystem.ts:246–252 (ReligionRecord shape)
-**GDD reference:** systems/religion.md § Belief System — three slot types: Reliquary (1), Founder (1–3), Enhancer (1)
+**Location:** `packages/engine/src/types/Religion.ts:284-296`; `packages/engine/src/systems/religionSystem.ts:238-250`
+**GDD reference:** `systems/religion.md` § Belief System
 **Severity:** MED
 **Effort:** M
-**VII says:** Four beliefs per religion across three slots: Reliquary (governs Relic earning, critical for Cultural Legacy Path), Founder (yield bonuses for founder), Enhancer (spread mechanics, unlocked via Theology Civic).
-**Engine does:** ReligionRecord has only founderBeliefId and followerBeliefId. No Reliquary or Enhancer slots.
-**Gap:** Reliquary slot (critical for relic generation → Cultural Legacy Path) and Enhancer slot absent from both ReligionRecord type and data catalogs.
-**Recommendation:** Add reliquaryBeliefId: string and enhancerBeliefId?: string to ReligionRecord. Create reliquary-beliefs.ts and enhancer-beliefs.ts data catalogs.
+**VII says:** Religion uses Reliquary, Founder, and Enhancer belief categories, with Reliquary driving relic acquisition.
+**Engine does:** `ReligionRecord` has only `founderBeliefId` and `followerBeliefId`; uniqueness is enforced for those two slots only.
+**Gap:** Reliquary and Enhancer slots/catalogs are absent from the live runtime record.
+**Recommendation:** Add `reliquaryBeliefId` and optional `enhancerBeliefId`, then migrate founder/follower naming if the GDD removes follower as a VII slot.
 
 ---
 
-### F-06: Pantheon content catalog diverges from VII — CLOSE
+### F-06: Pantheon content catalog diverges from VII -- CLOSE
 
-**Location:** packages/engine/src/data/religion/pantheons.ts:15–180
-**GDD reference:** content/pantheons/_overview.md — 18 Pantheons (16 unique + 2 non-unique: Trickster God, God of Revelry)
+**Location:** `packages/engine/src/data/religion/pantheons.ts`
+**GDD reference:** `content/pantheons/_overview.md`
 **Severity:** MED
 **Effort:** M
-**VII says:** God of Healing = +5 healing for units on rural tiles; God of War = +15% Production toward Military Units; God of the Forge = +10% Production toward buildings; God of the Sea = +1 Production on Fishing Boats. Effects are Altar-scoped or tile/improvement-scoped.
-**Engine does:** God of Healing = +1 Faith to city; God of War = MODIFY_COMBAT melee +3; God of the Forge = MODIFY_COMBAT siege +4; God of the Sea = MODIFY_COMBAT naval +3. All effects are combat or flat-yield variants. Missing entries: Monument to the Gods, Oral Tradition, City Patron Goddess, Trickster God, God of Revelry, Stone Circles, Earth Goddess, Sacred Waters.
-**Gap:** 10+ effect mismatches; 6+ names missing. Engine Pantheons are custom creations, not VII entries.
-**Recommendation:** Replace pantheons.ts wholesale with VII-accurate entries from content/pantheons/_overview.md. Requires new EffectDef variants for production-percent and growth-percent bonuses.
+**VII says:** Pantheon list and effects are VII-specific and mostly Altar-scoped or tile/improvement-scoped.
+**Engine does:** The catalog has several custom/combat-oriented effects and still uses available `EffectDef` shapes rather than VII-accurate production, healing, growth, and Altar-gated effects.
+**Gap:** Catalog shape exists, but names/effects are not fully VII-accurate.
+**Recommendation:** Replace pantheon content against `content/pantheons/_overview.md` after adding the missing effect targets required by F-07.
 
 ---
 
-### F-07: Pantheon effects apply empire-wide (Altar-gating absent) — DIVERGED
+### F-07: Pantheon Altar gating absent -- DIVERGED
 
-**Location:** packages/engine/src/data/religion/pantheons.ts (all entries use target city or target empire)
-**GDD reference:** systems/religion.md § Pantheon — effects NOT empire-wide by themselves — require an Altar building to activate per settlement
+**Location:** `packages/engine/src/data/religion/pantheons.ts`; `packages/engine/src/systems/effectSystem.ts`
+**GDD reference:** `systems/religion.md` § Pantheon -- effects require an Altar
 **Severity:** MED
 **Effort:** M
-**VII says:** Pantheon effects only activate in settlements that have an Altar building.
-**Engine does:** All 16 engine Pantheons use target city or target empire EffectDefs. No Altar-building check. Effects apply to every city unconditionally.
-**Gap:** Missing per-settlement Altar-activation gate. A player who builds no Altars receives full Pantheon bonuses.
-**Recommendation:** Add an altar effect target to the EffectDef union (or a per-building conditional activation flag). The effect system must check whether a city has an Altar building before applying Pantheon bonuses.
+**VII says:** Pantheon effects activate per settlement through the Altar building.
+**Engine does:** Pantheon effects are plain `EffectDef` bonuses targeting city, empire, or unit classes. No system checks whether a settlement has an Altar before applying a pantheon effect.
+**Gap:** Players can receive pantheon bonuses without building Altars.
+**Recommendation:** Add an Altar-scoped effect condition and make pantheon evaluation settlement-aware.
 
 ---
 
-### F-08: Missionary system entirely absent — MISSING
+### F-08: Missionary spread exists but is simplified -- CLOSE
 
-**Location:** Not found in any engine or UI file.
-**GDD reference:** systems/religion.md § Missionary Mechanics
+**Location:** `packages/engine/src/systems/religionSystem.ts:319-394`; `packages/engine/src/types/GameState.ts:91-99,230-248,1497-1505`
+**GDD reference:** `systems/religion.md` § Missionary Mechanics
 **Severity:** HIGH
 **Effort:** L
-**VII says:** Missionaries are civilian units with 1–4 charges that convert settlements by spending charges on urban district tiles (Urban population) and improved rural tiles (Rural population). No passive pressure. No theological combat.
-**Engine does:** SPREAD_RELIGION is documented as a pass-through no-op (comment line 16). No Missionary unit type. No CityState.religion, CityState.urbanConverted, or CityState.ruralConverted fields exist.
-**Gap:** Entire spread mechanic is unimplemented. Religion can be founded but never spreads; Relics never accumulate; Cultural Legacy Path cannot complete.
-**Recommendation:** Implement as a dedicated cycle: (1) Add CityState.religion, CityState.urbanConverted, CityState.ruralConverted to state types. (2) Add SPREAD_RELIGION action handler with urban/rural charge logic. (3) Add Missionary unit with charges field. (4) Connect to relic accumulation. Substantial L-effort work.
+**VII says:** Missionaries spend charges to convert settlement population through urban district tiles and improved rural tiles, with no passive pressure or theological combat.
+**Engine does:** Missionary units have `spreadsRemaining`, `SPREAD_RELIGION` validates range/charges/founded religion, sets `CityState.religionId`, decrements charges, and consumes the unit on the last charge.
+**Gap:** The live handler converts a whole city in one action. It does not model urban/rural converted counters, improved rural tile selection, conversion thresholds, or charge bonuses.
+**Recommendation:** Expand `SPREAD_RELIGION` into a tile-targeted conversion action that updates urban/rural counters before flipping city majority religion.
 
 ---
 
-### F-09: Relic system and Cultural Legacy Path connection absent — MISSING
+### F-09: Relic pipeline exists but Reliquary rules are incomplete -- CLOSE
 
-**Location:** Not found.
-**GDD reference:** systems/religion.md § Relics and the Cultural Legacy Path — 12 Relics = Cultural Golden Age milestone
+**Location:** `packages/engine/src/systems/religionSystem.ts:263-279,397-438`; `packages/engine/src/state/LegacyPaths.ts`; `packages/engine/src/data/relics.ts`
+**GDD reference:** `systems/religion.md` § Relics and Cultural Legacy Path
 **Severity:** HIGH
 **Effort:** M
-**VII says:** PlayerState.relicCount tracks Relics earned via Reliquary Belief on first-time foreign conversions. 12 Relics triggers Cultural Golden Age legacy milestone.
-**Engine does:** No relicCount on PlayerState. No Reliquary Belief type. No milestone check. Dependent on F-08.
-**Gap:** Full relic pipeline absent. Cultural Legacy Path via religion cannot complete.
-**Recommendation:** Add relicCount: number to PlayerState. Add Reliquary Belief catalog (per F-05). Increment relicCount in SPREAD_RELIGION handler per Reliquary Belief rules. Add milestone check in legacy path system.
+**VII says:** Reliquary beliefs define relic earning; relic counts feed the Exploration Cultural Legacy Path.
+**Engine does:** Relic definitions exist; founding a religion grants a starting relic; `EARN_RELIC` grants unique relics; `scoreLegacyPaths` reads player relic counts for Exploration culture progress.
+**Gap:** Relics are not driven by Reliquary belief rules or first-time foreign conversions. Starting relic on founding may be a local simplification rather than VII parity.
+**Recommendation:** Implement Reliquary belief data and move relic awards behind the relevant spread/conversion triggers.
 
 ---
 
-### F-10: Modern age religion freeze absent — MISSING
+### F-10: Modern religion freeze is not enforced for spread -- DIVERGED
 
-**Location:** packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler).
-**GDD reference:** systems/religion.md § Modern Age — Exploration→Modern transition permanently locks all CityState.religion values
+**Location:** `packages/engine/src/systems/religionSystem.ts:203-204,319-394`; `packages/engine/src/systems/ageSystem.ts`
+**GDD reference:** `systems/religion.md` § Modern Age -- Exploration to Modern locks city religion values
 **Severity:** MED
 **Effort:** S
-**VII says:** At Exploration→Modern transition, city religion affiliations freeze permanently; no further conversion is possible.
-**Engine does:** No TRANSITION_AGE case in religionSystem. No CityState.religion field. No freeze mechanism.
-**Gap:** Both the data field and the transition hook are absent. Dependent on F-08.
-**Recommendation:** After F-08 lands CityState.religion, add TRANSITION_AGE handler for Exploration→Modern that marks cities religionLocked: true. SPREAD_RELIGION must check this flag.
+**VII says:** At the Exploration to Modern transition, city religion affiliations freeze permanently and no further conversion is possible.
+**Engine does:** Founding a religion is blocked in Modern, but `SPREAD_RELIGION` has no Modern-age guard and `CityState` has no `religionLocked` field set by age transition.
+**Gap:** Missionaries can still convert cities in Modern if dispatched.
+**Recommendation:** Add a Modern freeze flag or age guard, plus an age-transition test that rejects post-Exploration spread.
 
 ---
 
-### F-11: ReligionPanel not wired into App.tsx — EXTRA
+### F-11: Religion panel is reachable -- MATCH
 
-**Location:** packages/web/src/ui/panels/ReligionPanel.tsx:11 — comment: NOT wired into App.tsx. This panel is intentionally un-integrated.
-**GDD reference:** systems/religion.md § UI requirements — ReligionPanel is a persistent overlay with keyboard shortcut R
+**Location:** `packages/web/src/App.tsx`; `packages/web/src/ui/panelRegistry.ts`; `packages/web/src/ui/layout/TopBar.tsx`; `packages/web/src/ui/panels/ReligionPanel.tsx`
+**GDD reference:** `systems/religion.md` § UI requirements
 **Severity:** LOW
 **Effort:** S
-**VII says:** ReligionPanel should be accessible via TopBar button or keyboard shortcut R at all times.
-**Engine does:** Panel exists and renders correctly but is not registered in panelRegistry.ts and not wired in App.tsx.
-**Gap:** Panel is unreachable in-game. Complete UI code sitting idle.
-**Recommendation:** Register religion in panelRegistry.ts (PanelId union + entry with shortcut R). Add activation branch to App.tsx. Add TopBar trigger.
+**VII says:** Religion UI should be reachable through normal HUD navigation.
+**Engine does:** The panel is registered, lazy-loaded in App, available from the TopBar menu, and covered by panel/e2e tests.
+**Gap:** None for reachability.
+**Recommendation:** Keep UI copy age-aware so it does not advertise Pantheon adoption outside Antiquity or Faith-cost founding.
 
 ---
 
-### F-12: Belief uniqueness per-game enforced — MATCH
+### F-12: Belief uniqueness per game enforced -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts:225–231
-**GDD reference:** systems/religion.md § Belief System
-**Severity:** —
-**VII says:** Each belief can only be held by one religion in a game.
-**Engine does:** founderTaken and followerTaken scans block founding if either belief is already claimed. Correct per-game uniqueness for current two-slot model.
-**Gap:** None for current slots. Will need extending for Reliquary and Enhancer (F-05).
+**Location:** `packages/engine/src/systems/religionSystem.ts:238-250`
+**GDD reference:** `systems/religion.md` § Belief System
+**Severity:** MED
+**Effort:** S
+**VII says:** Each belief can be held by only one religion in a game.
+**Engine does:** Existing religions are scanned before founding; duplicate founder or follower belief choices are rejected.
+**Gap:** None for current two-slot model. This must be extended when Reliquary/Enhancer slots land.
+**Recommendation:** Keep uniqueness centralized in the founding/enhancement handlers.
 
 ---
 
-### F-13: Immutable state patterns in religionSystem — MATCH
+### F-13: Immutable state patterns in religionSystem -- MATCH
 
-**Location:** packages/engine/src/systems/religionSystem.ts:150–178,243–262
-**GDD reference:** engine-patterns.md § Immutable state updates
-**Severity:** —
-**VII says:** N/A — engine invariant.
-**Engine does:** Both handleAdoptPantheon and handleFoundReligion use new Map(state.players), spread-append [...existingReligions, newRecord], and return new state objects. No direct .set() on live state.
+**Location:** `packages/engine/src/systems/religionSystem.ts:152-181,257-307,365-394,423-438`
+**GDD reference:** `engine-patterns.md` § Immutable state updates
+**Severity:** LOW
+**Effort:** S
+**VII says:** N/A -- engine invariant.
+**Engine does:** Religion actions allocate new maps/arrays and return new state objects instead of mutating live state.
 **Gap:** None.
+**Recommendation:** Preserve this style when expanding missionary, relic, and belief handlers.
 
 ---
 
-## Extras to retire
+## Active gaps after this pass
 
-- religionSystem.ts:47 — FOUND_RELIGION_FAITH_COST = 200 constant and deduction at line 208: VII removed Faith as a founding currency; delete when F-04 is resolved.
-- religionSystem.ts:205 — if (!player.pantheonId) return state guard: direct Civ-VI-ism; remove per F-03.
-- pantheons.ts — entire content catalog: replace with VII-accurate entries (F-06); current entries are not VII pantheons.
-
----
-
-## Missing items (not yet implemented)
-
-- **Reliquary Belief catalog** (data/religion/reliquary-beliefs.ts) — required for Cultural Legacy Path; deferred to belief-expansion cycle.
-- **Enhancer Belief catalog** (data/religion/enhancer-beliefs.ts) — required for Theology Civic interaction; deferred to belief-expansion cycle.
-- **SPREAD_RELIGION action handler** — entire missionary conversion pipeline; deferred per cycle comment in religionSystem.ts.
-- **CityState.religion / CityState.urbanConverted / CityState.ruralConverted** — per-city religion tracking fields.
-- **PlayerState.relicCount** — relic accumulation for Cultural Legacy Path.
-- **TRANSITION_AGE handlers** — Antiquity→Exploration (pantheon discard) and Exploration→Modern (religion freeze).
-- **Piety Civic + Temple building prerequisites** for religion founding (replaces Faith gate in F-04).
-- **Mysticism Civic prerequisite** for pantheon adoption (F-01).
-- **Altar-building gate** for per-settlement Pantheon effect activation (F-07).
+- Altar-gated pantheon effects (F-07)
+- VII-accurate pantheon catalog and missing effect variants (F-06)
+- Reliquary/Enhancer belief slots and relic triggers (F-05/F-09)
+- Tile-targeted missionary conversion (F-08)
+- Modern spread freeze (F-10)
 
 ---
 
-## Mapping recommendation for GDD system doc
+## Recommended next slice
 
-Paste this back into .codex/gdd/systems/religion.md § Mapping to hex-empires:
-
-
-
----
-
-## Open questions for the audit
-
-- **Faith currency status:** GDD marks source-conflict — Screen Rant says Faith removed entirely; other sources show 25-Faith pantheon cost. If Faith is removed entirely, player.faith should be retired and all gating must switch to civic+building checks.
-- **Altar-as-activation-gate vs Altar-as-yield-source:** Implementing F-07 likely requires a new EffectDef target variant. Interaction with the broader effect system design needs a design review.
-- **Founder Belief slot count:** GDD says up to 2 (possibly 3) unlock through gameplay; engine has exactly one founderBeliefId. Implement as single slot initially and extend.
-
----
-
-## Effort estimate
-
-| Bucket | Findings | Estimated total effort |
-|---|---|---|
-| S (half-day) | F-01, F-02, F-03, F-04, F-10, F-11 | ~3d |
-| M (1–3 days) | F-05, F-06, F-07, F-09 | ~8d |
-| L (week+) | F-08 | ~1w |
-| **Total** | 10 actionable | **~2.5w** |
-
-Recommended tackle order (highest severity / lowest effort first): **F-03 → F-02 → F-04 → F-11 → F-01 → F-05 → F-09 → F-06 → F-07 → F-08 → F-10**.
-
-F-03, F-02, and F-04 form the purge-Civ-VI-isms cluster — addressable in one session as single-file edits. F-08 (Missionary system) is the long-pole item and should be a dedicated implementation cycle after the preceding fixes land.
+Address F-10 as a small safety fix before the larger missionary expansion: block `SPREAD_RELIGION` in Modern and add an age-transition or direct system test. Then tackle F-08/F-09 together because tile conversion, Reliquary beliefs, and relic awards share the same action surface.
 
 ---
 
