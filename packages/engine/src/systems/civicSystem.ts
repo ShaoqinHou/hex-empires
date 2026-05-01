@@ -1,5 +1,9 @@
 import type { GameState, GameAction, ActiveEffect, PlayerState, PolicySlotType, EffectDef } from '../types/GameState';
 import { getYieldBonus } from '../state/EffectUtils';
+import {
+  effectivePolicySlotCount,
+  normalizePolicySlotArray,
+} from '../state/PolicySlotUtils';
 
 /**
  * CivicSystem handles civic research (parallel to tech tree, uses culture).
@@ -150,6 +154,7 @@ function processNormalCivicResearch(state: GameState): GameState {
     // Y2.1: Apply on-completion effects (e.g. GRANT_POLICY_SLOT)
     const completedCivicDef = state.config.civics.get(completedCivicId);
     const updatedSlotCounts = applyCompletionEffects(player, completedCivicDef?.effects);
+    const slottedPoliciesUpdate = normalizeCivicGrantedPolicySlots(state, player, updatedSlotCounts);
 
     // EE1: Unlock tradition if civic has unlocksTradition set and tradition exists in registry
     const unlockedTraditionId = completedCivicDef?.unlocksTradition;
@@ -199,6 +204,7 @@ function processNormalCivicResearch(state: GameState): GameState {
       policySwapWindowOpen: true,
       // Y2.1: Conditionally update policySlotCounts if civic grants slots
       ...(updatedSlotCounts !== null ? { policySlotCounts: updatedSlotCounts } : {}),
+      ...slottedPoliciesUpdate,
       // EE1: Conditionally append tradition ID (no duplicates)
       ...traditionsUpdate,
       // KK2 (F-09): Relic grant on Mysticism completion
@@ -393,4 +399,31 @@ function applyCompletionEffects(
 
   if (!hasSlotEffect) return null;
   return { military, economic, diplomatic, wildcard };
+}
+
+function normalizeCivicGrantedPolicySlots(
+  state: GameState,
+  player: PlayerState,
+  updatedSlotCounts: PlayerState['policySlotCounts'] | null,
+): { readonly slottedPolicies?: ReadonlyArray<string | null> } {
+  if (updatedSlotCounts === null) return {};
+
+  const governmentId = player.governmentId ?? null;
+  if (governmentId === null) return {};
+
+  const government = state.config.governments.get(governmentId);
+  if (!government) return {};
+
+  const playerWithUpdatedCounts: PlayerState = {
+    ...player,
+    policySlotCounts: updatedSlotCounts,
+  };
+  const total = effectivePolicySlotCount(government, state.age.currentAge, playerWithUpdatedCounts);
+  const current = Array.isArray(player.slottedPolicies)
+    ? player.slottedPolicies
+    : undefined;
+
+  return {
+    slottedPolicies: normalizePolicySlotArray(current, total),
+  };
 }

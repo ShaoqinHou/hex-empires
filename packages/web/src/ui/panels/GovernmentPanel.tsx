@@ -17,6 +17,7 @@
 
 import { usePanelManager } from './PanelManager';
 import { useGameState } from '../../providers/GameProvider';
+import { effectivePolicySlotCount } from '@hex/engine';
 import type { PlayerState } from '@hex/engine';
 import type { GovernmentDef, PolicyDef } from '@hex/engine';
 import { PanelShell } from './PanelShell';
@@ -98,6 +99,10 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
   const player = findHumanPlayer(state.players);
   const government = findGovernment(player?.governmentId, state.config.governments);
   const researched = new Set<string>(player?.researchedCivics ?? []);
+  const totalSlots =
+    government === null || player === undefined
+      ? 0
+      : effectivePolicySlotCount(government, state.age.currentAge, player);
 
   const availablePolicies: ReadonlyArray<PolicyDef> = [...state.config.policies.values()].filter(
     (p) => researched.has(p.unlockCivic),
@@ -155,10 +160,10 @@ export function GovernmentPanel({ onClose }: GovernmentPanelProps) {
                   style={{ color: 'var(--panel-muted-color)' }}
                   data-testid="government-panel-slot-count-total"
                 >
-                  {government.policySlots.total} slot{government.policySlots.total === 1 ? '' : 's'}
+                  {totalSlots} slot{totalSlots === 1 ? '' : 's'}
                 </span>
               </div>
-              {flatSlotArray(player, government.policySlots.total).map((slot, idx) =>
+              {flatSlotArray(player, totalSlots).map((slot, idx) =>
                 slot !== null ? (
                   <div
                     key={`slot-${idx}`}

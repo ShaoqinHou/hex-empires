@@ -79,6 +79,8 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     // W1-A: new PlayerState fields — safe defaults
     narrativeTags: [] as string[],
     globalHappiness: 0,
+    governmentId: null as string | null,
+    slottedPolicies: [] as Array<string | null>,
     socialPolicySlots: 0,
     traditions: [] as string[],
     ideology: null as null,

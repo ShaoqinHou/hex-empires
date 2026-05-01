@@ -162,7 +162,15 @@ export { specialistSystem } from './systems/specialistSystem';
 export { governorSystem } from './systems/governorSystem';
 // M12 Integration — newly wired systems
 export { religionSystem, canAdoptPantheon } from './systems/religionSystem';
-export { governmentSystem, canAdoptGovernment, canSlotPolicy, findGovernment, findPolicy } from './systems/governmentSystem';
+export {
+  governmentSystem,
+  canAdoptGovernment,
+  canSlotPolicy,
+  findGovernment,
+  findPolicy,
+  effectivePolicySlotCount,
+  AGE_POLICY_SLOT_BASELINE,
+} from './systems/governmentSystem';
 export { urbanBuildingSystem } from './systems/urbanBuildingSystem';
 export { resourceAssignmentSystem, getResourceSlotCapacity } from './systems/resourceAssignmentSystem';
 export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRESHOLDS } from './systems/commanderPromotionSystem';

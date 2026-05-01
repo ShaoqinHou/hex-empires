@@ -4,6 +4,7 @@ import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
 import { getYieldBonus } from './EffectUtils';
 import { neighbors, coordToKey } from '../hex/HexMath';
+import { effectivePolicySlotCount } from './PolicySlotUtils';
 
 /**
  * F-10 (W8): Per-yield cap applied as a final clamp to city yields.
@@ -130,7 +131,11 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
   // Y2.2: Slotted policy MODIFY_YIELD effects (both 'empire' and 'city' targets apply per city).
   const player = state.players.get(city.owner);
   if (player?.slottedPolicies) {
-    for (const policyId of player.slottedPolicies) {
+    const government = player.governmentId ? state.config.governments.get(player.governmentId) : undefined;
+    const maxPolicySlots = government
+      ? effectivePolicySlotCount(government, state.age.currentAge, player)
+      : player.slottedPolicies.length;
+    for (const policyId of player.slottedPolicies.slice(0, maxPolicySlots)) {
       if (!policyId) continue;
       const policyDef = state.config.policies.get(policyId);
       const bonus = policyDef?.bonus;

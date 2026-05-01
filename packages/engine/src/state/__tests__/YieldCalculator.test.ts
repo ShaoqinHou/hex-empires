@@ -232,6 +232,37 @@ describe('Y2.2: slotted policy effects applied in YieldCalculator', () => {
 
     expect(yieldsWith.production - yieldsWithout.production).toBe(2);
   });
+
+  it('ignores policy entries beyond the effective policy slot count', () => {
+    const testPolicyId = 'test_hidden_prod_policy';
+    const state = createTestState();
+    const city = makeCity();
+    const baseYields = calculateCityYields(city, state);
+
+    const policies = new Map(state.config.policies);
+    policies.set(testPolicyId, {
+      id: testPolicyId,
+      name: 'Hidden Production Policy',
+      category: 'economic' as const,
+      unlockCivic: 'code_of_laws',
+      bonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'production', value: 2 },
+      description: '+2 Production per city.',
+    });
+    const players = new Map(state.players);
+    players.set('p1', {
+      ...state.players.get('p1')!,
+      governmentId: 'classical_republic',
+      slottedPolicies: [null, null, testPolicyId],
+    });
+    const testState = {
+      ...state,
+      config: { ...state.config, policies },
+      players,
+    };
+
+    const yieldsWithHiddenPolicy = calculateCityYields(city, testState);
+    expect(yieldsWithHiddenPolicy.production).toBe(baseYields.production);
+  });
 });
 
 // ── Y2.3: Tech-effect MODIFY_YIELD applied in YieldCalculator ──

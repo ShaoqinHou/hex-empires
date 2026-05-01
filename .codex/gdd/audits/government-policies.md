@@ -22,9 +22,9 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 2 |
+| MATCH | 3 |
 | CLOSE | 5 |
-| DIVERGED | 1 |
+| DIVERGED | 0 |
 | MISSING | 0 |
 | EXTRA | 0 |
 
@@ -99,16 +99,16 @@
 
 ---
 
-### F-06: Government system not wired to celebration slot grants -- DIVERGED
+### F-06: Government system not wired to celebration slot grants -- MATCH
 
-**Location:** `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/types/GameState.ts`
+**Location:** `packages/engine/src/state/PolicySlotUtils.ts`, `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/systems/civicSystem.ts`, `packages/engine/src/state/YieldCalculator.ts`, `packages/web/src/ui/panels/GovernmentPanel.tsx`
 **GDD reference:** `government-policies.md` § "Slot acquisition sources" item 2, § "Triggers" CELEBRATION_TRIGGER
 **Severity:** MED
-**Effort:** M
+**Effort:** S
 **VII says:** Each celebration that fires increases `policySlotCount` by +1. `bonusSlotCount` accumulates from Celebrations + Attributes + Civics.
-**Engine does:** `PICK_CELEBRATION_BONUS` increments `socialPolicySlots` and appends a null to `slottedPolicies`.
-**Gap:** `canSlotPolicy` still bounds slot indexes against `effectivePolicySlotCount(gov, age)`, which ignores `socialPolicySlots`, civic-granted slots, and leader/attribute slots. Celebration-added slots can exist in `slottedPolicies` but are not reliably slottable through the validator.
-**Recommendation:** Make effective slot count derive from age baseline + government + `socialPolicySlots` + civic/attribute grants, and use that same total for adoption, validation, UI count, and save migration.
+**Engine does:** `effectivePolicySlotCount` derives total slots from age baseline + government + `socialPolicySlots` + summed civic `policySlotCounts` + legacy `GRANT_POLICY_SLOT` effects. Government adoption, slot validation, slot/unslot reducers, celebration choice, civic completion slot grants, yield calculation, and the Government panel all use or respect that effective total. Fresh players initialize government slot fields, migrated players with a valid government can rebuild missing slot arrays on slotting, and overlong hidden policy arrays are ignored by yield calculation.
+**Gap:** None for effective slot-count wiring.
+**Recommendation:** Keep `PolicySlotUtils` as the shared source of truth and add future slot-grant sources as `GRANT_POLICY_SLOT` effects rather than bespoke counters.
 
 ---
 
@@ -146,19 +146,18 @@ None. (The typed-slot categories in F-01 are technically extras but paired with 
 
 ## Missing items
 
-1. Effective policy slot total must include `socialPolicySlots`, civic grants, and leader/attribute grants (F-06).
-2. Revolutionary Exploration governments need explicit Revolutions-crisis gating and forced switch behavior (F-03).
-3. `civRequired` must be enforced for `REVOLUCION` (F-04).
-4. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
-5. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
-6. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
+1. Revolutionary Exploration governments need explicit Revolutions-crisis gating and forced switch behavior (F-03).
+2. `civRequired` must be enforced for `REVOLUCION` (F-04).
+3. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
+4. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
+5. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
 
 ---
 
 ## Cross-cuts with other audits
 
-- **`celebrations.md` F-04 (MISSING — socialPolicySlots):** Now partially implemented. `socialPolicySlots` exists and increments on `PICK_CELEBRATION_BONUS`, but policy slot validation still ignores it (F-06).
-- **Age transition:** Current code clears government/slotted policies and preserves `socialPolicySlots`; F-06 still needs a single effective-slot formula shared across age transition, government adoption, validation, and UI.
+- **`celebrations.md` F-04 (MISSING — socialPolicySlots):** `socialPolicySlots` now increments on `PICK_CELEBRATION_BONUS` and participates in the shared effective-slot formula used by validation and UI.
+- **Age transition:** Current code clears government/slotted policies and preserves `socialPolicySlots`; the next government adoption normalizes slots from the shared effective-slot formula.
 
 ---
 
@@ -172,9 +171,9 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 - `packages/engine/src/data/governments/governments.ts`
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
 
-**Status:** 2 MATCH / 5 CLOSE / 1 DIVERGED / 0 MISSING / 0 EXTRA
+**Status:** 3 MATCH / 5 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity active findings:** F-03 — revolutionary Exploration governments are data-present but not Revolutions-gated; F-05 — celebration bonuses are data-present but not structured as canonical effects. F-06 is the remaining DIVERGED row.
+**Highest-severity active findings:** F-03 — revolutionary Exploration governments are data-present but not Revolutions-gated; F-05 — celebration bonuses are data-present but not structured as canonical effects.
 
 ---
 
@@ -192,11 +191,11 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 | Bucket | Findings | Total effort |
 |---|---|---|
 | S (half-day) | F-04, F-08 | 1d |
-| M (1-3 days) | F-03, F-05, F-06, F-07 | ~6-8d |
+| M (1-3 days) | F-03, F-05, F-07 | ~5-7d |
 | L (week+) | — | — |
-| **Remaining active work** | 6 | **~7-9d** |
+| **Remaining active work** | 5 | **~6-8d** |
 
-Recommended order: F-06 (single effective slot-count formula), F-04 (`civRequired` enforcement), F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
+Recommended order: F-04 (`civRequired` enforcement), F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
 
 ---
 

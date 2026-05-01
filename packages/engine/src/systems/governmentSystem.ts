@@ -24,6 +24,11 @@ import type {
 import type { GovernmentDef } from '../data/governments/governments';
 import type { PolicyDef } from '../data/governments/policies';
 import { CELEBRATION_DURATION } from '../state/CelebrationConstants';
+import {
+  effectivePolicySlotCount,
+  normalizePolicySlotArray,
+} from '../state/PolicySlotUtils';
+export { AGE_POLICY_SLOT_BASELINE, effectivePolicySlotCount } from '../state/PolicySlotUtils';
 
 /**
  * Widened action union accepted by governmentSystem. The engine-level
@@ -56,6 +61,11 @@ function hasGovernmentFields(
   );
 }
 
+function getPlayerGovernmentId(player: PlayerState): GovernmentId | null {
+  const governmentId = (player as Partial<PlayerWithGovernment>).governmentId;
+  return typeof governmentId === 'string' ? governmentId : null;
+}
+
 /** Look up a Government definition by id from config. */
 export function findGovernment(id: GovernmentId, config: GameConfig): GovernmentDef | undefined {
   return config.governments.get(id);
@@ -64,35 +74,6 @@ export function findGovernment(id: GovernmentId, config: GameConfig): Government
 /** Look up a Policy definition by id from config. */
 export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefined {
   return config.policies.get(id);
-}
-
-/**
- * Age baselines for policy slots (civic-tree F-10).
- * Each age guarantees a minimum number of wildcard policy slots regardless
- * of which government the player adopts.
- *
- * Effective slot count = max(governmentDef.policySlots.total, ageBaseline)
- */
-export const AGE_POLICY_SLOT_BASELINE: Readonly<Record<string, number>> = {
-  antiquity: 2,
-  exploration: 4,
-  modern: 6,
-} as const;
-
-/**
- * Returns the effective total policy slot count for a player:
- * max(government.policySlots.total, age baseline).
- *
- * When the government grants fewer slots than the age baseline, the baseline
- * wins — the age itself guarantees a minimum slot floor.
- * When the government grants MORE than the baseline, the government wins.
- */
-export function effectivePolicySlotCount(
-  gov: GovernmentDef,
-  age: string,
-): number {
-  const baseline = AGE_POLICY_SLOT_BASELINE[age] ?? 0;
-  return Math.max(gov.policySlots.total, baseline);
 }
 
 /**
@@ -123,10 +104,7 @@ export function canAdoptGovernment(
 
   if (!player.researchedCivics.includes(gov.unlockCivic)) return false;
 
-  if (
-    hasGovernmentFields(player) &&
-    player.governmentId === governmentId
-  ) {
+  if (getPlayerGovernmentId(player) === governmentId) {
     return false;
   }
 
@@ -139,7 +117,7 @@ export function canAdoptGovernment(
  * - `policySwapWindowOpen` must be true (W2-03 GP F-08).
  * - Policy must exist and be unlocked.
  * - Slot index must be within bounds (0..effectiveTotal-1) where effective
- *   total = max(gov.policySlots.total, age baseline) (civic-tree F-10).
+ *   total = effectivePolicySlotCount(...).
  * - All slots are wildcard — no category match required.
  */
 export function canSlotPolicy(
@@ -150,13 +128,13 @@ export function canSlotPolicy(
 ): boolean {
   const player = state.players.get(playerId);
   if (!player) return false;
-  if (!hasGovernmentFields(player)) return false;
-  if (player.governmentId === null) return false;
+  const governmentId = getPlayerGovernmentId(player);
+  if (governmentId === null) return false;
 
   // Swap window gate (W2-03 GP F-08)
   if (!player.policySwapWindowOpen) return false;
 
-  const gov = findGovernment(player.governmentId, state.config);
+  const gov = findGovernment(governmentId, state.config);
   if (!gov) return false;
 
   const policy = findPolicy(policyId, state.config);
@@ -166,8 +144,8 @@ export function canSlotPolicy(
   if (!player.researchedCivics.includes(policy.unlockCivic)) return false;
 
   // Slot index bounds check (no category — all wildcard).
-  // Use effective slot count = max(gov.policySlots.total, age baseline) (F-10).
-  const total = effectivePolicySlotCount(gov, state.age.currentAge);
+  // Use effective slot count with bonuses (F-10).
+  const total = effectivePolicySlotCount(gov, state.age.currentAge, player);
   if (slotIndex < 0 || slotIndex >= total) return false;
 
   return true;
@@ -177,16 +155,17 @@ export function canSlotPolicy(
 
 /**
  * Produce a fresh, empty flat slot array for the given Government.
- * Length = max(gov.policySlots.total, age baseline) (civic-tree F-10).
+ * Length uses `effectivePolicySlotCount`.
  * Slots reset on Government change.
  */
 function emptySlotArray(
   government: GovernmentDef | undefined,
   age: string,
+  player?: PlayerState,
 ): ReadonlyArray<PolicyId | null> {
   if (!government) return [];
-  const total = effectivePolicySlotCount(government, age);
-  return new Array<PolicyId | null>(total).fill(null);
+  const total = effectivePolicySlotCount(government, age, player);
+  return normalizePolicySlotArray(undefined, total) as ReadonlyArray<PolicyId | null>;
 }
 
 function updatePlayer(
@@ -207,9 +186,6 @@ function applyAdoptGovernment(
   const player = state.players.get(playerId);
   if (!player) return state;
 
-  // Graceful no-op if schema lacks Government fields.
-  if (!hasGovernmentFields(player)) return state;
-
   if (!canAdoptGovernment(state, playerId, governmentId)) return state;
 
   const gov = findGovernment(governmentId, state.config);
@@ -218,8 +194,8 @@ function applyAdoptGovernment(
   const updated: PlayerWithGovernment = {
     ...player,
     governmentId,
-    // Slot count = max(gov.policySlots.total, age baseline) (civic-tree F-10)
-    slottedPolicies: emptySlotArray(gov, state.age.currentAge),
+    // Slot count uses effective formula (F-10 + social/civic/legacy bonuses).
+    slottedPolicies: emptySlotArray(gov, state.age.currentAge, player),
     // Lock this player's government for the rest of the age (W2-03 CT F-07)
     governmentLockedForAge: true,
   };
@@ -234,26 +210,25 @@ function applySlotPolicy(
   const { playerId, slotIndex, policyId } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
-  if (!hasGovernmentFields(player)) return state;
+  const governmentId = getPlayerGovernmentId(player);
+  if (governmentId === null) return state;
 
   if (!canSlotPolicy(state, playerId, slotIndex, policyId)) {
     return state;
   }
 
-  const gov = findGovernment(player.governmentId!, state.config);
+  const gov = findGovernment(governmentId, state.config);
   if (!gov) return state;
 
-  // Use effective slot count (max of gov slots and age baseline — F-10)
-  const total = effectivePolicySlotCount(gov, state.age.currentAge);
-  const current = player.slottedPolicies;
-  const next: Array<PolicyId | null> = new Array<PolicyId | null>(total).fill(null);
-  for (let i = 0; i < total; i++) {
-    next[i] = current[i] ?? null;
-  }
+  // Use effective slot count with bonuses (F-10 + social/civic/legacy).
+  const total = effectivePolicySlotCount(gov, state.age.currentAge, player);
+  const current = Array.isArray(player.slottedPolicies) ? player.slottedPolicies : undefined;
+  const next = normalizePolicySlotArray(current, total) as Array<PolicyId | null>;
   next[slotIndex] = policyId;
 
   const updated: PlayerWithGovernment = {
     ...player,
+    governmentId,
     slottedPolicies: next,
     // Consume the swap window (W2-03 GP F-08)
     policySwapWindowOpen: false,
@@ -269,27 +244,25 @@ function applyUnslotPolicy(
   const { playerId, slotIndex } = action;
   const player = state.players.get(playerId);
   if (!player) return state;
-  if (!hasGovernmentFields(player)) return state;
-  if (player.governmentId === null) return state;
+  const governmentId = getPlayerGovernmentId(player);
+  if (governmentId === null) return state;
 
-  const gov = findGovernment(player.governmentId, state.config);
+  const gov = findGovernment(governmentId, state.config);
   if (!gov) return state;
 
-  // Use effective slot count (max of gov slots and age baseline — F-10)
-  const total = effectivePolicySlotCount(gov, state.age.currentAge);
+  // Use effective slot count with bonuses (F-10 + social/civic/legacy).
+  const total = effectivePolicySlotCount(gov, state.age.currentAge, player);
   if (slotIndex < 0 || slotIndex >= total) return state;
 
-  const current = player.slottedPolicies;
+  const current = Array.isArray(player.slottedPolicies) ? player.slottedPolicies : [];
   if ((current[slotIndex] ?? null) === null) return state;
 
-  const next: Array<PolicyId | null> = new Array<PolicyId | null>(total).fill(null);
-  for (let i = 0; i < total; i++) {
-    next[i] = current[i] ?? null;
-  }
+  const next = normalizePolicySlotArray(current, total) as Array<PolicyId | null>;
   next[slotIndex] = null;
 
   const updated: PlayerWithGovernment = {
     ...player,
+    governmentId,
     slottedPolicies: next,
   };
 
@@ -356,13 +329,23 @@ function applyPickCelebrationBonus(
   // BB1.5 (S10): cap celebrationCount at 7 — threshold effects stop after the 7th celebration
   const MAX_CELEBRATION_COUNT = 7;
 
-  // FF2: extend the flat slottedPolicies array with one extra null slot so the
-  // new bonus slot is immediately slottable. socialPolicySlots tracks the count;
-  // slottedPolicies carries the actual entries. Both must stay in sync.
-  // Only applicable when the player already has the Government fields (flat array model).
+  const nextSocialPolicySlots = (player.socialPolicySlots ?? 0) + 1;
+
+  // FF2/F-06: normalize the flat slottedPolicies array to the full effective
+  // slot count after the celebration grant. This preserves existing policies
+  // while bringing stale arrays back in sync with social/civic/legacy counters.
   const extendedSlottedPolicies: ReadonlyArray<PolicyId | null> | undefined =
     hasGovernmentFields(player)
-      ? [...(player.slottedPolicies as ReadonlyArray<PolicyId | null>), null]
+      ? (() => {
+          const total = effectivePolicySlotCount(gov, state.age.currentAge, {
+            ...player,
+            socialPolicySlots: nextSocialPolicySlots,
+          });
+          return normalizePolicySlotArray(
+            player.slottedPolicies as ReadonlyArray<PolicyId | null>,
+            total,
+          ) as ReadonlyArray<PolicyId | null>;
+        })()
       : undefined;
 
   const updated: PlayerState = {
@@ -373,7 +356,9 @@ function applyPickCelebrationBonus(
     celebrationBonus: 10,
     celebrationCount: Math.min(MAX_CELEBRATION_COUNT, player.celebrationCount + 1),
     // F-04: increment social policy slots counter
-    socialPolicySlots: (player.socialPolicySlots ?? 0) + 1,
+    socialPolicySlots: nextSocialPolicySlots,
+    // New bonus slot is immediately usable.
+    policySwapWindowOpen: true,
     // Clear the pending prompt
     pendingCelebrationChoice: null,
     // FF2: extend slot array if present

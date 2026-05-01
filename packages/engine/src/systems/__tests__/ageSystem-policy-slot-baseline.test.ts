@@ -2,7 +2,7 @@
  * Per-age policy slot baseline tests (civic-tree F-10 / JJ2.2).
  *
  * Verifies that when a player adopts a government, their effective policy
- * slot count is max(gov.policySlots.total, age baseline):
+ * slot count is gov.base + bonuses where base is max(gov.policySlots.total, age baseline):
  *   - Antiquity baseline: 2
  *   - Exploration baseline: 4
  *   - Modern baseline: 6
@@ -32,6 +32,9 @@ function withGovFields(
     governmentId?: string | null;
     slottedPolicies?: Array<string | null>;
     governmentLockedForAge?: boolean;
+    socialPolicySlots?: number;
+    policySlotCounts?: PlayerState['policySlotCounts'];
+    legacyBonuses?: PlayerState['legacyBonuses'];
   } = {},
 ): PlayerState {
   return {
@@ -39,6 +42,9 @@ function withGovFields(
     governmentId: overrides.governmentId ?? null,
     slottedPolicies: overrides.slottedPolicies ?? [],
     governmentLockedForAge: overrides.governmentLockedForAge ?? false,
+    socialPolicySlots: overrides.socialPolicySlots ?? player.socialPolicySlots,
+    policySlotCounts: overrides.policySlotCounts ?? player.policySlotCounts,
+    legacyBonuses: overrides.legacyBonuses ?? player.legacyBonuses,
   } as unknown as PlayerState;
 }
 
@@ -141,6 +147,60 @@ describe('effectivePolicySlotCount', () => {
     };
     expect(effectivePolicySlotCount(highSlotGov, 'antiquity')).toBe(5);
   });
+
+  it('adds socialPolicySlots when provided', () => {
+    const mockGov: GovernmentDef = {
+      id: 'classical_republic',
+      name: 'Classical Republic',
+      age: 'antiquity',
+      unlockCivic: 'code_of_laws',
+      policySlots: { total: 2 },
+      legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
+      description: '',
+      celebrationBonuses: [
+        { id: 'a', name: 'a', description: '' },
+        { id: 'b', name: 'b', description: '' },
+      ],
+    };
+    const player = createTestPlayer({
+      id: 'p1',
+      socialPolicySlots: 2,
+    });
+    expect(effectivePolicySlotCount(mockGov, 'antiquity', player)).toBe(4);
+  });
+
+  it('adds policySlotCounts and legacy GRANT_POLICY_SLOT effects when provided', () => {
+    const mockGov: GovernmentDef = {
+      id: 'classical_republic',
+      name: 'Classical Republic',
+      age: 'antiquity',
+      unlockCivic: 'code_of_laws',
+      policySlots: { total: 2 },
+      legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
+      description: '',
+      celebrationBonuses: [
+        { id: 'a', name: 'a', description: '' },
+        { id: 'b', name: 'b', description: '' },
+      ],
+    };
+    const player = {
+      ...createTestPlayer({
+        id: 'p1',
+      }),
+      policySlotCounts: {
+        military: 1,
+        economic: 1,
+        diplomatic: 0,
+        wildcard: 0,
+      },
+      legacyBonuses: [
+        { source: 'legacy:one', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'military' } },
+        { source: 'legacy:two', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' } },
+        { source: 'legacy:other', effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 1 } },
+      ],
+    } as ReturnType<typeof createTestPlayer>;
+    expect(effectivePolicySlotCount(mockGov, 'antiquity', player)).toBe(6);
+  });
 });
 
 describe('policy slot baseline via SET_GOVERNMENT (integration)', () => {
@@ -212,5 +272,35 @@ describe('policy slot baseline via SET_GOVERNMENT (integration)', () => {
     // slottedPolicies length = effective slot count = max(4, 6) = 6
     expect(after.slottedPolicies?.length).toBe(6);
     expect(after.slottedPolicies).toEqual([null, null, null, null, null, null]);
+  });
+
+  it('SET_GOVERNMENT includes bonus slots from socialPolicySlots, policySlotCounts, and legacy grants', () => {
+    const player = withGovFields(
+      createTestPlayer({
+        id: 'p1',
+        age: 'antiquity',
+        researchedCivics: ['code_of_laws'],
+        socialPolicySlots: 1,
+      }),
+      {
+        slottedPolicies: [null, null],
+        policySlotCounts: {
+          military: 0,
+          economic: 1,
+          diplomatic: 0,
+          wildcard: 0,
+        },
+        legacyBonuses: [
+          { source: 'legacy:one', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' } },
+        ],
+      },
+    );
+
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+    const after = adoptGov(state, 'p1', 'classical_republic');
+    expect(after.slottedPolicies?.length).toBe(5);
   });
 });

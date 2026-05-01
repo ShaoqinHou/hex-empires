@@ -18,6 +18,7 @@ import {
 } from '../governmentSystem';
 import type { GovernmentAction } from '../../types/Government';
 import type { PlayerState } from '../../types/GameState';
+import { createInitialState } from '../../state/GameInitializer';
 import { createTestState, createTestPlayer } from './helpers';
 
 /**
@@ -32,6 +33,9 @@ function withGovernmentFields(
     governmentLockedForAge?: boolean;
     policySwapWindowOpen?: boolean;
     ideology?: 'democracy' | 'fascism' | 'communism' | null;
+    socialPolicySlots?: number;
+    policySlotCounts?: PlayerState['policySlotCounts'];
+    legacyBonuses?: PlayerState['legacyBonuses'];
   } = {},
 ): PlayerState {
   return {
@@ -40,6 +44,9 @@ function withGovernmentFields(
     slottedPolicies: overrides.slottedPolicies ?? [],
     governmentLockedForAge: overrides.governmentLockedForAge ?? false,
     policySwapWindowOpen: overrides.policySwapWindowOpen ?? false,
+    socialPolicySlots: overrides.socialPolicySlots ?? player.socialPolicySlots ?? 0,
+    policySlotCounts: overrides.policySlotCounts ?? player.policySlotCounts,
+    legacyBonuses: overrides.legacyBonuses ?? player.legacyBonuses,
     ideology: overrides.ideology ?? null,
   } as unknown as PlayerState;
 }
@@ -93,8 +100,7 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
-  it('SET_GOVERNMENT gracefully no-ops when PlayerState lacks governmentId/slottedPolicies', () => {
-    // Vanilla helper player — no Government fields.
+  it('SET_GOVERNMENT initializes government fields when PlayerState lacks them', () => {
     const player = createTestPlayer({
       id: 'p1',
       researchedCivics: ['code_of_laws'],
@@ -108,7 +114,12 @@ describe('governmentSystem', () => {
       governmentId: 'classical_republic',
     };
     const next = governmentSystem(state, action);
-    expect(next).toBe(state);
+    const updated = next.players.get('p1') as PlayerState & {
+      governmentId: string | null;
+      slottedPolicies: ReadonlyArray<string | null>;
+    };
+    expect(updated.governmentId).toBe('classical_republic');
+    expect(updated.slottedPolicies).toEqual([null, null]);
   });
 
   // ── ADOPT_GOVERNMENT — valid ──
@@ -148,6 +159,33 @@ describe('governmentSystem', () => {
     expect(updated.slottedPolicies[1]).toBeNull();
     // Sets the age lock (W2-03 CT F-07)
     expect(updated.governmentLockedForAge).toBe(true);
+  });
+
+  it('fresh initialized players can adopt a government after researching its civic', () => {
+    const initial = createInitialState({
+      civId: 'rome',
+      leaderId: 'augustus',
+      mapWidth: 8,
+      mapHeight: 8,
+      numAI: 0,
+    }, 42);
+    const player = {
+      ...initial.players.get('player1')!,
+      researchedCivics: ['code_of_laws'],
+    };
+    const state = {
+      ...initial,
+      players: new Map([['player1', player]]),
+    };
+
+    const next = governmentSystem(state, {
+      type: 'SET_GOVERNMENT',
+      playerId: 'player1',
+      governmentId: 'classical_republic',
+    });
+    const updated = next.players.get('player1')!;
+    expect(updated.governmentId).toBe('classical_republic');
+    expect(updated.slottedPolicies).toEqual([null, null]);
   });
 
   it('SET_GOVERNMENT when already on that government returns state unchanged', () => {
@@ -285,6 +323,119 @@ describe('governmentSystem', () => {
       slottedPolicies: ReadonlyArray<string | null>;
     };
     expect(updated.slottedPolicies[1]).toBe('diplomatic_league');
+  });
+
+  it('SLOT_POLICY fills a bonus slot granted by socialPolicySlots', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        socialPolicySlots: 1,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    const action: GovernmentAction = {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 2,
+      policyId: 'discipline',
+    };
+    const next = governmentSystem(state, action);
+    const updated = next.players.get('p1') as PlayerState & { slottedPolicies: ReadonlyArray<string | null> };
+    expect(updated.slottedPolicies).toHaveLength(3);
+    expect(updated.slottedPolicies[2]).toBe('discipline');
+  });
+
+  it('SLOT_POLICY fills a bonus slot granted by policySlotCounts', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        policySlotCounts: {
+          military: 0,
+          economic: 0,
+          diplomatic: 1,
+          wildcard: 0,
+        },
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    const action: GovernmentAction = {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 2,
+      policyId: 'discipline',
+    };
+    const next = governmentSystem(state, action);
+    const updated = next.players.get('p1') as PlayerState & { slottedPolicies: ReadonlyArray<string | null> };
+    expect(updated.slottedPolicies).toHaveLength(3);
+    expect(updated.slottedPolicies[2]).toBe('discipline');
+  });
+
+  it('SLOT_POLICY fills a bonus slot granted by legacy GRANT_POLICY_SLOT effects', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        legacyBonuses: [
+          { source: 'legacy:example-1', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'economic' } },
+          { source: 'legacy:example-2', effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 1 } },
+        ],
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    const action: GovernmentAction = {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 2,
+      policyId: 'discipline',
+    };
+    const next = governmentSystem(state, action);
+    const updated = next.players.get('p1') as PlayerState & { slottedPolicies: ReadonlyArray<string | null> };
+    expect(updated.slottedPolicies).toHaveLength(3);
+    expect(updated.slottedPolicies[2]).toBe('discipline');
+  });
+
+  it('SLOT_POLICY rebuilds a missing slot array for migrated government state', () => {
+    const player = createTestPlayer({
+      id: 'p1',
+      researchedCivics: ['code_of_laws'],
+      governmentId: 'classical_republic',
+      policySwapWindowOpen: true,
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+
+    const next = governmentSystem(state, {
+      type: 'SLOT_POLICY',
+      playerId: 'p1',
+      slotIndex: 0,
+      policyId: 'discipline',
+    });
+    const updated = next.players.get('p1') as PlayerState & { slottedPolicies: ReadonlyArray<string | null> };
+    expect(updated.slottedPolicies).toEqual(['discipline', null]);
   });
 
   it('SLOT_POLICY blocked when policySwapWindowOpen is false', () => {
@@ -476,6 +627,72 @@ describe('governmentSystem', () => {
       players: new Map([['p1', player]]),
     });
     expect(canSlotPolicy(state, 'p1', 0, 'discipline')).toBe(true);
+  });
+
+  it('canSlotPolicy accepts a slot index granted by socialPolicySlots bonus', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        socialPolicySlots: 1,
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canSlotPolicy(state, 'p1', 2, 'discipline')).toBe(true);
+  });
+
+  it('canSlotPolicy accepts a slot index granted by policySlotCounts bonus', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        policySlotCounts: {
+          military: 0,
+          economic: 1,
+          diplomatic: 0,
+          wildcard: 0,
+        },
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canSlotPolicy(state, 'p1', 2, 'discipline')).toBe(true);
+  });
+
+  it('canSlotPolicy accepts a slot index granted by legacy GRANT_POLICY_SLOT effects', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        researchedCivics: ['code_of_laws'],
+      }),
+      {
+        governmentId: 'classical_republic',
+        slottedPolicies: [null, null],
+        policySwapWindowOpen: true,
+        legacyBonuses: [
+          { source: 'legacy:example-1', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'military' } },
+          { source: 'legacy:example-2', effect: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 1 } },
+          { source: 'legacy:example-3', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' } },
+        ],
+      },
+    );
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+    });
+    expect(canSlotPolicy(state, 'p1', 3, 'discipline')).toBe(true);
   });
 
   // ── SELECT_IDEOLOGY (W2-03 CT F-08) ──
@@ -807,8 +1024,37 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
     expect(slots[1]).toBeNull();
   });
 
-  it('FF2: celebration pick with already-filled slots preserves existing policies and appends null', () => {
-    // Player has 2 filled slots; celebration should extend to 3 without wiping them.
+  it('FF2: celebration pick opens policySwapWindowOpen so the new bonus slot can be filled', () => {
+    const player = {
+      ...createTestPlayer({ id: 'p1' }),
+      governmentId: 'classical_republic',
+      slottedPolicies: [null, null],
+      pendingCelebrationChoice: { governmentId: 'classical_republic' },
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 0,
+      policySwapWindowOpen: false,
+    } as ReturnType<typeof createTestPlayer> & {
+      governmentId: string;
+      slottedPolicies: Array<string | null>;
+      pendingCelebrationChoice: { governmentId: string };
+      socialPolicySlots: number;
+      policySwapWindowOpen: boolean;
+    };
+    const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-culture',
+    });
+    const updated = next.players.get('p1')!;
+    expect((updated as typeof updated & { policySwapWindowOpen: boolean }).policySwapWindowOpen).toBe(true);
+  });
+
+  it('FF2: celebration pick with already-filled slots preserves existing policies and syncs effective slots', () => {
+    // Player has 2 filled slots and 1 existing social slot counter; celebration
+    // should normalize to the full 4-slot effective total without wiping cards.
     const player = {
       ...createTestPlayer({ id: 'p1', researchedCivics: ['code_of_laws'] }),
       governmentId: 'classical_republic',
@@ -832,10 +1078,48 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
     });
     const updated = next.players.get('p1')!;
     const slots = (updated as typeof updated & { slottedPolicies: Array<string | null> }).slottedPolicies;
-    expect(slots).toHaveLength(3);
+    expect(slots).toHaveLength(4);
     expect(slots[0]).toBe('discipline');
     expect(slots[1]).toBe('urban_planning');
-    expect(slots[2]).toBeNull(); // new bonus slot
+    expect(slots[2]).toBeNull(); // existing bonus slot
+    expect(slots[3]).toBeNull(); // new bonus slot
+  });
+
+  it('FF2: celebration pick normalizes slots to full effective total when other bonus counters exist', () => {
+    const player = {
+      ...createTestPlayer({ id: 'p1' }),
+      governmentId: 'classical_republic',
+      slottedPolicies: ['discipline', null],
+      pendingCelebrationChoice: { governmentId: 'classical_republic' },
+      celebrationCount: 0,
+      celebrationBonus: 0,
+      celebrationTurnsLeft: 0,
+      socialPolicySlots: 0,
+      policySlotCounts: { military: 0, economic: 1, diplomatic: 0, wildcard: 0 },
+      legacyBonuses: [
+        { source: 'legacy:slot', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' } },
+      ],
+    } as ReturnType<typeof createTestPlayer> & {
+      governmentId: string;
+      slottedPolicies: Array<string | null>;
+      pendingCelebrationChoice: { governmentId: string };
+      socialPolicySlots: number;
+      policySlotCounts: NonNullable<PlayerState['policySlotCounts']>;
+    };
+    const state = createTestState({ players: new Map([['p1', player as ReturnType<typeof createTestPlayer>]]) });
+    const next = governmentSystem(state, {
+      type: 'PICK_CELEBRATION_BONUS',
+      playerId: 'p1',
+      bonusId: 'classical-rep-wonder',
+    });
+    const updated = next.players.get('p1')!;
+    const slots = (updated as typeof updated & { slottedPolicies: Array<string | null> }).slottedPolicies;
+    expect(slots).toHaveLength(5);
+    expect(slots[0]).toBe('discipline');
+    expect(slots[1]).toBeNull();
+    expect(slots[2]).toBeNull();
+    expect(slots[3]).toBeNull();
+    expect(slots[4]).toBeNull();
   });
 
   it('FF2: player without government fields (no slottedPolicies) still gets socialPolicySlots increment but no slottedPolicies change', () => {

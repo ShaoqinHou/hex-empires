@@ -135,7 +135,7 @@ interface AIPlayerSnapshot {
   faith: number;
   pantheonId: string | null;
   governmentId: string | null;
-  slottedPolicies: Record<string, unknown> | null;
+  slottedPolicies: unknown[] | Record<string, unknown> | null;
   researchedTechs: string[];
   researchedCivics: string[];
 }
@@ -150,16 +150,22 @@ async function aiSnapshot(page: Page): Promise<AIPlayerSnapshot[]> {
         faith?: number;
         pantheonId?: string | null;
         governmentId?: string | null;
-        slottedPolicies?: Map<string, unknown>;
+        slottedPolicies?: Map<string, unknown> | unknown[] | Record<string, unknown>;
         researchedTechs?: Iterable<string>;
         researchedCivics?: Iterable<string>;
       };
+      const slottedPolicies =
+        Array.isArray(player.slottedPolicies)
+          ? player.slottedPolicies
+          : player.slottedPolicies instanceof Map
+            ? Object.fromEntries(player.slottedPolicies)
+            : player.slottedPolicies ?? null;
       out.push({
         id,
         faith: player.faith ?? 0,
         pantheonId: player.pantheonId ?? null,
         governmentId: player.governmentId ?? null,
-        slottedPolicies: player.slottedPolicies ? Object.fromEntries(player.slottedPolicies) : null,
+        slottedPolicies,
         researchedTechs: [...(player.researchedTechs ?? [])],
         researchedCivics: [...(player.researchedCivics ?? [])],
       });

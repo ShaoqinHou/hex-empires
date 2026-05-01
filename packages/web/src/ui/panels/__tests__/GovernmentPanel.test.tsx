@@ -91,6 +91,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     crises: [],
     log: [],
     config: createGameConfig(),
+    age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     ...overrides,
   } as unknown as GameState;
 }
@@ -165,6 +166,52 @@ describe('GovernmentPanel', () => {
       .toContain('Serfdom');
     // Slot 1 is null → dashed-border placeholder showing "—"
     expect(getByTestId('government-panel-slot-1').textContent)
+      .toBe('—');
+  });
+
+  it('adds effective social-policy bonus slots to the total', () => {
+    // Classical Republic = 2 base slots (antiquity baseline), +1
+    // socialPolicySlots = 3 total visible slots.
+    const player = makePlayer({
+      governmentId: 'classical_republic',
+      socialPolicySlots: 1,
+      slottedPolicies: ['serfdom', null, null] as unknown as PlayerState['slottedPolicies'],
+    });
+    setMockState(makeState({ players: new Map([[player.id, player]]) }));
+
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
+
+    // The count label should report 3 slots and index 2 should be rendered.
+    expect(getByTestId('government-panel-slot-count-total').textContent)
+      .toContain('3');
+    expect(getByTestId('government-panel-slot-2').textContent)
+      .toBe('—');
+  });
+
+  it('adds civic and legacy effective policy slots to the total', () => {
+    const player = makePlayer({
+      governmentId: 'classical_republic',
+      policySlotCounts: { military: 0, economic: 1, diplomatic: 0, wildcard: 0 },
+      legacyBonuses: [
+        { source: 'attribute:envoy-corps', effect: { type: 'GRANT_POLICY_SLOT', slotType: 'wildcard' } },
+      ],
+      slottedPolicies: ['serfdom', null, null, null] as unknown as PlayerState['slottedPolicies'],
+    });
+    setMockState(makeState({ players: new Map([[player.id, player]]) }));
+
+    const { getByTestId } = render(
+      <PanelManagerProvider>
+        <GovernmentPanel onClose={() => {}} />
+      </PanelManagerProvider>,
+    );
+
+    expect(getByTestId('government-panel-slot-count-total').textContent)
+      .toContain('4');
+    expect(getByTestId('government-panel-slot-3').textContent)
       .toBe('—');
   });
 

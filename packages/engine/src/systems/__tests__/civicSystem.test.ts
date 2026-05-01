@@ -513,6 +513,25 @@ describe('Y2.1: civic completion grants typed policy slots', () => {
     expect(nextPlayer.policySlotCounts?.diplomatic).toBe(0);
   });
 
+  it('completing a slot-granting civic grows active government slots immediately', () => {
+    const player = createTestPlayer({
+      currentCivic: 'code_of_laws',
+      civicProgress: 24,
+      governmentId: 'classical_republic',
+      slottedPolicies: [null, null],
+    });
+    const city = createTestCity({ buildings: ['monument'] });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+
+    const next = civicSystem(state, { type: 'END_TURN' });
+    const nextPlayer = next.players.get('p1')!;
+    expect(nextPlayer.policySlotCounts?.economic).toBe(1);
+    expect(nextPlayer.slottedPolicies).toEqual([null, null, null]);
+  });
+
   it('completing a civic without GRANT_POLICY_SLOT does not modify policySlotCounts', () => {
     // craftsmanship has no effects — only masteryUnlocks
     const player = createTestPlayer({
