@@ -23,7 +23,7 @@
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 1M / 2C / 1D / 4X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
-| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 0M / 2C / 3D / 3X / 0E |
+| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 2M / 5C / 1D / 0X / 0E |
 | independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 0M / 0C / 1D / 7X / 0E |
 | leaders | `.codex/gdd/audits/leaders.md` | 11 | 1M / 1C / 3D / 5X / 1E |
 | legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 13 | 1M / 4C / 5D / 3X / 0E |
@@ -91,10 +91,10 @@
 | diplomacy-influence | F-04 | Endeavor Support/Accept/Reject 3-way response | ⊘ MISSING | M | `packages/engine/src/systems/diplomacySystem.ts:304-350` |
 | diplomacy-influence | F-05 | Espionage system | ⊘ MISSING | L | Entire engine |
 | diplomacy-influence | F-07 | Independent Powers interaction | ⊘ MISSING | L | Entire engine |
-| government-policies | F-01 | Typed slot categories retained — all slots should be wildcar | ⚠ DIVERGED | M | `packages/engine/src/data/governments/governments.ts:14-25`, `packages/engine/sr |
-| government-policies | F-02 | Chiefdom listed as a VII government — does not exist in VII | ⚠ DIVERGED | S | `packages/engine/src/data/governments/governments.ts:40-49` |
-| government-policies | F-03 | Exploration Age government roster wrong | ⚠ DIVERGED | M | `packages/engine/src/data/governments/governments.ts:86-117` |
-| government-policies | F-05 | Government celebration bonuses missing from GovernmentDef da | ⊘ MISSING | M | `packages/engine/src/data/governments/governments.ts:27-36` (local `GovernmentDe |
+| government-policies | F-01 | Typed slot categories retained -- all slots should be wildca | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
+| government-policies | F-02 | Chiefdom listed as a VII government -- does not exist in VII | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts` |
+| government-policies | F-03 | Exploration Age government roster wrong | ≈ CLOSE | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
+| government-policies | F-05 | Government celebration bonuses missing from GovernmentDef da | ≈ CLOSE | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
 | independent-powers | F-01 | `IndependentPowerState` entity absent | ⊘ MISSING | M | `types/GameState.ts` |
 | independent-powers | F-02 | `independentPowerSystem.ts` absent | ⊘ MISSING | L | `systems/` (no file) |
 | independent-powers | F-03 | Age-transition IP reset absent | ⊘ MISSING | S | `systems/ageSystem.ts` |
@@ -210,9 +210,9 @@
 | diplomacy-influence | F-11 | Diplomatic Ledger / opinion modifier history | ⊘ MISSING | S | `packages/engine/src/types/GameState.ts` (DiplomacyState) |
 | diplomacy-influence | F-13 | Peace deals | ⚠ DIVERGED | M | `packages/engine/src/systems/diplomacySystem.ts:143-169` |
 | diplomacy-influence | F-14 | Surprise war War Support delta scaling | ≈ CLOSE | S | `packages/engine/src/systems/diplomacySystem.ts:102` |
-| government-policies | F-04 | Modern Age government roster incomplete | ≈ CLOSE | S | `packages/engine/src/data/governments/governments.ts:121-143` |
-| government-policies | F-06 | Government system not wired to celebration slot grants | ⊘ MISSING | M | `packages/engine/src/systems/governmentSystem.ts` (no CELEBRATION_TRIGGER handle |
-| government-policies | F-07 | Crisis policy slots entirely absent | ⊘ MISSING | M | `packages/engine/src/types/Government.ts`, `packages/engine/src/systems/governme |
+| government-policies | F-04 | Modern Age government roster incomplete | ≈ CLOSE | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
+| government-policies | F-06 | Government system not wired to celebration slot grants | ⚠ DIVERGED | M | `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/types/Ga |
+| government-policies | F-07 | Crisis policy slots entirely absent | ≈ CLOSE | M | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/crisisSys |
 | independent-powers | F-06 | Data content registry (named IP factions) absent | ⊘ MISSING | S | `data/` (no directory) |
 | independent-powers | F-07 | DiplomacyPanel IP tab absent | ⊘ MISSING | S | `DiplomacyPanel.tsx` (1-327) |
 | leaders | F-03 | Leader roster is 9 leaders; VII shipped 21 unique (26 w/ per | ⚠ DIVERGED | M | `data/leaders/all-leaders.ts` |
@@ -350,10 +350,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 44 |
-| CLOSE | 54 |
-| DIVERGED | 68 |
-| MISSING | 102 |
+| MATCH | 46 |
+| CLOSE | 57 |
+| DIVERGED | 66 |
+| MISSING | 99 |
 | EXTRA | 18 |
 | **Total findings** | **286** |
 

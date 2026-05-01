@@ -73,24 +73,72 @@ describe('ALL_GOVERNMENTS — celebrationBonuses (DD3.2)', () => {
     expect(withBonuses.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('classical_republic has both celebration bonus options', () => {
-    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'classical_republic');
-    expect(g).toBeDefined();
-    expect(g!.celebrationBonuses[0].id).toBe('classical-rep-culture');
-    expect(g!.celebrationBonuses[1].id).toBe('classical-rep-wonder');
-  });
+  it('each listed government has exact celebration bonus names', () => {
+    const expectations = [
+      {
+        id: 'classical_republic',
+        bonuses: ['+20% Culture for 10 turns', '+15% Production toward Wonders for 10 turns'],
+      },
+      {
+        id: 'despotism',
+        bonuses: ['+20% Science for 10 turns', '+30% Production toward Infantry Units for 10 turns'],
+      },
+      {
+        id: 'oligarchy',
+        bonuses: ['+20% Food for 10 turns', '+30% Production toward Buildings for 10 turns'],
+      },
+      {
+        id: 'theocracy',
+        bonuses: ['+20% Culture for 10 turns', '+40% Production toward Civilian and Support Units for 10 turns'],
+      },
+      {
+        id: 'plutocracy',
+        bonuses: ['+20% Gold for 10 turns', '+30% Production toward Overbuilding for 10 turns'],
+      },
+      {
+        id: 'feudal_monarchy',
+        bonuses: ['+20% Food for 10 turns', '+30% Production toward Cavalry and Naval Units for 10 turns'],
+      },
+      {
+        id: 'revolutionary_republic',
+        bonuses: ['+100% Production toward Military Units for 10 turns', '+6 War Support for 10 turns'],
+      },
+      {
+        id: 'revolutionary_authoritarianism',
+        bonuses: ['+20% Culture and Science for 10 turns', '+100% Influence toward Sanctions'],
+      },
+      {
+        id: 'constitutional_monarchy',
+        bonuses: ['+40% Gold for 10 turns', '+100% Influence toward Diplomatic Endeavors'],
+      },
+      {
+        id: 'authoritarianism',
+        bonuses: ['+30% Production toward Military Units for 10 turns', '+3 Combat Strength for all Units'],
+      },
+      {
+        id: 'bureaucratic_monarchy',
+        bonuses: ['+20% Gold for 10 turns', '+30% Relationship change from Endeavors and Sanctions for 10 turns'],
+      },
+      {
+        id: 'elective_republic',
+        bonuses: ['+20% Culture for 10 turns', '+20% Science for 10 turns'],
+      },
+      {
+        id: 'revolucion',
+        bonuses: [
+          '+30% Culture for 10 turns, +50% Influence toward Diplomatic Actions for 10 turns',
+          '+30% Science for 10 turns, +40% Production toward Military Units for 10 turns',
+        ],
+      },
+    ];
 
-  it('despotism has military and tribute celebration options', () => {
-    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'despotism');
-    expect(g).toBeDefined();
-    expect(g!.celebrationBonuses[0].id).toBe('despotism-military');
-    expect(g!.celebrationBonuses[1].id).toBe('despotism-tribute');
-  });
-
-  it('oligarchy has trade and growth celebration options', () => {
-    const g = ALL_GOVERNMENTS.find((gov) => gov.id === 'oligarchy');
-    expect(g).toBeDefined();
-    expect(g!.celebrationBonuses[0].id).toBe('oligarchy-trade');
-    expect(g!.celebrationBonuses[1].id).toBe('oligarchy-growth');
+    for (const expectation of expectations) {
+      const g = ALL_GOVERNMENTS.find((gov) => gov.id === expectation.id);
+      expect(g, `missing government ${expectation.id}`).toBeDefined();
+      expect(
+        g!.celebrationBonuses.map((bonus) => bonus.name),
+        `${expectation.id} celebration names`,
+      ).toEqual(expectation.bonuses);
+    }
   });
 });

@@ -74,8 +74,8 @@ export const CLASSICAL_REPUBLIC: GovernmentDef = {
     },
     {
       id: 'classical-rep-wonder',
-      name: '+15% Wonder Production for 10 turns',
-      description: 'Wonder construction production boosted by 15% for the celebration window.',
+      name: '+15% Production toward Wonders for 10 turns',
+      description: 'Wonder production increased by 15% for the celebration window.',
     },
   ],
 };
@@ -91,14 +91,14 @@ export const DESPOTISM: GovernmentDef = {
     'Strong-arm rule. +2 Combat Strength to Melee units while active.',
   celebrationBonuses: [
     {
-      id: 'despotism-military',
-      name: '+20% Unit Production for 10 turns',
-      description: 'All military unit production increased by 20% for the celebration window.',
+      id: 'despotism-science',
+      name: '+20% Science for 10 turns',
+      description: 'Empire science output increased by 20% for the celebration window.',
     },
     {
-      id: 'despotism-tribute',
-      name: '+30 Gold per turn for 10 turns',
-      description: 'Empire receives a tribute of +30 Gold per turn during the celebration.',
+      id: 'despotism-infantry',
+      name: '+30% Production toward Infantry Units for 10 turns',
+      description: 'Infantry unit production increased by 30% for the celebration window.',
     },
   ],
 };
@@ -114,14 +114,14 @@ export const OLIGARCHY: GovernmentDef = {
     'Rule by elite council. +2 Gold per turn to the empire while active.',
   celebrationBonuses: [
     {
-      id: 'oligarchy-trade',
-      name: '+25% Gold for 10 turns',
-      description: 'Empire gold output increased by 25% for the celebration window.',
+      id: 'oligarchy-food',
+      name: '+20% Food for 10 turns',
+      description: 'Empire food output increased by 20% for the celebration window.',
     },
     {
-      id: 'oligarchy-growth',
-      name: '+20% City Growth for 10 turns',
-      description: 'All city food-toward-growth increased by 20% for the celebration window.',
+      id: 'oligarchy-buildings',
+      name: '+30% Production toward Buildings for 10 turns',
+      description: 'Building production increased by 30% for the celebration window.',
     },
   ],
 };
@@ -139,14 +139,14 @@ export const FEUDAL_MONARCHY: GovernmentDef = {
     'Hereditary royal rule. +2 Food per City-Center while active.',
   celebrationBonuses: [
     {
-      id: 'feudal-monarchy-levies',
-      name: '+2 Free Units for 10 turns',
-      description: 'Empire receives 2 free military units (no maintenance) for the celebration window.',
+      id: 'feudal-monarchy-food',
+      name: '+20% Food for 10 turns',
+      description: 'Empire food output increased by 20% for the celebration window.',
     },
     {
-      id: 'feudal-monarchy-harvest',
-      name: '+30% Food for 10 turns',
-      description: 'All city food output increased by 30% for the celebration window.',
+      id: 'feudal-monarchy-cavalry-naval',
+      name: '+30% Production toward Cavalry and Naval Units for 10 turns',
+      description: 'Cavalry and naval unit production increased by 30% for the celebration window.',
     },
   ],
 };
@@ -162,14 +162,14 @@ export const PLUTOCRACY: GovernmentDef = {
     'Wealth-driven oligarchy. +4 Gold per turn to the empire while active.',
   celebrationBonuses: [
     {
-      id: 'plutocracy-commerce',
-      name: '+30% Gold for 10 turns',
-      description: 'Empire gold output increased by 30% for the celebration window.',
+      id: 'plutocracy-gold',
+      name: '+20% Gold for 10 turns',
+      description: 'Empire gold output increased by 20% for the celebration window.',
     },
     {
-      id: 'plutocracy-trade-routes',
-      name: '+50 Gold per Trade Route for 10 turns',
-      description: 'Each active trade route yields an additional +50 Gold for the celebration window.',
+      id: 'plutocracy-overbuilding',
+      name: '+30% Production toward Overbuilding for 10 turns',
+      description: 'Overbuilding production increased by 30% for the celebration window.',
     },
   ],
 };
@@ -185,14 +185,14 @@ export const THEOCRACY: GovernmentDef = {
     'Religious authority rules the state. +3 Faith per turn to the empire.',
   celebrationBonuses: [
     {
-      id: 'theocracy-faith',
-      name: '+30% Faith for 10 turns',
-      description: 'All empire faith output increased by 30% for the celebration window.',
+      id: 'theocracy-culture',
+      name: '+20% Culture for 10 turns',
+      description: 'Empire culture output increased by 20% for the celebration window.',
     },
     {
-      id: 'theocracy-missionaries',
-      name: '+2 Free Missionaries for 10 turns',
-      description: 'Receive 2 free missionaries during the celebration window.',
+      id: 'theocracy-units',
+      name: '+40% Production toward Civilian and Support Units for 10 turns',
+      description: 'Civilian and support unit production increased by 40% for the celebration window.',
     },
   ],
 };
@@ -214,14 +214,14 @@ export const REVOLUTIONARY_REPUBLIC: GovernmentDef = {
     'Born of popular revolution. +1 Policy Slot on adoption. Crisis-locked: available only via specific Revolutions crisis outcomes.',
   celebrationBonuses: [
     {
-      id: 'rev-republic-policy',
-      name: '+1 Policy Slot for 10 turns',
-      description: 'Empire gains an additional wildcard policy slot for the celebration window.',
+      id: 'revolutionary-republic-military-production',
+      name: '+100% Production toward Military Units for 10 turns',
+      description: 'Military unit production increased by 100% for the celebration window.',
     },
     {
-      id: 'rev-republic-culture',
-      name: '+20% Culture for 10 turns',
-      description: 'Empire culture output increased by 20% for the celebration window.',
+      id: 'revolutionary-republic-war-support',
+      name: '+6 War Support for 10 turns',
+      description: 'Empire war support increased by 6 for the celebration window.',
     },
   ],
 };
@@ -237,14 +237,14 @@ export const REVOLUTIONARY_AUTHORITARIANISM: GovernmentDef = {
     'Authoritarian revolution that trades economic stability for military power. Crisis-locked: available only via specific Revolutions crisis outcomes.',
   celebrationBonuses: [
     {
-      id: 'rev-auth-military',
-      name: '+30% Military Production for 10 turns',
-      description: 'All military unit production increased by 30% for the celebration window.',
+      id: 'revolutionary-authoritarianism-culture-science',
+      name: '+20% Culture and Science for 10 turns',
+      description: 'Empire culture and science output increased by 20% for the celebration window.',
     },
     {
-      id: 'rev-auth-gold',
-      name: '-10% Gold (wartime levy) for 10 turns',
-      description: 'Empire gold output reduced by 10% as resources are directed toward the war effort.',
+      id: 'revolutionary-authoritarianism-sanctions',
+      name: '+100% Influence toward Sanctions',
+      description: 'Influence toward Sanctions increased by 100% for the celebration window.',
     },
   ],
 };
@@ -260,14 +260,14 @@ export const CONSTITUTIONAL_MONARCHY: GovernmentDef = {
     'Stability-focused constitutional government with a royal executive. Crisis-locked: available only via specific Revolutions crisis outcomes.',
   celebrationBonuses: [
     {
-      id: 'const-monarchy-happiness',
-      name: '+2 Happiness per City for 10 turns',
-      description: 'All cities receive +2 happiness for the celebration window.',
+      id: 'constitutional-monarchy-gold',
+      name: '+40% Gold for 10 turns',
+      description: 'Empire gold output increased by 40% for the celebration window.',
     },
     {
-      id: 'const-monarchy-policy',
-      name: '+1 Policy Slot for 10 turns',
-      description: 'Empire gains an additional wildcard policy slot for the celebration window.',
+      id: 'constitutional-monarchy-diplomatic',
+      name: '+100% Influence toward Diplomatic Endeavors',
+      description: 'Influence toward Diplomatic Endeavors increased by 100% for the celebration window.',
     },
   ],
 };
@@ -286,8 +286,8 @@ export const ELECTIVE_REPUBLIC: GovernmentDef = {
   celebrationBonuses: [
     {
       id: 'elective-republic-culture',
-      name: '+30% Culture for 10 turns',
-      description: 'Empire culture output increased by 30% for the celebration window.',
+      name: '+20% Culture for 10 turns',
+      description: 'Empire culture output increased by 20% for the celebration window.',
     },
     {
       id: 'elective-republic-science',
@@ -310,14 +310,14 @@ export const AUTHORITARIANISM: GovernmentDef = {
     'Centralised power under a single strong leader. +3 Combat Strength to all units while active.',
   celebrationBonuses: [
     {
-      id: 'authoritarianism-military',
-      name: '+25% Unit Production for 10 turns',
-      description: 'All military unit production increased by 25% for the celebration window.',
+      id: 'authoritarianism-military-production',
+      name: '+30% Production toward Military Units for 10 turns',
+      description: 'Military unit production increased by 30% for the celebration window.',
     },
     {
-      id: 'authoritarianism-suppression',
-      name: '+40 Gold per turn for 10 turns',
-      description: 'Empire receives +40 Gold per turn from suppressed trade during the celebration.',
+      id: 'authoritarianism-unit-strength',
+      name: '+3 Combat Strength for all Units',
+      description: 'All units gain +3 combat strength for the celebration window.',
     },
   ],
 };
@@ -333,14 +333,14 @@ export const BUREAUCRATIC_MONARCHY: GovernmentDef = {
     'Centralised royal administration with a professional civil service. +3 Science per City while active.',
   celebrationBonuses: [
     {
-      id: 'bureaucratic-monarchy-science',
-      name: '+30% Science for 10 turns',
-      description: 'Empire science output increased by 30% for the celebration window.',
+      id: 'bureaucratic-monarchy-gold',
+      name: '+20% Gold for 10 turns',
+      description: 'Empire gold output increased by 20% for the celebration window.',
     },
     {
-      id: 'bureaucratic-monarchy-stability',
-      name: '+20% Food and Production for 10 turns',
-      description: 'All city food and production increased by 20% for the celebration window.',
+      id: 'bureaucratic-monarchy-diplomacy',
+      name: '+30% Relationship change from Endeavors and Sanctions for 10 turns',
+      description: 'Relationship changes from Endeavors and Sanctions increased by 30% for the celebration window.',
     },
   ],
 };
@@ -356,14 +356,14 @@ export const REVOLUCION: GovernmentDef = {
     'Revolutionary government born of popular uprising. +4 Culture per turn to the empire while active.',
   celebrationBonuses: [
     {
-      id: 'revolucion-uprising',
-      name: '+3 Free Units for 10 turns',
-      description: 'Empire receives 3 free military units (no maintenance) for the celebration window.',
+      id: 'revolucion-culture-influence',
+      name: '+30% Culture for 10 turns, +50% Influence toward Diplomatic Actions for 10 turns',
+      description: 'Empire culture output increased by 30% and influence toward diplomatic actions increased by 50% for the celebration window.',
     },
     {
-      id: 'revolucion-solidarity',
-      name: '+35% Culture for 10 turns',
-      description: 'Empire culture output increased by 35% for the celebration window.',
+      id: 'revolucion-science-military',
+      name: '+30% Science for 10 turns, +40% Production toward Military Units for 10 turns',
+      description: 'Empire science output increased by 30% and military unit production increased by 40% for the celebration window.',
     },
   ],
   civRequired: 'mexico',

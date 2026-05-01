@@ -5,6 +5,7 @@
 **Audit date:** `2026-04-19`
 **Auditor:** `claude-sonnet-4.6`
 **Version target:** Firaxis patch 1.3.0
+**Current-code refresh:** `2026-05-02` by Codex against branch `codex/civ7-refactor-cycle`
 
 ---
 
@@ -21,10 +22,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 0 |
-| CLOSE | 2 |
-| DIVERGED | 3 |
-| MISSING | 3 |
+| MATCH | 2 |
+| CLOSE | 5 |
+| DIVERGED | 1 |
+| MISSING | 0 |
 | EXTRA | 0 |
 
 **Total findings:** 8
@@ -33,107 +34,107 @@
 
 ## Detailed findings
 
-### F-01: Typed slot categories retained — all slots should be wildcard — DIVERGED
+### F-01: Typed slot categories retained -- all slots should be wildcard -- MATCH
 
-**Location:** `packages/engine/src/data/governments/governments.ts:14-25`, `packages/engine/src/systems/governmentSystem.ts:149-157`, `packages/web/src/ui/panels/GovernmentPanel.tsx:64-69`
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`, `packages/web/src/ui/panels/GovernmentPanel.tsx`
 **GDD reference:** `government-policies.md` § "Policy Slots and Wildcard System"
 **Severity:** HIGH
-**Effort:** M
+**Effort:** S
 **VII says:** All policy slots are **wildcard**. There are no military, economic, or diplomatic slot types. Any policy can be placed in any slot. This is explicitly called out as the key VII-vs-VI design change.
-**Engine does:** `PolicySlotCounts` defines four separate slot categories: `military`, `economic`, `diplomatic`, `wildcard`. `GovernmentDef` uses this struct to declare per-category slot counts. `canSlotPolicy` enforces category matching (`policy.category !== category`). The panel renders four separate category rows. `DESPOTISM` exposes `{ military: 2, economic: 0, diplomatic: 0, wildcard: 0 }` — a Civ VI typed-slot model.
-**Gap:** The entire slot-category system is a Civ VI holdover. VII has no slot categories.
-**Recommendation:** Replace `PolicySlotCounts` with a single `readonly total: number`. Replace `slottedPolicies: ReadonlyMap<PolicyCategory, ReadonlyArray<...>>` with `ReadonlyArray<PolicyId | null>` sized to `total`. Remove category-match check from `canSlotPolicy`. Flatten the panel into a single slot row. `PolicyCategory` on `PolicyDef` can remain as a display/sorting hint but must not gate slot placement.
+**Engine does:** `PolicySlotCounts` now exposes a single `total`, `PlayerState.slottedPolicies` is a flat array, `SLOT_POLICY` uses `slotIndex`, `canSlotPolicy` no longer category-checks, and the Government panel renders one Wildcard slot list.
+**Gap:** None for the typed-slot retirement.
+**Recommendation:** Keep `PolicyCategory` only as metadata for display/sorting; do not reintroduce category-gated slotting.
 
 ---
 
-### F-02: Chiefdom listed as a VII government — does not exist in VII — DIVERGED
+### F-02: Chiefdom listed as a VII government -- does not exist in VII -- MATCH
 
-**Location:** `packages/engine/src/data/governments/governments.ts:40-49`
+**Location:** `packages/engine/src/data/governments/governments.ts`
 **GDD reference:** `government-policies.md` § "Antiquity Age Governments"
 **Severity:** HIGH
 **Effort:** S
 **VII says:** Antiquity offers exactly three governments: **Classical Republic**, **Despotism**, **Oligarchy**. There is no Chiefdom government in VII.
-**Engine does:** `CHIEFDOM` is defined with `age: 'antiquity'` and `unlockCivic: 'code_of_laws'`, making it an Antiquity government the player can select. It exposes `{ wildcard: 1 }` slot.
-**Gap:** Chiefdom is an invented starter government. The GDD documents three Antiquity governments; Chiefdom is not among them.
-**Recommendation:** Remove `CHIEFDOM` from `ALL_GOVERNMENTS` and from the barrel. Verify no test or UI path depends on `'chiefdom'` as a required starting government.
+**Engine does:** `CHIEFDOM` is no longer defined or exported in `ALL_GOVERNMENTS`.
+**Gap:** None.
+**Recommendation:** Keep retirement coverage so `chiefdom` does not re-enter government content.
 
 ---
 
-### F-03: Exploration Age government roster wrong — DIVERGED
+### F-03: Exploration Age government roster wrong -- CLOSE
 
-**Location:** `packages/engine/src/data/governments/governments.ts:86-117`
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
 **GDD reference:** `government-policies.md` § "Exploration Age Governments"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Exploration Age standard governments are **Theocracy**, **Plutocracy**, **Feudal Monarchy**. Plus three crisis-unlocked revolutionary governments (Revolutionary Republic, Revolutionary Authoritarianism, Constitutional Monarchy) available only if Revolutions crisis fires.
-**Engine does:** Exploration Age has `MONARCHY` and `MERCHANT_REPUBLIC` as named governments. `THEOCRACY` is defined for Exploration (correct). `Plutocracy` and `Feudal Monarchy` are absent. No revolutionary governments exist.
-**Gap:** `MONARCHY` and `MERCHANT_REPUBLIC` are not VII Exploration Age governments. `Plutocracy` and `Feudal Monarchy` are missing. The three revolutionary crisis governments are entirely absent.
-**Recommendation:** Rename `MONARCHY` → `FEUDAL_MONARCHY` (matching VII name). Rename/replace `MERCHANT_REPUBLIC` → `PLUTOCRACY`. Add `REVOLUTIONARY_REPUBLIC`, `REVOLUTIONARY_AUTHORITARIANISM`, `CONSTITUTIONAL_MONARCHY` as crisis-gated governments with a `crisisRequired: 'revolutions'` flag.
+**Engine does:** Exploration Age data now includes `THEOCRACY`, `PLUTOCRACY`, `FEUDAL_MONARCHY`, `REVOLUTIONARY_REPUBLIC`, `REVOLUTIONARY_AUTHORITARIANISM`, and `CONSTITUTIONAL_MONARCHY`.
+**Gap:** The revolutionary governments are data-present but are not actually gated by a Revolutions crisis outcome; `unlockCivic: 'nationalism'` is only a proxy.
+**Recommendation:** Add an explicit crisis requirement field and enforce it in `canAdoptGovernment`, including the forced revolutionary replacement flow when the Revolutions crisis reaches its final stage.
 
 ---
 
-### F-04: Modern Age government roster incomplete — CLOSE
+### F-04: Modern Age government roster incomplete -- CLOSE
 
-**Location:** `packages/engine/src/data/governments/governments.ts:121-143`
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
 **GDD reference:** `government-policies.md` § "Modern Age Governments"
 **Severity:** MED
 **Effort:** S
 **VII says:** Modern Age offers three standard governments: **Authoritarianism**, **Bureaucratic Monarchy**, **Elective Republic**. Plus civ-specific Mexico **Revolucion**.
-**Engine does:** Only `DEMOCRACY` is defined for `age: 'modern'`. `Democracy` is not in the VII Modern Age government list (it does not exist as a named Modern Age government in VII — the equivalent is `Elective Republic`).
-**Gap:** Two of three standard Modern Age governments are missing. `Democracy` is a mislabeled substitute for `Elective Republic`. `Authoritarianism` and `Bureaucratic Monarchy` are absent. `Revolucion` is absent.
-**Recommendation:** Rename `DEMOCRACY` → `ELECTIVE_REPUBLIC`. Add `AUTHORITARIANISM` and `BUREAUCRATIC_MONARCHY` for Modern. Add `REVOLUCION` with a `civRequired: 'mexico'` guard.
+**Engine does:** Modern Age data now includes `AUTHORITARIANISM`, `BUREAUCRATIC_MONARCHY`, `ELECTIVE_REPUBLIC`, and `REVOLUCION` with `civRequired: 'mexico'`.
+**Gap:** `canAdoptGovernment` does not enforce `civRequired`, so non-Mexico players can still adopt `REVOLUCION` if the civic gate is met.
+**Recommendation:** Enforce `civRequired` in the adoption validator and add a targeted test for Mexico-only `REVOLUCION`.
 
 ---
 
-### F-05: Government celebration bonuses missing from GovernmentDef data — MISSING
+### F-05: Government celebration bonuses missing from GovernmentDef data -- CLOSE
 
-**Location:** `packages/engine/src/data/governments/governments.ts:27-36` (local `GovernmentDef`)
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
 **GDD reference:** `government-policies.md` § "Government Selection", celebration-bonus tables for all three ages
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Each government grants exactly **two celebration effects** (a 2-tuple) that activate for 10 turns each time the player triggers a celebration by crossing the happiness threshold. These are the primary strategic differentiator between governments — e.g. Classical Republic: +20% Culture / +15% Production toward Wonders; Despotism: +20% Science / +30% Production toward Infantry.
-**Engine does:** The local `GovernmentDef` in `governments.ts` (used by the data barrel) has NO `celebrationBonuses` field. The canonical `GovernmentDef` in `types/Government.ts` correctly includes `celebrationBonuses: readonly [GovernmentCelebrationBonus, GovernmentCelebrationBonus]`, but the **data files** (`governments.ts`) still use the old local definition that omits it. `GovernmentState` has `activeCelebrationBonus` and `bonusSlotCount` but no system wires celebration triggers to slot increments.
-**Gap:** All eight governments in `ALL_GOVERNMENTS` lack `celebrationBonuses`. The celebration-bonus data for all three ages' governments is entirely unimplemented. The `PICK_CELEBRATION_BONUS` action exists in the type union but is never handled in `governmentSystem.ts`.
-**Recommendation:** Remove the duplicate local `GovernmentDef` from `governments.ts`; import the canonical one from `types/Government.ts`. Add `celebrationBonuses` to all government data entries using the GDD tables. Implement `PICK_CELEBRATION_BONUS` handler in `governmentSystem.ts`.
+**Engine does:** Every government in `ALL_GOVERNMENTS` now has a two-item `celebrationBonuses` tuple matching the local GDD names, and `governmentSystem` handles `PICK_CELEBRATION_BONUS`.
+**Gap:** Bonus entries are still text/id records, not canonical effect-bearing structures, and the data module still carries a local `GovernmentDef` shape instead of importing the canonical type.
+**Recommendation:** Promote government content to the canonical `types/Government.ts` shape and encode each celebration bonus as structured effects so `effectSystem` can apply them without string interpretation.
 
 ---
 
-### F-06: Government system not wired to celebration slot grants — MISSING
+### F-06: Government system not wired to celebration slot grants -- DIVERGED
 
-**Location:** `packages/engine/src/systems/governmentSystem.ts` (no CELEBRATION_TRIGGER handler), `packages/engine/src/types/Government.ts:238` (`bonusSlotCount`)
+**Location:** `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/types/GameState.ts`
 **GDD reference:** `government-policies.md` § "Slot acquisition sources" item 2, § "Triggers" CELEBRATION_TRIGGER
 **Severity:** MED
 **Effort:** M
 **VII says:** Each celebration that fires increases `policySlotCount` by +1. `bonusSlotCount` accumulates from Celebrations + Attributes + Civics.
-**Engine does:** `GovernmentState.bonusSlotCount` field exists in the type but is never written. `governmentSystem.ts` handles `SET_GOVERNMENT`, `SLOT_POLICY`, `UNSLOT_POLICY` only. No `CELEBRATION_TRIGGER` action is dispatched or handled anywhere. No civic-completion slot-grant path exists in the system either.
-**Gap:** The slot-accumulation mechanic — the core progression loop of the policies layer — is entirely absent. A player who triggers celebrations never gains additional policy slots.
-**Recommendation:** Add `CELEBRATION_TRIGGER` handling to `governmentSystem` that increments `bonusSlotCount`. Total available slots = `government.policySlots` total + `bonusSlotCount`. Cross-reference `civicSystem` to add slot-grant civic hooks (Philosophy, Bureaucracy, Diplomatic Service, Political Theory).
+**Engine does:** `PICK_CELEBRATION_BONUS` increments `socialPolicySlots` and appends a null to `slottedPolicies`.
+**Gap:** `canSlotPolicy` still bounds slot indexes against `effectivePolicySlotCount(gov, age)`, which ignores `socialPolicySlots`, civic-granted slots, and leader/attribute slots. Celebration-added slots can exist in `slottedPolicies` but are not reliably slottable through the validator.
+**Recommendation:** Make effective slot count derive from age baseline + government + `socialPolicySlots` + civic/attribute grants, and use that same total for adoption, validation, UI count, and save migration.
 
 ---
 
-### F-07: Crisis policy slots entirely absent — MISSING
+### F-07: Crisis policy slots entirely absent -- CLOSE
 
-**Location:** `packages/engine/src/types/Government.ts`, `packages/engine/src/systems/governmentSystem.ts`
+**Location:** `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/crisisSystem.ts`, `packages/engine/src/systems/turnSystem.ts`
 **GDD reference:** `government-policies.md` § "Crisis Policies", § "Staged escalation"
 **Severity:** MED
 **Effort:** M
 **VII says:** During crisis phase, 2→3→4 mandatory crisis policy slots must be filled before END_TURN is allowed. Crisis policies impose negative yield penalties. They clear at age end. These are separate from the standard policy slots.
-**Engine does:** `GovernmentState` has no `activeCrisisPolicies`, no `crisisPolicySlotCount` field. `governmentSystem.ts` has no crisis-policy handler. `crisisSystem.ts` exists but no coupling between crisis phase and forced policy slots is present.
-**Gap:** The entire crisis policy mechanic is absent. No forced negative policies, no turn-end block, no staged escalation.
-**Recommendation:** Add `activeCrisisPolicies: ReadonlyArray<PolicyId>` and `crisisPolicySlotCount: number` to `GovernmentState`. Add `FORCE_CRISIS_POLICY` handler in `governmentSystem`. Wire `crisisSystem` stage-advance to dispatch slot-count increments. Add turn-end validation in `turnSystem` to block END_TURN when crisis slots are unfilled.
+**Engine does:** `PlayerState.crisisPolicySlots` / `crisisPolicies`, per-crisis `slottedPolicies`, `FORCE_CRISIS_POLICY`, `SLOT_CRISIS_POLICY`, stage slot counts, and END_TURN gates now exist.
+**Gap:** There are two parallel crisis policy paths: legacy player-level `crisisPolicies` with 2/3/4 slot counts, and per-crisis `SLOT_CRISIS_POLICY` that clears `pendingResolution` once each human has at least one policy. The model is not yet one coherent 2/3/4 forced-slot implementation.
+**Recommendation:** Collapse crisis policy state to one action/model, require the stage-specific number of slots in that model, and ensure age transition clears crisis policies.
 
 ---
 
-### F-08: Policy swap window not enforced — CLOSE
+### F-08: Policy swap window not enforced -- CLOSE
 
 **Location:** `packages/engine/src/systems/governmentSystem.ts:127-159` (`canSlotPolicy`)
 **GDD reference:** `government-policies.md` § "Policy Unlocking and Swapping"
 **Severity:** LOW
 **Effort:** S
 **VII says:** Policies can only be swapped during a civic-completion event window. Outside that window, filled slots are locked. There is no turn-by-turn policy management.
-**Engine does:** `canSlotPolicy` validates government existence, policy unlock, category (problematic per F-01), and slot index. It does NOT validate whether the player is in a civic-completion swap window. `SLOT_POLICY` can be dispatched freely at any turn.
-**Gap:** The civic-completion gating is absent.
-**Recommendation:** Add `policySwapWindowOpen: boolean` to `GovernmentState`. Set `true` in `civicSystem` when a civic completes. `canSlotPolicy` checks this flag. Clear after the swap or at turn end.
+**Engine does:** `canSlotPolicy` requires `policySwapWindowOpen`, `SLOT_POLICY` consumes the window, and civic completion paths open it.
+**Gap:** The lifecycle is still approximate: a single slot action consumes the full window, and turn-end clearing is not explicit.
+**Recommendation:** Model a policy-change session that lets the player fill/swap all allowed slots during the window, then explicitly closes on confirm or turn end.
 
 ---
 
@@ -145,19 +146,19 @@ None. (The typed-slot categories in F-01 are technically extras but paired with 
 
 ## Missing items
 
-1. Celebration bonuses on every `GovernmentDef` (F-05) — primary strategic differentiator absent.
-2. `CELEBRATION_TRIGGER` handler in `governmentSystem.ts` (F-06) — slot accumulation dead.
-3. Crisis policy slots + forced slot handler + turn-end gate (F-07).
-4. Civic-completion swap window enforcement (F-08).
-5. Missing Exploration governments (Plutocracy, Feudal Monarchy, 3 revolutionary) (F-03).
-6. Missing Modern governments (Authoritarianism, Bureaucratic Monarchy, Revolucion) (F-04).
+1. Effective policy slot total must include `socialPolicySlots`, civic grants, and leader/attribute grants (F-06).
+2. Revolutionary Exploration governments need explicit Revolutions-crisis gating and forced switch behavior (F-03).
+3. `civRequired` must be enforced for `REVOLUCION` (F-04).
+4. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
+5. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
+6. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
 
 ---
 
 ## Cross-cuts with other audits
 
-- **`celebrations.md` F-04 (MISSING — socialPolicySlots):** Paired with F-06 here. celebrations system fires a `CELEBRATION_TRIGGER`; government system must handle it to increment `bonusSlotCount`.
-- **Age transition:** `GovernmentState` has no age-transition handler. On `TRANSITION_AGE`, standard policies must be cleared, `bonusSlotCount` reset, and `currentGovernmentId` set to null until the player picks. Cross-cut with `ages.md` findings.
+- **`celebrations.md` F-04 (MISSING — socialPolicySlots):** Now partially implemented. `socialPolicySlots` exists and increments on `PICK_CELEBRATION_BONUS`, but policy slot validation still ignores it (F-06).
+- **Age transition:** Current code clears government/slotted policies and preserves `socialPolicySlots`; F-06 still needs a single effective-slot formula shared across age transition, government adoption, validation, and UI.
 
 ---
 
@@ -171,18 +172,18 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 - `packages/engine/src/data/governments/governments.ts`
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
 
-**Status:** 0 MATCH / 2 CLOSE / 3 DIVERGED / 3 MISSING / 0 EXTRA
+**Status:** 2 MATCH / 5 CLOSE / 1 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-01 — typed slot categories (Civ-VI-ism) require flattening to wildcard-only; F-05 — celebration bonuses missing from all government data.
+**Highest-severity active findings:** F-03 — revolutionary Exploration governments are data-present but not Revolutions-gated; F-05 — celebration bonuses are data-present but not structured as canonical effects. F-06 is the remaining DIVERGED row.
 
 ---
 
 ## Open questions
 
-1. Is `Democracy` intended as a hex-empires-specific name for `Elective Republic`, or a Civ-V/VI holdover?
-2. Are the 3 revolutionary crisis governments blocked on `crises` audit landing, or can they be added now with a TODO guard?
-3. Does `crisisSystem.ts` already define a `CrisisPhase` state type that we can read to gate crisis policies?
-4. Does `civicSystem.ts` currently emit a civic-completion event that `governmentSystem.ts` could listen to for swap-window enforcement?
+1. What exact state flag should gate the three revolutionary Exploration governments after a Revolutions crisis?
+2. Should `civRequired` check the player's current civilization id only, or also historical civ lineage after age transitions?
+3. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
+4. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
 
 ---
 
@@ -190,12 +191,12 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 
 | Bucket | Findings | Total effort |
 |---|---|---|
-| S (half-day) | F-02, F-04, F-08 | 1.5d |
-| M (1-3 days) | F-01, F-03, F-05, F-06, F-07 | ~10d |
+| S (half-day) | F-04, F-08 | 1d |
+| M (1-3 days) | F-03, F-05, F-06, F-07 | ~6-8d |
 | L (week+) | — | — |
-| **Total** | 8 | **~12d** |
+| **Remaining active work** | 6 | **~7-9d** |
 
-Recommended order: F-01 (flatten slots — prerequisite for correct panel rendering), F-05 (add celebration bonus data), F-06 (wire celebration trigger to slot grant), F-03 + F-04 (correct government rosters), F-07 (crisis policies), F-02 (remove Chiefdom), F-08 (swap window lock).
+Recommended order: F-06 (single effective slot-count formula), F-04 (`civRequired` enforcement), F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
 
 ---
 
