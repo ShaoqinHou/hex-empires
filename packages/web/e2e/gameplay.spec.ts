@@ -441,6 +441,100 @@ test.describe('Phase 3: Unit Interaction', () => {
     expect(newVisibleCount).toBeGreaterThan(0);
   });
 
+  test('fog of war drops stale current visibility immediately after movement', async ({ page }) => {
+    await startGame(page);
+    const scenario = await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      if (!s) return null;
+
+      const player = s.players.get(s.currentPlayerId);
+      const unit = [...s.units.values()].find((u: any) => u.owner === s.currentPlayerId);
+      if (!player || !unit) return null;
+
+      const dirs = [
+        { q: 1, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 1 },
+        { q: 0, r: -1 }, { q: 1, r: -1 }, { q: -1, r: 1 },
+      ];
+      const keyOf = (coord: { q: number; r: number }) => `${coord.q},${coord.r}`;
+      const distance = (a: { q: number; r: number }, b: { q: number; r: number }) => {
+        const dq = a.q - b.q;
+        const dr = a.r - b.r;
+        const ds = -dq - dr;
+        return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
+      };
+      const isFlatLand = (coord: { q: number; r: number }) => {
+        const tile = s.map.tiles.get(keyOf(coord));
+        if (!tile || tile.feature !== null) return false;
+        const terrain = s.config.terrains.get(tile.terrain);
+        return terrain?.isPassable !== false && terrain?.isWater !== true && terrain?.isDeepOcean !== true;
+      };
+
+      for (const tile of s.map.tiles.values()) {
+        const start = tile.coord;
+        if (!isFlatLand(start)) continue;
+
+        for (const dir of dirs) {
+          const dest = { q: start.q + dir.q, r: start.r + dir.r };
+          if (!isFlatLand(dest)) continue;
+
+          const oldVisible: string[] = [];
+          const newVisible: string[] = [];
+          for (const [key, mapTile] of s.map.tiles as Map<string, any>) {
+            if (distance(start, mapTile.coord) <= 2) oldVisible.push(key);
+            if (distance(dest, mapTile.coord) <= 2) newVisible.push(key);
+          }
+          const oldSet = new Set(oldVisible);
+          const newSet = new Set(newVisible);
+          const oldOnlyKey = oldVisible.find((key) => !newSet.has(key));
+          const newOnlyKey = newVisible.find((key) => !oldSet.has(key));
+          if (!oldOnlyKey || !newOnlyKey) continue;
+
+          s.units = new Map([[
+            unit.id,
+            {
+              ...unit,
+              position: start,
+              movementLeft: 2,
+              fortified: false,
+            },
+          ]]);
+          s.cities = new Map();
+          s.phase = 'actions';
+          player.visibility = new Set(oldVisible);
+          player.explored = new Set(oldVisible);
+
+          return { unitId: unit.id, start, dest, oldOnlyKey, newOnlyKey };
+        }
+      }
+
+      return null;
+    });
+    if (!scenario) test.skip(true, 'no flat adjacent fog regression scenario on this map');
+
+    await dispatch(page, {
+      type: 'MOVE_UNIT',
+      unitId: scenario.unitId,
+      path: [scenario.dest],
+    });
+
+    const result = await page.evaluate((args) => {
+      const s = (window as any).__gameState;
+      const player = s.players.get(s.currentPlayerId);
+      const unit = s.units.get(args.unitId);
+      return {
+        position: unit?.position,
+        oldVisible: player.visibility.has(args.oldOnlyKey),
+        oldExplored: player.explored.has(args.oldOnlyKey),
+        newVisible: player.visibility.has(args.newOnlyKey),
+      };
+    }, scenario);
+
+    expect(result.position).toEqual(scenario.dest);
+    expect(result.newVisible).toBe(true);
+    expect(result.oldVisible).toBe(false);
+    expect(result.oldExplored).toBe(true);
+  });
+
   test('fortify unit via keyboard', async ({ page }) => {
     await startGame(page);
     const state = await getState(page);

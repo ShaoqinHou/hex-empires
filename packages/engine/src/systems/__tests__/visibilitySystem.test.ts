@@ -61,6 +61,32 @@ describe('visibilitySystem', () => {
       expect(visibility.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
       expect(next.players.get('p1')!.explored.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
     });
+
+    it('MOVE_UNIT recalculates full visibility, removing now-hidden tiles and preserving explored', () => {
+      const oldExclusiveTile = coordToKey({ q: 2, r: 0 }); // only old position at (0,0) reveals this
+      const newVisibleTile = coordToKey({ q: 3, r: 3 }); // center of new position
+      const players = new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          visibility: new Set([oldExclusiveTile]),
+          explored: new Set(),
+        })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ players, units });
+      const next = visibilitySystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 3, r: 3 }],
+      });
+
+      const player = next.players.get('p1')!;
+      expect(player.visibility.has(oldExclusiveTile)).toBe(false);
+      expect(player.explored.has(oldExclusiveTile)).toBe(true);
+      expect(player.visibility.has(newVisibleTile)).toBe(true);
+    });
   });
 
   describe('unit visibility on START_TURN', () => {

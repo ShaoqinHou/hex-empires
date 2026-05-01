@@ -93,6 +93,82 @@ describe('system-wiring — visibilitySystem order', () => {
     expect(next.players.get('p1')!.visibility.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
     expect(next.players.get('p1')!.explored.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
   });
+
+  it('refreshes current visibility immediately after movement', () => {
+    const unit = createTestUnit({
+      id: 'u1',
+      owner: 'p1',
+      typeId: 'warrior',
+      position: { q: 3, r: 3 },
+      movementLeft: 2,
+    });
+    let state = createTestState({
+      phase: 'start',
+      currentPlayerId: 'p1',
+      players: new Map([['p1', createTestPlayer({ id: 'p1' })]]),
+      units: new Map([['u1', unit]]),
+    });
+
+    state = engine.applyAction(state, { type: 'START_TURN' });
+
+    const oldOnly = coordToKey({ q: 1, r: 3 });
+    const newOnly = coordToKey({ q: 6, r: 3 });
+    expect(state.players.get('p1')!.visibility.has(oldOnly)).toBe(true);
+
+    const next = engine.applyAction(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 4, r: 3 }],
+    });
+
+    expect(next.units.get('u1')!.position).toEqual({ q: 4, r: 3 });
+    expect(next.players.get('p1')!.visibility.has(newOnly)).toBe(true);
+    expect(next.players.get('p1')!.visibility.has(oldOnly)).toBe(false);
+    expect(next.players.get('p1')!.explored.has(oldOnly)).toBe(true);
+  });
+
+  it('refreshes visibility after combat even when the attacker is destroyed', () => {
+    const oldOnly = coordToKey({ q: 1, r: 3 });
+    const state = createTestState({
+      phase: 'actions',
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          visibility: new Set([oldOnly]),
+          explored: new Set([oldOnly]),
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      units: new Map([
+        ['a1', createTestUnit({
+          id: 'a1',
+          owner: 'p1',
+          typeId: 'warrior',
+          position: { q: 3, r: 3 },
+          movementLeft: 2,
+          health: 1,
+        })],
+        ['d1', createTestUnit({
+          id: 'd1',
+          owner: 'p2',
+          typeId: 'warrior',
+          position: { q: 4, r: 3 },
+          health: 100,
+        })],
+      ]),
+    });
+
+    const next = engine.applyAction(state, {
+      type: 'ATTACK_UNIT',
+      attackerId: 'a1',
+      targetId: 'd1',
+    });
+
+    expect(next.units.has('a1')).toBe(false);
+    expect(next.players.get('p1')!.visibility.has(oldOnly)).toBe(false);
+    expect(next.players.get('p1')!.explored.has(oldOnly)).toBe(true);
+  });
 });
 
 describe('system-wiring — rejected END_TURN short-circuit', () => {

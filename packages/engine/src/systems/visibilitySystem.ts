@@ -24,31 +24,22 @@ export function visibilitySystem(state: GameState, action: GameAction): GameStat
   if (action.type === 'MOVE_UNIT') {
     const unit = state.units.get(action.unitId);
     if (!unit || unit.owner !== state.currentPlayerId) return state;
-    // The unit has already moved in state by the time visibility runs
-    // (movementSystem is earlier in the pipeline). Reveal around its current position.
-    return revealAroundCoord(state, unit.owner, unit.position, getSightRange(state, unit.typeId));
+    // The unit has already moved in state by the time visibility runs.
+    // Recompute full visibility for the current player so tiles can shrink as
+    // well as expand immediately.
+    return recalcFullVisibility(state, state.currentPlayerId);
   }
 
   if (action.type === 'FOUND_CITY') {
-    // citySystem runs before visibilitySystem; find the newly-founded city
-    // by looking up where the settler was (unit is gone, city exists there now).
-    // Find the most recently added city owned by the current player.
-    // Fall back to revealing around ANY new city position if we can't pinpoint it.
-    for (const city of state.cities.values()) {
-      if (city.owner === state.currentPlayerId) {
-        // All owned cities: re-reveal. Not expensive — cities are few.
-        revealAroundCoord(state, city.owner, city.position, 3);
-      }
-    }
-    // Run a full incremental reveal across all current-player cities.
-    return revealAllCities(state, state.currentPlayerId);
+    return recalcFullVisibility(state, state.currentPlayerId);
   }
 
   if (action.type === 'ATTACK_UNIT' || action.type === 'ATTACK_CITY') {
-    // After combat, the attacker's position (and surrounding tiles) should be visible.
-    const attacker = state.units.get(action.attackerId);
-    if (!attacker || attacker.owner !== state.currentPlayerId) return state;
-    return revealAroundCoord(state, attacker.owner, attacker.position, getSightRange(state, attacker.typeId));
+    if (state.lastValidation?.valid === false) return state;
+    // After combat, the attacker's current position can change the set of
+    // currently visible tiles. The attacker may also have died in combat, so
+    // this cannot depend on looking the unit up after combat resolves.
+    return recalcFullVisibility(state, state.currentPlayerId);
   }
 
   return state;
@@ -123,50 +114,6 @@ function recalcFullVisibility(state: GameState, playerId: string): GameState {
       explored.add(key);
     }
   }
-
-  const updatedPlayers = new Map(state.players);
-  updatedPlayers.set(playerId, { ...player, visibility: visible, explored });
-  return { ...state, players: updatedPlayers };
-}
-
-/** Incrementally reveal tiles around all of a player's cities. */
-function revealAllCities(state: GameState, playerId: string): GameState {
-  let current = state;
-  for (const city of state.cities.values()) {
-    if (city.owner !== playerId) continue;
-    current = revealAroundCoord(current, playerId, city.position, 3);
-  }
-  return current;
-}
-
-/** Incrementally reveal tiles around a coordinate without shrinking existing visibility. */
-function revealAroundCoord(
-  state: GameState,
-  playerId: string,
-  position: HexCoord,
-  sightRange: number
-): GameState {
-  const player = state.players.get(playerId);
-  if (!player) return state;
-
-  const visible = new Set(player.visibility);
-  const explored = new Set(player.explored);
-  let changed = false;
-
-  for (const hex of range(position, sightRange)) {
-    const key = coordToKey(hex);
-    const tile = state.map.tiles.get(key);
-    if (!tile) continue;
-    // W4-02 (F-04): Skip Distant Lands tiles unless player has unlocked access.
-    // Parity guard — same logic as recalcFullVisibility.
-    if (tile.isDistantLands && !player.distantLandsReachable) continue;
-    // F-09: LOS occlusion — skip tiles blocked by mountains or forests
-    if (!hasLineOfSight(position, hex, state)) continue;
-    if (!visible.has(key)) { visible.add(key); changed = true; }
-    if (!explored.has(key)) { explored.add(key); changed = true; }
-  }
-
-  if (!changed) return state;
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(playerId, { ...player, visibility: visible, explored });
