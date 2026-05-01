@@ -47,6 +47,7 @@ Every finding carries:
 |---|---|---|
 | ID | `F-NN` (per system) | Stable reference for cross-linking |
 | Title | Short phrase | Grep-friendly |
+| Heading | `### F-NN: <title> -- STATUS` or `### F-NN: <title> -- STATUS (<note>)` | Parsed by `aggregate-audits.py`; only MATCH / CLOSE / DIVERGED / MISSING / EXTRA is counted |
 | Location | `file.ts:lineStart–lineEnd` | So the next person can open it |
 | GDD reference | `systems/<slug>.md` § section | Traceable claim |
 | Severity | HIGH / MED / LOW | Under clone commitment, HIGH = "violates fidelity"; MED = "numeric drift"; LOW = "edge case" |

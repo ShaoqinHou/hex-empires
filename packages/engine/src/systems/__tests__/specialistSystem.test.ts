@@ -101,6 +101,34 @@ describe('specialistSystem', () => {
     });
   });
 
+  describe('ASSIGN_SPECIALIST_FROM_GROWTH', () => {
+    it('clears pending growth choice and stale validation on success', () => {
+      const city = createTestCity({ population: 3, specialists: 0 });
+      const player = createTestPlayer({
+        id: 'p1',
+        pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        lastValidation: {
+          valid: false,
+          reason: 'Resolve pending city growth choices before ending your turn.',
+          category: 'general',
+        },
+      });
+
+      const next = specialistSystem(state, {
+        type: 'ASSIGN_SPECIALIST_FROM_GROWTH',
+        cityId: 'c1',
+      });
+
+      expect(next.cities.get('c1')!.specialists).toBe(1);
+      expect(next.players.get('p1')?.pendingGrowthChoices ?? []).toHaveLength(0);
+      expect(next.lastValidation).toBeNull();
+    });
+  });
+
   describe('UNASSIGN_SPECIALIST', () => {
     it('unassigns one specialist', () => {
       const city = createTestCity({ population: 3, specialists: 2 });

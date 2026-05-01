@@ -208,3 +208,64 @@
   color: var(--panel-muted-color);
   border: 1px solid var(--panel-muted-border, rgba(74, 62, 40, 0.3));
 }
+
+/* ── Growth-choice panel (W2-01) ─────────────────────────────── */
+
+.city-growth-choice {
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.city-growth-choice__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--panel-muted-color);
+}
+
+.city-growth-choice__options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-growth-choice__btn {
+  width: 100%;
+  font-size: 11px;
+  border-radius: var(--panel-radius, 4px);
+  padding: 4px 8px;
+  background: var(--panel-bg);
+  color: var(--panel-text-color);
+  border: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.city-growth-choice__btn:hover:not(:disabled) {
+  border-color: var(--panel-accent-gold);
+  color: var(--panel-accent-gold);
+}
+
+.city-growth-choice__btn--specialist {
+  background: color-mix(in srgb, var(--color-science) 14%, var(--panel-bg));
+}
+
+.city-growth-choice__btn--specialist:hover:not(:disabled) {
+  color: var(--panel-accent-gold);
+}
+
+.city-growth-choice__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.city-growth-choice__muted {
+  font-size: 10px;
+  color: var(--panel-muted-color);
+}

@@ -1,6 +1,8 @@
 import type { HexTile, GameState } from '../types/GameState';
 import type { ImprovementId } from '../types/Ids';
 
+const DEFAULT_RESOURCE_USES = 5;
+
 /**
  * Derive the unique improvement type that belongs on a tile based on its
  * terrain + resource combination.
@@ -12,18 +14,11 @@ import type { ImprovementId } from '../types/Ids';
  *
  * Priority order:
  *   1. Resource-driven (resource determines the improvement family)
- *   2. Feature-driven (forest / rainforest without a resource)
- *   3. Terrain-driven fallback (grassland/plains → farm, hills → mine)
+ *   2. Feature/terrain-driven (vegetation/wet fallback)
+ *   3. Terrain-driven fallback (plains/grassland/tropical → farm, hills → mine)
  *
- * Returns `null` when the tile is not improvable (water, desert without
- * resource, forest with no woodcutter in data, etc.).
- *
- * Deferred improvements (not yet in engine data):
- *   - Fishing Boats (aquatic resources)
- *   - Oil Rig (oil resource, Modern-age only)
- *   - Woodcutter / Lumber Mill (forest/rainforest without resource)
- *
- * This function is a pure state utility — no side effects, no mutations.
+ * Returns `null` when the tile is not improvable (water, desert without a
+ * mapped family, etc.).
  */
 export function deriveImprovementType(
   tile: HexTile,
@@ -31,39 +26,53 @@ export function deriveImprovementType(
 ): ImprovementId | null {
   // ── 1. Resource-driven (highest priority) ──
   if (tile.resource) {
-    // Mineral resources → Mine
-    if (['iron', 'copper', 'gold_ore', 'silver', 'gems'].includes(tile.resource)) {
-      return 'mine';
+    if (tile.resource === 'wheat') {
+      return 'farm';
     }
-    // Stone/marble → Quarry
-    if (['marble', 'stone'].includes(tile.resource)) {
-      return 'quarry';
-    }
-    // Livestock → Pasture
-    if (['cattle', 'horses', 'sheep'].includes(tile.resource)) {
+
+    if (['cattle', 'horses'].includes(tile.resource)) {
       return 'pasture';
     }
-    // Agricultural luxuries → Plantation
-    if (['cotton', 'sugar', 'spices', 'coffee', 'tea', 'tobacco'].includes(tile.resource)) {
+
+    if (tile.resource === 'stone') {
+      return 'quarry';
+    }
+
+    if (['iron', 'niter', 'coal', 'gems'].includes(tile.resource)) {
+      return 'mine';
+    }
+
+    if (['silk', 'spices', 'wine'].includes(tile.resource)) {
       return 'plantation';
     }
-    // Hunting resources → Camp
-    if (['deer', 'furs', 'ivory', 'truffles'].includes(tile.resource)) {
+
+    if (tile.resource === 'ivory') {
       return 'camp';
     }
-    // Aquatic resources (fishing_boats improvement not yet in data — defer)
-    // Oil (oil_rig, Modern only — defer)
-    // Unknown resource with no matched category → fall through to terrain-driven
+
+    if (tile.resource === 'whales') {
+      return 'fishing_boats';
+    }
+
+    if (tile.resource === 'oil') {
+      return 'oil_rig';
+    }
   }
 
-  // ── 2. Feature-driven ──
-  // Forest / Rainforest without a matched resource: woodcutter not yet in data.
-  // Return null so callers know the tile is currently un-improvable by this system.
-  if (tile.feature === 'forest' || tile.feature === 'rainforest') {
-    return null;
+  // ── 2. Feature/terrain-driven fallback ──
+  if (
+    tile.feature === 'forest' ||
+    tile.feature === 'jungle' ||
+    tile.terrain === 'rainforest'
+  ) {
+    return 'woodcutter';
   }
 
-  // ── 3. Feature-driven fallback (hills/mountains) ──
+  if (tile.feature === 'marsh' || tile.terrain === 'mangrove') {
+    return 'clay_pit';
+  }
+
+  // ── 3. Terrain feature-driven fallback ──
   if (tile.feature === 'hills') {
     return 'mine';
   }
@@ -76,9 +85,31 @@ export function deriveImprovementType(
   switch (tile.terrain) {
     case 'grassland':
     case 'plains':
+    case 'tropical':
       return 'farm';
     default:
-      // Desert, tundra, snow, ocean, coast without a resource → not improvable.
+      // Desert, tundra, snow, ocean, coast without a mapped family → not improvable.
       return null;
   }
+}
+
+/**
+ * Apply an improvement and perform the one-time bonus-resource depletion that
+ * Civ VII ties to improving a resource tile.
+ */
+export function applyImprovementToTile(
+  tile: HexTile,
+  improvementId: ImprovementId,
+): HexTile {
+  let updatedTile: HexTile = { ...tile, improvement: improvementId };
+
+  if (tile.resource !== null) {
+    const usesLeft = tile.resourceUsesRemaining ?? DEFAULT_RESOURCE_USES;
+    const newUses = usesLeft - 1;
+    updatedTile = newUses <= 0
+      ? { ...updatedTile, resource: null, resourceUsesRemaining: 0 }
+      : { ...updatedTile, resourceUsesRemaining: newUses };
+  }
+
+  return updatedTile;
 }

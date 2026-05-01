@@ -39,7 +39,10 @@ against `packages/engine/src/systems/<System>System.ts` + related.
 
 ## Detailed findings
 
-### F-01: `<short-title>` — DIVERGED / CLOSE / MISSING / EXTRA
+### F-01: `<short-title>` — DIVERGED
+
+<!-- Heading status must be one of MATCH / CLOSE / DIVERGED / MISSING / EXTRA.
+Optional parenthetical notes are allowed after the status, e.g. `MISSING (content gap)`. -->
 
 **Location:** `packages/engine/src/systems/X.ts:42–80`
 **GDD reference:** `systems/<slug>.md` § "Mechanics" → sub-section name

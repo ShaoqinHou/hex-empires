@@ -111,6 +111,7 @@ function handleStartTurn(state: GameState): GameState {
     phase: 'actions',
     units: updatedUnits,
     log: newLog,
+    lastValidation: null,
   };
 }
 
@@ -252,6 +253,17 @@ function handleEndTurn(state: GameState): GameState {
   const currentPlayer = state.players.get(state.currentPlayerId);
   const isHuman = currentPlayer?.isHuman ?? true;
   if (isHuman) {
+    if ((currentPlayer?.pendingGrowthChoices?.length ?? 0) > 0) {
+      return {
+        ...state,
+        lastValidation: {
+          valid: false,
+          reason: 'Resolve pending city growth choices before ending your turn.',
+          category: 'general',
+        },
+      };
+    }
+
     const hasBlockingEvent = state.log.some(
       e => e.turn === state.turn &&
            e.playerId === state.currentPlayerId &&
@@ -322,6 +334,7 @@ function handleEndTurn(state: GameState): GameState {
       turn: stateAfterAttrition.turn + 1,
       currentPlayerId: nextPlayerId,
       phase: 'start',
+      lastValidation: null,
     };
   } else {
     // Advance to next player in the same turn
@@ -330,6 +343,7 @@ function handleEndTurn(state: GameState): GameState {
       ...stateAfterAttrition,
       currentPlayerId: nextPlayerId,
       phase: 'start',
+      lastValidation: null,
     };
   }
 }

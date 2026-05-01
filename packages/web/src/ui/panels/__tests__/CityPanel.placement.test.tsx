@@ -12,8 +12,8 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
-import type { GameState, PlayerState, CityState, GameAction, CityId } from '@hex/engine';
-import { createGameConfig } from '@hex/engine';
+import type { GameState, PlayerState, CityState, GameAction, CityId, HexCoord, HexTile } from '@hex/engine';
+import { createGameConfig, coordToKey } from '@hex/engine';
 
 // ── vi.mock — stub the useGameState hook ──
 
@@ -142,6 +142,21 @@ function makeState(player: PlayerState, city: CityState, overrides: Partial<Game
   } as unknown as GameState;
 }
 
+function makeTile(coord: HexCoord, overrides: Partial<HexTile> = {}): HexTile {
+  return {
+    coord,
+    terrain: 'grassland',
+    feature: null,
+    resource: null,
+    improvement: null,
+    building: null,
+    river: [],
+    elevation: 0.5,
+    continent: 1,
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
   mockRef.state = null;
@@ -266,5 +281,107 @@ describe('CityPanel — building placement launch (cycle 5)', () => {
     fireEvent.click(warrior);
 
     expect(closeCalls).toEqual([]);
+  });
+
+  it('renders growth-choice with a valid tile improvement button and dispatches PLACE_IMPROVEMENT', () => {
+    const dispatchCalls: GameAction[] = [];
+    const city = makeCity({
+      id: 'c-growth',
+      population: 3,
+      territory: [coordToKey({ q: 0, r: 0 }), coordToKey({ q: 1, r: 0 })],
+      specialists: 0,
+    });
+    const growthTile: HexCoord = { q: 1, r: 0 };
+    const tiles = new Map<string, HexTile>([
+      [coordToKey({ q: 0, r: 0 }), makeTile({ q: 0, r: 0 })],
+      [coordToKey(growthTile), makeTile(growthTile)],
+    ]);
+    mockRef.dispatch = (action) => {
+      dispatchCalls.push(action);
+    };
+    mockRef.state = makeState(makePlayer({
+      pendingGrowthChoices: [{ cityId: 'c-growth', triggeredOnTurn: 1 }],
+    }), city, {
+      map: { width: 10, height: 10, tiles, wrapX: false },
+    });
+
+    const { getByRole, queryByRole } = render(<CityPanel city={city} onClose={() => {}} />);
+
+    const growthBtn = getByRole('button', { name: /farm \(1, 0\)/i });
+    expect(queryByRole('button', { name: /farm \(0, 0\)/i })).toBeNull();
+    fireEvent.click(growthBtn);
+
+    expect(dispatchCalls).toEqual([
+      { type: 'PLACE_IMPROVEMENT', cityId: 'c-growth', tile: growthTile },
+    ]);
+  });
+
+  it('does not render growth improvement buttons for urban tiles', () => {
+    const city = makeCity({
+      id: 'c-urban-growth',
+      population: 3,
+      territory: [coordToKey({ q: 0, r: 0 }), coordToKey({ q: 1, r: 0 })],
+      urbanTiles: new Map([[coordToKey({ q: 1, r: 0 }), {
+        cityId: 'c-urban-growth',
+        coord: { q: 1, r: 0 },
+        buildings: ['granary'],
+        specialistCount: 0,
+        specialistCapPerTile: 1,
+        walled: false,
+      }]]),
+    });
+    const tiles = new Map<string, HexTile>([
+      [coordToKey({ q: 0, r: 0 }), makeTile({ q: 0, r: 0 })],
+      [coordToKey({ q: 1, r: 0 }), makeTile({ q: 1, r: 0 })],
+    ]);
+    mockRef.state = makeState(makePlayer({
+      pendingGrowthChoices: [{ cityId: 'c-urban-growth', triggeredOnTurn: 1 }],
+    }), city, {
+      map: { width: 10, height: 10, tiles, wrapX: false },
+    });
+
+    const { queryByRole } = render(<CityPanel city={city} onClose={() => {}} />);
+
+    expect(queryByRole('button', { name: /farm \(1, 0\)/i })).toBeNull();
+  });
+
+  it('dispatches ASSIGN_SPECIALIST_FROM_GROWTH when specialist button is clicked', () => {
+    const dispatchCalls: GameAction[] = [];
+    const city = makeCity({
+      id: 'c-spec',
+      population: 4,
+      specialists: 1,
+      territory: [coordToKey({ q: 0, r: 0 })],
+    });
+    mockRef.dispatch = (action) => {
+      dispatchCalls.push(action);
+    };
+    mockRef.state = makeState(makePlayer({
+      pendingGrowthChoices: [{ cityId: 'c-spec', triggeredOnTurn: 1 }],
+    }), city, {
+      map: {
+        width: 10,
+        height: 10,
+        tiles: new Map([[coordToKey({ q: 0, r: 0 }), makeTile({ q: 0, r: 0 })]]),
+        wrapX: false,
+      },
+    });
+
+    const { getByRole } = render(<CityPanel city={city} onClose={() => {}} />);
+
+    const specialistButton = getByRole('button', { name: /assign specialist/i });
+    fireEvent.click(specialistButton);
+
+    expect(dispatchCalls).toEqual([
+      { type: 'ASSIGN_SPECIALIST_FROM_GROWTH', cityId: 'c-spec' },
+    ]);
+  });
+
+  it('does not show a growth-choice panel when no pending growth choice exists', () => {
+    const city = makeCity({ id: 'c-no-choice' });
+    mockRef.state = makeState(makePlayer(), city);
+
+    const { queryByTestId } = render(<CityPanel city={city} onClose={() => {}} />);
+    expect(queryByTestId('city-growth-choice')).toBeNull();
   });
 });

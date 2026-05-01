@@ -69,6 +69,87 @@ describe('growthSystem', () => {
     const next = growthSystem(state, { type: 'START_TURN' });
     expect(next).toBe(state);
   });
+
+  it('logs city-targeted production warning when growth creates a pending choice', () => {
+    const city = createTestCity({ population: 1, food: 29 });
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const next = growthSystem(state, { type: 'END_TURN' });
+
+    const choiceLog = next.log.find(event => event.message.startsWith('Rome'));
+    expect(choiceLog).toBeDefined();
+    expect(choiceLog!.type).toBe('production');
+    expect(choiceLog!.category).toBe('production');
+    expect(choiceLog!.panelTarget).toBe('city');
+    expect(choiceLog!.severity).toBe('warning');
+    expect(choiceLog!.blocksTurn).toBeUndefined();
+  });
+
+  it('does not create an unresolvable pending choice for a center-only town', () => {
+    const centerKey = coordToKey({ q: 3, r: 3 });
+    const base = createTestState();
+    const centerTile = base.map.tiles.get(centerKey)!;
+    const city = createTestCity({
+      population: 1,
+      food: 29,
+      settlementType: 'town',
+      isCapital: false,
+      territory: [centerKey],
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      map: { ...base.map, tiles: new Map([[centerKey, centerTile]]) },
+    });
+    const next = growthSystem(state, { type: 'END_TURN' });
+
+    expect(next.cities.get('c1')!.population).toBe(2);
+    expect(next.players.get('p1')!.pendingGrowthChoices ?? []).toHaveLength(0);
+    expect(next.log.some(event => event.message.includes('growth: choose'))).toBe(false);
+  });
+
+  it('resolves an improvement growth choice with resource depletion and clears stale validation', () => {
+    const cityPos = { q: 3, r: 3 };
+    const targetTile = { q: 4, r: 3 };
+    const targetKey = coordToKey(targetTile);
+    const tiles = new Map(createTestState().map.tiles);
+    const existing = tiles.get(targetKey)!;
+    tiles.set(targetKey, {
+      ...existing,
+      resource: 'stone',
+      resourceUsesRemaining: 1,
+    });
+    const city = createTestCity({
+      position: cityPos,
+      territory: [coordToKey(cityPos), targetKey],
+    });
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+      map: { width: 10, height: 10, tiles, wrapX: false },
+      lastValidation: {
+        valid: false,
+        reason: 'Resolve pending city growth choices before ending your turn.',
+        category: 'general',
+      },
+    });
+
+    const next = growthSystem(state, {
+      type: 'RESOLVE_GROWTH_CHOICE',
+      cityId: 'c1',
+      kind: 'improvement',
+      tileId: targetTile,
+    });
+
+    const tile = next.map.tiles.get(targetKey);
+    expect(tile?.improvement).toBe('quarry');
+    expect(tile?.resource).toBeNull();
+    expect(tile?.resourceUsesRemaining).toBe(0);
+    expect(next.players.get('p1')?.pendingGrowthChoices ?? []).toHaveLength(0);
+    expect(next.lastValidation).toBeNull();
+  });
 });
 
 describe('getGrowthThreshold', () => {

@@ -23,19 +23,17 @@ async function startGame(page: Page, opts: { seed?: number } = {}) {
   // test is deterministic. Any test that needs a different scenario can pass its own.
   const seed = opts.seed ?? 2;
   const url = `http://localhost:5174/?seed=${seed}`;
-  await page.goto(url);
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     // Clear any autosave from prior tests in this browser context — the SetupScreen
     // would otherwise show "Resume" as primary, breaking the /start game/i lookup.
     localStorage.removeItem('hex-empires-save');
     localStorage.removeItem('hex-empires-save-meta');
     localStorage.setItem('helpShown', 'true');
   });
-  // Reload so the Setup component re-evaluates its readSaveInfo() effect against the
-  // freshly-cleared storage.
-  await page.reload();
-  await page.waitForTimeout(400);
-  await page.locator('[data-testid="start-game-button"]').click();
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  const startButton = page.locator('[data-testid="start-game-button"]');
+  await expect(startButton).toBeVisible({ timeout: 10000 });
+  await startButton.click();
   await page.waitForSelector('canvas', { timeout: 10000 });
   // Wait for GameProvider's useEffect to expose __gameDispatch — guarantees keyboard
   // handler (wired in GameUI's earlier useEffect) is also registered.

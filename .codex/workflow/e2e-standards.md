@@ -14,6 +14,10 @@ change. A workflow is not done just because unit tests pass.
    "element exists."
 6. **Regression sweep** - run the relevant Playwright spec or add one when the
    behavior is new.
+7. **Deploy build smoke order** - if full Playwright includes build-smoke specs,
+   run `npm --workspace=packages/web run build:deploy` immediately before
+   Playwright. A normal `npm run build` rewrites `packages/web/dist` with root
+   asset paths and invalidates `/hex-empires/` smoke assertions.
 
 ## UI/Canvas Verification
 
@@ -25,6 +29,8 @@ For UI or canvas changes:
 - Check console/page errors.
 - Exercise the interaction with real clicks/keys where possible.
 - Confirm text does not overlap at the tested viewport.
+- For build-smoke coverage, make `build:deploy` the final build command before
+  the Playwright run.
 
 ## Long-Run Gameplay E2E
 

@@ -29,14 +29,14 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
 }
 
 describe('visibilitySystem', () => {
-  describe('pass-through for non-START_TURN actions', () => {
+  describe('action routing', () => {
     it('ignores END_TURN and returns state unchanged', () => {
       const state = createTestState();
       const next = visibilitySystem(state, { type: 'END_TURN' });
       expect(next).toBe(state);
     });
 
-    it('ignores MOVE_UNIT and returns state unchanged', () => {
+    it('ignores MOVE_UNIT for a missing unit and returns state unchanged', () => {
       const state = createTestState();
       const next = visibilitySystem(state, {
         type: 'MOVE_UNIT',
@@ -44,6 +44,22 @@ describe('visibilitySystem', () => {
         path: [{ q: 1, r: 0 }],
       });
       expect(next).toBe(state);
+    });
+
+    it('MOVE_UNIT reveals around the unit position already present in state', () => {
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior' })],
+      ]);
+      const state = createTestState({ units });
+      const next = visibilitySystem(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 1, r: 0 }],
+      });
+
+      const visibility = next.players.get('p1')!.visibility;
+      expect(visibility.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
+      expect(next.players.get('p1')!.explored.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
     });
   });
 

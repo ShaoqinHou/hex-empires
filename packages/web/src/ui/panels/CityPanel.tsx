@@ -1,5 +1,14 @@
-import type { CityState } from '@hex/engine';
-import { calculateCityYields, getGrowthThreshold, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty, calculateResourceChanges } from '@hex/engine';
+import type { CityState, HexTile } from '@hex/engine';
+import {
+  calculateCityYields,
+  getGrowthThreshold,
+  calculateCityHappiness,
+  calculateSettlementCapPenalty,
+  applyHappinessPenalty,
+  calculateResourceChanges,
+  coordToKey,
+  deriveImprovementType,
+} from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { UnitCard } from '../components/UnitCard';
 import { BuildingCard } from '../components/BuildingCard';
@@ -42,6 +51,32 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const player = state.players.get(state.currentPlayerId);
   const currentAge = player?.age ?? 'antiquity';
   const playerGold = player?.gold ?? 0;
+  const pendingGrowthChoices = player?.pendingGrowthChoices ?? [];
+  const hasPendingGrowthChoice = pendingGrowthChoices.some(choice => choice.cityId === city.id);
+  const canAssignSpecialistFromGrowth = !isTown && city.specialists < city.population - 1;
+  const cityCenterKey = coordToKey(city.position);
+
+  const validGrowthTiles = hasPendingGrowthChoice
+    ? Array.from(city.territory)
+      .map((tileKey) => {
+        if (tileKey === cityCenterKey) return null;
+        const tile = state.map.tiles.get(tileKey);
+        if (!tile || tile.building || tile.improvement || city.urbanTiles?.has(tileKey)) return null;
+
+        const improvementId = deriveImprovementType(tile, state);
+        if (!improvementId) return null;
+
+        const improvementDef = state.config.improvements.get(improvementId);
+        const improvementName = improvementDef?.name ?? improvementId;
+
+        return {
+          tile,
+          label: `${improvementName} (${tile.coord.q}, ${tile.coord.r})`,
+          tileKey,
+        };
+      })
+      .filter((entry): entry is { tile: HexTile; label: string; tileKey: string } => Boolean(entry))
+    : [];
 
   // Available production items — filter by age AND tech prerequisites
   const researchedTechs = new Set(player?.researchedTechs ?? []);
@@ -236,6 +271,39 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
             </span>
           )}
         </div>
+        {hasPendingGrowthChoice && (
+          <div className="city-growth-choice" data-testid="city-growth-choice">
+            <div className="city-growth-choice__label">Growth Choice</div>
+
+            <button
+              className="city-growth-choice__btn city-growth-choice__btn--specialist"
+              disabled={!canAssignSpecialistFromGrowth}
+              onClick={() => dispatch({ type: 'ASSIGN_SPECIALIST_FROM_GROWTH', cityId: city.id })}
+            >
+              Assign Specialist
+            </button>
+
+            {validGrowthTiles.length > 0 ? (
+              <div className="city-growth-choice__options">
+                {validGrowthTiles.map(option => (
+                  <button
+                    key={option.tileKey}
+                    className="city-growth-choice__btn"
+                    onClick={() => dispatch({ type: 'PLACE_IMPROVEMENT', cityId: city.id, tile: option.tile.coord })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              !canAssignSpecialistFromGrowth && (
+                <div className="city-growth-choice__muted">
+                  No valid improvement tile in territory and specialist is unavailable.
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Worked-Tiles Summary ─────────────────────────────────────── */}

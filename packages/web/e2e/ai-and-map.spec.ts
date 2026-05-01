@@ -8,6 +8,7 @@
  * 4. Different AI counts produce different game dynamics
  */
 import { test, expect, Page } from '@playwright/test';
+import { endTurnAndWait } from './helpers/turnFlow';
 
 // ── State readers ──
 
@@ -89,6 +90,7 @@ async function startGameWith(page: Page, numAI: number) {
 
   await page.locator('[data-testid="start-game-button"]').click();
   await page.waitForSelector('canvas', { timeout: 15000 });
+  await page.waitForFunction(() => !!(window as any).__gameDispatch, null, { timeout: 15000 });
   await page.waitForTimeout(300);
 }
 
@@ -155,9 +157,56 @@ async function dismissBlockingEvents(page: Page) {
   await page.waitForTimeout(120);
 }
 
+/** Resolve pending growth choices for the current player before ending the turn. */
+async function resolvePendingGrowthChoices(page: Page): Promise<void> {
+  const hadChoices = await page.evaluate(() => {
+    const state = (window as any).__gameState;
+    const dispatch = (window as any).__gameDispatch;
+    if (!state || !dispatch) return false;
+
+    const pid = state.currentPlayerId;
+    const player = state.players?.get(pid);
+    const choices = [...((player?.pendingGrowthChoices as Array<{ cityId: string }> | undefined) ?? [])];
+    if (choices.length === 0) return false;
+
+    for (const choice of choices) {
+      const city = state.cities?.get(choice.cityId);
+      if (!city) continue;
+
+      const centerKey = `${city.position.q},${city.position.r}`;
+      const territory = [...(city.territory ?? [])]
+        .filter((key: string) => key !== centerKey)
+        .sort((a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0));
+
+      for (const key of territory) {
+        const tile = (window as any).__gameState?.map?.tiles?.get(key);
+        if (!tile || tile.improvement || tile.building || city.urbanTiles?.has?.(key)) continue;
+
+        const [q, r] = key.split(',').map(Number);
+        if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
+
+        dispatch({ type: 'PLACE_IMPROVEMENT', cityId: choice.cityId, tile: { q, r } });
+      }
+
+      if (city.settlementType !== 'town') {
+        if (city.specialists < city.population - 1) {
+          dispatch({ type: 'ASSIGN_SPECIALIST_FROM_GROWTH', cityId: choice.cityId });
+        }
+      }
+    }
+    return true;
+  });
+  if (hadChoices) {
+    await page.waitForFunction(() => {
+      const state = (window as any).__gameState;
+      const player = state?.players?.get(state.currentPlayerId);
+      return ((player?.pendingGrowthChoices as Array<unknown> | undefined) ?? []).length === 0;
+    }, null, { timeout: 3000 });
+  }
+}
+
 async function endTurn(page: Page) {
-  await dismissBlockingEvents(page);
-  await dispatch(page, { type: 'END_TURN' });
+  await endTurnAndWait(page);
   await page.waitForTimeout(300);
   // Dismiss transition
   const overlay = page.locator('.fixed.inset-0.z-50');

@@ -89,6 +89,7 @@ export { Registry } from './registry';
 
 // State utilities
 export { nextRandom, randomInt, shuffle, createRng, noise2D, smoothNoise2D, fractalNoise2D } from './state';
+export { deriveImprovementType } from './state/ImprovementRules';
 export { allUnitsHaveActed } from './state/AllUnitsActed';
 export {
   CELEBRATION_THRESHOLDS,

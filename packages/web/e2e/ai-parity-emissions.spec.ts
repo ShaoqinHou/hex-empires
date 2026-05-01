@@ -12,6 +12,7 @@
  * All helpers are inline (no cross-spec imports per task constraint).
  */
 import { test, expect, Page } from '@playwright/test';
+import { advanceTurns, endTurnAndWait } from './helpers/turnFlow';
 
 // ---------- inline helpers ----------
 
@@ -126,16 +127,7 @@ async function dismissBlockingEvents(page: Page) {
 }
 
 async function advance(page: Page, n: number) {
-  for (let i = 0; i < n; i++) {
-    const before = await page.evaluate(() => (window as unknown as { __gameState: { turn: number } }).__gameState.turn);
-    await dismissBlockingEvents(page);
-    await dispatch(page, { type: 'END_TURN' });
-    await page.waitForFunction(
-      (b) => ((window as unknown as { __gameState?: { turn?: number } }).__gameState?.turn ?? 0) > b,
-      before,
-      { timeout: 15000 },
-    );
-  }
+  await advanceTurns(page, n);
 }
 
 interface AIPlayerSnapshot {
@@ -272,14 +264,7 @@ test.describe('AI parity emissions over turns', () => {
     const startTurn = await turn(page);
     const seen: number[] = [startTurn];
     for (let i = 0; i < 40; i++) {
-      const before = await turn(page);
-      await dismissBlockingEvents(page);
-      await dispatch(page, { type: 'END_TURN' });
-      await page.waitForFunction(
-        (b) => ((window as unknown as { __gameState?: { turn?: number } }).__gameState?.turn ?? 0) > b,
-        before,
-        { timeout: 15000 },
-      );
+      await endTurnAndWait(page);
       seen.push(await turn(page));
     }
     // Every subsequent turn must be strictly greater than the previous.

@@ -307,37 +307,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         animationEventBus.emit(action, prevSnapshot, nextSnapshot);
       });
 
+      if (action.type === 'END_TURN' && isAcceptedEndTurn(prev, next)) {
+        Promise.resolve().then(() => {
+          const humanPlayerId = 'player1';
+          const { accountDelta } = evaluateLegends(nextSnapshot, accountRef.current, humanPlayerId);
+          const updatedAccount = applyAccountDelta(accountRef.current, accountDelta);
+          accountRef.current = updatedAccount;
+          saveAccountToStorage(updatedAccount);
+          setAccount(updatedAccount);
+
+          setIsProcessingAI(true);
+          setTimeout(() => {
+            setState(current => {
+              if (!current) return current;
+              return processAITurns(engine, current);
+            });
+            setIsProcessingAI(false);
+          }, 50);
+        });
+      }
+
       return next;
     });
-
-    // After END_TURN, evaluate legends (cross-session meta-progression) and
-    // persist the updated AccountState to localStorage, then process AI turns.
-    if (action.type === 'END_TURN') {
-      // Evaluate legends synchronously against the latest state before AI turns.
-      // Use functional setState to read the current state snapshot; update the
-      // account ref + React state + localStorage.
-      setState(prev => {
-        if (!prev) return prev;
-        const humanPlayerId = 'player1';
-        const { accountDelta } = evaluateLegends(prev, accountRef.current, humanPlayerId);
-        const updatedAccount = applyAccountDelta(accountRef.current, accountDelta);
-        accountRef.current = updatedAccount;
-        saveAccountToStorage(updatedAccount);
-        // Schedule React state update after this batch (can't call setAccount
-        // inside a setState updater directly — use Promise.resolve microtask).
-        Promise.resolve().then(() => setAccount(updatedAccount));
-        return prev; // legends don't mutate GameState itself
-      });
-
-      setIsProcessingAI(true);
-      setTimeout(() => {
-        setState(prev => {
-          if (!prev) return prev;
-          return processAITurns(engine, prev);
-        });
-        setIsProcessingAI(false);
-      }, 50);
-    }
   }, []);
 
   const saveGame = useCallback(() => {
@@ -472,4 +463,13 @@ export function useGameState(): GameContextValue & { state: GameState } {
   const ctx = useGame();
   if (!ctx.state) throw new Error('useGameState called before game was initialized');
   return ctx as GameContextValue & { state: GameState };
+}
+
+function isAcceptedEndTurn(prev: GameState, next: GameState): boolean {
+  return next.lastValidation?.valid !== false
+    && (
+      next.turn !== prev.turn
+      || next.currentPlayerId !== prev.currentPlayerId
+      || next.phase !== prev.phase
+    );
 }

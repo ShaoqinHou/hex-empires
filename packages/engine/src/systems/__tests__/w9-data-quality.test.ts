@@ -138,6 +138,73 @@ describe('F-12: RESOLVE_GROWTH_CHOICE', () => {
     expect(next).toBe(state); // unchanged
   });
 
+  it('rejects improvement resolution outside city territory', () => {
+    const tileCoord = { q: 9, r: 9 };
+    const tileKey = coordToKey(tileCoord);
+    const pendingChoice: PendingGrowthChoice = {
+      cityId: 'c1',
+      triggeredOnTurn: 1,
+    };
+    const player = createTestPlayer({
+      pendingGrowthChoices: [pendingChoice],
+    });
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 })] });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+      map: {
+        width: 10,
+        height: 10,
+        tiles: new Map([[tileKey, makeTile(tileCoord)]]),
+        wrapX: false,
+      },
+    });
+
+    const next = growthSystem(state, {
+      type: 'RESOLVE_GROWTH_CHOICE',
+      cityId: 'c1',
+      kind: 'improvement',
+      tileId: tileCoord,
+    });
+
+    expect(next).toBe(state);
+    expect(next.players.get('p1')!.pendingGrowthChoices).toHaveLength(1);
+  });
+
+  it('rejects explicit improvementId that does not match terrain-derived type', () => {
+    const tileCoord = { q: 4, r: 3 };
+    const tileKey = coordToKey(tileCoord);
+    const pendingChoice: PendingGrowthChoice = {
+      cityId: 'c1',
+      triggeredOnTurn: 1,
+    };
+    const player = createTestPlayer({
+      pendingGrowthChoices: [pendingChoice],
+    });
+    const city = makeCity({ territory: [tileKey] });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+      map: {
+        width: 10,
+        height: 10,
+        tiles: new Map([[tileKey, makeTile(tileCoord, { terrain: 'grassland' })]]),
+        wrapX: false,
+      },
+    });
+
+    const next = growthSystem(state, {
+      type: 'RESOLVE_GROWTH_CHOICE',
+      cityId: 'c1',
+      kind: 'improvement',
+      improvementId: 'mine',
+      tileId: tileCoord,
+    });
+
+    expect(next).toBe(state);
+    expect(next.players.get('p1')!.pendingGrowthChoices).toHaveLength(1);
+  });
+
   it('PendingGrowthChoice accepts kind + improvementId + tileId fields', () => {
     // Type-level test: constructing a PendingGrowthChoice with F-12 fields compiles
     const choice: PendingGrowthChoice = {

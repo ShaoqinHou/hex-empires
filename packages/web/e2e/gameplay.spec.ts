@@ -85,6 +85,54 @@ async function dismissBlockingEvents(page: Page) {
   await page.waitForTimeout(80);
 }
 
+/** Resolve human pending growth choices before ending the turn. */
+async function resolvePendingGrowthChoices(page: Page): Promise<void> {
+  const hadChoices = await page.evaluate(() => {
+    const state = (window as any).__gameState;
+    const dispatch = (window as any).__gameDispatch;
+    if (!state || !dispatch) return false;
+
+    const pid = state.currentPlayerId;
+    const player = state.players?.get(pid);
+    const choices = [...((player?.pendingGrowthChoices as Array<{ cityId: string }> | undefined) ?? [])];
+    if (choices.length === 0) return false;
+
+    for (const choice of choices) {
+      const city = state.cities?.get(choice.cityId);
+      if (!city) continue;
+
+      const cityCenterKey = `${city.position.q},${city.position.r}`;
+      const tiles = [...(city.territory ?? [])]
+        .filter((key: string) => key !== cityCenterKey)
+        .sort((a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0));
+
+      for (const key of tiles) {
+        const tile = (window as any).__gameState?.map?.tiles?.get(key);
+        if (!tile || tile.improvement || tile.building || city.urbanTiles?.has?.(key)) continue;
+
+        const [q, r] = key.split(',').map(Number);
+        if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
+
+        dispatch({ type: 'PLACE_IMPROVEMENT', cityId: choice.cityId, tile: { q, r } });
+      }
+
+      if (city.settlementType !== 'town') {
+        if (city.specialists < city.population - 1) {
+          dispatch({ type: 'ASSIGN_SPECIALIST_FROM_GROWTH', cityId: choice.cityId });
+        }
+      }
+    }
+    return true;
+  });
+  if (hadChoices) {
+    await page.waitForFunction(() => {
+      const state = (window as any).__gameState;
+      const player = state?.players?.get(state.currentPlayerId);
+      return ((player?.pendingGrowthChoices as Array<unknown> | undefined) ?? []).length === 0;
+    }, null, { timeout: 3000 });
+  }
+}
+
 /** Start game with specific config */
 async function startGame(page: Page, options?: { civ?: string; leader?: string }) {
   await page.goto('http://localhost:5174');
@@ -121,6 +169,7 @@ async function startGame(page: Page, options?: { civ?: string; leader?: string }
 async function endTurn(page: Page) {
   const before = await page.evaluate(() => (window as any).__gameState?.turn ?? 0);
   await dismissBlockingEvents(page);
+  await resolvePendingGrowthChoices(page);
   await dispatch(page, { type: 'END_TURN' });
   await page.waitForFunction(
     (b) => ((window as any).__gameState?.turn ?? 0) > b,
@@ -303,27 +352,93 @@ test.describe('Phase 3: Unit Interaction', () => {
 
   test('unit movement via dispatch reduces movement points', async ({ page }) => {
     await startGame(page);
-    const before = await getState(page);
-    const warrior = before!.units.find(u => u.typeId === 'warrior' && u.owner === before!.currentPlayerId)!;
-    const startPos = warrior.position;
-    const startMovement = warrior.movementLeft;
+    const scenario = await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      const player = s.players.get(s.currentPlayerId);
+      const visibleBefore = new Set(player.visibility as Set<string>);
+      const dirs = [
+        { q: 1, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 1 },
+        { q: 0, r: -1 }, { q: 1, r: -1 }, { q: -1, r: 1 },
+      ];
+      const distance = (a: { q: number; r: number }, b: { q: number; r: number }) => {
+        const dq = a.q - b.q;
+        const dr = a.r - b.r;
+        const ds = -dq - dr;
+        return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
+      };
+      const occupied = (q: number, r: number) =>
+        [...s.units.values()].some((u: any) => u.position.q === q && u.position.r === r)
+        || [...s.cities.values()].some((c: any) => c.position.q === q && c.position.r === r);
 
-    // Move warrior one hex to the right (q+1)
+      const candidates: Array<{
+        unitId: string;
+        unitType: string;
+        startPos: { q: number; r: number };
+        startMovement: number;
+        dest: { q: number; r: number };
+        score: number;
+      }> = [];
+
+      for (const unit of s.units.values() as Iterable<any>) {
+        if (unit.owner !== s.currentPlayerId || unit.movementLeft <= 0) continue;
+        const sightRange = s.config.units.get(unit.typeId)?.sightRange ?? 2;
+
+        for (const dir of dirs) {
+          const dest = { q: unit.position.q + dir.q, r: unit.position.r + dir.r };
+          const destTile = s.map.tiles.get(`${dest.q},${dest.r}`);
+          const terrain = destTile ? s.config.terrains.get(destTile.terrain) : null;
+          if (!destTile || terrain?.isWater || terrain?.isPassable === false || occupied(dest.q, dest.r)) continue;
+
+          let score = 0;
+          for (const [key, tile] of s.map.tiles as Map<string, any>) {
+            if (distance(dest, tile.coord) <= sightRange && distance(unit.position, tile.coord) > sightRange && !visibleBefore.has(key)) {
+              score += 1;
+            }
+          }
+          if (score > 0) {
+            candidates.push({
+              unitId: unit.id,
+              unitType: unit.typeId,
+              startPos: unit.position,
+              startMovement: unit.movementLeft,
+              dest,
+              score,
+            });
+          }
+        }
+      }
+      candidates.sort((a, b) => {
+        const typeRank = (type: string) => type === 'scout' ? 0 : type === 'warrior' ? 1 : 2;
+        return typeRank(a.unitType) - typeRank(b.unitType) || b.score - a.score;
+      });
+      const pick = candidates[0];
+      return pick ? { ...pick, visibleBefore: [...visibleBefore] } : null;
+    });
+    if (!scenario) test.skip(true, 'no starting move exposes new fog on this seed');
+
     await dispatch(page, {
       type: 'MOVE_UNIT',
-      unitId: warrior.id,
-      path: [{ q: startPos.q + 1, r: startPos.r }],
+      unitId: scenario.unitId,
+      path: [scenario.dest],
     });
 
     const after = await getState(page);
-    const movedWarrior = after!.units.find(u => u.id === warrior.id)!;
+    const movedUnit = after!.units.find(u => u.id === scenario.unitId)!;
 
     // EXPECT: Unit moved to new position
-    expect(movedWarrior.position.q).toBe(startPos.q + 1);
-    expect(movedWarrior.position.r).toBe(startPos.r);
+    expect(movedUnit.position).toEqual(scenario.dest);
 
     // EXPECT: Movement points decreased
-    expect(movedWarrior.movementLeft).toBeLessThan(startMovement);
+    expect(movedUnit.movementLeft).toBeLessThan(scenario.startMovement);
+
+    // EXPECT: Fog of war updates immediately after movement, before next turn.
+    const newVisibleCount = await page.evaluate((visibleBefore) => {
+      const s = (window as any).__gameState;
+      const player = s.players.get(s.currentPlayerId);
+      const before = new Set(visibleBefore);
+      return [...player.visibility].filter((key: string) => !before.has(key) && player.explored.has(key)).length;
+    }, scenario.visibleBefore);
+    expect(newVisibleCount).toBeGreaterThan(0);
   });
 
   test('fortify unit via keyboard', async ({ page }) => {
@@ -550,16 +665,15 @@ test.describe('Phase 7: Panel Features', () => {
     await startGame(page);
 
     // Open diplomacy via TopBar button
-    await page.getByRole('button', { name: /Diplo/i }).click();
-    await page.waitForTimeout(300);
-
-    const text = await page.locator('body').innerText();
+    await page.locator('[data-panel-trigger="diplomacy"]').click();
+    const panel = page.locator('[data-testid="panel-shell-diplomacy"]');
+    await expect(panel).toBeVisible({ timeout: 5000 });
 
     // EXPECT: Diplomacy panel visible
-    expect(text).toContain('Diplomacy');
+    await expect(panel).toContainText('Diplomacy');
 
     // EXPECT: AI player shown (at least one)
-    expect(text).toMatch(/AI|Empire|neutral|Neutral/i);
+    await expect(panel).toContainText(/AI|Empire|neutral|Neutral/i);
   });
 
   test('overflow menu opens secondary panels', async ({ page }) => {

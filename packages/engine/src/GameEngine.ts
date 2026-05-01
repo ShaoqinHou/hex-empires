@@ -81,11 +81,11 @@ function adaptCommanderArmy(state: GameState, action: GameAction): GameState {
 
 export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   turnSystem,
-  visibilitySystem,
   effectSystem,
   movementSystem,
   citySystem,
   combatSystem,
+  visibilitySystem,
   // M12: insert after combat, before resource
   adaptReligion,
   adaptGovernment,
@@ -139,7 +139,11 @@ export class GameEngine {
   applyAction(state: GameState, action: GameAction): GameState {
     let next = state;
     for (const system of this.systems) {
+      const before = next;
       next = system(next, action);
+      if (isRejectedEndTurn(action, before, next)) {
+        return next;
+      }
     }
     return next;
   }
@@ -167,4 +171,12 @@ export class GameEngine {
   applyLegends(state: GameState, account: AccountState, humanPlayerId: string): LegendsResult {
     return evaluateLegends(state, account, humanPlayerId);
   }
+}
+
+function isRejectedEndTurn(action: GameAction, before: GameState, after: GameState): boolean {
+  return action.type === 'END_TURN'
+    && after.lastValidation?.valid === false
+    && after.turn === before.turn
+    && after.currentPlayerId === before.currentPlayerId
+    && after.phase === before.phase;
 }

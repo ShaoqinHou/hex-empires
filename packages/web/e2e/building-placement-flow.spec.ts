@@ -70,6 +70,54 @@ async function dismissBlockingEvents(page: Page): Promise<void> {
   await page.waitForTimeout(80);
 }
 
+/** Resolve pending growth choices for the active player before advancing turns. */
+async function resolvePendingGrowthChoices(page: Page): Promise<void> {
+  const hadChoices = await page.evaluate(() => {
+    const state = (window as any).__gameState;
+    const dispatch = (window as any).__gameDispatch;
+    if (!state || !dispatch) return false;
+
+    const pid = state.currentPlayerId;
+    const player = state.players?.get(pid);
+    const choices = [...((player?.pendingGrowthChoices as Array<{ cityId: string }> | undefined) ?? [])];
+    if (choices.length === 0) return false;
+
+    for (const choice of choices) {
+      const city = state.cities?.get(choice.cityId);
+      if (!city) continue;
+
+      const centerKey = `${city.position.q},${city.position.r}`;
+      const territory = [...(city.territory ?? [])]
+        .filter((key: string) => key !== centerKey)
+        .sort((a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0));
+
+      for (const key of territory) {
+        const tile = (window as any).__gameState?.map?.tiles?.get(key);
+        if (!tile || tile.improvement || tile.building || city.urbanTiles?.has?.(key)) continue;
+
+        const [q, r] = key.split(',').map(Number);
+        if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
+
+        dispatch({ type: 'PLACE_IMPROVEMENT', cityId: choice.cityId, tile: { q, r } });
+      }
+
+      if (city.settlementType !== 'town') {
+        if (city.specialists < city.population - 1) {
+          dispatch({ type: 'ASSIGN_SPECIALIST_FROM_GROWTH', cityId: choice.cityId });
+        }
+      }
+    }
+    return true;
+  });
+  if (hadChoices) {
+    await page.waitForFunction(() => {
+      const state = (window as any).__gameState;
+      const player = state?.players?.get(state.currentPlayerId);
+      return ((player?.pendingGrowthChoices as Array<unknown> | undefined) ?? []).length === 0;
+    }, null, { timeout: 3000 });
+  }
+}
+
 async function hexScreen(page: Page, q: number, r: number): Promise<{ x: number; y: number }> {
   await page.evaluate(({ q, r }) => (window as unknown as { __centerCameraOn: (q: number, r: number) => void }).__centerCameraOn(q, r), { q, r });
   const box = await page.locator('canvas').first().boundingBox();
@@ -192,6 +240,7 @@ async function pickValidTile(page: Page, cityId: string, fallback: HexCoord): Pr
 async function advanceTurn(page: Page): Promise<void> {
   const before = await page.evaluate(() => (window as unknown as { __gameState: { turn: number } }).__gameState.turn);
   await dismissBlockingEvents(page);
+  await resolvePendingGrowthChoices(page);
   await dispatch(page, { type: 'END_TURN' });
   await page.waitForFunction(
     (b) => ((window as unknown as { __gameState?: { turn: number } }).__gameState?.turn ?? 0) > b,

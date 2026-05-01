@@ -37,7 +37,12 @@ describe('improvementSystem', () => {
       const targetTile: HexCoord = { q: 3, r: 2 };
 
       const player = createTestPlayer({ id: 'p1' });
-      const city = createTestCity({ id: 'c1', owner: 'p1', position: cityPos });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos), coordToKey(targetTile)],
+      });
 
       const state = createTestState({
         players: new Map([['p1', {
@@ -65,6 +70,53 @@ describe('improvementSystem', () => {
       // pendingGrowthChoice for c1 is cleared
       const updatedPlayer = next.players.get('p1');
       expect(updatedPlayer?.pendingGrowthChoices?.some(c => c.cityId === 'c1')).toBe(false);
+    });
+
+    it('depletes resource uses and clears stale validation when placing an improvement', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
+      const targetKey = coordToKey(targetTile);
+      const tiles = new Map(createTestState().map.tiles);
+      const existing = tiles.get(targetKey)!;
+      tiles.set(targetKey, {
+        ...existing,
+        resource: 'wheat',
+        resourceUsesRemaining: 2,
+      });
+
+      const player = createTestPlayer({
+        id: 'p1',
+        pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+      });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos), targetKey],
+      });
+
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        map: { width: 10, height: 10, tiles, wrapX: false },
+        lastValidation: {
+          valid: false,
+          reason: 'Resolve pending city growth choices before ending your turn.',
+          category: 'general',
+        },
+      });
+
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
+      });
+
+      const tile = next.map.tiles.get(targetKey);
+      expect(tile?.improvement).toBe('farm');
+      expect(tile?.resource).toBe('wheat');
+      expect(tile?.resourceUsesRemaining).toBe(1);
+      expect(next.lastValidation).toBeNull();
     });
 
     it('rejects when city does not exist', () => {
@@ -102,6 +154,121 @@ describe('improvementSystem', () => {
       });
 
       // Already improved — no-op
+      expect(next).toBe(state);
+    });
+
+    it('rejects when tile already has a building', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
+      const targetKey = coordToKey(targetTile);
+      const tiles = new Map(createTestState().map.tiles);
+      const existing = tiles.get(targetKey)!;
+      tiles.set(targetKey, { ...existing, building: 'granary' });
+
+      const player = createTestPlayer({
+        id: 'p1',
+        pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+      });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos), targetKey],
+      });
+
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        map: { width: 10, height: 10, tiles, wrapX: false },
+      });
+
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
+      });
+
+      expect(next).toBe(state);
+    });
+
+    it('rejects when the city has no pending growth choice', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
+
+      const player = createTestPlayer({ id: 'p1', pendingGrowthChoices: [] });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos), coordToKey(targetTile)],
+      });
+
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
+      });
+
+      expect(next).toBe(state);
+    });
+
+    it('rejects when the target tile is outside city territory', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const targetTile: HexCoord = { q: 3, r: 2 };
+
+      const player = createTestPlayer({
+        id: 'p1',
+        pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+      });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos)],
+      });
+
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: targetTile,
+      });
+
+      expect(next).toBe(state);
+    });
+
+    it('rejects when the target tile is the city center', () => {
+      const cityPos: HexCoord = { q: 2, r: 2 };
+      const player = createTestPlayer({
+        id: 'p1',
+        pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+      });
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: cityPos,
+        territory: [coordToKey(cityPos)],
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+      });
+
+      const next = improvementSystem(state, {
+        type: 'PLACE_IMPROVEMENT',
+        cityId: 'c1',
+        tile: cityPos,
+      });
+
       expect(next).toBe(state);
     });
 

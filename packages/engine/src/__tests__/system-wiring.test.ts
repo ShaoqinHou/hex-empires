@@ -11,8 +11,9 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { GameEngine, DEFAULT_SYSTEMS } from '../GameEngine';
-import { createTestState, createTestPlayer, createTestCity } from '../systems/__tests__/helpers';
+import { createTestState, createTestPlayer, createTestCity, createTestUnit } from '../systems/__tests__/helpers';
 import type { CityState, PlayerState } from '../types/GameState';
+import { coordToKey } from '../hex/HexMath';
 
 // ── Test helpers (local — mirroring patterns from dedicated system tests) ────
 
@@ -61,6 +62,67 @@ function withAssignedResources(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const engine = new GameEngine();
+
+describe('system-wiring — visibilitySystem order', () => {
+  it('reveals fog immediately around the moved unit position', () => {
+    const player = createTestPlayer({
+      id: 'p1',
+      visibility: new Set(),
+      explored: new Set(),
+    });
+    const unit = createTestUnit({
+      id: 'u1',
+      owner: 'p1',
+      typeId: 'warrior',
+      position: { q: 0, r: 0 },
+      movementLeft: 2,
+    });
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([['p1', player]]),
+      units: new Map([['u1', unit]]),
+    });
+
+    const next = engine.applyAction(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 1, r: 0 }],
+    });
+
+    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.players.get('p1')!.visibility.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
+    expect(next.players.get('p1')!.explored.has(coordToKey({ q: 3, r: 0 }))).toBe(true);
+  });
+});
+
+describe('system-wiring — rejected END_TURN short-circuit', () => {
+  it('does not run downstream turn systems when END_TURN is rejected', () => {
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+    });
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p1',
+      population: 1,
+      food: 1000,
+    });
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([['p1', player]]),
+      cities: new Map([['c1', city]]),
+    });
+
+    const next = engine.applyAction(state, { type: 'END_TURN' });
+
+    expect(next.turn).toBe(state.turn);
+    expect(next.currentPlayerId).toBe('p1');
+    expect(next.phase).toBe('actions');
+    expect(next.lastValidation?.valid).toBe(false);
+    expect(next.cities.get('c1')!.population).toBe(1);
+    expect(next.cities.get('c1')!.food).toBe(1000);
+  });
+});
 
 describe('system-wiring — urbanBuildingSystem', () => {
   it('PLACE_URBAN_BUILDING through pipeline appends building to urbanTiles', () => {

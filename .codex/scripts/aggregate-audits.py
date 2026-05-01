@@ -50,8 +50,9 @@ SYSTEMS_DIR = Path('.codex/gdd/systems')
 TRACKER = Path('.codex/gdd/convergence-tracker.md')
 
 FINDING_RE = re.compile(
-    r'^###\s+F-(\d+):\s*(.+?)\s*(?:—|--)\s*(MATCH|CLOSE|DIVERGED|MISSING|EXTRA)\s*$',
-    re.MULTILINE
+    r'^###\s+F-(\d+):\s*(.+?)\s*(?:—|--)\s*'
+    r'(MATCH|CLOSE|DIVERGED|MISSING|EXTRA)(?:\s*\([^)]*\))?\s*$',
+    re.MULTILINE,
 )
 
 META_RE_LOCATION = re.compile(r'^\*\*Location:\*\*\s*(.+?)$', re.MULTILINE)

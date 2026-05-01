@@ -31,7 +31,10 @@ Use this to test the workflow, not just the documents.
    over, splits the task, or reroutes to a stronger model.
 6. Add or update focused tests.
 7. Run narrow tests, then broader tests/build as risk requires.
-8. For UI/browser-facing work, follow `.codex/workflow/e2e-standards.md`.
+8. For UI/browser-facing work, follow `.codex/workflow/e2e-standards.md`. If
+   full Playwright or build-smoke specs are in scope, run
+   `npm --workspace=packages/web run build:deploy` after any normal build and
+   immediately before Playwright.
 9. Update audit/GDD/tracker status only if the finding's parity changed.
 10. Commit on a `codex/` branch.
 

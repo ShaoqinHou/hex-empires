@@ -73,22 +73,22 @@ describe('deriveImprovementType', () => {
     expect(deriveImprovementType(tile, state)).toBe('farm');
   });
 
+  it('tropical with no resource → farm', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'tropical' });
+    expect(deriveImprovementType(tile, state)).toBe('farm');
+  });
+
   it('hills with no resource → mine', () => {
     const state = createTestState();
     const tile = makeTile({ q: 0, r: 0 }, { feature: 'hills' });
     expect(deriveImprovementType(tile, state)).toBe('mine');
   });
 
-  it('iron resource → mine (overrides terrain)', () => {
+  it('wheat resource → farm', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'grassland', resource: 'iron' });
-    expect(deriveImprovementType(tile, state)).toBe('mine');
-  });
-
-  it('marble resource → quarry', () => {
-    const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { feature: 'hills', resource: 'marble' });
-    expect(deriveImprovementType(tile, state)).toBe('quarry');
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', resource: 'wheat' });
+    expect(deriveImprovementType(tile, state)).toBe('farm');
   });
 
   it('cattle resource → pasture', () => {
@@ -103,22 +103,87 @@ describe('deriveImprovementType', () => {
     expect(deriveImprovementType(tile, state)).toBe('pasture');
   });
 
-  it('cotton resource → plantation', () => {
+  it('stone resource → quarry', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', resource: 'cotton' });
-    expect(deriveImprovementType(tile, state)).toBe('plantation');
+    const tile = makeTile({ q: 0, r: 0 }, { feature: 'hills', resource: 'stone' });
+    expect(deriveImprovementType(tile, state)).toBe('quarry');
   });
 
-  it('deer resource → camp', () => {
+  it('iron/niter/coal/gems resources → mine', () => {
     const state = createTestState();
-    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', resource: 'deer' });
+    const tileBase = { q: 0, r: 0 };
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'iron' }), state)).toBe('mine');
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'niter' }), state)).toBe('mine');
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'coal' }), state)).toBe('mine');
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'gems' }), state)).toBe('mine');
+  });
+
+  it('silk/spices/wine resources → plantation', () => {
+    const state = createTestState();
+    const tileBase = { q: 0, r: 0 };
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'silk' }), state)).toBe('plantation');
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'spices' }), state)).toBe('plantation');
+    expect(deriveImprovementType(makeTile(tileBase, { terrain: 'plains', resource: 'wine' }), state)).toBe('plantation');
+  });
+
+  it('ivory resource → camp', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', resource: 'ivory' });
     expect(deriveImprovementType(tile, state)).toBe('camp');
   });
 
-  it('forest without resource → null (woodcutter not yet in data)', () => {
+  it('whales resource → fishing_boats', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'coast', resource: 'whales' });
+    expect(deriveImprovementType(tile, state)).toBe('fishing_boats');
+  });
+
+  it('oil resource → oil_rig (forward-compatible)', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'coast', resource: 'oil' });
+    expect(deriveImprovementType(tile, state)).toBe('oil_rig');
+  });
+
+  it('forest without resource → woodcutter', () => {
     const state = createTestState();
     const tile = makeTile({ q: 0, r: 0 }, { terrain: 'grassland', feature: 'forest' });
-    expect(deriveImprovementType(tile, state)).toBeNull();
+    expect(deriveImprovementType(tile, state)).toBe('woodcutter');
+  });
+
+  it('jungle without resource → woodcutter', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', feature: 'jungle' });
+    expect(deriveImprovementType(tile, state)).toBe('woodcutter');
+  });
+
+  it('rainforest terrain without resource → woodcutter', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'rainforest' });
+    expect(deriveImprovementType(tile, state)).toBe('woodcutter');
+  });
+
+  it('marsh without resource → clay_pit', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'grassland', feature: 'marsh' });
+    expect(deriveImprovementType(tile, state)).toBe('clay_pit');
+  });
+
+  it('mangrove without resource → clay_pit', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'mangrove' });
+    expect(deriveImprovementType(tile, state)).toBe('clay_pit');
+  });
+
+  it('iron resource (overrides terrain) → mine', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'tropical', resource: 'iron' });
+    expect(deriveImprovementType(tile, state)).toBe('mine');
+  });
+
+  it('gold-like resource not mapped → fallback to terrain', () => {
+    const state = createTestState();
+    const tile = makeTile({ q: 0, r: 0 }, { terrain: 'plains', resource: 'gold_ore' });
+    expect(deriveImprovementType(tile, state)).toBe('farm');
   });
 
   it('desert without resource → null (not improvable)', () => {
@@ -204,8 +269,8 @@ describe('growthSystem — pendingGrowthChoice emission', () => {
 
 describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   it('places the game-derived improvement type on a grassland tile', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
-    const city = makeCity({ territory: [coordToKey(tileCoord)] });
+    const tileCoord: HexCoord = { q: 4, r: 3 };
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 }), coordToKey(tileCoord)] });
     const player = createTestPlayer({
       id: 'p1',
       pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
@@ -226,8 +291,8 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   });
 
   it('clears the pendingGrowthChoice for the city after placement', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
-    const city = makeCity({ territory: [coordToKey(tileCoord)] });
+    const tileCoord: HexCoord = { q: 4, r: 3 };
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 }), coordToKey(tileCoord)] });
     const player = createTestPlayer({
       id: 'p1',
       pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
@@ -248,8 +313,8 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   });
 
   it('only clears the matching city, not other cities pending choices', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
-    const city = makeCity({ territory: [coordToKey(tileCoord)] });
+    const tileCoord: HexCoord = { q: 4, r: 3 };
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 }), coordToKey(tileCoord)] });
     const player = createTestPlayer({
       id: 'p1',
       pendingGrowthChoices: [
@@ -274,6 +339,32 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
     expect(choices.filter(c => c.cityId === 'c2').length).toBe(1);
   });
 
+  it('clears only one pending growth choice for the city per placement', () => {
+    const tileCoord: HexCoord = { q: 4, r: 3 };
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 }), coordToKey(tileCoord)] });
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [
+        { cityId: 'c1', triggeredOnTurn: 1 },
+        { cityId: 'c1', triggeredOnTurn: 2 },
+      ],
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', player]]),
+    });
+
+    const next = improvementSystem(state, {
+      type: 'PLACE_IMPROVEMENT',
+      cityId: 'c1',
+      tile: tileCoord,
+    });
+
+    const choices = next.players.get('p1')!.pendingGrowthChoices ?? [];
+    expect(choices.filter(c => c.cityId === 'c1')).toHaveLength(1);
+    expect(choices[0].triggeredOnTurn).toBe(2);
+  });
+
   it('no-ops when city does not exist', () => {
     const state = createTestState();
     const next = improvementSystem(state, {
@@ -285,7 +376,7 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   });
 
   it('no-ops when tile already has an improvement', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
+    const tileCoord: HexCoord = { q: 4, r: 3 };
     // Mutate tile to have improvement pre-set
     const tiles = new Map(createTestState().map.tiles);
     const key = coordToKey(tileCoord);
@@ -313,7 +404,7 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   });
 
   it('no-ops when terrain is not improvable (desert)', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
+    const tileCoord: HexCoord = { q: 4, r: 3 };
     const tiles = new Map(createTestState().map.tiles);
     const key = coordToKey(tileCoord);
     const existing = tiles.get(key)!;
@@ -343,8 +434,8 @@ describe('improvementSystem — PLACE_IMPROVEMENT', () => {
   });
 
   it('adds a log entry on successful placement', () => {
-    const tileCoord: HexCoord = { q: 3, r: 3 };
-    const city = makeCity({ territory: [coordToKey(tileCoord)] });
+    const tileCoord: HexCoord = { q: 4, r: 3 };
+    const city = makeCity({ territory: [coordToKey({ q: 3, r: 3 }), coordToKey(tileCoord)] });
     const player = createTestPlayer({
       id: 'p1',
       pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
@@ -407,6 +498,31 @@ describe('specialistSystem — ASSIGN_SPECIALIST_FROM_GROWTH', () => {
     expect(choices.filter(c => c.cityId === 'c1').length).toBe(0);
   });
 
+  it('clears only one pending growth choice for the city per specialist assignment', () => {
+    const city = makeCity({ population: 4, specialists: 0 });
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [
+        { cityId: 'c1', triggeredOnTurn: 1 },
+        { cityId: 'c1', triggeredOnTurn: 2 },
+      ],
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', player]]),
+    });
+
+    const next = specialistSystem(state, {
+      type: 'ASSIGN_SPECIALIST_FROM_GROWTH',
+      cityId: 'c1',
+    });
+
+    expect(next.cities.get('c1')!.specialists).toBe(1);
+    const choices = next.players.get('p1')!.pendingGrowthChoices ?? [];
+    expect(choices.filter(c => c.cityId === 'c1')).toHaveLength(1);
+    expect(choices[0].triggeredOnTurn).toBe(2);
+  });
+
   it('respects the specialists cap (max = population - 1)', () => {
     // population 2, specialists already 1 → cap reached
     const city = makeCity({ population: 2, specialists: 1 });
@@ -427,6 +543,47 @@ describe('specialistSystem — ASSIGN_SPECIALIST_FROM_GROWTH', () => {
     // At cap — no change
     expect(next).toBe(state);
     expect(next.cities.get('c1')!.specialists).toBe(1);
+  });
+
+  it('requires a pending growth choice', () => {
+    const city = makeCity({ population: 3, specialists: 0 });
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [],
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', player]]),
+    });
+
+    const next = specialistSystem(state, {
+      type: 'ASSIGN_SPECIALIST_FROM_GROWTH',
+      cityId: 'c1',
+    });
+
+    expect(next).toBe(state);
+    expect(next.cities.get('c1')!.specialists).toBe(0);
+  });
+
+  it('rejects town growth-specialist assignment', () => {
+    const city = makeCity({ population: 3, specialists: 0, settlementType: 'town' });
+    const player = createTestPlayer({
+      id: 'p1',
+      pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }],
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', player]]),
+    });
+
+    const next = specialistSystem(state, {
+      type: 'ASSIGN_SPECIALIST_FROM_GROWTH',
+      cityId: 'c1',
+    });
+
+    expect(next).toBe(state);
+    expect(next.cities.get('c1')!.specialists).toBe(0);
+    expect(next.players.get('p1')!.pendingGrowthChoices).toHaveLength(1);
   });
 
   it('adds a log entry on successful assignment', () => {

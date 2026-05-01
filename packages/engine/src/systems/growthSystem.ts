@@ -1,9 +1,10 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, HexTile, GameEvent } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, GameEvent } from '../types/GameState';
 import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
-import { deriveImprovementType } from '../state/ImprovementRules';
+import { applyImprovementToTile, deriveImprovementType } from '../state/ImprovementRules';
+import { removeOnePendingGrowthChoice } from '../state/PendingGrowthChoices';
 
 // Re-export so existing callers (tests, barrel, web) continue to work.
 export { getGrowthThreshold } from '../state/GrowthUtils';
@@ -92,6 +93,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   const updatedCities = new Map(state.cities);
   // Track new pending growth choices accumulated this turn, keyed by playerId.
   const newGrowthChoices = new Map<string, PendingGrowthChoice[]>();
+  const growthChoiceLogEntries: GameEvent[] = [];
   // F-07 (W4-05): Track newly acquired resources from border expansion, keyed by playerId.
   const newResourceAcquisitions = new Map<string, ResourceId[]>();
   let changed = false;
@@ -132,12 +134,13 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
       if (clampedFood >= growthThreshold && canGrow) {
         // Population grows + territory expands
         const { territory: expandedTerritory, newTileKey } = expandBorders(city, state, updatedCities);
-        updatedCities.set(cityId, {
+        const grownCity: CityState = {
           ...city,
           population: city.population + 1,
           food: clampedFood - growthThreshold,
           territory: expandedTerritory,
-        });
+        };
+        updatedCities.set(cityId, grownCity);
         // F-07 (W4-05): If the newly claimed tile has a resource, add it to the player's ownedResources.
         const playerId = city.owner;
         if (newTileKey !== null) {
@@ -157,15 +160,26 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
             }
           }
         }
-        // Emit a pending growth choice so the player can place an improvement
-        // or assign a specialist (Civ VII W2-01 mechanic).
-        if (!newGrowthChoices.has(playerId)) {
-          newGrowthChoices.set(playerId, []);
+        // Emit a pending growth choice only when the settlement has at least
+        // one legal resolver. The turn guard would otherwise create a hard lock.
+        if (canResolveGrowthChoice(grownCity, state)) {
+          if (!newGrowthChoices.has(playerId)) {
+            newGrowthChoices.set(playerId, []);
+          }
+          newGrowthChoices.get(playerId)!.push({
+            cityId,
+            triggeredOnTurn: state.turn,
+          });
+          growthChoiceLogEntries.push({
+            turn: state.turn,
+            playerId,
+            message: `${city.name} growth: choose an improvement placement or specialist assignment.`,
+            type: 'production' as const,
+            category: 'production',
+            panelTarget: 'city',
+            severity: 'warning',
+          });
         }
-        newGrowthChoices.get(playerId)!.push({
-          cityId,
-          triggeredOnTurn: state.turn,
-        });
         changed = true;
       } else if (!canGrow) {
         // At population cap — stop accumulating food (reset to threshold to avoid runaway)
@@ -215,7 +229,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   // F-10: Emit a log event (category: 'info') for each newly acquired resource so
   // the player sees a "You gained access to X" notification in the HUD.
   let updatedLog = state.log;
-  if (newResourceAcquisitions.size > 0) {
+  if (newResourceAcquisitions.size > 0 || growthChoiceLogEntries.length > 0) {
     const newEntries: GameEvent[] = [];
     for (const [playerId, resourceIds] of newResourceAcquisitions) {
       for (const resourceId of resourceIds) {
@@ -229,6 +243,9 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
           category: 'info',
         });
       }
+    }
+    if (growthChoiceLogEntries.length > 0) {
+      newEntries.push(...growthChoiceLogEntries);
     }
     if (newEntries.length > 0) {
       updatedLog = [...state.log, ...newEntries];
@@ -248,10 +265,6 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
  *   (or uses improvementId if provided) and places it on tileId. Also handles
  *   F-10 resource depletion: decrements resourceUsesRemaining by 1 when the tile
  *   has a bonus resource; clears the resource when uses reach 0.
- *
- * NOTE (F-10): The PLACE_IMPROVEMENT action in improvementSystem.ts does NOT
- * currently decrement resourceUsesRemaining. That wiring should be added to
- * improvementSystem in a follow-up once the W8 productionSystem changes settle.
  */
 function handleResolveGrowthChoice(
   state: GameState,
@@ -272,11 +285,12 @@ function handleResolveGrowthChoice(
   if (!hasPending) return state;
 
   // Clear the pending choice for this city
-  const newPending = (player.pendingGrowthChoices ?? []).filter(c => c.cityId !== cityId);
+  const newPending = removeOnePendingGrowthChoice(player.pendingGrowthChoices, cityId);
   const updatedPlayer: PlayerState = { ...player, pendingGrowthChoices: newPending };
   const updatedPlayers = new Map(state.players);
 
   if (kind === 'specialist') {
+    if (city.settlementType === 'town') return state;
     if (city.specialists >= city.population - 1) return state;
     const updatedCities = new Map(state.cities);
     updatedCities.set(cityId, { ...city, specialists: city.specialists + 1 });
@@ -285,6 +299,7 @@ function handleResolveGrowthChoice(
       ...state,
       cities: updatedCities,
       players: updatedPlayers,
+      lastValidation: null,
       log: [...state.log, {
         turn: state.turn,
         playerId: state.currentPlayerId,
@@ -299,25 +314,21 @@ function handleResolveGrowthChoice(
   const tileKey = coordToKey(tileCoord);
   const currentTile = state.map.tiles.get(tileKey);
   if (!currentTile) return state;
+  if (!city.territory.includes(tileKey)) return state;
+  if (tileKey === coordToKey(city.position)) return state;
   if (currentTile.improvement) return state; // already improved
+  if (currentTile.building || city.urbanTiles?.has(tileKey)) return state;
 
-  // Use explicit improvementId or derive from terrain + resource
+  // Game derives the improvement type from terrain + resource. If legacy
+  // callers provide an explicit id, it must match the derived type.
+  const derivedImprovementId = deriveImprovementType(currentTile, state);
   const resolvedImprovementId: ImprovementId | null =
-    (improvementId as ImprovementId | undefined) ?? deriveImprovementType(currentTile, state);
+    improvementId === undefined || improvementId === derivedImprovementId
+      ? derivedImprovementId
+      : null;
   if (!resolvedImprovementId) return state;
 
-  // F-10: Resource depletion — decrement resourceUsesRemaining by 1 on first harvest.
-  const DEFAULT_RESOURCE_USES = 5;
-  let updatedTileData: HexTile = { ...currentTile, improvement: resolvedImprovementId };
-  if (currentTile.resource !== null) {
-    const usesLeft = currentTile.resourceUsesRemaining ?? DEFAULT_RESOURCE_USES;
-    const newUses = usesLeft - 1;
-    if (newUses <= 0) {
-      updatedTileData = { ...updatedTileData, resource: null, resourceUsesRemaining: 0 };
-    } else {
-      updatedTileData = { ...updatedTileData, resourceUsesRemaining: newUses };
-    }
-  }
+  const updatedTileData = applyImprovementToTile(currentTile, resolvedImprovementId);
 
   const updatedTiles = new Map(state.map.tiles);
   updatedTiles.set(tileKey, updatedTileData);
@@ -330,6 +341,7 @@ function handleResolveGrowthChoice(
     ...state,
     map: { ...state.map, tiles: updatedTiles },
     players: updatedPlayers,
+    lastValidation: null,
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,
@@ -337,6 +349,24 @@ function handleResolveGrowthChoice(
       type: 'production' as const,
     }],
   };
+}
+
+function canResolveGrowthChoice(city: CityState, state: GameState): boolean {
+  if (city.settlementType !== 'town' && city.specialists < city.population - 1) {
+    return true;
+  }
+
+  const centerKey = coordToKey(city.position);
+  for (const tileKey of city.territory) {
+    if (tileKey === centerKey) continue;
+    if (city.urbanTiles?.has(tileKey)) continue;
+
+    const tile = state.map.tiles.get(tileKey);
+    if (!tile || tile.improvement || tile.building) continue;
+    if (deriveImprovementType(tile, state)) return true;
+  }
+
+  return false;
 }
 
 /**

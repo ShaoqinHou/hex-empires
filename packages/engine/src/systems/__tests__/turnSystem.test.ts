@@ -183,6 +183,71 @@ describe('turnSystem', () => {
   });
 
   describe('END_TURN', () => {
+    it('blocks END_TURN for a human player with pending city growth choices', () => {
+      const state = createTestState({
+        phase: 'actions',
+        players: new Map([
+          [
+            'p1',
+            createTestPlayer({ id: 'p1', isHuman: true, pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }] }),
+          ],
+        ]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('actions');
+      expect(next.lastValidation).not.toBeNull();
+      expect(next.lastValidation).toMatchObject({
+        valid: false,
+        category: 'general',
+      });
+      expect(next.lastValidation?.valid).toBe(false);
+      if (next.lastValidation?.valid === false) {
+        expect(next.lastValidation.reason).toBe('Resolve pending city growth choices before ending your turn.');
+      }
+    });
+
+    it('allows AI player to bypass pending city growth choices', () => {
+      const state = createTestState({
+        phase: 'actions',
+        players: new Map([
+          [
+            'p1',
+            createTestPlayer({ id: 'p1', isHuman: false, pendingGrowthChoices: [{ cityId: 'c1', triggeredOnTurn: 1 }] }),
+          ],
+        ]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('allows END_TURN for a human player when no pending growth choices remain', () => {
+      const state = createTestState({
+        phase: 'actions',
+        players: new Map([
+          [
+            'p1',
+            createTestPlayer({ id: 'p1', isHuman: true, pendingGrowthChoices: [] }),
+          ],
+        ]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+    });
+
+    it('clears stale validation when END_TURN succeeds', () => {
+      const state = createTestState({
+        phase: 'actions',
+        lastValidation: {
+          valid: false,
+          reason: 'previous failed action',
+          category: 'general',
+        },
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.phase).toBe('start');
+      expect(next.lastValidation).toBeNull();
+    });
+
     it('advances to next turn when single player', () => {
       const state = createTestState({ phase: 'actions', turn: 1 });
       const next = turnSystem(state, { type: 'END_TURN' });

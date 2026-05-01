@@ -91,6 +91,20 @@ Run-Step "asset-workflow-check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-asset-workflow.ps1"
 }
 
+Run-Step "browser-e2e-build-order" {
+  $e2eStandards = Get-Content -Raw ".codex/workflow/e2e-standards.md"
+  $processChecklist = Get-Content -Raw ".codex/workflow/process-checklist.md"
+  foreach ($doc in @(
+    @{ Name = "e2e-standards"; Text = $e2eStandards },
+    @{ Name = "process-checklist"; Text = $processChecklist }
+  )) {
+    if ($doc.Text -notmatch "build:deploy" -or $doc.Text -notmatch "(?is)before\s+Playwright") {
+      throw "$($doc.Name) does not document deploy build before Playwright"
+    }
+  }
+  Write-Output "browser e2e build order documented"
+}
+
 if (-not $SkipAggregateCheck) {
   Run-Step "aggregate-check" {
     python ".codex/scripts/aggregate-audits.py" --check
@@ -107,8 +121,22 @@ Run-Step "audit-history" {
   if ($tracker -notmatch "Audits completed:\*\*\s+26 / 26") {
     throw "tracker does not show 26 / 26 audits"
   }
-  if ($tracker -notmatch "\*\*Total findings\*\*.+\*\*266\*\*") {
-    throw "tracker total findings is not 266"
+  $totalMatch = [regex]::Match($tracker, "\| \*\*Total findings\*\* \| \*\*(\d+)\*\* \|")
+  if (-not $totalMatch.Success) {
+    throw "tracker total findings row missing"
+  }
+  $totalFindings = [int]$totalMatch.Groups[1].Value
+  if ($totalFindings -le 0) {
+    throw "tracker total findings is not positive"
+  }
+  $rowPattern = "^\| [^|]+ \| ``\.codex/gdd/audits/[^``]+`` \| (\d+) \|"
+  $rows = [regex]::Matches($tracker, $rowPattern, [System.Text.RegularExpressions.RegexOptions]::Multiline)
+  $sum = 0
+  foreach ($row in $rows) {
+    $sum += [int]$row.Groups[1].Value
+  }
+  if ($sum -ne $totalFindings) {
+    throw "tracker total findings $totalFindings does not match audit row sum $sum"
   }
   $blank = Select-String -Path ".codex/gdd/systems/*.md" -Pattern "Populated during implementation"
   if ($blank) {

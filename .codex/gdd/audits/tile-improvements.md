@@ -2,24 +2,27 @@
 
 **System slug:** `tile-improvements`
 **GDD doc:** [systems/tile-improvements.md](../systems/tile-improvements.md)
-**Audit date:** `2026-04-19`
-**Auditor:** `claude-sonnet-4-6`
-**Version target:** Firaxis patch 1.3.0 (per commitment.md)
+**Audit date:** `2026-05-02`
+**Auditor:** `codex-gpt-5.5-lead`
+**Version target:** Firaxis patch 1.3.0 (per source-target.md; official drift flagged there)
 
 ---
 
 ## Engine files audited
 
-- `packages/engine/src/systems/improvementSystem.ts` (lines 1-107)
-- `packages/engine/src/systems/growthSystem.ts` (lines 1-184)
+- `packages/engine/src/systems/improvementSystem.ts`
+- `packages/engine/src/systems/growthSystem.ts`
+- `packages/engine/src/systems/turnSystem.ts` (pending-growth end-turn guard)
 - `packages/engine/src/systems/urbanBuildingSystem.ts` (lines 1-177)
 - `packages/engine/src/systems/districtSystem.ts` (lines 1-293)
-- `packages/engine/src/systems/specialistSystem.ts` (lines 1-68)
+- `packages/engine/src/systems/specialistSystem.ts`
+- `packages/engine/src/state/ImprovementRules.ts`
 - `packages/engine/src/state/UrbanPlacementHints.ts` (lines 1-214)
 - `packages/engine/src/types/DistrictOverhaul.ts` (lines 1-205)
-- `packages/engine/src/data/improvements/index.ts` (lines 1-107)
-- `packages/engine/src/data/units/antiquity-units.ts` (BUILDER unit)
-- `packages/web/src/ui/panels/ImprovementPanel.tsx` (lines 1-207)
+- `packages/engine/src/data/improvements/index.ts`
+- `packages/engine/src/__tests__/retirement-invariants.test.ts`
+- `packages/web/src/ui/panels/CityPanel.tsx` (growth-choice UI)
+- `packages/web/src/ui/layout/BottomBar.tsx` (builder-remnant UI text only)
 
 ---
 
@@ -27,11 +30,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH -- code does what VII does | 3 |
-| CLOSE -- right shape, wrong specifics | 2 |
-| DIVERGED -- fundamentally different (Civ-VI-ism or custom) | 3 |
-| MISSING -- GDD describes, engine lacks | 3 |
-| EXTRA -- engine has, VII/GDD does not have | 1 |
+| MATCH -- code does what VII does | 6 |
+| CLOSE -- right shape, wrong specifics | 6 |
+| DIVERGED -- fundamentally different (Civ-VI-ism or custom) | 0 |
+| MISSING -- GDD describes, engine lacks | 0 |
+| EXTRA -- engine has, VII/GDD does not have | 0 |
 
 **Total findings:** 12
 
@@ -39,55 +42,55 @@
 
 ## Detailed findings
 
-### F-01: Worker/Builder unit triggers improvements -- DIVERGED
+### F-01: Worker/Builder unit triggers improvements -- MATCH
 
-**Location:** `packages/engine/src/systems/improvementSystem.ts:9-68`, `packages/engine/src/data/units/antiquity-units.ts:166-180`
+**Location:** `packages/engine/src/systems/improvementSystem.ts`, `packages/engine/src/types/GameState.ts` (GameAction union), `packages/engine/src/__tests__/retirement-invariants.test.ts`
 **GDD reference:** `systems/tile-improvements.md` section "The No-Worker Shift"
-**Severity:** HIGH
-**Effort:** L (week+)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** VII has NO worker or builder units. Improvement placement is a city-level event triggered by population growth (CITY_POPULATION_GROWTH). The player picks a tile; the game auto-assigns the improvement type from terrain+resource. Placement is instant.
-**Engine does:** `improvementSystem` handles a `BUILD_IMPROVEMENT` action dispatched by a `Builder` unit (ability: build_improvement, defined in antiquity-units.ts). The builder must be on the target tile. Building consumes the builder unit (`updatedUnits.delete(unitId)`). The player explicitly selects both the unit and the improvement type.
-**Gap:** Three Civ-VII divergences stacked: (1) a builder unit exists (Civ VI/V pattern); (2) improvement placement is unit-action not city-event; (3) player chooses the improvement type (not terrain-auto). `ImprovementPanel.tsx` shows all valid improvement types for the tile -- the player picks, defeating the "terrain dictates type" rule.
-**Recommendation:** Remove `BUILDER` unit data and `BUILD_IMPROVEMENT` action. Add `CITY_POPULATION_GROWTH` event to `growthSystem` when population increments. Add `PLACE_IMPROVEMENT` action to `improvementSystem` that auto-selects type from terrain+resource via a lookup table matching the GDD terrain-to-improvement mapping (Farm for flat, Mine for rough+mineral, etc.).
+**Engine does:** `BUILDER` unit data and the `BUILD_IMPROVEMENT` action are retired. `improvementSystem` accepts city-level `PLACE_IMPROVEMENT`, verifies a pending growth choice, verifies city territory, and derives the improvement type from terrain/resource.
+**Gap:** No active gameplay gap for the rural-improvement placement path. Some web/component names still use "builder" as legacy labels, but no builder unit/action path remains.
+**Recommendation:** Keep the retirement invariant tests. Clean up legacy UI names opportunistically when touching selection chrome.
 
 ---
 
-### F-02: Population growth does not trigger improvement-placement prompt -- MISSING
+### F-02: Population growth does not trigger improvement-placement prompt -- CLOSE
 
 **Location:** `packages/engine/src/systems/growthSystem.ts:90-98`
 **GDD reference:** `systems/tile-improvements.md` section "Triggers" -> CITY_POPULATION_GROWTH
 **Severity:** HIGH
 **Effort:** M (1-3 days)
 **VII says:** When food_in_bucket >= food_threshold, population increments AND a CITY_POPULATION_GROWTH event fires, prompting the player to spend the new point -- improve a tile (rural) or assign as Specialist.
-**Engine does:** `growthSystem` increments `city.population` and expands territory. No event is fired. No improvement-placement prompt is triggered. The growth turn ends with population incremented but no tile-assignment step.
-**Gap:** The core VII mechanic -- every pop point = one improvement charge -- is entirely absent. The engine has city growth but the growth-improvement coupling does not exist.
-**Recommendation:** After `population + 1` in `growthSystem`, append a pending-action or event to `state.pendingCityActions` (or equivalent) so the UI can surface the "improve a tile / assign specialist" choice. This is closely tied to F-01 (the improvement action must be a city-level action, not a builder action).
+**Engine does:** `growthSystem` appends `PlayerState.pendingGrowthChoices` on growth, emits a city-targeted production warning, `turnSystem` blocks human `END_TURN` while choices remain, and `CityPanel` renders improvement/specialist resolution controls.
+**Gap:** The core non-bankable growth-choice loop exists. Remaining UI polish: map-level tile highlighting/selection flow is still panel-button driven rather than a full map prompt.
+**Recommendation:** Add a map-highlight placement mode for pending growth choices in a follow-up UI slice; keep the current engine guard as the source of truth.
 
 ---
 
-### F-03: Improvement type is player-chosen, not terrain-auto -- DIVERGED
+### F-03: Improvement type is player-chosen, not terrain-auto -- MATCH
 
-**Location:** `packages/engine/src/systems/improvementSystem.ts:14`, `packages/web/src/ui/panels/ImprovementPanel.tsx:29-55`
+**Location:** `packages/engine/src/state/ImprovementRules.ts`, `packages/engine/src/systems/improvementSystem.ts`, `packages/engine/src/systems/growthSystem.ts`, `packages/web/src/ui/panels/CityPanel.tsx`
 **GDD reference:** `systems/tile-improvements.md` section "Rural Tiles and Rural Improvements"
-**Severity:** HIGH
-**Effort:** M (1-3 days)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** Player picks the tile; game selects the type from terrain+resource. Players cannot force a Farm onto Hills, or a Mine onto Grassland.
-**Engine does:** `ImprovementPanel` shows all improvements whose prerequisites match the tile terrain/feature/resource, and lets the player pick any of them. There is no automatic derivation -- multiple improvements can match a tile and the player chooses.
-**Gap:** The filter in `ImprovementPanel` enforces prerequisites but does not enforce the "exactly one improvement type per tile" determinism VII requires.
-**Recommendation:** Add `deriveImprovementType(terrain, feature, resource): ImprovementId` to `improvementSystem` or a new `ImprovementRules` utility, implementing the GDD mapping table. Wire it into the `PLACE_IMPROVEMENT` action (F-01) so the type is never player-chosen.
+**Engine does:** `deriveImprovementType` is the canonical mapping. `PLACE_IMPROVEMENT` and `RESOLVE_GROWTH_CHOICE` derive from terrain/resource; explicit mismatch attempts are rejected.
+**Gap:** None for the active city-growth improvement path.
+**Recommendation:** Expand derivation tests whenever new resources/terrains are added.
 
 ---
 
-### F-04: Pre-built District model (Civ VI) coexists with spatial urban tile model -- DIVERGED
+### F-04: Pre-built District model (Civ VI) coexists with spatial urban tile model -- CLOSE
 
 **Location:** `packages/engine/src/systems/districtSystem.ts:39-153`, `packages/engine/src/types/DistrictOverhaul.ts`
 **GDD reference:** `systems/tile-improvements.md` section "Urban Tiles, Districts, and Building Slots"
 **Severity:** HIGH
 **Effort:** L (week+)
 **VII says:** No pre-built District. A tile becomes urban when the first building is placed on it. A District is established automatically. Each urban tile holds exactly two building slots. No per-slot type specialization.
-**Engine does:** Two competing district models coexist. `districtSystem.ts` implements a Civ-VI-style explicit `PLACE_DISTRICT` action with a typed DistrictDef (campus, harbor, etc.), one-per-city-per-type limit, and population-cost gating. Simultaneously, `DistrictOverhaul.ts` and `urbanBuildingSystem.ts` implement the VII-style spatial model (PLACE_URBAN_BUILDING, UrbanTileV2, 2-slot cap, QuarterV2). `DistrictOverhaul.ts` comments confirm these are "NOT yet wired into GameEngine".
-**Gap:** The legacy `districtSystem` is the live implementation. The VII-parity overhaul (`urbanBuildingSystem`) is isolated in a parallel namespace and disconnected from the main engine pipeline. Players currently experience Civ-VI-style district placement.
-**Recommendation:** Complete the Districts Overhaul Cycle F integration: wire `urbanBuildingSystem` into `GameEngine`, splice `DistrictOverhaulActionV2` into `GameAction`, and remove the legacy `PLACE_DISTRICT` path. The type infrastructure in `DistrictOverhaul.ts` is already well-designed.
+**Engine does:** `PLACE_URBAN_BUILDING` is in `GameAction`, `urbanBuildingSystem` is wired into `DEFAULT_SYSTEMS`, and building placement uses the spatial two-slot urban tile model. The old `districtSystem` remains only for `UPGRADE_DISTRICT` against legacy district state.
+**Gap:** Legacy district data/state and `UPGRADE_DISTRICT` remain, so the old abstraction is not fully retired.
+**Recommendation:** Retire or migrate legacy `districts` state and `UPGRADE_DISTRICT` after confirming no active production/UI path still relies on it.
 
 ---
 
@@ -97,33 +100,33 @@
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** A Quarter forms when two civ-specific Unique Buildings are co-located on one tile (e.g., Parthenon + Odeon -> Acropolis). The Quarter is civilization-locked and named.
-**Engine does:** computeQuarter in urbanBuildingSystem detects a Quarter when two buildings share the same age. No civ-unique check, no named Quarter catalog, no civilization-lock.
-**Gap:** Quarter detection rule is wrong (age-match instead of civ-unique pair), Quarters are anonymous, and there is no civilization guard.
-**Recommendation:** Add a QUARTER_CATALOG mapping civ+building-pair to named Quarter definitions. Update computeQuarter to check the building pair against the catalog for the current player civ.
+**Engine does:** `computeQuarter` checks `state.config.quarters` for civ-locked unique building pairs, records `quarterId` for named unique quarters, and still supports pure-age/ageless-pair fallback quarters.
+**Gap:** The unique-quarter rule shape exists, but content completeness and exact named-quarter coverage still need a content audit.
+**Recommendation:** Expand quarter content alongside civ-unique building content; keep `unique_quarter` behavior as the canonical path.
 
 ---
 
-### F-06: Ageless flag absent from ImprovementDef -- MISSING
+### F-06: Ageless flag absent from ImprovementDef -- MATCH
 
 **Location:** `packages/engine/src/types/Improvement.ts`
-**Severity:** MED
-**Effort:** S (half-day)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** Civ-unique improvements are tagged Ageless -- they persist across age transitions. Non-ageless standard buildings lose effects and adjacency on transition.
-**Engine does:** ImprovementDef has no ageless boolean field. ageSystem.ts handles TRANSITION_AGE but contains zero logic for preserving ageless improvements.
-**Gap:** The Ageless/outdated split -- a core VII design pillar -- is not modeled. All improvements behave identically across ages.
-**Recommendation:** Add readonly ageless: boolean to ImprovementDef and BuildingDef. Add TRANSITION_AGE handler in ageSystem to nullify effects on non-ageless buildings.
+**Engine does:** `ImprovementDef.isAgeless` and `BuildingDef.isAgeless` exist; `ageSystem` preserves ageless entries and removes explicitly non-ageless improvements/buildings on transition.
+**Gap:** None for the data-model/transition hook.
+**Recommendation:** Keep content validation for `isAgeless` on civ-unique improvements and wonders.
 
 ---
 
-### F-07: Civ-unique rural improvements absent from data -- MISSING
+### F-07: Civ-unique rural improvements absent from data -- CLOSE
 
 **Location:** `packages/engine/src/data/improvements/index.ts`
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Each civilization has at least one unique rural improvement (Baray for Khmer, Great Wall for Han China, Pairidaeza for Persia, etc.; 16 unique improvements catalogued in the GDD).
-**Engine does:** ALL_IMPROVEMENTS contains exactly 7 entries: Farm, Mine, Pasture, Plantation, Quarry, Camp, Road. No civ-unique rural improvements exist.
-**Gap:** The entire civ-unique improvement layer (16 improvements per GDD) is absent.
-**Recommendation:** Create data files in packages/engine/src/data/improvements/ for each civ-unique improvement. Add ageless: true, define a civId foreign key, add placement constraints. Add all to the barrel export.
+**Engine does:** `ALL_IMPROVEMENTS` now includes standard improvements plus several civ-unique improvements with `civId` and `isAgeless`.
+**Gap:** The catalog is not yet complete against the GDD's full civ-unique list, and some referenced civ IDs are still planned content.
+**Recommendation:** Continue civ-unique data expansion as a content slice, with validation against known civ IDs once those civs land.
 
 ---
 
@@ -133,75 +136,73 @@
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Assign the point as a Specialist on a specific existing urban tile. Specialists amplify that tile adjacency bonuses (plus 50 percent per DistrictOverhaul.ts spec). The assignment is spatial.
-**Engine does:** specialistSystem operates on city.specialists (a flat integer count). ASSIGN_SPECIALIST and UNASSIGN_SPECIALIST actions take only cityId -- no tile coordinate. DistrictOverhaul.ts defines a per-tile specialistAssigned: boolean field, but this is in the unintegrated V2 namespace.
-**Gap:** The live specialist system is city-level not tile-level, so the adjacency-amplification effect cannot be expressed.
-**Recommendation:** Wire AssignUrbanSpecialistActionV2 into the main pipeline as part of Cycle F overhaul (F-04). Update YieldCalculator to read UrbanTileV2.specialistAssigned and apply the adjacency multiplier.
+**Engine does:** `ASSIGN_SPECIALIST` supports optional `tileId`, updates `specialistsByTile`, and syncs `UrbanTileV2.specialistCount` when spatial data exists. The growth-choice path still resolves to city-level `ASSIGN_SPECIALIST_FROM_GROWTH`.
+**Gap:** Growth-triggered specialist assignment is not yet tile-targeted, and adjacency-amplification coverage needs a focused audit against `YieldCalculator`.
+**Recommendation:** Extend the growth-choice UI/action to select an urban tile for specialist assignment after the urban-tile flow is fully stable.
 
 ---
 
-### F-09: Farm terrain prerequisites include Desert/Tundra -- CLOSE
+### F-09: Farm terrain prerequisites include Desert/Tundra -- MATCH
 
 **Location:** `packages/engine/src/data/improvements/index.ts:3-14`
-**Severity:** LOW
-**Effort:** S (half-day)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** Farm is for flat terrain (Grassland, Plains, Tropical) -- primary Food producer. Desert and Tundra are non-arable terrain types that should not support Farms.
-**Engine does:** FARM.prerequisites.terrain includes plains, grassland, desert, tundra -- allowing farms on Desert and Tundra tiles.
-**Gap:** Desert and Tundra terrain types are non-arable in VII. Allowing Farms on them breaks the terrain-to-improvement mapping.
-**Recommendation:** Remove desert and tundra from FARM.prerequisites.terrain. Verify MINE.prerequisites restricts to hills and mountains to match the GDD rough terrain rule.
+**Engine does:** `FARM.prerequisites.terrain` is limited to plains, grassland, and tropical.
+**Gap:** None for farm terrain eligibility.
+**Recommendation:** Keep farm derivation covered in `w2-01-growth-improvement.test.ts`.
 
 ---
 
-### F-10: PLACE_IMPROVEMENT action absent from GameAction union -- MISSING
+### F-10: PLACE_IMPROVEMENT action absent from GameAction union -- MATCH
 
 **Location:** `packages/engine/src/types/GameState.ts` (GameAction union)
-**Severity:** HIGH
-**Effort:** M (1-3 days)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** Two explicit actions: PLACE_IMPROVEMENT (city-level, triggered by population growth) and PLACE_BUILDING (converts tile to urban, auto-creates district, checks for Quarter pair).
-**Engine does:** The live GameAction union contains BUILD_IMPROVEMENT (builder-unit action) and PLACE_DISTRICT (Civ-VI district placement). PLACE_IMPROVEMENT and the VII-style PLACE_BUILDING are absent from the live action union.
-**Gap:** The VII action vocabulary is not present in the live engine. Fixing F-01, F-02, and F-04 all require these actions to exist in GameAction.
-**Recommendation:** Add PLACE_IMPROVEMENT with cityId+tile and splice PlaceUrbanBuildingActionV2 as PLACE_URBAN_BUILDING into GameAction as part of Cycle F. This is a prerequisite blocker for F-01, F-02, and F-04.
+**Engine does:** `GameAction` includes `PLACE_IMPROVEMENT`, `ASSIGN_SPECIALIST_FROM_GROWTH`, `RESOLVE_GROWTH_CHOICE`, and `PLACE_URBAN_BUILDING`.
+**Gap:** None for action-union availability.
+**Recommendation:** Keep action union tests focused on behavior rather than type-only assertions.
 
 ---
 
-### F-11: Road is a rural improvement -- EXTRA
+### F-11: Road is a rural improvement -- MATCH
 
 **Location:** `packages/engine/src/data/improvements/index.ts:86-97`
-**Severity:** LOW
-**Effort:** S (half-day)
+**Severity:** LOW (resolved)
+**Effort:** S (verification)
 **VII says:** The GDD lists Farm, Mine, Quarry, Pasture, Plantation, Camp, Woodcutter, Clay Pit, Fishing Boat, Oil Rig, and civ-unique improvements. Roads are not listed as tile improvements in VII.
-**Engine does:** ROAD is defined as an ImprovementDef in ALL_IMPROVEMENTS with category: infrastructure, cost: 1 Builder charge, requiredTech: wheel, and a movement: -0.5 modifier.
-**Gap:** Road as a Builder-unit improvement is a Civ V/VI holdover. VII has no documented road-improvement mechanism.
-**Recommendation:** Remove ROAD from ALL_IMPROVEMENTS or move to a separate infrastructure category explicitly marked as not a VII improvement.
+**Engine does:** `ROAD` is retired from `ALL_IMPROVEMENTS`; retirement-invariant tests assert it stays removed.
+**Gap:** None for the rural-improvement catalog.
+**Recommendation:** Treat roads/rail as trade or infrastructure systems, not rural improvement data.
 
 ---
 
-### F-12: Woodcutter, Clay Pit, Fishing Boat, Oil Rig absent -- MISSING (content gap)
+### F-12: Woodcutter, Clay Pit, Fishing Boat, Oil Rig absent -- CLOSE (content gap)
 
 **Location:** `packages/engine/src/data/improvements/index.ts`
 **Severity:** LOW
 **Effort:** S (half-day)
 **VII says:** Standard rural improvements include Woodcutter (vegetated forest tiles), Clay Pit (wet terrain), Fishing Boat (coastal/river with aquatic resources), and Oil Rig (Oil, Modern-only).
-**Engine does:** None of these four types exist in ALL_IMPROVEMENTS. The current 7-item list omits Woodcutter, Clay Pit, Fishing Boat, and Oil Rig.
-**Gap:** Four of VII ten standard improvements are unimplemented.
-**Recommendation:** Create data entries for Woodcutter, Clay Pit, Fishing Boat, and Oil Rig. Oil Rig requires Modern-age gating via requiredTech or an age field added to ImprovementDef.
+**Engine does:** `WOODCUTTER`, `CLAY_PIT`, `FISHING_BOATS`, and `OIL_RIG` exist in `ALL_IMPROVEMENTS` and are covered by derivation tests.
+**Gap:** Oil Rig is forward-compatible for an `oil` resource but lacks Modern-only gating because the current improvement rule does not receive age context and no oil resource exists yet.
+**Recommendation:** Add age/tech gating for Oil Rig when the oil resource and Modern resource data are introduced.
 
 ---
 
 ## Extras to retire
 
-- `packages/engine/src/data/units/antiquity-units.ts` -- BUILDER unit with build_improvement ability; VII removed the worker unit entirely. Retire after F-01.
-- `packages/engine/src/systems/districtSystem.ts` -- PLACE_DISTRICT Civ-VI-style district placement. Retire after Cycle F overhaul promotes urbanBuildingSystem.
-- ROAD in improvements/index.ts -- not a VII improvement type (see F-11).
+- `packages/engine/src/systems/districtSystem.ts` / `GameState.districts` -- legacy district upgrade state remains. Retire or migrate after confirming no active save/UI dependency.
+- Builder naming remnants in web UI callbacks and icon code -- not an active gameplay path, but should be renamed when that chrome is next touched.
 
 ---
 
 ## Missing items
 
-- Population-growth -> improvement-placement event coupling (F-02) -- required for clone; most critical missing link.
-- PLACE_IMPROVEMENT + PLACE_URBAN_BUILDING in live GameAction union (F-10) -- prerequisite blocker.
-- Ageless flag on improvements/buildings + age-transition handler (F-06) -- required for VII age-transition semantics.
-- 16 civ-unique rural improvements (F-07) -- required for civ differentiation.
-- Woodcutter, Clay Pit, Fishing Boat, Oil Rig standard improvements (F-12) -- content completeness.
+- Full map-highlight UI for pending growth choice tile selection (F-02 follow-up).
+- Complete civ-unique rural improvement catalog (F-07).
+- Growth-triggered specialist assignment to a specific urban tile (F-08).
+- Oil Rig Modern-only gating once oil resource data exists (F-12).
 
 ---
 
@@ -212,24 +213,25 @@ Paste into .codex/gdd/systems/tile-improvements.md section Mapping to hex-empire
 **Engine files:**
 - `packages/engine/src/systems/improvementSystem.ts`
 - `packages/engine/src/systems/growthSystem.ts`
-- `packages/engine/src/systems/urbanBuildingSystem.ts` (V2 -- not yet wired)
-- `packages/engine/src/systems/districtSystem.ts` (Civ-VI legacy -- pending retirement)
+- `packages/engine/src/systems/turnSystem.ts`
+- `packages/engine/src/systems/urbanBuildingSystem.ts`
+- `packages/engine/src/systems/districtSystem.ts` (legacy upgrade state -- pending retirement)
 - `packages/engine/src/systems/specialistSystem.ts`
 - `packages/engine/src/types/DistrictOverhaul.ts`
 - `packages/engine/src/data/improvements/index.ts`
-- `packages/web/src/ui/panels/ImprovementPanel.tsx`
+- `packages/web/src/ui/panels/CityPanel.tsx`
 
-**Status:** 3 MATCH / 2 CLOSE / 3 DIVERGED / 3 MISSING / 1 EXTRA (see .codex/gdd/audits/tile-improvements.md for details)
+**Status:** 6 MATCH / 6 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA (see .codex/gdd/audits/tile-improvements.md for details)
 
-**Highest-severity finding:** F-01 -- Worker/Builder unit triggers improvements (DIVERGED -- VII has no worker unit; improvement is a city-level population-growth event)
+**Highest-severity finding:** F-02 -- Population growth prompt (CLOSE -- core pending-choice loop exists; map-highlight prompt polish remains)
 
 ---
 
 ## Open questions
 
-- Whether urbanBuildingSystem Cycle F integration is in-flight -- the overhaul design is complete in DistrictOverhaul.ts but not wired in. If Cycle F is active, F-04 and F-08 may be partially resolved.
+- Whether legacy `districts` state can be retired outright or needs save migration.
 - food_threshold curve: engine uses GrowthUtils.getGrowthThreshold with age-dependent formulas -- reasonable but not cross-checked against VII exact formula.
-- District adjacency in districtSystem.ts:265-292 is a stub (terrain feature check noted as simplified). A secondary gap not surfaced as a top-level finding.
+- District/urban adjacency and growth-specialist tile targeting should be re-audited together because F-08 depends on both.
 
 ---
 
@@ -237,12 +239,12 @@ Paste into .codex/gdd/systems/tile-improvements.md section Mapping to hex-empire
 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
-| S (half-day) | F-06, F-09, F-11, F-12 | 2d |
-| M (1-3 days) | F-02, F-03, F-05, F-07, F-08, F-10 | ~12d |
-| L (week+) | F-01, F-04 | ~3w |
-| **Total** | 12 | **~4w** |
+| S (half-day) | verification/cleanup for F-01, F-03, F-06, F-09, F-10, F-11 | done |
+| M (1-3 days) | F-02 map prompt polish, F-05 content coverage, F-08 tile-targeted growth specialists, F-12 oil gating | ~8d |
+| L (week+) | F-04 legacy district-state retirement, F-07 full civ-unique catalog | ~2w |
+| **Remaining** | 6 CLOSE findings | **~3w** |
 
-Recommended order: F-10, F-02, F-01, F-04 -- action-union prerequisite first, then growth event, then builder retirement, then district overhaul promotion. F-06, F-09, F-11, F-12 are low-effort and can be done in parallel.
+Recommended order: F-02 map-highlight UI polish, F-08 growth specialist tile targeting, F-07 civ-unique catalog completion, F-04 legacy district-state retirement, F-12 oil gating when Modern resource data lands.
 
 ---
 

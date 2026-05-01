@@ -6,7 +6,7 @@ export const FARM: ImprovementDef = {
   category: 'basic',
   requiredTech: null,
   prerequisites: {
-    terrain: ['plains', 'grassland'],
+    terrain: ['plains', 'grassland', 'tropical'],
   },
   yields: { food: 1 },
   modifier: {},
@@ -80,6 +80,58 @@ export const CAMP: ImprovementDef = {
     resource: ['deer', 'furs', 'ivory', 'truffles'],
   },
   yields: { food: 1, gold: 1 },
+  modifier: {},
+  isAgeless: true,
+} as const;
+
+export const WOODCUTTER: ImprovementDef = {
+  id: 'woodcutter',
+  name: 'Woodcutter',
+  category: 'resource',
+  requiredTech: null,
+  prerequisites: {
+    feature: ['forest', 'jungle', 'rainforest'],
+  },
+  yields: { production: 1 },
+  modifier: {},
+  isAgeless: true,
+} as const;
+
+export const CLAY_PIT: ImprovementDef = {
+  id: 'clay_pit',
+  name: 'Clay Pit',
+  category: 'resource',
+  requiredTech: null,
+  prerequisites: {
+    feature: ['marsh', 'mangrove'],
+  },
+  yields: { production: 1 },
+  modifier: {},
+  isAgeless: true,
+} as const;
+
+export const FISHING_BOATS: ImprovementDef = {
+  id: 'fishing_boats',
+  name: 'Fishing Boats',
+  category: 'resource',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['coast', 'ocean', 'lake'],
+  },
+  yields: { food: 1 },
+  modifier: {},
+  isAgeless: true,
+} as const;
+
+export const OIL_RIG: ImprovementDef = {
+  id: 'oil_rig',
+  name: 'Oil Rig',
+  category: 'resource',
+  requiredTech: null,
+  prerequisites: {
+    terrain: ['ocean', 'coast'],
+  },
+  yields: { production: 2 },
   modifier: {},
   isAgeless: true,
 } as const;
@@ -221,6 +273,10 @@ export const ALL_IMPROVEMENTS: ReadonlyArray<ImprovementDef> = [
   PLANTATION,
   QUARRY,
   CAMP,
+  WOODCUTTER,
+  CLAY_PIT,
+  FISHING_BOATS,
+  OIL_RIG,
   BARAY,
   GREAT_WALL,
   PAIRIDAEZA,

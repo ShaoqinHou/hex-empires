@@ -18,27 +18,27 @@
 | buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 0M / 0C / 4D / 6X / 2E |
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 0M / 3C / 5D / 4X / 1E |
-| civilizations | `.codex/gdd/audits/civilizations.md` | 8 | 3M / 2C / 1D / 2X / 0E |
+| civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
 | combat | `.codex/gdd/audits/combat.md` | 14 | 4M / 2C / 5D / 2X / 1E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 1M / 2C / 1D / 4X / 2E |
-| crises | `.codex/gdd/audits/crises.md` | 9 | 0M / 0C / 3D / 5X / 1E |
-| diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 8 | 1M / 1C / 1D / 5X / 0E |
+| crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
+| diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
 | government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 0M / 2C / 3D / 3X / 0E |
 | independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 0M / 0C / 1D / 7X / 0E |
-| leaders | `.codex/gdd/audits/leaders.md` | 10 | 1M / 1C / 2D / 5X / 1E |
-| legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 11 | 1M / 3C / 5D / 2X / 0E |
-| legends | `.codex/gdd/audits/legends.md` | 6 | 0M / 0C / 1D / 5X / 0E |
+| leaders | `.codex/gdd/audits/leaders.md` | 11 | 1M / 1C / 3D / 5X / 1E |
+| legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 13 | 1M / 4C / 5D / 3X / 0E |
+| legends | `.codex/gdd/audits/legends.md` | 8 | 0M / 1C / 2D / 5X / 0E |
 | map-terrain | `.codex/gdd/audits/map-terrain.md` | 12 | 0M / 4C / 3D / 4X / 1E |
 | mementos | `.codex/gdd/audits/mementos.md` | 6 | 0M / 0C / 0D / 6X / 0E |
 | narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 0M / 0C / 0D / 7X / 0E |
 | population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 0M / 2C / 2D / 5X / 0E |
-| religion | `.codex/gdd/audits/religion.md` | 10 | 2M / 1C / 3D / 3X / 1E |
-| resources | `.codex/gdd/audits/resources.md` | 10 | 0M / 0C / 3D / 6X / 1E |
+| religion | `.codex/gdd/audits/religion.md` | 13 | 2M / 2C / 5D / 3X / 1E |
+| resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
 | settlements | `.codex/gdd/audits/settlements.md` | 11 | 2M / 4C / 0D / 5X / 0E |
-| tech-tree | `.codex/gdd/audits/tech-tree.md` | 13 | 1M / 3C / 4D / 4X / 1E |
-| tile-improvements | `.codex/gdd/audits/tile-improvements.md` | 11 | 0M / 3C / 3D / 4X / 1E |
+| tech-tree | `.codex/gdd/audits/tech-tree.md` | 14 | 1M / 3C / 4D / 4X / 2E |
+| tile-improvements | `.codex/gdd/audits/tile-improvements.md` | 12 | 6M / 6C / 0D / 0X / 0E |
 | trade-routes | `.codex/gdd/audits/trade-routes.md` | 10 | 0M / 1C / 3D / 5X / 1E |
-| victory-paths | `.codex/gdd/audits/victory-paths.md` | 10 | 0M / 2C / 5D / 2X / 1E |
+| victory-paths | `.codex/gdd/audits/victory-paths.md` | 11 | 0M / 2C / 5D / 3X / 1E |
 | yields-adjacency | `.codex/gdd/audits/yields-adjacency.md` | 10 | 1M / 2C / 2D / 4X / 1E |
 
 **Audits completed:** 26 / 26
@@ -71,6 +71,7 @@
 | celebrations | F-07 | Global happiness accumulator absent from PlayerState | ⊘ MISSING | S | `packages/engine/src/types/GameState.ts` lines 173-176 |
 | civic-tree | F-03 | TRANSITION_AGE does not reset civic state | ⚠ DIVERGED | M | `ageSystem.ts:75-84` |
 | civic-tree | F-06 | Traditions — `PlayerState.traditions` and `TraditionCard` ty | ⊘ MISSING | L | `GameState.ts` (PlayerState), `Civic.ts` |
+| civilizations | F-06 | Legacy bonus source | ⚠ DIVERGED | S | packages/engine/src/systems/ageSystem.ts:289-317 |
 | civilizations | F-07 | Unique building / unique infrastructure | ⚠ DIVERGED | M | packages/engine/src/data/civilizations/types.ts:14, all civ data files |
 | civilizations | F-08 | Civ unlock system (historical-path / leader-unlock / quest) | ⊘ MISSING | L | packages/engine/src/state/GameInitializer.ts, packages/engine/src/systems/ageSys |
 | civilizations | F-09 | Traditions / unique civic tree | ⊘ MISSING | L | packages/engine/src/data/civilizations/types.ts |
@@ -104,6 +105,7 @@
 | legacy-paths | F-02 | No conquest multiplier | ⚠ DIVERGED | S | `LegacyPaths.ts:163-186`, `ageSystem.ts:236` |
 | legacy-paths | F-04 | Golden Age wrong mechanics | ⚠ DIVERGED | M | `ageSystem.ts:140-220` |
 | legacy-paths | F-05 | No Golden Age cap (1 per transition) | ⊘ MISSING | S | `ageSystem.ts:128-220` |
+| legacy-paths | F-11 | No global age progress meter | ⊘ MISSING | M | `ageSystem.ts:255-258` |
 | legends | F-01 | `AccountState` cross-session persistence layer absent | ⊘ MISSING | L | no file |
 | legends | F-02 | Foundation Path level + XP tracking absent | ⊘ MISSING | M | no file |
 | legends | F-03 | Per-leader Level + XP tracking absent | ⊘ MISSING | M | no file |
@@ -125,6 +127,8 @@
 | population-specialists | F-04 | Specialists tracked city-wide integer, not per-urban-tile ma | ⚠ DIVERGED | L | `packages/engine/src/systems/specialistSystem.ts:24-44`, `packages/engine/src/st |
 | population-specialists | F-08 | No population-growth → improvement-or-specialist choice prom | ⊘ MISSING | M | `packages/engine/src/systems/growthSystem.ts:90-98` |
 | religion | F-01 | Pantheon missing Mysticism Civic prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:68–84,115–178 |
+| religion | F-02 | Pantheon persists across age transition | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler); packa |
+| religion | F-03 | Religion founding requires Pantheon prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:204–205 |
 | religion | F-04 | Religion founding costs 200 Faith | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:47,208 |
 | religion | F-08 | Missionary system entirely absent | ⊘ MISSING | L | Not found in any engine or UI file. |
 | religion | F-09 | Relic system and Cultural Legacy Path connection absent | ⊘ MISSING | M | Not found. |
@@ -138,11 +142,8 @@
 | tech-tree | F-05 | Science formula limited to population + flat building yields | ⊘ MISSING | L | `researchSystem.ts:247-263` |
 | tech-tree | F-08 | Codex system entirely absent | ⊘ MISSING | L | No `codexSystem.ts`. `PlayerState` has no codex fields. `TechnologyDef` has no ` |
 | tech-tree | F-09 | Science legacy milestones use techs-count proxy, not Codex c | ⚠ DIVERGED | S | `ageSystem.ts:238`, `LegacyPaths.ts:119-136` |
-| tile-improvements | F-01 | Worker/Builder unit triggers improvements | ⚠ DIVERGED | L | `packages/engine/src/systems/improvementSystem.ts:9-68`, `packages/engine/src/da |
-| tile-improvements | F-02 | Population growth does not trigger improvement-placement pro | ⊘ MISSING | M | `packages/engine/src/systems/growthSystem.ts:90-98` |
-| tile-improvements | F-03 | Improvement type is player-chosen, not terrain-auto | ⚠ DIVERGED | M | `packages/engine/src/systems/improvementSystem.ts:14`, `packages/web/src/ui/pane |
-| tile-improvements | F-04 | Pre-built District model (Civ VI) coexists with spatial urba | ⚠ DIVERGED | L | `packages/engine/src/systems/districtSystem.ts:39-153`, `packages/engine/src/typ |
-| tile-improvements | F-10 | PLACE_IMPROVEMENT action absent from GameAction union | ⊘ MISSING | M | `packages/engine/src/types/GameState.ts` (GameAction union) |
+| tile-improvements | F-02 | Population growth does not trigger improvement-placement pro | ≈ CLOSE | M | `packages/engine/src/systems/growthSystem.ts:90-98` |
+| tile-improvements | F-04 | Pre-built District model (Civ VI) coexists with spatial urba | ≈ CLOSE | L | `packages/engine/src/systems/districtSystem.ts:39-153`, `packages/engine/src/typ |
 | trade-routes | F-01 | Trade route yield is symmetric gold to both parties | ⚠ DIVERGED | M | `tradeSystem.ts:102-112` |
 | trade-routes | F-02 | Fixed 20-turn duration replaces permanent route model | ⚠ DIVERGED | M | `tradeSystem.ts:8-9, 114-117` |
 | trade-routes | F-04 | No distance/range check | ⊘ MISSING | S | `tradeSystem.ts:37-53` |
@@ -190,6 +191,7 @@
 | civic-tree | F-11 | governmentSystem not wired into GameEngine | ≈ CLOSE | M | `governmentSystem.ts:1-11` (comment) |
 | civilizations | F-04 | Unique ability | ≈ CLOSE | M | packages/engine/src/data/civilizations/types.ts:8-12, all civ data files |
 | civilizations | F-05 | Unique unit | ≈ CLOSE | M | packages/engine/src/data/civilizations/types.ts:13, all civ data files |
+| civilizations | F-11 | GameInitializer uses Date.now() as seed | ✗ EXTRA | S | packages/engine/src/state/GameInitializer.ts:19 |
 | combat | F-04 | zoc-ranged-units-project-zoc - | ⚠ DIVERGED | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
 | combat | F-07 | support-bonus-missing-standalone - | ≈ CLOSE | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
 | combat | F-11 | civilian-capture-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts (entire file) |
@@ -197,12 +199,16 @@
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
 | commanders | F-07 | `commander-respawn-absent` | ⊘ MISSING | M | `packages/engine/src/types/Commander.ts`, all systems |
 | commanders | F-09 | `panel-not-wired-and-uses-all-global` | ≈ CLOSE | S | `packages/web/src/ui/panels/CommanderPanel.tsx:19,27-32` |
+| crises | F-05 | `ALL_CRISES` direct import | ⚠ DIVERGED | S | `crisisSystem.ts:3` |
 | crises | F-06 | CrisisPanel is a one-shot DramaModal, not persistent policy  | ⚠ DIVERGED | M | `CrisisPanel.tsx:49-60` |
 | crises | F-07 | Crisis legacy bonus and `crisisLegacyUnlocked` absent | ⊘ MISSING | M | `types/GameState.ts` (PlayerState), `crisisSystem.ts` |
 | crises | F-08 | Empire-size scaling for crisis penalties absent | ⊘ MISSING | M | `crisisSystem.ts:198-298` (`applyCrisisEffect`) |
 | crises | F-10 | Plague city infection model (`CityState.infected`) absent | ⊘ MISSING | M | `types/GameState.ts` (CityState), `data/crises/all-crises.ts:4-21` |
 | diplomacy-influence | F-06 | Treaties (Open Borders, Trade Relations) | ⊘ MISSING | M | Entire engine |
+| diplomacy-influence | F-08 | War Support | ≈ CLOSE | S | `packages/engine/src/systems/combatSystem.ts:211-232`, `packages/engine/src/stat |
+| diplomacy-influence | F-09 | Alliance bundle benefits | ≈ CLOSE | M | `packages/engine/src/systems/diplomacySystem.ts:172-195` |
 | diplomacy-influence | F-11 | Diplomatic Ledger / opinion modifier history | ⊘ MISSING | S | `packages/engine/src/types/GameState.ts` (DiplomacyState) |
+| diplomacy-influence | F-13 | Peace deals | ⚠ DIVERGED | M | `packages/engine/src/systems/diplomacySystem.ts:143-169` |
 | diplomacy-influence | F-14 | Surprise war War Support delta scaling | ≈ CLOSE | S | `packages/engine/src/systems/diplomacySystem.ts:102` |
 | government-policies | F-04 | Modern Age government roster incomplete | ≈ CLOSE | S | `packages/engine/src/data/governments/governments.ts:121-143` |
 | government-policies | F-06 | Government system not wired to celebration slot grants | ⊘ MISSING | M | `packages/engine/src/systems/governmentSystem.ts` (no CELEBRATION_TRIGGER handle |
@@ -215,12 +221,14 @@
 | leaders | F-06 | Memento slots absent from PlayerState and LeaderDef | ⊘ MISSING | M | `types/GameState.ts`, `data/leaders/types.ts` |
 | leaders | F-07 | Relationship five-tier ladder not verified | ≈ CLOSE | S | `types/GameState.ts` (diplomacy), `state/GameInitializer.ts:150` |
 | legacy-paths | F-03 | Antiquity science proxy uses wrong object | ⚠ DIVERGED | S | `LegacyPaths.ts:113-136` |
+| legacy-paths | F-06 | Dark Age not opt-in | ≈ CLOSE | S | `ageSystem.ts:146-219` |
 | legacy-paths | F-07 | Score uses reset legacy points | ⚠ DIVERGED | S | `victorySystem.ts:254-268`, `ageSystem.ts:83` |
 | legacy-paths | F-08 | Modern victory conditions wrong | ≈ CLOSE | M | `victorySystem.ts:101-228` |
 | legacy-paths | F-09 | Military kills proxy cross-age bleed | ≈ CLOSE | S | `LegacyPaths.ts:164-283` |
 | legacy-paths | F-10 | Legacy Points untyped | ⊘ MISSING | S | `ageSystem.ts:246`, `GameState.ts` (player.legacyPoints: number) |
 | legends | F-04 | Challenge category schema absent | ⊘ MISSING | M | `data/achievements/index.ts`, `types` for AchievementDef |
 | legends | F-05 | Attribute Node and Legacy Card unlock dispatch absent | ⊘ MISSING | M | no `AccountState` fields |
+| legends | F-07 | `achievementSystem` is in-session only | ≈ CLOSE | M | `systems/achievementSystem.ts` |
 | map-terrain | F-03 | Movement costs are fractional additions, not binary deplete- | ⚠ DIVERGED | M | `hex/TerrainCost.ts:1-64` |
 | map-terrain | F-05 | Deep Ocean and ocean attrition absent | ⊘ MISSING | M | `data/terrains/base-terrains.ts`, `systems/movementSystem.ts` |
 | map-terrain | F-06 | Snow standalone + Tropical absent + JUNGLE missing Science | ≈ CLOSE | S | `data/terrains/base-terrains.ts:47-56` |
@@ -236,6 +244,7 @@
 | population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts:23-30` |
 | population-specialists | F-07 | growthEventCount not reset on age transition | ⊘ MISSING | S | `packages/engine/src/systems/growthSystem.ts` (no TRANSITION_AGE handler present |
 | population-specialists | F-09 | Specialist cap ignores Quarters / per-tile rules | ⊘ MISSING | M | `packages/engine/src/systems/specialistSystem.ts:24-44` |
+| religion | F-05 | Belief slots are Founder + Follower only | ≈ CLOSE | M | packages/engine/src/systems/religionSystem.ts:246–252 (ReligionRecord shape) |
 | religion | F-06 | Pantheon content catalog diverges from VII | ≈ CLOSE | M | packages/engine/src/data/religion/pantheons.ts:15–180 |
 | religion | F-07 | Pantheon effects apply empire-wide (Altar-gating absent) | ⚠ DIVERGED | M | packages/engine/src/data/religion/pantheons.ts (all entries use target city or t |
 | religion | F-10 | Modern age religion freeze absent | ⊘ MISSING | S | packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler). |
@@ -254,9 +263,9 @@
 | tech-tree | F-06 | Research progress wiped on tech switch, not preserved | ≈ CLOSE | S | `researchSystem.ts:52-60` |
 | tech-tree | F-10 | SET_MASTERY engine action has no UI entry point | ⊘ MISSING | S | `web/src/ui/panels/TechTreePanel.tsx:21-30` |
 | tech-tree | F-11 | Normal tech completion grants `+5 ageProgress` | ✗ EXTRA | S | `researchSystem.ts:163` |
+| tech-tree | F-12 | Dark-age random-tech-removal | ✗ EXTRA | S | `ageSystem.ts:185-198` |
 | tile-improvements | F-05 | Quarter formation uses age-match, not civ-unique pair | ≈ CLOSE | M | `packages/engine/src/systems/urbanBuildingSystem.ts:61-88` |
-| tile-improvements | F-06 | Ageless flag absent from ImprovementDef | ⊘ MISSING | S | `packages/engine/src/types/Improvement.ts` |
-| tile-improvements | F-07 | Civ-unique rural improvements absent from data | ⊘ MISSING | M | `packages/engine/src/data/improvements/index.ts` |
+| tile-improvements | F-07 | Civ-unique rural improvements absent from data | ≈ CLOSE | M | `packages/engine/src/data/improvements/index.ts` |
 | tile-improvements | F-08 | Specialist is city-level count, not per-urban-tile | ≈ CLOSE | M | `packages/engine/src/systems/specialistSystem.ts:1-68` |
 | trade-routes | F-03 | Merchant consumed on arrival, not converted to Caravan/Trade | ⚠ DIVERGED | M | `tradeSystem.ts:77-78` |
 | trade-routes | F-06 | No per-civ-pair route capacity cap | ⊘ MISSING | S | `tradeSystem.ts:59-64` |
@@ -264,6 +273,7 @@
 | victory-paths | F-05 | Domination alive-check includes units; VII uses settlements  | ≈ CLOSE | S | `victorySystem.ts:76-98` |
 | victory-paths | F-06 | Score Victory uses turn limit (300), not Modern Age 100% pro | ≈ CLOSE | S | `victorySystem.ts:229-247` |
 | victory-paths | F-07 | Diplomacy victory type has no GDD basis | ✗ EXTRA | S | `victorySystem.ts:154-171`, `VictoryProgressPanel.tsx:5-12` |
+| victory-paths | F-09 | VictoryProgressPanel shows static hints; VictoryPanel uses r | ⊘ MISSING | S | `VictoryProgressPanel.tsx:124-131`, `VictoryPanel.tsx:130-137` |
 | victory-paths | F-10 | Age-transition Legacy Bonus menu not implemented | ⊘ MISSING | M | `LegacyPaths.ts`, `victorySystem.ts` |
 | yields-adjacency | F-03 | River bonus is double-counted across base and adjacency laye | ⚠ DIVERGED | S | `YieldCalculator.ts:40-42`, `DistrictAdjacency.ts:124-126` |
 | yields-adjacency | F-07 | Ageless flag not filtered in adjacency | ⊘ MISSING | S | `DistrictAdjacency.ts` (entire module), `YieldCalculator.ts` |
@@ -290,18 +300,23 @@
 | commanders | F-06 | `air-commander-extra` | ✗ EXTRA | S | `packages/engine/src/data/commanders/commanders.ts:140-151` |
 | commanders | F-10 | `partisan-leader-extra` | ✗ EXTRA | S | `packages/engine/src/data/commanders/commanders.ts:159-170` |
 | crises | F-09 | Golden Age and Trade Opportunity are positive events misclas | ✗ EXTRA | S | `data/crises/all-crises.ts:44-82` |
+| diplomacy-influence | F-10 | hasFriendship / PROPOSE_FRIENDSHIP | ✗ EXTRA | S | `packages/engine/src/types/GameState.ts:235`, `packages/engine/src/systems/diplo |
+| diplomacy-influence | F-15 | DiplomacyPanel priority | ≈ CLOSE | S | `packages/web/src/ui/panels/DiplomacyPanel.tsx:38` |
 | government-policies | F-08 | Policy swap window not enforced | ≈ CLOSE | S | `packages/engine/src/systems/governmentSystem.ts:127-159` (`canSlotPolicy`) |
 | independent-powers | F-08 | Pericles suzerain-count scaling data bug | ⚠ DIVERGED | S | `data/leaders/all-leaders.ts:27-37` |
 | leaders | F-01 | Leader persists across age transition | ✓ MATCH | S | `ageSystem.ts:75-84` |
+| leaders | F-08 | Leader unique ability names diverge from VII | ⚠ DIVERGED | S | `data/leaders/all-leaders.ts` |
 | leaders | F-09 | Starting bias and historical civ pairing absent | ⊘ MISSING | S | `data/leaders/types.ts` |
 | leaders | F-10 | `compatibleAges` on LeaderDef is not a VII concept | ✗ EXTRA | S | `data/leaders/types.ts:12` |
 | leaders | F-11 | Named commander spawns not modeled | ⊘ MISSING | M | `data/leaders/types.ts`, `data/leaders/all-leaders.ts` |
 | legacy-paths | F-12 | MilestoneTracker barrel exclusion | ≈ CLOSE | UNK | `MilestoneTracker.ts:24` |
 | legacy-paths | F-13 | Leaderboard dense-rank correct | ✓ MATCH | UNK | `MilestoneTracker.ts:127-152` |
+| legends | F-06 | `AchievementsPanel` imports `ALL_ACHIEVEMENTS` global | ⚠ DIVERGED | S | `AchievementsPanel.tsx:10` |
 | legends | F-08 | `AchievementsPanel` models Legends UI incorrectly | ⚠ DIVERGED | M | `AchievementsPanel.tsx` |
 | map-terrain | F-09 | Fog of war lacks terrain occlusion | ≈ CLOSE | M | `systems/visibilitySystem.ts:67-79` |
 | map-terrain | F-12 | TerrainId is open string; WATER_TERRAINS is magic-string set | ✗ EXTRA | S | `types/Terrain.ts:3`, `state/MapAnalytics.ts:15` |
 | religion | F-11 | ReligionPanel not wired into App.tsx | ✗ EXTRA | S | packages/web/src/ui/panels/ReligionPanel.tsx:11 — comment: NOT wired into App.ts |
+| resources | F-04 | No unit production gates exist | ✓ MATCH | UNK | `packages/engine/src/systems/resourceSystem.ts`, production pipeline |
 | resources | F-10 | Resource acquisition notification/UI path entirely absent | ⊘ MISSING | M | no engine handler; no UI surface |
 | resources | F-11 | CityState `assignedResources` / PlayerState `ownedResources` | ✗ EXTRA | S | `packages/engine/src/types/GameState.ts` (CityState, PlayerState) |
 | settlements | F-05 | Town specialization mechanics | ✓ MATCH | S | `growthSystem.ts:10-36`, `types/GameState.ts:58-67`, `YieldCalculator.ts:79-92` |
@@ -311,8 +326,13 @@
 | tech-tree | F-07 | Antiquity tech content does not match GDD canonical | ≈ CLOSE | S | `data/technologies/antiquity/index.ts:212-217` |
 | tech-tree | F-13 | Exploration + Modern Future Tech have no prerequisite data | ⊘ MISSING | S | `data/technologies/exploration/index.ts`, `modern/index.ts` |
 | tech-tree | F-14 | Science overflow carries correctly to next tech | ✓ MATCH | S | `researchSystem.ts:157-159` |
-| tile-improvements | F-09 | Farm terrain prerequisites include Desert/Tundra | ≈ CLOSE | S | `packages/engine/src/data/improvements/index.ts:3-14` |
-| tile-improvements | F-11 | Road is a rural improvement | ✗ EXTRA | S | `packages/engine/src/data/improvements/index.ts:86-97` |
+| tile-improvements | F-01 | Worker/Builder unit triggers improvements | ✓ MATCH | S | `packages/engine/src/systems/improvementSystem.ts`, `packages/engine/src/types/G |
+| tile-improvements | F-03 | Improvement type is player-chosen, not terrain-auto | ✓ MATCH | S | `packages/engine/src/state/ImprovementRules.ts`, `packages/engine/src/systems/im |
+| tile-improvements | F-06 | Ageless flag absent from ImprovementDef | ✓ MATCH | S | `packages/engine/src/types/Improvement.ts` |
+| tile-improvements | F-09 | Farm terrain prerequisites include Desert/Tundra | ✓ MATCH | S | `packages/engine/src/data/improvements/index.ts:3-14` |
+| tile-improvements | F-10 | PLACE_IMPROVEMENT action absent from GameAction union | ✓ MATCH | S | `packages/engine/src/types/GameState.ts` (GameAction union) |
+| tile-improvements | F-11 | Road is a rural improvement | ✓ MATCH | S | `packages/engine/src/data/improvements/index.ts:86-97` |
+| tile-improvements | F-12 | Woodcutter, Clay Pit, Fishing Boat, Oil Rig absent | ≈ CLOSE | S | `packages/engine/src/data/improvements/index.ts` |
 | trade-routes | F-08 | Modern-age travel-free route establishment absent | ⊘ MISSING | S | `tradeSystem.ts:37-53` |
 | trade-routes | F-09 | Merchant road-building side effect absent | ⊘ MISSING | M | `tradeSystem.ts` (no road logic) |
 | trade-routes | F-10 | City-pair dedup guard is extra logic partially substituting  | ✗ EXTRA | S | `tradeSystem.ts:59-64` |
@@ -328,15 +348,15 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 22 |
-| CLOSE | 44 |
-| DIVERGED | 68 |
-| MISSING | 115 |
-| EXTRA | 17 |
-| **Total findings** | **266** |
+| MATCH | 29 |
+| CLOSE | 53 |
+| DIVERGED | 72 |
+| MISSING | 113 |
+| EXTRA | 19 |
+| **Total findings** | **286** |
 
 
-Implementation progress: 0 / 266 findings resolved (0%).
+Implementation progress: 0 / 286 findings resolved (0%).
 
 
 ---

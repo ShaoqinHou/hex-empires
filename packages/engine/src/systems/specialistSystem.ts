@@ -1,5 +1,6 @@
 import type { GameState, GameAction, CityState, PlayerState, SpecialistType } from '../types/GameState';
 import type { HexKey } from '../types/HexCoord';
+import { removeOnePendingGrowthChoice } from '../state/PendingGrowthChoices';
 
 /**
  * SpecialistSystem handles citizen specialist assignment.
@@ -251,18 +252,23 @@ function handleAssignFromGrowth(state: GameState, cityId: string): GameState {
   if (!city) return state;
   if (city.owner !== state.currentPlayerId) return state;
 
+  const player = state.players.get(state.currentPlayerId);
+  if (!player) return state;
+  const hasPending = (player.pendingGrowthChoices ?? []).some(
+    c => c.cityId === cityId,
+  );
+  if (!hasPending) return state;
+
+  // Growth specialists are a city-only resolution path.
+  if (city.settlementType === 'town') return state;
   // At least 1 pop must work tiles: max specialists = population - 1
-  if (city.specialists >= city.population - 1) return state;
+  if (!canAssignSpecialist(city)) return state;
 
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, { ...city, specialists: city.specialists + 1 });
 
   // Clear the pending growth choice for this city
-  const player = state.players.get(state.currentPlayerId);
-  if (!player) return { ...state, cities: updatedCities };
-  const newPending = (player.pendingGrowthChoices ?? []).filter(
-    c => c.cityId !== cityId,
-  );
+  const newPending = removeOnePendingGrowthChoice(player.pendingGrowthChoices, cityId);
   const updatedPlayer: PlayerState = { ...player, pendingGrowthChoices: newPending };
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(state.currentPlayerId, updatedPlayer);
@@ -271,6 +277,7 @@ function handleAssignFromGrowth(state: GameState, cityId: string): GameState {
     ...state,
     cities: updatedCities,
     players: updatedPlayers,
+    lastValidation: null,
     log: [...state.log, {
       turn: state.turn,
       playerId: state.currentPlayerId,
