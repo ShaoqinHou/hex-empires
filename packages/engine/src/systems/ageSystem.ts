@@ -277,15 +277,16 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     if (townSpecializationReset) updatedCities = nextCities;
   }
 
-  // F-07 (population-specialists): Reset food to 0 for all cities owned by
-  // the transitioning player so the growth curve restarts fresh in the new age.
+  // F-07 (population-specialists): Reset food and per-age growth history for
+  // all settlements owned by the transitioning player so the growth curve
+  // restarts from X=0 in the new age without erasing population.
   {
     const nextCities = new Map(updatedCities);
     let foodReset = false;
     for (const [cityId, city] of updatedCities) {
       if (city.owner !== player.id) continue;
-      if (city.food === 0) continue;
-      nextCities.set(cityId, { ...city, food: 0 });
+      if (city.food === 0 && city.growthEventCount === 0) continue;
+      nextCities.set(cityId, { ...city, food: 0, growthEventCount: 0 });
       foodReset = true;
     }
     if (foodReset) updatedCities = nextCities;

@@ -31,7 +31,7 @@
 | map-terrain | `.codex/gdd/audits/map-terrain.md` | 12 | 0M / 4C / 3D / 4X / 1E |
 | mementos | `.codex/gdd/audits/mementos.md` | 6 | 0M / 0C / 0D / 6X / 0E |
 | narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 0M / 0C / 0D / 7X / 0E |
-| population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 1M / 1C / 2D / 5X / 0E |
+| population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 5M / 3C / 1D / 0X / 0E |
 | religion | `.codex/gdd/audits/religion.md` | 13 | 2M / 2C / 5D / 3X / 1E |
 | resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
 | settlements | `.codex/gdd/audits/settlements.md` | 11 | 7M / 2C / 0D / 2X / 0E |
@@ -121,11 +121,11 @@
 | narrative-events | F-03 | `GameState.firedNarrativeEvents` deduplication store absent | ⊘ MISSING | S | `types/GameState.ts:355-393` |
 | narrative-events | F-04 | `narrativeEventSystem.ts` absent | ⊘ MISSING | M | no file in `systems/` |
 | narrative-events | F-05 | `RESOLVE_NARRATIVE_EVENT` action + `pendingNarrativeEvents`  | ⊘ MISSING | S | `types/GameState.ts:404-455` (GameAction union) |
-| population-specialists | F-01 | Growth formula constants diverge from GDD (quadratic constan | ≈ CLOSE | S | `packages/engine/src/state/GrowthUtils.ts:17-29` |
-| population-specialists | F-02 | Specialist food cost absent; only happiness cost tracked | ⊘ MISSING | M | `packages/engine/src/systems/specialistSystem.ts:1-68`, `packages/engine/src/sta |
-| population-specialists | F-03 | Specialist adjacency amplification entirely absent | ⊘ MISSING | M | `packages/engine/src/systems/specialistSystem.ts:1-68` (full file) |
-| population-specialists | F-04 | Specialists tracked city-wide integer, not per-urban-tile ma | ⚠ DIVERGED | L | `packages/engine/src/systems/specialistSystem.ts:24-44`, `packages/engine/src/st |
-| population-specialists | F-08 | No population-growth → improvement-or-specialist choice prom | ⊘ MISSING | M | `packages/engine/src/systems/growthSystem.ts:90-98` |
+| population-specialists | F-01 | Growth formula constants align with GDD quadratic constants | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts` |
+| population-specialists | F-02 | Specialist food and happiness costs are both represented | ✓ MATCH | M | `packages/engine/src/state/YieldCalculator.ts`, `packages/engine/src/state/Happi |
+| population-specialists | F-03 | Specialist adjacency amplification exists but depends on spa | ≈ CLOSE | M | `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/Cit |
+| population-specialists | F-04 | Specialists have a per-urban-tile map, with legacy city-wide | ≈ CLOSE | L | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/specialis |
+| population-specialists | F-08 | Population growth creates a resolvable improvement-or-specia | ✓ MATCH | M | `packages/engine/src/systems/growthSystem.ts`, `packages/engine/src/systems/turn |
 | religion | F-01 | Pantheon missing Mysticism Civic prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:68–84,115–178 |
 | religion | F-02 | Pantheon persists across age transition | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts (no TRANSITION_AGE handler); packa |
 | religion | F-03 | Religion founding requires Pantheon prerequisite | ⚠ DIVERGED | S | packages/engine/src/systems/religionSystem.ts:204–205 |
@@ -240,10 +240,10 @@
 | mementos | F-06 | Challenge evaluation and XP award (`legendsSystem`) absent | ⊘ MISSING | M | no file |
 | narrative-events | F-06 | Discovery tile mechanic absent | ⊘ MISSING | M | no file; `HexTile` has no `discoveryId` |
 | narrative-events | F-07 | Narrative-event UI (vignette popup + choices) absent | ⊘ MISSING | M | no `NarrativeEventPanel.tsx` |
-| population-specialists | F-05 | Town pop-7 cap and specialization unlock | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts:87-89` |
-| population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts:23-30` |
-| population-specialists | F-07 | growthEventCount not reset on age transition | ⊘ MISSING | S | `packages/engine/src/systems/growthSystem.ts` (no TRANSITION_AGE handler present |
-| population-specialists | F-09 | Specialist cap ignores Quarters / per-tile rules | ⊘ MISSING | M | `packages/engine/src/systems/specialistSystem.ts:24-44` |
+| population-specialists | F-05 | Town pop-7 cap and specialization unlock | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts` |
+| population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts` |
+| population-specialists | F-07 | growthEventCount resets on age transition | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts`, `packages/engine/src/systems/growthS |
+| population-specialists | F-09 | Specialist cap is per-tile when spatial data exists; cap-inc | ≈ CLOSE | M | `packages/engine/src/systems/specialistSystem.ts`, `packages/engine/src/types/Ga |
 | religion | F-05 | Belief slots are Founder + Follower only | ≈ CLOSE | M | packages/engine/src/systems/religionSystem.ts:246–252 (ReligionRecord shape) |
 | religion | F-06 | Pantheon content catalog diverges from VII | ≈ CLOSE | M | packages/engine/src/data/religion/pantheons.ts:15–180 |
 | religion | F-07 | Pantheon effects apply empire-wide (Altar-gating absent) | ⚠ DIVERGED | M | packages/engine/src/data/religion/pantheons.ts (all entries use target city or t |
@@ -348,10 +348,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 35 |
-| CLOSE | 50 |
-| DIVERGED | 72 |
-| MISSING | 110 |
+| MATCH | 39 |
+| CLOSE | 52 |
+| DIVERGED | 71 |
+| MISSING | 105 |
 | EXTRA | 19 |
 | **Total findings** | **286** |
 

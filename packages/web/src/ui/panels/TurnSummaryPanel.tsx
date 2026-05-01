@@ -1,5 +1,5 @@
 import { useGameState } from '../../providers/GameProvider';
-import { calculateResourceChanges, getGrowthThreshold, calculateEffectiveSettlementCap } from '@hex/engine';
+import { calculateResourceChanges, getCityGrowthThreshold, calculateEffectiveSettlementCap } from '@hex/engine';
 import { ResourceChangeSummaryDisplay } from '../components/ResourceChangeBadge';
 import { DramaModal } from './DramaModal';
 import type { DramaChoice } from './DramaModal';
@@ -128,7 +128,7 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
         </h3>
         <div className="flex flex-col gap-2">
           {playerCities.map(({ city, isStarving, hasGoldDeficit }) => {
-            const growthThreshold = getGrowthThreshold(city.population);
+            const growthThreshold = getCityGrowthThreshold(city, player.age ?? state.age.currentAge);
             const isTown = city.settlementType === 'town';
 
             return (

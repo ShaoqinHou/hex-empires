@@ -63,7 +63,7 @@
 ### Crises (2 items)
 20. **crises F-04** — Age-specific pool + seeded RNG selection absent
 21. **civic-tree F-13** — Non-VII `+5 ageProgress` per civic still at `civicSystem.ts:145`
-22. **population-specialists F-07** — `growthEventCount` not reset on TRANSITION_AGE
+22. **population-specialists F-07** — RESOLVED 2026-05-02: `growthEventCount` now resets on TRANSITION_AGE via `ageSystem`
 
 ### Map (2 items)
 23. **map-terrain F-03** — Binary deplete-all movement absent (additive fractional still)

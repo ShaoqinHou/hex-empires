@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { growthSystem, getGrowthThreshold, calculateCityYields, calculateTotalGrowthRate } from '../growthSystem';
+import {
+  growthSystem,
+  getCityGrowthThreshold,
+  getGrowthThreshold,
+  getGrowthThresholdForEvents,
+  calculateCityYields,
+  calculateTotalGrowthRate,
+} from '../growthSystem';
 import { getSpecializationYields } from '../../state/YieldCalculator';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState, TownSpecialization } from '../../types/GameState';
@@ -30,15 +37,17 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
 
 describe('growthSystem', () => {
   it('accumulates food surplus', () => {
-    const city = createTestCity({ population: 1, food: 0 });
+    const city = createTestCity({ population: 2, food: 0 });
     const state = createTestState({
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
     // territory: 3 grassland tiles × 2 food = 6; city center bonus +2 = 8 total (II2 F-10)
-    // consumed: population(1) * 2 = 2; surplus = 6; newFood = 0 + 6 = 6
+    // consumed: population(2) * 2 = 4; surplus = 4; growth threshold = 29
+    // newFood = 0 + 4 = 4, below threshold.
     const updatedCity = next.cities.get('c1')!;
-    expect(updatedCity.food).toBe(6);
+    expect(updatedCity.population).toBe(2);
+    expect(updatedCity.food).toBe(4);
   });
 
   it('grows population when food reaches threshold', () => {
@@ -55,13 +64,15 @@ describe('growthSystem', () => {
     expect(updatedCity.food !== city.food || updatedCity.population !== city.population).toBe(true);
   });
 
-  it('does not grow past population cap for towns (cap=5)', () => {
-    const city = createTestCity({ population: 5, food: 100, settlementType: 'town', happiness: 5, isCapital: false });
+  it('does not grow past population cap for towns (cap=7)', () => {
+    const city = createTestCity({ population: 7, food: 1000, settlementType: 'town', happiness: 5, isCapital: false });
     const state = createTestState({
       cities: new Map([['c1', city]]),
     });
     const next = growthSystem(state, { type: 'END_TURN' });
-    expect(next.cities.get('c1')!.population).toBe(5);
+    const updatedCity = next.cities.get('c1')!;
+    expect(updatedCity.population).toBe(7);
+    expect(updatedCity.food).toBeLessThanOrEqual(getCityGrowthThreshold(updatedCity, 'antiquity'));
   });
 
   it('ignores non-END_TURN actions', () => {
@@ -82,6 +93,17 @@ describe('growthSystem', () => {
     expect(choiceLog!.panelTarget).toBe('city');
     expect(choiceLog!.severity).toBe('warning');
     expect(choiceLog!.blocksTurn).toBeUndefined();
+  });
+
+  it('increments growthEventCount when food-driven growth resolves', () => {
+    const city = createTestCity({ population: 1, food: 4 });
+    const state = createTestState({ cities: new Map([['c1', city]]) });
+    const next = growthSystem(state, { type: 'END_TURN' });
+
+    const updatedCity = next.cities.get('c1')!;
+    expect(updatedCity.population).toBe(2);
+    expect(updatedCity.growthEventCount).toBe(1);
+    expect(updatedCity.food).toBe(5);
   });
 
   it('does not create an unresolvable pending choice for a center-only town', () => {
@@ -163,18 +185,18 @@ describe('getGrowthThreshold', () => {
   });
 
   it('antiquity has fast early growth', () => {
-    // At pop 1 (growthEvents=0): 30 + 0 + 0 = 30
-    expect(getGrowthThreshold(1, 'antiquity')).toBe(30);
+    // At pop 1 (growthEvents=0): 5 + 0 + 0 = 5
+    expect(getGrowthThreshold(1, 'antiquity')).toBe(5);
   });
 
   it('exploration has moderate growth', () => {
-    // At pop 1 (growthEvents=0): 20 + 0 + 0 = 20
-    expect(getGrowthThreshold(1, 'exploration')).toBe(20);
+    // At pop 1 (growthEvents=0): 30 + 0 + 0 = 30
+    expect(getGrowthThreshold(1, 'exploration')).toBe(30);
   });
 
   it('modern has slow late growth', () => {
-    // At pop 1 (growthEvents=0): 20 + 0 + 0 = 20
-    expect(getGrowthThreshold(1, 'modern')).toBe(20);
+    // At pop 1 (growthEvents=0): 60 + 0 + 0 = 60
+    expect(getGrowthThreshold(1, 'modern')).toBe(60);
     // At pop 5 (growthEvents=4): modern should be harder than antiquity
     expect(getGrowthThreshold(5, 'modern')).toBeGreaterThan(getGrowthThreshold(5, 'antiquity'));
   });
@@ -183,6 +205,14 @@ describe('getGrowthThreshold', () => {
     for (const age of ['antiquity', 'exploration', 'modern'] as const) {
       expect(getGrowthThreshold(10, age)).toBeGreaterThan(getGrowthThreshold(5, age));
     }
+  });
+
+  it('uses explicit growth event history before population fallback', () => {
+    const newAgeCity = createTestCity({ population: 8, growthEventCount: 0 });
+    const legacyCity = createTestCity({ population: 8 });
+
+    expect(getCityGrowthThreshold(newAgeCity, 'antiquity')).toBe(getGrowthThresholdForEvents(0, 'antiquity'));
+    expect(getCityGrowthThreshold(legacyCity, 'antiquity')).toBe(getGrowthThreshold(8, 'antiquity'));
   });
 });
 
@@ -256,7 +286,7 @@ describe('calculateTotalGrowthRate', () => {
 
 describe('growthSystem — growth rate modifiers', () => {
   it('city with granary has lower effective growth threshold than city without', () => {
-    // Threshold at pop=1, antiquity = 30. With granary (0.1): round(30 * 0.9) = 27.
+    // Threshold at pop=1, antiquity = 5. With granary (0.1): round(5 * 0.9) = 5.
     // We test the effect by setting food so that the city with the granary
     // already starts above its (reduced) threshold. The growthSystem will
     // grow it immediately (food >= threshold before any surplus is added).
@@ -265,13 +295,13 @@ describe('growthSystem — growth rate modifiers', () => {
     // enough that food surplus = 0 (population * 2 == food yield), so the
     // surplus added this turn is 0. That way the comparison is clean.
     //
-    // createTestState gives a flat grassland map: 3 territory tiles × 3 food
-    // + city center 2 = 11 food yield; consumption = pop * 2.
-    // At pop=4: consumption=8, surplus=3. food += 3 each turn.
-    const baseThreshold = getGrowthThreshold(4, 'antiquity');           // 30 + 3*3 + 33*9 = 336
-    const reducedThreshold = Math.round(baseThreshold * (1 - 0.1));     // 302
+    // createTestState gives a flat grassland map: 3 territory tiles x 2 food
+    // + city center 2 = 8 food yield; consumption = pop * 2.
+    // At pop=4: consumption=8, surplus=0. food is unchanged.
+    const baseThreshold = getGrowthThreshold(4, 'antiquity');           // 5 + 20*3 + 4*9 = 101
+    const reducedThreshold = Math.round(baseThreshold * (1 - 0.1));     // 91
     // food set to reducedThreshold: city WITH granary is exactly at its threshold → grows.
-    // city WITHOUT granary is below base threshold (302 < 336) → does NOT grow.
+    // city WITHOUT granary is below base threshold (91 < 101) → does NOT grow.
 
     const territory = [
       coordToKey({ q: 3, r: 3 }),
@@ -304,9 +334,9 @@ describe('growthSystem — growth rate modifiers', () => {
   });
 
   it('city with granary + watermill has lower threshold than granary alone', () => {
-    const baseThreshold = getGrowthThreshold(1, 'antiquity'); // 30
-    const withGranary = Math.round(baseThreshold * (1 - 0.1));      // 27
-    const withBoth = Math.round(baseThreshold * (1 - 0.15));         // 26
+    const baseThreshold = getGrowthThreshold(1, 'antiquity'); // 5
+    const withGranary = Math.round(baseThreshold * (1 - 0.1));      // 5
+    const withBoth = Math.round(baseThreshold * (1 - 0.15));         // 4
 
     expect(withBoth).toBeLessThan(withGranary);
     expect(withBoth).toBeLessThan(baseThreshold);
@@ -316,7 +346,7 @@ describe('growthSystem — growth rate modifiers', () => {
     // Extreme case: 100% growth bonus should clamp to threshold of 1
     const city = createTestCity({ buildings: ['granary'] });
     const state = createTestState({ cities: new Map([['c1', city]]) });
-    // buildingDef for granary has growthRateBonus=0.1; 30 * 0.9 = 27, well above 1
+    // buildingDef for granary has growthRateBonus=0.1; 5 * 0.9 = 4.5, well above 1
     // The Math.max(1, ...) guard ensures it never hits 0
     const baseThreshold = getGrowthThreshold(1, 'antiquity');
     const totalRate = calculateTotalGrowthRate(city, state);
@@ -326,7 +356,7 @@ describe('growthSystem — growth rate modifiers', () => {
 
   it('buildings without growthRateBonus do not reduce threshold', () => {
     // monument has no growthRateBonus; threshold should equal base
-    const baseThreshold = getGrowthThreshold(1, 'antiquity'); // 30
+    const baseThreshold = getGrowthThreshold(1, 'antiquity'); // 5
     const cityWithMonument = createTestCity({ buildings: ['monument'] });
     const state = createTestState({ cities: new Map([['c1', cityWithMonument]]) });
     const totalRate = calculateTotalGrowthRate(cityWithMonument, state);

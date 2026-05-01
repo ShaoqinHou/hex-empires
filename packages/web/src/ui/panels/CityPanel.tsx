@@ -1,7 +1,7 @@
 import type { CityState, HexTile, TownSpecialization, NonGrowingTownSpecialization } from '@hex/engine';
 import {
   calculateCityYields,
-  getGrowthThreshold,
+  getCityGrowthThreshold,
   calculateSettlementUpgradeCost,
   calculateCityHappiness,
   calculateSettlementCapPenalty,
@@ -24,8 +24,11 @@ interface CityPanelProps {
 export function CityPanel({ city, onClose }: CityPanelProps) {
   const { state, dispatch, enterPlacementMode } = useGameState();
 
+  // Get the player's current age
+  const player = state.players.get(state.currentPlayerId);
+  const currentAge = player?.age ?? 'antiquity';
   const yields = calculateCityYields(city, state);
-  const growthThreshold = getGrowthThreshold(city.population);
+  const growthThreshold = getCityGrowthThreshold(city, currentAge);
   const foodConsumed = city.population * 2;
   const settlementCapPenalty = calculateSettlementCapPenalty(state, state.currentPlayerId);
   const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
@@ -48,9 +51,6 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
 
   const currentProduction = city.productionQueue[0];
 
-  // Get the player's current age
-  const player = state.players.get(state.currentPlayerId);
-  const currentAge = player?.age ?? 'antiquity';
   const playerGold = player?.gold ?? 0;
   const upgradeCost = calculateSettlementUpgradeCost(state, state.currentPlayerId, city);
   const pendingGrowthChoices = player?.pendingGrowthChoices ?? [];

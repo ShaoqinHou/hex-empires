@@ -204,9 +204,9 @@ describe('deriveImprovementType', () => {
 describe('growthSystem — pendingGrowthChoice emission', () => {
   it('appends a pendingGrowthChoice when a city grows', () => {
     // Build a city that is at or over the growth threshold after 1 turn of yields.
-    // getGrowthThreshold(1, 'antiquity') = 30. Territory yields ~9 food, surplus ~7.
-    // Set food = 29 so that 29 + surplus (>= 1) crosses threshold = 30.
-    const city = makeCity({ population: 1, food: 29 });
+    // getGrowthThreshold(1, 'antiquity') = 5. Any positive surplus from this setup
+    // crosses the first-event threshold and creates a pending growth choice.
+    const city = makeCity({ population: 1, food: 4 });
     const state = createTestState({ cities: new Map([['c1', city]]) });
 
     const next = growthSystem(state, { type: 'END_TURN' });
@@ -225,21 +225,21 @@ describe('growthSystem — pendingGrowthChoice emission', () => {
   });
 
   it('does NOT emit pendingGrowthChoice when city does not grow', () => {
-    // food = 0, surplus ~7 → far below threshold (30) → no growth
-    const city = makeCity({ population: 1, food: 0 });
+    // pop=3, food=0, surplus is below the 61-food threshold for X=2.
+    const city = makeCity({ population: 3, food: 0 });
     const state = createTestState({ cities: new Map([['c1', city]]) });
 
     const next = growthSystem(state, { type: 'END_TURN' });
 
-    expect(next.cities.get('c1')!.population).toBe(1);
+    expect(next.cities.get('c1')!.population).toBe(3);
     const player = next.players.get('p1')!;
     const choices = player.pendingGrowthChoices ?? [];
     expect(choices.filter(c => c.cityId === 'c1').length).toBe(0);
   });
 
   it('accumulates pendingGrowthChoices across turns', () => {
-    // First growth event: threshold pop1 antiquity = 30; set food = 29 so surplus crosses it.
-    const city = makeCity({ population: 1, food: 29 });
+    // First growth event: threshold pop1 antiquity = 5; start just below it.
+    const city = makeCity({ population: 1, food: 4 });
     const state = createTestState({ cities: new Map([['c1', city]]) });
     const next1 = growthSystem(state, { type: 'END_TURN' });
     const choices1 = next1.players.get('p1')!.pendingGrowthChoices ?? [];

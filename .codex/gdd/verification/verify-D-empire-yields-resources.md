@@ -18,7 +18,7 @@
 1. **settlements F-08** — Raze settlement: `CityState.razingCountdown` field exists in `GameState.ts:158` but zero system logic — no `RAZE_SETTLEMENT` action handler, no countdown decrement, no diplomacy effects.
 2. **celebrations F-13** — Celebrations UI fully absent: accumulator/thresholds correct but invisible — no `HappinessHUD` in hudRegistry, no celebration modal, no active-bonus badge.
 3. **settlements F-09** — Settlement cap UI: `calculateEffectiveSettlementCap` computed but no `X / Y` badge surfaces in `TurnSummaryPanel` or any HUD.
-4. **population-specialists F-07** — `growthEventCount` not reset on age transition: `growthSystem.ts` has no `TRANSITION_AGE` case; X remains `population - 1` with no separate `growthEvents` counter.
+4. **population-specialists F-07** — RESOLVED 2026-05-02: `growthEventCount` now resets on age transition via `ageSystem`, while `GrowthUtils` preserves `population - 1` only as an old-save fallback.
 5. **yields-adjacency F-06** — Civic/tech/happiness modifier pipeline: `slottedPolicies` effects not threaded through `getYieldBonus`; `applyHappinessPenalty` not applied in yield calc.
 
 ## Key VERIFIED surprises (landed correctly)

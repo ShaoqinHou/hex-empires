@@ -13,12 +13,17 @@ import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { transitionFortTownDefenseHP } from '../state/TownSpecializationUtils';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
-import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
+import { getCityGrowthThreshold as _getCityGrowthThreshold, getGrowthEventCount } from '../state/GrowthUtils';
 import { applyImprovementToTile, deriveImprovementType } from '../state/ImprovementRules';
 import { removeOnePendingGrowthChoice } from '../state/PendingGrowthChoices';
 
 // Re-export so existing callers (tests, barrel, web) continue to work.
-export { getGrowthThreshold } from '../state/GrowthUtils';
+export {
+  getGrowthThreshold,
+  getGrowthThresholdForEvents,
+  getGrowthEventCount,
+  getCityGrowthThreshold,
+} from '../state/GrowthUtils';
 
 /** Minimum population required to assign a town specialization */
 const SPECIALIZATION_POP_MINIMUM = 7;
@@ -95,10 +100,10 @@ function getNextLockedTownSpecialization(
  * 4. At threshold, population grows
  *
  * Growth threshold is age-dependent (Civ VII-style):
- * - Antiquity: 30 + 3*g + g^3.3 (fast early growth)
- * - Exploration: 20 + 20*g + g^3.0 (moderate growth)
- * - Modern: 20 + 40*g + g^2.7 (slow late growth)
- * where g = growthEvents = population - 1
+ * - Antiquity: 5 + 20*g + 4*g^2
+ * - Exploration: 30 + 50*g + 5*g^2
+ * - Modern: 60 + 60*g + 6*g^2
+ * where g = growthEventCount for the current age
  */
 export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_SPECIALIZATION') {
@@ -135,7 +140,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
     const foodConsumed = city.population * 2;
     const foodSurplus = yields.food - foodConsumed;
     const newFood = city.food + foodSurplus;
-    const baseThreshold = _getGrowthThreshold(city.population, age);
+    const baseThreshold = _getCityGrowthThreshold(city, age);
     const totalGrowthRate = calculateTotalGrowthRate(city, state);
     let growthThreshold = Math.max(1, Math.round(baseThreshold * (1 - totalGrowthRate)));
     // growing_town specialization: +50% growth rate = -33% threshold
@@ -158,6 +163,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
         const grownCity: CityState = {
           ...city,
           population: city.population + 1,
+          growthEventCount: getGrowthEventCount(city) + 1,
           food: clampedFood - growthThreshold,
           territory: expandedTerritory,
         };

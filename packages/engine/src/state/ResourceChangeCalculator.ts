@@ -1,7 +1,7 @@
 import type { GameState, CityState } from '../types/GameState';
 import { calculateCityYields, getSpecializationYields } from './YieldCalculator';
 import { calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './HappinessUtils';
-import { getGrowthThreshold } from './GrowthUtils';
+import { getCityGrowthThreshold } from './GrowthUtils';
 
 /**
  * Per-turn resource change summary for a player
@@ -84,7 +84,7 @@ export function calculateResourceChanges(state: GameState, playerId: string): Re
     const foodSurplus = applyHappinessPenalty(yields.food, cityHappiness) - foodConsumed;
     totalFoodSurplus += foodSurplus;
 
-    const growthThreshold = getGrowthThreshold(city.population);
+    const growthThreshold = getCityGrowthThreshold(city, player.age);
     if (foodSurplus < 0 && city.food < growthThreshold * 0.2) {
       // City is starving and has low food reserves
       starvingCities.push({

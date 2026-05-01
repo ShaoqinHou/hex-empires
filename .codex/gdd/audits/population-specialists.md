@@ -3,17 +3,23 @@
 **System slug:** `population-specialists`
 **GDD doc:** [systems/population-specialists.md](../systems/population-specialists.md)
 **Audit date:** `2026-05-02`
-**Auditor:** `codex-gpt-5.5-lead` (F-05 refresh)
+**Auditor:** `codex-gpt-5.5-lead` (growth-history refresh)
 **Version target:** Firaxis patch 1.3.0 (per commitment.md)
 
 ---
 
 ## Engine files audited
 
-- `packages/engine/src/systems/growthSystem.ts` (184 lines)
-- `packages/engine/src/systems/specialistSystem.ts` (68 lines)
-- `packages/engine/src/state/GrowthUtils.ts` (30 lines)
-- `packages/engine/src/state/HappinessUtils.ts` (121 lines)
+- `packages/engine/src/state/GrowthUtils.ts`
+- `packages/engine/src/systems/growthSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/systems/specialistSystem.ts`
+- `packages/engine/src/state/YieldCalculator.ts`
+- `packages/engine/src/state/CityYieldsWithAdjacency.ts`
+- `packages/engine/src/state/DistrictAdjacency.ts`
+- `packages/engine/src/state/HappinessUtils.ts`
+- `packages/engine/src/systems/turnSystem.ts`
+- `packages/web/src/ui/panels/CityPanel.tsx`
 
 ---
 
@@ -21,10 +27,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 1 |
-| CLOSE | 1 |
-| DIVERGED | 2 |
-| MISSING | 5 |
+| MATCH | 5 |
+| CLOSE | 3 |
+| DIVERGED | 1 |
+| MISSING | 0 |
 | EXTRA | 0 |
 
 **Total findings:** 9
@@ -33,132 +39,119 @@
 
 ## Detailed findings
 
-### F-01: Growth formula constants diverge from GDD (quadratic constants mismatch) — CLOSE
-**Location:** `packages/engine/src/state/GrowthUtils.ts:17-29`
+### F-01: Growth formula constants align with GDD quadratic constants — MATCH
+**Location:** `packages/engine/src/state/GrowthUtils.ts`
 **GDD reference:** `systems/population-specialists.md` section Growth food threshold (post-patch 1.1.2)
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Flat + (Scalar * X) + (Exponent * X^2). Antiquity: Flat=5, Scalar=20, Exponent=4. Sample Antiquity X=0: 5 food; X=1: 29; X=5: 205.
-**Engine does:** Antiquity: 30 + 3*x + 33*x*x. X=0: 30; X=1: 66; X=5: 870. Antiquity X=0 threshold is 30 in engine vs 5 in GDD -- first growth costs 6x more.
-**Gap:** Code comment acknowledges quadratic formula but uses wrong constants. Exponent terms also diverge (33 vs 4 for Antiquity). Much steeper early curve.
-**Recommendation:** Replace constants: Antiquity: 5+20*x+4*x*x; Exploration: 30+50*x+5*x*x; Modern: 60+60*x+6*x*x.
+**VII says:** Flat + (Scalar * X) + (Exponent * X^2). Antiquity: 5/20/4; Exploration: 30/50/5; Modern: 60/60/6.
+**Engine does:** `getGrowthThresholdForEvents` implements the same constants and `getGrowthThreshold` preserves the legacy population fallback.
+**Gap:** None for formula constants.
+**Recommendation:** Keep formula tests in `population-rulebook-parity.test.ts` and `growthSystem.test.ts` as the guardrail.
 
 ---
 
-### F-02: Specialist food cost absent; only happiness cost tracked — MISSING
-**Location:** `packages/engine/src/systems/specialistSystem.ts:1-68`, `packages/engine/src/state/HappinessUtils.ts:89-92`
+### F-02: Specialist food and happiness costs are both represented — MATCH
+**Location:** `packages/engine/src/state/YieldCalculator.ts`, `packages/engine/src/state/HappinessUtils.ts`
 **GDD reference:** `systems/population-specialists.md` section Specialist assignment (Cities only)
 **Severity:** HIGH
 **Effort:** M
-**VII says:** Each specialist costs -2 Food/turn AND -2 Happiness/turn.
-**Engine does:** HappinessUtils applies -2 happiness per specialist (line 90: specialistPenalty = city.specialists * 2) -- correct. But no food deduction for specialists. growthSystem computes foodConsumed = city.population * 2 with no specialist food cost.
-**Gap:** Specialist food drain entirely missing. Food cost is the second direct constraint limiting heavy specialist stacking in food-poor cities. Without it, the engagement cost of specialists is halved.
-**Recommendation:** In growthSystem food loop, add specialistFoodCost = city.specialists * 2 to foodConsumed.
+**VII says:** Each specialist costs -2 Food/turn and -2 Happiness/turn.
+**Engine does:** `YieldCalculator.calculateCityYields` subtracts 2 food per specialist and adds +2 science/+2 culture. `HappinessUtils.calculateCityHappiness` subtracts 2 happiness per specialist.
+**Gap:** None for city-level specialist maintenance. Per-tile placement fidelity is tracked in F-04/F-09.
+**Recommendation:** Do not also subtract specialist food in `growthSystem`; the food yield already includes the maintenance deduction.
 
 ---
 
-### F-03: Specialist adjacency amplification entirely absent — MISSING
-**Location:** `packages/engine/src/systems/specialistSystem.ts:1-68` (full file)
-**GDD reference:** `systems/population-specialists.md` section Specialist assignment (Cities only) bullet 4
+### F-03: Specialist adjacency amplification exists but depends on spatial specialist data — CLOSE
+**Location:** `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/CityYieldsWithAdjacency.ts`
+**GDD reference:** `systems/population-specialists.md` section Specialist assignment bullet 4
 **Severity:** HIGH
 **Effort:** M
-**VII says:** Specialists amplify adjacency bonuses on their urban tile. Coefficient: +0.5 adjacency per specialist (Game8). Distinct from base +2 Sci / +2 Cul.
-**Engine does:** specialistSystem.ts records specialists as a city-level integer. No adjacency lookup in assign/unassign handlers. YieldCalculator does not multiply adjacency yields by specialist count on urban tiles.
-**Gap:** Adjacency amplification wholly absent. The VII mechanic where stacking specialists on a high-adjacency Quarter dramatically scales yields is not modeled.
-**Recommendation:** In YieldCalculator.calculateCityYields, for each urban tile with buildings and specialist count > 0, add adjacencyBonus * 0.5 * specialists to science+culture output. Requires F-04 per-tile model first.
+**VII says:** Specialists amplify adjacency bonuses on their urban tile. Coefficient: +0.5 adjacency per specialist.
+**Engine does:** `DistrictAdjacency.computeAdjacencyBonus` multiplies adjacency on an urban tile by `1 + 0.5 * specialistCount`, capped at two specialists. `CityYieldsWithAdjacency` adds that layer over base yields.
+**Gap:** Works when `urbanTiles` carry `specialistCount`. Some legacy/UI paths still assign specialists city-wide without a tile target, so those specialists cannot amplify a specific tile.
+**Recommendation:** Finish tile-targeted specialist selection in the growth-choice UI and retire city-level-only specialist assignment paths where possible.
 
 ---
 
-### F-04: Specialists tracked city-wide integer, not per-urban-tile map — DIVERGED
-**Location:** `packages/engine/src/systems/specialistSystem.ts:24-44`, `packages/engine/src/state/HappinessUtils.ts:90`
+### F-04: Specialists have a per-urban-tile map, with legacy city-wide fallback still present — CLOSE
+**Location:** `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/specialistSystem.ts`
 **GDD reference:** `systems/population-specialists.md` section Entities -- SettlementState.specialists is map of urbanTileId to Specialist
 **Severity:** HIGH
 **Effort:** L
-**VII says:** SettlementState.specialists is map<urbanTileId, Specialist>. specialistCapPerTile starts at 1. Quarters (two buildings on one tile) both benefit from a single specialist on that tile. Per-tile tracking essential for adjacency amplification and Quarters interaction.
-**Engine does:** CityState.specialists is a plain integer. Constraint is specialists less-than population-minus-1 (city-wide headcount cap). ASSIGN_SPECIALIST action carries no tileId.
-**Gap:** Entire per-tile model absent. specialistCapPerTile cannot be implemented. Adjacency amplification cannot be per-tile. Quarters cannot give doubled bonus. Integer is a stub satisfying happiness cost only.
-**Recommendation:** Change CityState.specialists from number to ReadonlyMap<string, number> (tileId to count). Update ASSIGN_SPECIALIST / UNASSIGN_SPECIALIST actions to carry action.tileId. Add specialistCapPerTile: number to CityState. Largest change in this audit.
+**VII says:** SettlementState specialists are keyed by urban tile; per-tile tracking is required for adjacency amplification and Quarters.
+**Engine does:** `CityState.specialistsByTile` and `urbanTiles[].specialistCount` exist and `ASSIGN_SPECIALIST` / `UNASSIGN_SPECIALIST` update them when `tileId` is supplied. `city.specialists` remains a total-count fallback for old saves/tests and non-spatial callers.
+**Gap:** The compatibility fallback is still reachable. `ASSIGN_SPECIALIST_FROM_GROWTH` and the current CityPanel specialist button do not select a tile, so growth-choice specialists remain city-level.
+**Recommendation:** Add a tile picker for growth-specialist resolution, pass `tileId`, and keep `city.specialists` as derived total rather than the only actionable state.
 
 ---
 
 ### F-05: Town pop-7 cap and specialization unlock — MATCH
-**Location:** `packages/engine/src/systems/growthSystem.ts:87-89`
+**Location:** `packages/engine/src/systems/growthSystem.ts`
 **GDD reference:** `systems/population-specialists.md` section Town vs city rules
 **Severity:** MED
 **Effort:** S
-**VII says:** Towns use the same food-bucket formula as Cities until the local settlement target's pop-7 town specialization threshold.
-**Engine does:** `growthSystem` caps towns at population 7 and uses `SPECIALIZATION_POP_MINIMUM = 7`, so Town Focus is reachable.
-**Gap:** None against the current local settlements target. Food forwarding after non-Growing specialization remains tracked in settlements F-11 / yields-adjacency.
-**Recommendation:** Keep the town cap and specialization threshold aligned. If a later verified Civ VII source proves uncapped towns, update the settlements GDD, audit, and regression tests together.
+**VII says:** Towns use the food-bucket formula until the local settlement target's pop-7 town specialization threshold.
+**Engine does:** `growthSystem` caps towns at population 7 and uses `SPECIALIZATION_POP_MINIMUM = 7`, so Town specialization is reachable.
+**Gap:** None against the current local settlements target.
+**Recommendation:** Keep town cap and specialization threshold aligned with settlements audit tests.
 
 ---
 
 ### F-06: Settlement cap increases are age-automatic, not tech/civic-driven — DIVERGED
-**Location:** `packages/engine/src/state/HappinessUtils.ts:23-30`
+**Location:** `packages/engine/src/state/HappinessUtils.ts`
 **GDD reference:** `systems/population-specialists.md` section Settlement cap sources
 **Severity:** MED
 **Effort:** M
-**VII says:** Cap increases granted by specific techs/civics: Antiquity (Irrigation, Entertainment, Organized Military); Exploration (Feudalism, Social Class, Sovereignty, Imperialism, Mastery Colonialism); Modern (Urbanization, Mass Production, Nationalism, Globalism, Hegemony).
-**Engine does:** calculateEffectiveSettlementCap adds +1 for exploration and +2 for modern age automatically, regardless of tech/civic research.
-**Gap:** Tech/civic-gated cap increases replaced by flat age bonuses. A player who skipped Irrigation should not gain the Irrigation cap bonus. The engine removes this strategic choice.
-**Recommendation:** Add settlementCapBonus field to PlayerState. When tech/civic with INCREASE_SETTLEMENT_CAP effect is applied via effectSystem, increment this field. Remove age-conditional block from calculateEffectiveSettlementCap.
+**VII says:** Cap increases are granted by specific techs/civics.
+**Engine does:** `calculateEffectiveSettlementCap` applies flat age bonuses regardless of researched techs/civics.
+**Gap:** Strategic cap unlocks are collapsed into automatic age progression.
+**Recommendation:** Add a tech/civic effect path for settlement-cap bonuses, store the player bonus, then remove the automatic age bonus.
 
 ---
 
-### F-07: growthEventCount not reset on age transition -- MISSING
-**Location:** `packages/engine/src/systems/growthSystem.ts` (no TRANSITION_AGE handler present)
+### F-07: growthEventCount resets on age transition — MATCH
+**Location:** `packages/engine/src/state/GrowthUtils.ts`, `packages/engine/src/systems/growthSystem.ts`, `packages/engine/src/systems/ageSystem.ts`
 **GDD reference:** `systems/population-specialists.md` section Age transition effects bullet 4
 **Severity:** MED
 **Effort:** S
-**VII says:** On TRANSITION_AGE, growthEventCount resets to 0 for all settlements. Early-age growth is cheap: formula starts at X=0 regardless of previous-age city size.
-**Engine does:** growthSystem handles only SET_SPECIALIZATION and END_TURN. No TRANSITION_AGE case. getGrowthThreshold uses population minus 1 as X, carrying full growth history into new ages.
-**Gap:** Growth counter reset absent. Post-transition growth far more expensive than VII intends.
-**Recommendation:** Add TRANSITION_AGE case to growthSystem. Add growthEvents: number to CityState (decouple from population minus 1). Age transition sets it to 0.
+**VII says:** On TRANSITION_AGE, growthEventCount resets to 0 for all settlements. Early-age growth is cheap regardless of prior-age population.
+**Engine does:** `CityState.growthEventCount` tracks per-age growth history, `growthSystem` increments it on food-driven growth, and `ageSystem` writes `growthEventCount: 0` plus `food: 0` for transitioning-player settlements.
+**Gap:** None for age-reset behavior. Missing old-save counters are explicitly normalized during transition.
+**Recommendation:** Keep `getCityGrowthThreshold(city, age)` as the preferred helper; use `getGrowthThreshold(population, age)` only for legacy fallback/tests.
 
 ---
 
-### F-08: No population-growth → improvement-or-specialist choice prompt — MISSING
-
-**Location:** `packages/engine/src/systems/growthSystem.ts:90-98`
-**GDD reference:** `systems/population-specialists.md` § "Growth event resolution"
+### F-08: Population growth creates a resolvable improvement-or-specialist choice — MATCH
+**Location:** `packages/engine/src/systems/growthSystem.ts`, `packages/engine/src/systems/turnSystem.ts`, `packages/web/src/ui/panels/CityPanel.tsx`
+**GDD reference:** `systems/population-specialists.md` section Growth event resolution
 **Severity:** HIGH
 **Effort:** M
-**VII says:** Each population-growth event requires the player to resolve with: (a) place an improvement (rural), or (b) assign a Specialist on an urban tile. Growth is gated on this decision.
-**Engine does:** `growthSystem` simply increments `city.population` and silently advances. No `pendingGrowthChoice`, no action-required state, no UI surface.
-**Gap:** The VII growth→decision loop is absent. Cross-cuts `tile-improvements.md` F-03 and F-08.
-**Recommendation:** Add `pendingGrowthChoices: ReadonlyArray<{ cityId: string }>` to `PlayerState`. Set on growth. Require resolution via `PLACE_IMPROVEMENT` or `ASSIGN_SPECIALIST` before next END_TURN is allowed. Cross-system coordination with tile-improvements flagship refactor.
+**VII says:** Each population-growth event requires the player to resolve with an improvement placement or specialist assignment before continuing.
+**Engine does:** Food-driven growth emits `pendingGrowthChoices` when at least one legal resolver exists. `turnSystem` blocks human END_TURN while choices are pending. `RESOLVE_GROWTH_CHOICE`, `PLACE_IMPROVEMENT`, and `ASSIGN_SPECIALIST_FROM_GROWTH` clear one pending choice, and CityPanel exposes the resolution controls.
+**Gap:** No functional gap for the decision loop. The specialist branch is still city-level unless F-04's tile-targeted path is used.
+**Recommendation:** Keep the legal-resolver guard to avoid hard-locks, then improve specialist tile targeting under F-04/F-09.
 
 ---
 
-### F-09: Specialist cap ignores Quarters / per-tile rules — MISSING
-
-**Location:** `packages/engine/src/systems/specialistSystem.ts:24-44`
-**GDD reference:** `systems/population-specialists.md` § "Specialist caps" + Quarters interaction
+### F-09: Specialist cap is per-tile when spatial data exists; cap-increase sources remain incomplete — CLOSE
+**Location:** `packages/engine/src/systems/specialistSystem.ts`, `packages/engine/src/types/GameState.ts`
+**GDD reference:** `systems/population-specialists.md` Specialist caps + Quarters interaction
 **Severity:** MED
 **Effort:** M
-**VII says:** Specialist cap is per-urban-tile (starts at 1, increases with specific civics/techs). A Quarter (2 civ-unique buildings on one tile) still accepts only `specialistCapPerTile` specialists — the cap is per tile, not per building.
-**Engine does:** Cap is `city.population - 1` (city-wide headcount). No per-tile cap. No integration with Quarter detection (which is itself missing per tile-improvements F-07).
-**Gap:** Without per-tile tracking (F-04), per-tile caps are unimplementable.
-**Recommendation:** Depends on F-04 (per-tile specialist model). Add `specialistCapPerTile: number` to `CityState` (default 1). Update civic/tech effects to increment it.
+**VII says:** Specialist cap is per urban tile, starts at 1, and increases through specific civics/techs.
+**Engine does:** `canAssignSpecialist` enforces `urbanTile.specialistCapPerTile ?? 1` when `tileId` is supplied. The total city headcount cap still prevents specialists from consuming the last working population.
+**Gap:** Civic/tech cap-increase effects are not wired, and city-level fallback assignments bypass tile-cap checks.
+**Recommendation:** Add specialist-cap effects to tech/civic completion and make growth-choice specialist assignment choose an urban tile.
 
 ---
 
-## Extras to retire
+## Active items
 
-None. The current specialist system is correct-shape but too simplistic — extend, don't retire.
-
----
-
-## Missing items
-
-1. Corrected growth thresholds (F-01) — one-line fix, enables proper growth curve.
-2. Specialist food cost (F-02) — simple addition to growth food loop.
-3. Specialist adjacency amplification (F-03) — requires F-04 first.
-4. Per-urban-tile specialist map (F-04) — largest refactor, blocks F-03 + F-09.
-5. Tech/civic-gated settlement cap bonuses (F-06).
-6. `growthEvents` reset on age transition (F-07).
-7. Population-growth → improvement-or-specialist choice prompt (F-08) — flagship VII cadence.
-8. Per-tile specialist cap + civic/tech increments (F-09).
+1. F-04/F-09: make growth-choice specialist assignment tile-targeted instead of city-level fallback.
+2. F-03: verify all yield surfaces that need adjacency use `calculateCityYieldsWithAdjacency`.
+3. F-06: replace automatic settlement-cap age bonuses with tech/civic-gated bonuses.
 
 ---
 
@@ -167,23 +160,25 @@ None. The current specialist system is correct-shape but too simplistic — exte
 Paste into `.codex/gdd/systems/population-specialists.md` § "Mapping to hex-empires":
 
 **Engine files:**
-- `packages/engine/src/systems/growthSystem.ts`
-- `packages/engine/src/systems/specialistSystem.ts`
 - `packages/engine/src/state/GrowthUtils.ts`
-- `packages/engine/src/state/HappinessUtils.ts`
+- `packages/engine/src/systems/growthSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/systems/specialistSystem.ts`
+- `packages/engine/src/state/YieldCalculator.ts`
+- `packages/engine/src/state/CityYieldsWithAdjacency.ts`
+- `packages/engine/src/state/DistrictAdjacency.ts`
 
-**Status:** 1 MATCH / 1 CLOSE / 2 DIVERGED / 5 MISSING / 0 EXTRA
+**Status:** 5 MATCH / 3 CLOSE / 1 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-04 (per-tile specialist map absent — blocks adjacency amplification). Other high-impact active items: F-01 (wrong growth constants), F-02 (specialist food cost absent), F-08 (growth→choice prompt absent).
+**Highest-severity active finding:** F-03/F-04 (specialist tile targeting and adjacency amplification are close but still have city-level fallback paths).
 
 ---
 
 ## Open questions
 
-1. Are the post-patch-1.1.2 growth constants (5/20/4, 30/50/5, 60/60/6) accurate? GDD notes them but wiki coverage is sparse.
-2. Per-tile cap increase sources: which civics/techs specifically trigger `specialistCapPerTile++`?
-3. For F-04 schema: `ReadonlyMap<string, number>` keyed by tile coord (stringified q,r) or urban-tile-id (if that exists post-Cycle F)?
-4. Food forwarding from specialized towns (cross-cut `settlements.md` F-11) — where does the forwarded food enter the growth bucket?
+1. Which tech/civic records should grant `specialistCapPerTile++`?
+2. Should the legacy city-level specialist action remain for AI/autoresolve, or be fully hidden behind tile selection?
+3. For settlement-cap bonuses, should the stored player field be a direct numeric bonus or a list of source ids for auditability?
 
 ---
 
@@ -191,12 +186,12 @@ Paste into `.codex/gdd/systems/population-specialists.md` § "Mapping to hex-emp
 
 | Bucket | Findings | Total effort |
 |---|---|---|
-| S (half-day) | F-01, F-02, F-07 | 1.5d |
-| M (1-3 days) | F-03, F-06, F-08, F-09 | ~8d |
-| L (week+) | F-04 | 1w+ |
-| **Active total** | 8 | **~2.25w** |
+| S (half-day) | F-03 validation pass | 0.5d |
+| M (1-3 days) | F-06, F-09 | ~4d |
+| L (week+) | F-04 completion | 1w |
+| **Active total** | 4 | **~1.5w** |
 
-Recommended order: F-01 (fix growth constants), F-02 (specialist food cost), F-07 (age-transition reset), F-04 (per-tile specialist model — unblocks F-03 + F-09), F-03 (adjacency amplification), F-08 (growth→choice prompt), F-09 (per-tile cap), F-06 (tech/civic-gated settlement cap).
+Recommended order: F-04/F-09 (tile-targeted specialist resolution), F-03 verification pass, F-06 tech/civic-gated settlement cap.
 
 ---
 

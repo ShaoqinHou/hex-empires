@@ -129,6 +129,12 @@ export interface CityState {
   readonly position: HexCoord;
   readonly population: number;
   readonly food: number;           // accumulated food toward next pop
+  /**
+   * Number of food-driven growth events this settlement has completed in the
+   * current age. Optional for old saves/tests; absent falls back to
+   * population - 1.
+   */
+  readonly growthEventCount?: number;
   readonly productionQueue: ReadonlyArray<ProductionItem>;
   readonly productionProgress: number; // accumulated production on current item
   readonly buildings: ReadonlyArray<BuildingId>;

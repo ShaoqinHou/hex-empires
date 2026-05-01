@@ -41,7 +41,7 @@ vi.mock('@hex/engine', async () => {
       goldDeficitCities: [],
       unhappyCities: 0,
     }),
-    getGrowthThreshold: () => 10,
+    getCityGrowthThreshold: () => 10,
   };
 });
 

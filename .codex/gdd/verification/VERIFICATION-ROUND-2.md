@@ -302,7 +302,7 @@
 | ID | Finding | Status | Notes |
 |----|---------|--------|-------|
 | F-01 | Growth constants | MISSING | Still wrong formula (30+3x+33x^2) |
-| F-02 | Specialist food cost | MISSING | No specialist food consumption |
+| F-02 | Specialist food cost | RESOLVED 2026-05-02 | Specialist food consumption now applies in `YieldCalculator`; original verification note was stale. |
 | F-03 | Per-tile specialist model | MISSING | No per-tile assignment |
 | F-04 | Population yield | PARTIAL | Population contributes, not per-tile |
 | F-05 | Growth overflow | PARTIAL | Some overflow, not VII-correct |

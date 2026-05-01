@@ -134,6 +134,62 @@ describe('A3: cities survive an age transition (§16.1 — settlements persist)'
   });
 });
 
+describe('A3b: settlement growth history resets on age transition (§3.1 / §16)', () => {
+  it('resets food and growthEventCount without erasing settlement population', () => {
+    const player = readyToTransitionPlayer();
+    const capital = makeCity({
+      id: 'c1',
+      name: 'Rome',
+      population: 8,
+      food: 42,
+      growthEventCount: 7,
+      isCapital: true,
+      settlementType: 'city',
+    });
+    const town = makeCity({
+      id: 't1',
+      name: 'Ostia',
+      population: 7,
+      food: 20,
+      growthEventCount: 6,
+      isCapital: false,
+      settlementType: 'town',
+      specialization: 'farming_town',
+    });
+    const legacyTown = makeCity({
+      id: 't2',
+      name: 'Antium',
+      population: 7,
+      food: 0,
+      isCapital: false,
+      settlementType: 'town',
+      specialization: 'mining_town',
+    });
+    const state = readyToTransitionState(player, {
+      cities: new Map([
+        [capital.id, capital],
+        [town.id, town],
+        [legacyTown.id, legacyTown],
+      ]),
+    });
+
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+
+    const updatedCapital = next.cities.get('c1')!;
+    const updatedTown = next.cities.get('t1')!;
+    const updatedLegacyTown = next.cities.get('t2')!;
+    expect(updatedCapital.population).toBe(8);
+    expect(updatedCapital.food).toBe(0);
+    expect(updatedCapital.growthEventCount).toBe(0);
+    expect(updatedTown.population).toBe(7);
+    expect(updatedTown.food).toBe(0);
+    expect(updatedTown.growthEventCount).toBe(0);
+    expect(updatedLegacyTown.population).toBe(7);
+    expect(updatedLegacyTown.food).toBe(0);
+    expect(updatedLegacyTown.growthEventCount).toBe(0);
+  });
+});
+
 // ── A4: previous civ legacy bonus becomes persistent ActiveEffect (§16.1 #5)
 
 describe('A4: previous civ legacy bonus becomes a persistent ActiveEffect (§16.1 #5)', () => {

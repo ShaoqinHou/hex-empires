@@ -129,7 +129,13 @@ export { turnSystem } from './systems/turnSystem';
 export { movementSystem } from './systems/movementSystem';
 export { getMovementCost } from './hex/TerrainCost';
 export { citySystem, calculateSettlementUpgradeCost } from './systems/citySystem';
-export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
+export {
+  growthSystem,
+  getGrowthThreshold,
+  getGrowthThresholdForEvents,
+  getGrowthEventCount,
+  getCityGrowthThreshold,
+} from './systems/growthSystem';
 export { calculateCityYields, getSpecializationYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';
 export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './systems/resourceSystem';

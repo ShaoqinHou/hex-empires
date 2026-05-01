@@ -1,7 +1,13 @@
 export { turnSystem } from './turnSystem';
 export { movementSystem } from './movementSystem';
 export { citySystem } from './citySystem';
-export { growthSystem, getGrowthThreshold } from './growthSystem';
+export {
+  growthSystem,
+  getGrowthThreshold,
+  getGrowthThresholdForEvents,
+  getGrowthEventCount,
+  getCityGrowthThreshold,
+} from './growthSystem';
 export { calculateCityYields } from '../state/YieldCalculator';
 export { productionSystem } from './productionSystem';
 export { resourceSystem, calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './resourceSystem';
