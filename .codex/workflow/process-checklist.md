@@ -20,16 +20,25 @@ Use this to test the workflow, not just the documents.
 
 1. Pick one tracker finding.
 2. Lead writes the implementation plan and file scope.
-3. Decide whether Spark can handle the final coding step. If yes, provide the
-   Spark worker contract from `agent-routing.md`.
-4. Lead reviews the worker diff.
-5. Add or update focused tests.
-6. Run narrow tests, then broader tests/build as risk requires.
-7. For UI/browser-facing work, follow `.codex/workflow/e2e-standards.md`.
-8. Update audit/GDD/tracker status only if the finding's parity changed.
-9. Commit on a `codex/` branch.
+3. Decide whether `gpt-5.3-codex-spark` can handle the final coding step. Use
+   Spark only when the work is narrow, mechanical, fully scoped, and has known
+   tests.
+4. If Spark is used, spawn it explicitly with the worker contract from
+   `agent-routing.md`; deterministic scripts and game tests do not request
+   models automatically.
+5. Lead reviews the worker diff and trouble signals. If Spark repeats an error,
+   exceeds scope, fails unclear tests, or returns uncertainty, the lead takes
+   over, splits the task, or reroutes to a stronger model.
+6. Add or update focused tests.
+7. Run narrow tests, then broader tests/build as risk requires.
+8. For UI/browser-facing work, follow `.codex/workflow/e2e-standards.md`.
+9. Update audit/GDD/tracker status only if the finding's parity changed.
+10. Commit on a `codex/` branch.
 
 ## Asset Workflow
+
+Status: paused. Do not generate or integrate new asset files until the lead
+explicitly re-enables this workflow.
 
 1. Read `.codex/workflow/asset-generation.md` and
    `.codex/skills/generate-asset/SKILL.md`.

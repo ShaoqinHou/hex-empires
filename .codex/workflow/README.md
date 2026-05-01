@@ -9,6 +9,8 @@
 - `.codex/skills/` - task procedures for panels, HUD, content, verification,
   review, consistency audits, and asset generation.
 - `.codex/scripts/` - workflow checks and generated-doc tooling.
+- `.codex/workflow/agent-routing.md` - lead/worker routing rules, including
+  when to use GPT-5.3-Codex-Spark.
 - `.codex/workflow/asset-generation.md` - GPT Image 2 asset source, style,
   mask, manifest, and animation workflow.
 - `AGENTS.md` - root Codex playbook.
@@ -43,6 +45,12 @@ changes:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .codex\scripts\test-workflow-e2e.ps1
+```
+
+That e2e check includes the Spark routing gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .codex\scripts\check-agent-routing.ps1
 ```
 
 Run the generated-doc check before committing GDD/audit mapping updates:

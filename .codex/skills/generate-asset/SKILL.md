@@ -5,6 +5,10 @@ description: Create traceable GPT Image 2 visual asset briefs, prompt templates,
 
 # Generate Asset
 
+Status: paused for this project. Do not generate or integrate asset files from
+this skill until the lead explicitly re-enables the asset workflow. While
+paused, this file is reference material only.
+
 Use `.codex/workflow/asset-generation.md` as the authority. Keep this skill as
 the short procedure for applying that workflow.
 
@@ -17,13 +21,26 @@ the short procedure for applying that workflow.
    target paths, `source_model: gpt-image-2`, prompt version, input references,
    style version, view angles, canvas size, team mask paths, postprocess steps,
    validation, and approval status.
-4. Write a structured GPT Image 2 prompt with subject, camera/style, scale,
+4. Select the generation mode before prompting: `8-authored-sheet`,
+   `5-source-plus-code-mirror`, `5-source-plus-ai-opposites`,
+   `direction-by-direction-reference`, or `3d-guide-plus-gpt-final`.
+5. Write a structured GPT Image 2 prompt with subject, camera/style, scale,
    team-color plan, and output constraints.
-5. For units, start with a still pilot before animation. The default pilot is
-   one idle villager with 8 directions and aligned team color masks.
-6. Reject outputs with text, watermark, wrong camera angle, inconsistent scale,
-   missing transparency, bad anchor point, or baked-in team color.
-7. Run or record the relevant validation gate. Use
+6. For units, use the `unit-turntable-v1` direction standard: fixed
+   orthographic camera at about 45-degree elevation above the ground plane,
+   subject yaw rotated in 45-degree steps, explicit S/front, SW/front-left,
+   W/profile-left, NW/rear-left, N/back, NE/rear-right, E/profile-right, and
+   SE/front-right pose descriptions.
+7. Treat code-mirroring as unsafe for handed weapons, shields, scabbards,
+   banners, readable emblems, asymmetric armor, or civilization-specific gear.
+   Use direction-by-direction reference generation for those units.
+8. For units, start with a still pilot before animation. The default pilot is
+   one idle unit with recorded generation mode and aligned team color masks.
+9. Reject outputs with text, watermark, wrong camera angle, camera movement
+   between directions, S/N not reading as straight front/back, W/E not reading
+   as profiles, camera elevation too low, inconsistent scale, missing
+   transparency, bad anchor point, unsafe mirroring, or baked-in team color.
+10. Run or record the relevant validation gate. Use
    `npm run assets:validate --workspace=packages/web` when files are integrated,
    and browser/Playwright checks for UI or canvas-visible assets.
 

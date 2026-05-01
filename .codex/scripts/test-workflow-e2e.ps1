@@ -83,6 +83,10 @@ Run-Step "workflow-check-strict" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-workflow.ps1" -Mode strict
 }
 
+Run-Step "agent-routing-check" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-agent-routing.ps1"
+}
+
 Run-Step "asset-workflow-check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-asset-workflow.ps1"
 }
