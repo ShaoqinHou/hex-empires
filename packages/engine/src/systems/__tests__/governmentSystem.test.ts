@@ -100,6 +100,29 @@ describe('governmentSystem', () => {
     expect(next).toBe(state);
   });
 
+  it('SET_GOVERNMENT rejects Mexico-only Revolucion for non-Mexico players', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        civilizationId: 'rome',
+        age: 'modern',
+        researchedCivics: ['class_struggle'],
+      }),
+    );
+    const state = createTestState({
+      age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+    const action: GovernmentAction = {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolucion',
+    };
+    const next = governmentSystem(state, action);
+    expect(next).toBe(state);
+    expect(canAdoptGovernment(state, 'p1', 'revolucion')).toBe(false);
+  });
+
   it('SET_GOVERNMENT initializes government fields when PlayerState lacks them', () => {
     const player = createTestPlayer({
       id: 'p1',
@@ -159,6 +182,35 @@ describe('governmentSystem', () => {
     expect(updated.slottedPolicies[1]).toBeNull();
     // Sets the age lock (W2-03 CT F-07)
     expect(updated.governmentLockedForAge).toBe(true);
+  });
+
+  it('SET_GOVERNMENT allows Revolucion for Mexico players in the Modern Age', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        civilizationId: 'mexico',
+        age: 'modern',
+        researchedCivics: ['class_struggle'],
+      }),
+    );
+    const state = createTestState({
+      age: { currentAge: 'modern', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+
+    const next = governmentSystem(state, {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolucion',
+    });
+    const updated = next.players.get('p1')!;
+
+    expect(updated.governmentId).toBe('revolucion');
+    const slottedPolicies = updated.slottedPolicies ?? [];
+    expect(slottedPolicies).toHaveLength(6);
+    expect(slottedPolicies.every(slot => slot === null)).toBe(true);
+    expect(updated.governmentLockedForAge).toBe(true);
+    expect(canAdoptGovernment(state, 'p1', 'revolucion')).toBe(true);
   });
 
   it('fresh initialized players can adopt a government after researching its civic', () => {

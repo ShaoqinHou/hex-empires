@@ -23,7 +23,7 @@
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 1M / 2C / 1D / 4X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
-| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 3M / 5C / 0D / 0X / 0E |
+| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 4M / 4C / 0D / 0X / 0E |
 | independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 0M / 0C / 1D / 7X / 0E |
 | leaders | `.codex/gdd/audits/leaders.md` | 11 | 1M / 1C / 3D / 5X / 1E |
 | legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 13 | 1M / 4C / 5D / 3X / 0E |
@@ -210,7 +210,7 @@
 | diplomacy-influence | F-11 | Diplomatic Ledger / opinion modifier history | ⊘ MISSING | S | `packages/engine/src/types/GameState.ts` (DiplomacyState) |
 | diplomacy-influence | F-13 | Peace deals | ⚠ DIVERGED | M | `packages/engine/src/systems/diplomacySystem.ts:143-169` |
 | diplomacy-influence | F-14 | Surprise war War Support delta scaling | ≈ CLOSE | S | `packages/engine/src/systems/diplomacySystem.ts:102` |
-| government-policies | F-04 | Modern Age government roster incomplete | ≈ CLOSE | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
+| government-policies | F-04 | Modern Age government roster incomplete | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
 | government-policies | F-06 | Government system not wired to celebration slot grants | ✓ MATCH | S | `packages/engine/src/state/PolicySlotUtils.ts`, `packages/engine/src/systems/gov |
 | government-policies | F-07 | Crisis policy slots entirely absent | ≈ CLOSE | M | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/crisisSys |
 | independent-powers | F-06 | Data content registry (named IP factions) absent | ⊘ MISSING | S | `data/` (no directory) |
@@ -350,8 +350,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 47 |
-| CLOSE | 57 |
+| MATCH | 48 |
+| CLOSE | 56 |
 | DIVERGED | 65 |
 | MISSING | 99 |
 | EXTRA | 18 |

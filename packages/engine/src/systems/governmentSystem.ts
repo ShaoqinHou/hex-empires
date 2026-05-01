@@ -81,6 +81,7 @@ export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefi
  * - Government must exist.
  * - Government's age must match the current game age (civic-tree F-07 age-gate).
  * - Player's `researchedCivics` must include the Government's unlockCivic.
+ * - Civ-specific Governments require the player's current civilization.
  * - Player must not already be on that Government.
  * - Player must not have `governmentLockedForAge === true`.
  */
@@ -103,6 +104,10 @@ export function canAdoptGovernment(
   if (gov.age !== state.age.currentAge) return false;
 
   if (!player.researchedCivics.includes(gov.unlockCivic)) return false;
+
+  if (gov.civRequired !== undefined && player.civilizationId !== gov.civRequired) {
+    return false;
+  }
 
   if (getPlayerGovernmentId(player) === governmentId) {
     return false;

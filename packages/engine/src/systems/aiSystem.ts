@@ -624,7 +624,10 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
  */
 function pickCivVIIParityAction(
   state: GameState,
-  player: { readonly id: string; readonly faith: number; readonly researchedCivics: ReadonlyArray<string>; readonly pantheonId?: string | null; readonly governmentId?: string | null; readonly slottedPolicies?: ReadonlyArray<string | null> },
+  player: Pick<
+    PlayerState,
+    'id' | 'civilizationId' | 'faith' | 'researchedCivics' | 'pantheonId' | 'governmentId' | 'slottedPolicies'
+  >,
   ourCities: ReadonlyArray<CityState>,
 ): GameAction | null {
   // Shared helper: does the player have any city with a Temple?
@@ -695,7 +698,11 @@ function pickCivVIIParityAction(
   // 3. Government
   if (!player.governmentId) {
     const researched = new Set(player.researchedCivics);
-    const candidate = [...state.config.governments.values()].find(g => researched.has(g.unlockCivic));
+    const candidate = [...state.config.governments.values()].find(g =>
+      g.age === state.age.currentAge &&
+      researched.has(g.unlockCivic) &&
+      (g.civRequired === undefined || g.civRequired === player.civilizationId)
+    );
     if (candidate) {
       return {
         type: 'SET_GOVERNMENT',

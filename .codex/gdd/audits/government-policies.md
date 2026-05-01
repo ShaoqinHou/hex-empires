@@ -73,16 +73,16 @@
 
 ---
 
-### F-04: Modern Age government roster incomplete -- CLOSE
+### F-04: Modern Age government roster incomplete -- MATCH
 
 **Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
 **GDD reference:** `government-policies.md` § "Modern Age Governments"
 **Severity:** MED
 **Effort:** S
 **VII says:** Modern Age offers three standard governments: **Authoritarianism**, **Bureaucratic Monarchy**, **Elective Republic**. Plus civ-specific Mexico **Revolucion**.
-**Engine does:** Modern Age data now includes `AUTHORITARIANISM`, `BUREAUCRATIC_MONARCHY`, `ELECTIVE_REPUBLIC`, and `REVOLUCION` with `civRequired: 'mexico'`.
-**Gap:** `canAdoptGovernment` does not enforce `civRequired`, so non-Mexico players can still adopt `REVOLUCION` if the civic gate is met.
-**Recommendation:** Enforce `civRequired` in the adoption validator and add a targeted test for Mexico-only `REVOLUCION`.
+**Engine does:** Modern Age data now includes `AUTHORITARIANISM`, `BUREAUCRATIC_MONARCHY`, `ELECTIVE_REPUBLIC`, and `REVOLUCION` with `civRequired: 'mexico'`. `canAdoptGovernment` enforces the current player's civilization id, `SET_GOVERNMENT` rejects non-Mexico adoption, and AI government selection does not emit invalid civ-specific choices.
+**Gap:** None for the Modern government roster and Mexico-only `REVOLUCION` gate.
+**Recommendation:** Keep `civRequired` as the government data gate unless future age-transition work proves that historical civ lineage should also qualify.
 
 ---
 
@@ -147,10 +147,9 @@ None. (The typed-slot categories in F-01 are technically extras but paired with 
 ## Missing items
 
 1. Revolutionary Exploration governments need explicit Revolutions-crisis gating and forced switch behavior (F-03).
-2. `civRequired` must be enforced for `REVOLUCION` (F-04).
-3. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
-4. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
-5. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
+2. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
+3. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
+4. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
 
 ---
 
@@ -171,7 +170,7 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 - `packages/engine/src/data/governments/governments.ts`
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
 
-**Status:** 3 MATCH / 5 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
+**Status:** 4 MATCH / 4 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
 **Highest-severity active findings:** F-03 — revolutionary Exploration governments are data-present but not Revolutions-gated; F-05 — celebration bonuses are data-present but not structured as canonical effects.
 
@@ -180,9 +179,8 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 ## Open questions
 
 1. What exact state flag should gate the three revolutionary Exploration governments after a Revolutions crisis?
-2. Should `civRequired` check the player's current civilization id only, or also historical civ lineage after age transitions?
-3. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
-4. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
+2. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
+3. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
 
 ---
 
@@ -190,12 +188,12 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 
 | Bucket | Findings | Total effort |
 |---|---|---|
-| S (half-day) | F-04, F-08 | 1d |
+| S (half-day) | F-08 | 0.5d |
 | M (1-3 days) | F-03, F-05, F-07 | ~5-7d |
 | L (week+) | — | — |
-| **Remaining active work** | 5 | **~6-8d** |
+| **Remaining active work** | 4 | **~5.5-7.5d** |
 
-Recommended order: F-04 (`civRequired` enforcement), F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
+Recommended order: F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
 
 ---
 

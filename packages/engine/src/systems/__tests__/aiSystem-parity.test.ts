@@ -181,6 +181,38 @@ describe('aiSystem — Civ VII parity emissions', () => {
     expect(set!.governmentId).toBe(candidate.id);
   });
 
+  it('AI does not emit SET_GOVERNMENT for a civ-specific government mismatch', () => {
+    const state = {
+      ...aiStateWith({
+        pantheonId: 'already_picked',
+        governmentId: null,
+        civilizationId: 'rome',
+        age: 'modern',
+        researchedCivics: ['class_struggle'],
+      }),
+      age: { currentAge: 'modern' as const, ageThresholds: { exploration: 50, modern: 100 } },
+    };
+    const actions = generateAIActions(state);
+    expect(findAction(actions, 'SET_GOVERNMENT')).toBeUndefined();
+  });
+
+  it('AI can emit SET_GOVERNMENT for Mexico-only Revolucion when eligible', () => {
+    const state = {
+      ...aiStateWith({
+        pantheonId: 'already_picked',
+        governmentId: null,
+        civilizationId: 'mexico',
+        age: 'modern',
+        researchedCivics: ['class_struggle'],
+      }),
+      age: { currentAge: 'modern' as const, ageThresholds: { exploration: 50, modern: 100 } },
+    };
+    const actions = generateAIActions(state);
+    const set = findAction(actions, 'SET_GOVERNMENT');
+    expect(set).toBeDefined();
+    expect(set!.governmentId).toBe('revolucion');
+  });
+
   it('AI with no government and no researched unlock civic does NOT emit SET_GOVERNMENT', () => {
     const state = aiStateWith({
       pantheonId: 'already_picked',
