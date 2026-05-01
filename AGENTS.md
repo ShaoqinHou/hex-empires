@@ -57,11 +57,13 @@ lead inspects and either tightens the task or reruns it with a stronger model.
    Civ VII claim that may have changed.
 4. Decide whether the task is research, audit, implementation, verification, or
    review. Only bounded implementation/verification parts are agent candidates.
-5. For code changes, add or update focused tests first when practical.
-6. Run narrow tests, then broader build/e2e checks proportional to risk.
-7. Update GDD mappings, audit docs, or the convergence tracker when parity
+5. For visual assets, follow `.codex/workflow/asset-generation.md`; final
+   visual asset sources must be GPT Image 2 (`gpt-image-2`).
+6. For code changes, add or update focused tests first when practical.
+7. Run narrow tests, then broader build/e2e checks proportional to risk.
+8. Update GDD mappings, audit docs, or the convergence tracker when parity
    status changes.
-8. Review the diff as lead before staging or committing.
+9. Review the diff as lead before staging or committing.
 
 ## Required Gates
 
@@ -79,4 +81,3 @@ python .codex\scripts\aggregate-audits.py --check
 
 For UI/browser changes, follow `.codex/workflow/e2e-standards.md` and run the
 appropriate Playwright or Browser Use verification before stopping.
-

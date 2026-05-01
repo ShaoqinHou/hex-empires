@@ -10,9 +10,10 @@ regenerate generated docs, and verify the workflow gate.
 
 Chosen task: workflow migration plus GDD/audit tracking refresh.
 
-Why this task: it tests the process without changing gameplay code. It exercises
-the local GDD, audits, tracker, scripts, git branch, source freshness warning,
-native path checks, and generated-doc checks.
+Why this task: it tests the process through workflow migration and tracking
+refresh. It exercises the local GDD, audits, tracker, scripts, git branch,
+source freshness warning, native path checks, generated-doc checks, and the
+game validation loop.
 
 ## Agent Use
 
@@ -20,8 +21,13 @@ native path checks, and generated-doc checks.
   and verification.
 - Explorer agents: one audited native migration/framing risks; one audited the
   existing test/e2e setup. No agent edited files.
-- Spark worker: not used because this task crossed workflow architecture and
-  generated tracking. Future Spark use is documented in `agent-routing.md`.
+- Spark worker: not used. The task crossed workflow architecture, generated
+  tracking, and validation triage. No workflow script or game test
+  automatically requested Spark; future Spark use requires the lead to spawn a
+  worker explicitly with the contract in `agent-routing.md`.
+- Claude Code runtime: not tested after migration because the live workflow is
+  Codex-native. The old workflow is recoverable from git history if a future
+  branch wants Claude Code again.
 
 ## What The Scan Found
 
@@ -48,6 +54,9 @@ native path checks, and generated-doc checks.
 - Fixed `.codex/scripts/aggregate-audits.py` to parse inline-code titles,
   generate cleaner Mapping status text, and support `--check`.
 - Regenerated `.codex/gdd/convergence-tracker.md` and GDD Mapping sections.
+- During full game validation, fixed minimum runtime/test blockers discovered by
+  the workflow e2e loop. Those changes were validation fallout, not an
+  independent gameplay refactor.
 
 ## Current Audit Snapshot
 
@@ -89,4 +98,5 @@ Expected accepted warning:
   fully-specified code or text-edit task.
 - Workflow E2E must verify process mechanics, generated docs, native path
   hygiene, and browser verification standards.
-
+- Game fixes made during validation should stay narrowly tied to failed gates
+  and be called out as workflow-test fallout.

@@ -82,11 +82,14 @@ Require-Path ".codex/gdd/convergence-tracker.md"
 Require-Path ".codex/rules"
 Require-Path ".codex/skills"
 Require-Path ".codex/scripts/aggregate-audits.py"
+Require-Path ".codex/scripts/check-asset-workflow.ps1"
 Require-Path ".codex/scripts/test-workflow-e2e.ps1"
 Require-Path ".codex/workflow/README.md"
 Require-Path ".codex/workflow/agent-routing.md"
+Require-Path ".codex/workflow/asset-generation.md"
 Require-Path ".codex/workflow/e2e-standards.md"
 Require-Path ".codex/workflow/source-target.md"
+Require-Path ".codex/skills/generate-asset/SKILL.md"
 
 $systemFiles = @()
 if (Test-Path ".codex/gdd/systems") {

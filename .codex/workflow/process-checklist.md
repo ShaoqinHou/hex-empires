@@ -29,6 +29,19 @@ Use this to test the workflow, not just the documents.
 8. Update audit/GDD/tracker status only if the finding's parity changed.
 9. Commit on a `codex/` branch.
 
+## Asset Workflow
+
+1. Read `.codex/workflow/asset-generation.md` and
+   `.codex/skills/generate-asset/SKILL.md`.
+2. Create the manifest entry before generating or integrating files.
+3. Use only `gpt-image-2` as the final visual asset source.
+4. For the first unit pilot, use an idle villager still set with 8 directions
+   and aligned team color masks.
+5. Validate scale, camera angle, transparency, anchor point, no text/watermark,
+   and team mask alignment before integration.
+6. Run `npm run assets:validate --workspace=packages/web` after integration.
+7. For UI/canvas-visible assets, follow `.codex/workflow/e2e-standards.md`.
+
 ## Failure Handling
 
 - If a worker exceeds scope, stop using that output as authoritative.

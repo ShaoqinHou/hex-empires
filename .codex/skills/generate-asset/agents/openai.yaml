@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Asset"
+  short_description: "Create GPT Image 2 game asset briefs and manifests."
+  default_prompt: "Create a consistent GPT Image 2 asset workflow entry for a game asset."

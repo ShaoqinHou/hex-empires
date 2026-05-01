@@ -2,7 +2,7 @@
 
 **Context:** Y-wave covers 6+3+4+1+2 = 16 MISSING-HIGH items. The verification-summary lists ~53 total MISSING. Post-Y that leaves ~37, of which ~15 are HIGH or blocking. Z-wave targets those.
 
-## Z-packs (all via GLM, parallel Bash)
+## Z-packs (Codex-routed implementation slices)
 
 ### Z1 — Government + Victory polish (S-M)
 - **gov F-04** — add 3 Modern governments: AUTHORITARIANISM, BUREAUCRATIC_MONARCHY, REVOLUCION (with `civRequired: 'mexico'`)
@@ -31,7 +31,11 @@
 
 ## Execution
 
-Fire all 5 in parallel once Y-wave lands + tests pass + deploy.
+Start only after Y-wave lands, tests pass, and deploy is clean. The lead owns
+sequencing and may run packs in parallel only when write scopes are disjoint.
+Use Spark only for fully specified mechanical edits from a single pack after the
+lead has written exact files, invariants, and validation commands. Use a
+stronger coding model for cross-system work or any task that still needs design.
 
 Verification: run `bash .codex/scripts/verify-retirements.sh` after each wave (should still be 21 pass), run `npm run test:engine` (should keep passing), add each new retirement/addition to retirement-invariants.test.ts.
 

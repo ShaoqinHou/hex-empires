@@ -9,6 +9,7 @@ when the task matches.
 | Add a new panel | `.codex/skills/add-panel/SKILL.md` | Only for exact template fill-in |
 | Add a HUD overlay | `.codex/skills/add-hud-element/SKILL.md` | Rare; usually needs lead/UI review |
 | Add data content | `.codex/skills/add-content/SKILL.md` | Yes if all values and IDs are supplied |
+| Generate or replace visual asset | `.codex/skills/generate-asset/SKILL.md` and `.codex/workflow/asset-generation.md` | Only manifest/file cleanup after approval |
 | Write tests | `.codex/skills/test/SKILL.md` plus `.codex/rules/testing.md` | Yes for small tests |
 | Browser verify UI | `.codex/skills/verify/SKILL.md` and `.codex/workflow/e2e-standards.md` | No, unless exact checklist |
 | Commit review | `.codex/skills/commit-review/SKILL.md` | No |
@@ -24,4 +25,3 @@ when the task matches.
 | Panels | `.codex/rules/panels.md`, `tech-conventions.md` |
 | HUD/overlays | `.codex/rules/ui-overlays.md`, `panels.md`, `tech-conventions.md` |
 | Continuous work | `.codex/rules/loop-and-continuous-mode.md`, translated through `agent-routing.md` |
-

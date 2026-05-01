@@ -14,9 +14,16 @@ tools for parallelism and throughput, not substitutes for the lead's judgment.
 | Medium implementation slice | Worker allowed | Strong coding model | Disjoint write set; lead reviews diff before commit |
 | Large cross-cutting implementation | Split only after design | Strong workers; lead integrates | Do not hand broad architecture to Spark |
 | UI/canvas visual verification | Optional verifier | Strong or default | Use browser screenshots and console checks |
+| Asset workflow planning | Usually no worker | Lead / strongest model | GPT Image 2 prompts, style, masks, and approval stay with lead |
+| Asset manifest/file cleanup | Worker allowed | Spark if exact paths supplied | No visual direction or prompt design |
 | Commit review | Optional reviewer | Strong/high reasoning | Findings first; lead decides fixes |
 
 ## Spark Worker Contract
+
+Workflow scripts do not automatically call Spark or any other model. The lead
+must explicitly spawn a worker and choose the model for that worker. Game tests,
+asset validation, Playwright, and workflow e2e commands are deterministic
+checks; they never request agents by themselves.
 
 Spark is appropriate when the prompt can be almost procedural:
 

@@ -45,6 +45,8 @@ For workflow-only changes:
   describe Codex as a translation layer.
 - Confirm generated GDD mapping sections are populated.
 - Confirm source-target warnings are explicit and accepted, not silent.
+- Confirm asset workflow gates pass when asset-source, skill, or prompt
+  standards change.
 
 ## When Browser E2E Can Be Skipped
 

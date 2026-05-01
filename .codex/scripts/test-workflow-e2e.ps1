@@ -83,6 +83,10 @@ Run-Step "workflow-check-strict" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-workflow.ps1" -Mode strict
 }
 
+Run-Step "asset-workflow-check" {
+  powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-asset-workflow.ps1"
+}
+
 if (-not $SkipAggregateCheck) {
   Run-Step "aggregate-check" {
     python ".codex/scripts/aggregate-audits.py" --check
@@ -90,7 +94,8 @@ if (-not $SkipAggregateCheck) {
 }
 
 Run-Step "script-compile" {
-  python -m py_compile ".codex/scripts/aggregate-audits.py"
+  python -B -m py_compile ".codex/scripts/aggregate-audits.py"
+  Remove-Item -LiteralPath ".codex/scripts/__pycache__" -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Run-Step "audit-history" {

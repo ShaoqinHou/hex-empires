@@ -7,8 +7,10 @@
 - `.codex/gdd/` - Civ VII GDD, audits, gap matrix, convergence tracker.
 - `.codex/rules/` - engineering rules for engine, UI, tests, and imports.
 - `.codex/skills/` - task procedures for panels, HUD, content, verification,
-  review, and consistency audits.
+  review, consistency audits, and asset generation.
 - `.codex/scripts/` - workflow checks and generated-doc tooling.
+- `.codex/workflow/asset-generation.md` - GPT Image 2 asset source, style,
+  mask, manifest, and animation workflow.
 - `AGENTS.md` - root Codex playbook.
 
 Claude Code files are no longer part of the live workflow. Recover them from git
@@ -25,12 +27,14 @@ history if a future session needs Claude Code again.
    convergence tracker rows, and rule files.
 5. **Agent routing** - keep hard judgment with the lead; delegate only bounded
    implementation or verification slices.
-6. **Implementation** - prefer small, testable changes.
-7. **Verification** - run narrow tests first, then build/e2e checks proportional
+6. **Asset source gate** - for visual assets, use only the GPT Image 2 workflow
+   in `asset-generation.md`.
+7. **Implementation** - prefer small, testable changes.
+8. **Verification** - run narrow tests first, then build/e2e checks proportional
    to risk.
-8. **Tracking** - update GDD mappings, audits, and tracker only when parity state
+9. **Tracking** - update GDD mappings, audits, and tracker only when parity state
    actually changes.
-9. **Lead review** - inspect the final diff before staging and committing.
+10. **Lead review** - inspect the final diff before staging and committing.
 
 ## Required Workflow Checks
 
@@ -52,4 +56,3 @@ python .codex\scripts\aggregate-audits.py --check
 The previous Claude-oriented workflow is recoverable through git history. Do not
 keep parallel live workflow trees in the working copy; if a future branch wants
 Claude Code back, restore it explicitly from an earlier commit.
-
