@@ -22,6 +22,7 @@ import type {
 import { AnimationManager } from './AnimationManager';
 import type { Camera } from './Camera';
 import { drawUnitIcon, type UnitIconOptions } from './UnitIcons';
+import type { HexCoord } from '@hex/engine';
 
 /** Minimal options for animated unit icons — no overlay indicators */
 function animOpts(playerColor: string): UnitIconOptions {
@@ -57,8 +58,62 @@ export class AnimationRenderer {
     this.ctx = ctx;
   }
 
+  /**
+   * Narrow fog-of-war hook.
+   *
+   * When omitted, callers run with legacy behavior (all animation overlays render).
+   */
+  private isVisible(
+    coord: HexCoord,
+    isVisible: ((coord: HexCoord) => boolean) | undefined,
+  ): boolean {
+    if (!isVisible) return true;
+    return isVisible(coord);
+  }
+
+  /**
+   * Unit movement can traverse multiple hexes, so render against the current
+   * half of the active segment. This lets units appear as they enter visible
+   * space without drawing them while their interpolated position is still in fog.
+   */
+  private isUnitMoveSegmentVisible(
+    anim: UnitMoveAnimation,
+    currentTime: number,
+    isVisible: ((coord: HexCoord) => boolean) | undefined,
+  ): boolean {
+    const segments = anim.path.length - 1;
+    if (segments <= 0) {
+      return this.isVisible(anim.path[0], isVisible);
+    }
+
+    if (anim.duration <= 0) {
+      const lastCoord = anim.path[anim.path.length - 1];
+      return this.isVisible(lastCoord, isVisible);
+    }
+
+    const elapsed = Math.max(0, currentTime - anim.startTime);
+    const rawGlobal = Math.min(1, elapsed / anim.duration);
+    const globalSegProgress = rawGlobal * segments;
+    const segment = Math.min(Math.floor(globalSegProgress), segments - 1);
+    const rawSegT = globalSegProgress - segment;
+    const isFirst = segment === 0;
+    const isLast = segment === segments - 1;
+    const easedSegT = isFirst || isLast
+      ? rawSegT * (2 - rawSegT)
+      : rawSegT;
+
+    const from = anim.path[segment];
+    const to = anim.path[segment + 1];
+    return this.isVisible(easedSegT < 0.5 ? from : to, isVisible);
+  }
+
   /** Render all active animations */
-  render(camera: Camera, manager: AnimationManager, currentTime: number): void {
+  render(
+    camera: Camera,
+    manager: AnimationManager,
+    currentTime: number,
+    isTileVisible?: (coord: HexCoord) => boolean,
+  ): void {
     const animations = manager.getActive();
     if (animations.length === 0) return;
 
@@ -75,33 +130,69 @@ export class AnimationRenderer {
     for (const anim of animations) {
       switch (anim.type) {
         case 'unit-move':
+          if (!this.isUnitMoveSegmentVisible(anim, currentTime, isTileVisible)) {
+            break;
+          }
           this.renderUnitMove(anim, manager, currentTime);
           break;
         case 'melee-attack':
+          if (!(
+            this.isVisible(anim.attackerFrom, isTileVisible)
+            && this.isVisible(anim.attackerTo, isTileVisible)
+          )) {
+            break;
+          }
           this.renderMeleeAttack(anim, manager, currentTime);
           break;
         case 'ranged-attack':
+          if (!(
+            this.isVisible(anim.from, isTileVisible)
+            && this.isVisible(anim.to, isTileVisible)
+          )) {
+            break;
+          }
           this.renderRangedAttack(anim, manager, currentTime);
           break;
         case 'damage-flash':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderDamageFlash(anim, manager, currentTime);
           break;
         case 'unit-death':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderUnitDeath(anim, manager, currentTime);
           break;
         case 'city-founded':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderCityFounded(anim, manager, currentTime);
           break;
         case 'production-complete':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderProductionComplete(anim, manager, currentTime);
           break;
         case 'city-growth':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderCityGrowth(anim, manager, currentTime);
           break;
         case 'floating-damage':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderFloatingDamage(anim, manager, currentTime);
           break;
         case 'defender-tint':
+          if (!this.isVisible(anim.position, isTileVisible)) {
+            break;
+          }
           this.renderDefenderTint(anim, manager, currentTime);
           break;
         // 'combat-lunge' and 'damage-number' are handled separately below
@@ -114,7 +205,7 @@ export class AnimationRenderer {
 
     // Damage numbers pass: drawn after units, before HUD overlays.
     // Spec §4: translateY(0 → -24px) + fade-out over --motion-slow (400ms).
-    this.renderDamageNumbers(manager, currentTime);
+    this.renderDamageNumbers(manager, currentTime, isTileVisible);
 
     this.ctx.restore();
   }
@@ -534,7 +625,11 @@ export class AnimationRenderer {
    *
    * Drawn after units, before HUD overlays (called at end of render()).
    */
-  private renderDamageNumbers(manager: AnimationManager, currentTime: number): void {
+  private renderDamageNumbers(
+    manager: AnimationManager,
+    currentTime: number,
+    isTileVisible?: (coord: HexCoord) => boolean,
+  ): void {
     const numbers = manager.getDamageNumbers();
     if (numbers.length === 0) return;
 
@@ -546,6 +641,10 @@ export class AnimationRenderer {
 
       const alpha = 1 - t;
       if (alpha <= 0.01) continue;
+
+      if (!this.isVisible(anim.position, isTileVisible)) {
+        continue;
+      }
 
       const { x, y } = hexToPixel(anim.position);
       // -24px rise over the full duration (spec: "translateY -24px * (t/400ms)")

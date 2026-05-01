@@ -130,6 +130,20 @@ export class HexRenderer {
     this.cache = cache;
   }
 
+  private hasFogData(rc: RenderContext): boolean {
+    return rc.explored !== null && rc.explored !== undefined && rc.visibility !== null && rc.visibility !== undefined;
+  }
+
+  private isTileExplored(rc: RenderContext, tileKey: string): boolean {
+    if (!this.hasFogData(rc)) return true;
+    return rc.explored!.has(tileKey);
+  }
+
+  private isTileVisible(rc: RenderContext, tileKey: string): boolean {
+    if (!this.hasFogData(rc)) return true;
+    return rc.visibility!.has(tileKey);
+  }
+
   render(camera: Camera, rc: RenderContext): void {
     const ctx = this.ctx;
     const canvas = ctx.canvas;
@@ -174,16 +188,6 @@ export class HexRenderer {
     // Draw territory borders
     this.drawTerritoryBorders(rc, viewport);
 
-    // Draw fog of war overlay
-    this.drawFogOfWar(rc, viewport);
-
-    // Draw reachable hex overlay AFTER fog so the amber tint is visible even
-    // over fogged tiles (players need to see where their unit can go regardless
-    // of whether they can see the terrain detail there).
-    if (rc.reachableHexes) {
-      this.drawReachableOverlay(rc, viewport);
-    }
-
     // Draw districts (below cities/units so markers appear on top)
     this.drawDistricts(rc, viewport);
 
@@ -193,11 +197,20 @@ export class HexRenderer {
       this.drawPlacementOverlay(rc, viewport);
     }
 
-    // Draw cities (only visible/explored, viewport culled)
+    // Draw cities (only explored tiles, viewport culled)
     this.drawCities(rc, viewport);
 
-    // Draw units (only visible, viewport culled)
+    // Draw units (only visible tiles, viewport culled)
     this.drawUnits(rc, viewport);
+
+    // Draw fog of war overlay above terrain/entities so explored but
+    // non-visible content is dimmed consistently.
+    this.drawFogOfWar(rc, viewport);
+
+    // Draw reachable overlay above fog so movement intent remains visible.
+    if (rc.reachableHexes) {
+      this.drawReachableOverlay(rc, viewport);
+    }
 
     // Draw selection highlight — use warm gold token for selection border
     if (rc.selectedHex) {
@@ -243,6 +256,8 @@ export class HexRenderer {
       }
 
       const { x, y } = hexToPixel(tile.coord);
+      const tileKey = coordToKey(tile.coord);
+      const isExplored = this.isTileExplored(rc, tileKey);
       const terrain = rc.terrainRegistry.get(tile.terrain);
       const feature = tile.feature ? rc.featureRegistry.get(tile.feature) : null;
 
@@ -348,23 +363,22 @@ export class HexRenderer {
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
-      // Improvement icon - always visible
-      if (tile.improvement) {
+      // Map-detail markers are remembered only after exploration; unexplored
+      // fog must not leak hidden city, improvement, resource, or yield data.
+      if (isExplored && tile.improvement) {
         this.drawImprovementIcon(tile, x, y, rc);
       }
 
-      // Building icon - always visible if present
-      if (tile.building) {
+      if (isExplored && tile.building) {
         this.drawBuildingIcon(tile, x, y, rc);
       }
 
-      // Resource icon — always visible (outside yield lens gate)
-      if (tile.resource) {
+      if (isExplored && tile.resource) {
         this.drawResourceIcon(tile, x, y, rc);
       }
 
       // Yield dots — only when lens is active
-      if (rc.showYields) {
+      if (isExplored && rc.showYields) {
         this.drawYieldDots(tile, x, y, rc);
       }
     }
@@ -694,7 +708,7 @@ export class HexRenderer {
   }
 
   private drawFogOfWar(rc: RenderContext, viewport: ViewportBounds): void {
-    if (!rc.visibility && !rc.explored) return; // no fog data, show everything
+    if (!this.hasFogData(rc)) return; // no fog data, show everything
 
     const ctx = this.ctx;
     for (const tile of rc.state.map.tiles.values()) {
@@ -709,8 +723,8 @@ export class HexRenderer {
       }
 
       const key = coordToKey(tile.coord);
-      const isVisible = rc.visibility?.has(key) ?? true;
-      const isExplored = rc.explored?.has(key) ?? true;
+      const isVisible = this.isTileVisible(rc, key);
+      const isExplored = this.isTileExplored(rc, key);
 
       if (!isExplored) {
         // Completely unexplored — heavy overlay but not pitch black
@@ -809,6 +823,7 @@ export class HexRenderer {
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
+        if (!this.isTileExplored(rc, hexKey)) continue;
 
         // Viewport culling
         if (
@@ -837,6 +852,7 @@ export class HexRenderer {
       for (const hexKey of city.territory) {
         const tile = rc.state.map.tiles.get(hexKey);
         if (!tile) continue;
+        if (!this.isTileExplored(rc, hexKey)) continue;
 
         // Viewport culling for borders (more lenient - include neighbors)
         if (
@@ -861,6 +877,7 @@ export class HexRenderer {
           const neighborCoord: HexCoord = { q: tile.coord.q + dir.q, r: tile.coord.r + dir.r };
           const neighborKey = coordToKey(neighborCoord);
           const neighborOwner = ownerByHex.get(neighborKey);
+          if (!this.isTileExplored(rc, neighborKey)) continue;
 
           // Draw edge only if neighbor is not owned by the same player
           if (neighborOwner === city.owner) continue;
@@ -1091,6 +1108,7 @@ export class HexRenderer {
 
     for (const district of rc.state.districts.values()) {
       const pos = district.position;
+      if (!this.isTileExplored(rc, coordToKey(pos))) continue;
 
       // Viewport culling
       if (
@@ -1165,6 +1183,9 @@ export class HexRenderer {
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
 
     for (const city of rc.state.cities.values()) {
+      const cityKey = coordToKey(city.position);
+      if (!this.isTileExplored(rc, cityKey)) continue;
+
       // Viewport culling
       if (
         city.position.q < viewport.minQ ||
@@ -1346,6 +1367,10 @@ export class HexRenderer {
     for (const [tileKey, tileUnits] of byTile) {
       // Quick viewport cull on the first unit's position (all share the same tile)
       const firstUnit = tileUnits[0];
+      if (!this.isTileVisible(rc, tileKey)) {
+        continue;
+      }
+
       if (
         firstUnit.position.q < viewport.minQ ||
         firstUnit.position.q > viewport.maxQ ||

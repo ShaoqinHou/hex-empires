@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { coordToKey } from '@hex/engine';
+import { coordToKey, type HexCoord } from '@hex/engine';
 import { useGameState } from '../../providers/GameProvider';
 import { hexToPixel } from '../../utils/hexMath';
 
@@ -63,6 +63,17 @@ export function Minimap({ cameraRef }: MinimapProps) {
     const currentPlayer = state.players.get(state.currentPlayerId);
     const visibility: ReadonlySet<string> | null = currentPlayer?.visibility ?? null;
     const explored: ReadonlySet<string> | null = currentPlayer?.explored ?? null;
+    const hasFogData = visibility !== null && explored !== null;
+
+    const isExplored = (coord: HexCoord) => {
+      if (!hasFogData) return true;
+      return explored!.has(coordToKey(coord));
+    };
+
+    const isVisible = (coord: HexCoord) => {
+      if (!hasFogData) return true;
+      return visibility!.has(coordToKey(coord));
+    };
 
     // Draw terrain using the main-renderer palette
     for (const tile of state.map.tiles.values()) {
@@ -73,26 +84,14 @@ export function Minimap({ cameraRef }: MinimapProps) {
       const my = (y - minY) * scaleY;
       ctx.fillStyle = TERRAIN_PALETTE[tile.terrain] ?? TERRAIN_FALLBACK;
       ctx.fillRect(mx - 2, my - 2, 4, 4);
-
-      // Apply fog overlay per tile
-      if (visibility && explored) {
-        const key = coordToKey(tile.coord);
-        if (!explored.has(key)) {
-          // Completely unexplored → 80% black overlay
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-          ctx.fillRect(mx - 2, my - 2, 4, 4);
-        } else if (!visibility.has(key)) {
-          // Explored but not currently visible → 40% black overlay
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-          ctx.fillRect(mx - 2, my - 2, 4, 4);
-        }
-      }
     }
 
     // Draw cities
     const playerColors = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#ff6f00'];
     const playerIds = [...state.players.keys()];
     for (const city of state.cities.values()) {
+      if (!isExplored(city.position)) continue;
+
       const { x, y } = hexToPixel(city.position);
       const mx = (x - minX) * scaleX;
       const my = (y - minY) * scaleY;
@@ -106,6 +105,8 @@ export function Minimap({ cameraRef }: MinimapProps) {
 
     // Draw units
     for (const unit of state.units.values()) {
+      if (!isVisible(unit.position)) continue;
+
       const { x, y } = hexToPixel(unit.position);
       const mx = (x - minX) * scaleX;
       const my = (y - minY) * scaleY;
@@ -114,6 +115,27 @@ export function Minimap({ cameraRef }: MinimapProps) {
       ctx.beginPath();
       ctx.arc(mx, my, 2, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // Draw fog overlay above terrain AND entities (including explored-but-hidden
+    // content) so partially explored content is visibly dimmed.
+    if (hasFogData) {
+      for (const tile of state.map.tiles.values()) {
+        const key = coordToKey(tile.coord);
+        const { x, y } = hexToPixel(tile.coord);
+        const mx = (x - minX) * scaleX;
+        const my = (y - minY) * scaleY;
+
+        if (!explored!.has(key)) {
+          // Completely unexplored → 80% black overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.fillRect(mx - 2, my - 2, 4, 4);
+        } else if (!visibility!.has(key)) {
+          // Explored but not currently visible → 40% black overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.fillRect(mx - 2, my - 2, 4, 4);
+        }
+      }
     }
 
     // Draw camera viewport rectangle — thick black outer + white inner for contrast

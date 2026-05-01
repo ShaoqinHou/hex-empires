@@ -438,7 +438,10 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
 
       // Render animations on top
       if (animationRenderer && animationManager) {
-        animationRenderer.render(cameraRef.current, animationManager, currentTime);
+        const isTileVisible = player?.visibility && player?.explored
+          ? (coord: HexCoord) => player.visibility?.has(coordToKey(coord)) ?? false
+          : undefined;
+        animationRenderer.render(cameraRef.current, animationManager, currentTime, isTileVisible);
       }
 
       animFrame = requestAnimationFrame(render);

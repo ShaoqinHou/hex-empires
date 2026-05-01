@@ -68,6 +68,55 @@ async function dispatch(page: Page, action: Record<string, any>) {
   await page.waitForTimeout(100);
 }
 
+async function sampleGameCanvasPixel(
+  page: Page,
+  coord: { q: number; r: number },
+  offset: { x: number; y: number } = { x: 0, y: 0 }
+) {
+  await page.evaluate(({ q, r }) => (window as any).__centerCameraOn(q, r), coord);
+  const canvas = page.getByTestId('game-canvas');
+  const box = await canvas.boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(200);
+
+  return page.evaluate(({ q, r, offset }) => {
+    const screen = (window as any).__hexToScreen(q, r);
+    const camera = (window as any).__cameraState?.();
+    const zoom = camera?.zoom ?? 1;
+    const canvas = document.querySelector('[data-testid="game-canvas"]') as HTMLCanvasElement | null;
+    const ctx = canvas?.getContext('2d');
+    if (!screen || !canvas || !ctx) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const pixel = ctx.getImageData(
+      Math.round(screen.x - rect.left + offset.x * zoom),
+      Math.round(screen.y - rect.top + offset.y * zoom),
+      1,
+      1
+    ).data;
+    return {
+      r: pixel[0],
+      g: pixel[1],
+      b: pixel[2],
+      a: pixel[3],
+      maxChannel: Math.max(pixel[0], pixel[1], pixel[2]),
+    };
+  }, { ...coord, offset });
+}
+
+function maxPixelDelta(
+  before: { r: number; g: number; b: number; a: number } | null,
+  after: { r: number; g: number; b: number; a: number } | null
+) {
+  if (!before || !after) return Number.POSITIVE_INFINITY;
+  return Math.max(
+    Math.abs(before.r - after.r),
+    Math.abs(before.g - after.g),
+    Math.abs(before.b - after.b),
+    Math.abs(before.a - after.a)
+  );
+}
+
 /** Dismiss any blocking log events so END_TURN is not gated. */
 async function dismissBlockingEvents(page: Page) {
   await page.evaluate(() => {
@@ -462,12 +511,55 @@ test.describe('Phase 3: Unit Interaction', () => {
         const ds = -dq - dr;
         return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
       };
+      const lineDraw = (a: { q: number; r: number }, b: { q: number; r: number }) => {
+        const n = distance(a, b);
+        if (n === 0) return [a];
+        const results: { q: number; r: number }[] = [];
+        const ac = { q: a.q, r: a.r, s: -a.q - a.r };
+        const bc = { q: b.q, r: b.r, s: -b.q - b.r };
+        for (let i = 0; i <= n; i++) {
+          const t = i / n;
+          const q = ac.q + (bc.q - ac.q) * t;
+          const r = ac.r + (bc.r - ac.r) * t;
+          const s = ac.s + (bc.s - ac.s) * t;
+          let rq = Math.round(q + 1e-6);
+          let rr = Math.round(r + 1e-6);
+          let rs = Math.round(s - 2e-6);
+          const dq = Math.abs(rq - (q + 1e-6));
+          const dr = Math.abs(rr - (r + 1e-6));
+          const ds = Math.abs(rs - (s - 2e-6));
+          if (dq > dr && dq > ds) rq = -rr - rs;
+          else if (dr > ds) rr = -rq - rs;
+          else rs = -rq - rr;
+          results.push({ q: rq, r: rr });
+        }
+        return results;
+      };
+      const hasLineOfSight = (observer: { q: number; r: number }, target: { q: number; r: number }) => {
+        const line = lineDraw(observer, target);
+        for (let i = 1; i < line.length - 1; i++) {
+          const tile = s.map.tiles.get(keyOf(line[i]));
+          if (tile?.feature === 'mountains' || tile?.feature === 'forest') return false;
+        }
+        return true;
+      };
+      const visibleKeysFrom = (position: { q: number; r: number }, sightRange: number) => {
+        const visible: string[] = [];
+        for (const [key, mapTile] of s.map.tiles as Map<string, any>) {
+          if (distance(position, mapTile.coord) > sightRange) continue;
+          if (mapTile.isDistantLands && !player.distantLandsReachable) continue;
+          if (!hasLineOfSight(position, mapTile.coord)) continue;
+          visible.push(key);
+        }
+        return visible;
+      };
       const isFlatLand = (coord: { q: number; r: number }) => {
         const tile = s.map.tiles.get(keyOf(coord));
         if (!tile || tile.feature !== null) return false;
         const terrain = s.config.terrains.get(tile.terrain);
         return terrain?.isPassable !== false && terrain?.isWater !== true && terrain?.isDeepOcean !== true;
       };
+      const sightRange = s.config.units.get(unit.typeId)?.sightRange ?? 2;
 
       for (const tile of s.map.tiles.values()) {
         const start = tile.coord;
@@ -477,12 +569,8 @@ test.describe('Phase 3: Unit Interaction', () => {
           const dest = { q: start.q + dir.q, r: start.r + dir.r };
           if (!isFlatLand(dest)) continue;
 
-          const oldVisible: string[] = [];
-          const newVisible: string[] = [];
-          for (const [key, mapTile] of s.map.tiles as Map<string, any>) {
-            if (distance(start, mapTile.coord) <= 2) oldVisible.push(key);
-            if (distance(dest, mapTile.coord) <= 2) newVisible.push(key);
-          }
+          const oldVisible = visibleKeysFrom(start, sightRange);
+          const newVisible = visibleKeysFrom(dest, sightRange);
           const oldSet = new Set(oldVisible);
           const newSet = new Set(newVisible);
           const oldOnlyKey = oldVisible.find((key) => !newSet.has(key));
@@ -533,6 +621,117 @@ test.describe('Phase 3: Unit Interaction', () => {
     expect(result.newVisible).toBe(true);
     expect(result.oldVisible).toBe(false);
     expect(result.oldExplored).toBe(true);
+  });
+
+  test('fog of war visually hides live cities and units on unexplored tiles', async ({ page }) => {
+    await startGame(page);
+    const scenario = await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      if (!s) return null;
+
+      const currentPlayerId = s.currentPlayerId;
+      const currentPlayer = s.players.get(currentPlayerId);
+      if (!currentPlayer) return null;
+
+      const coordKey = (coord: { q: number; r: number }) => `${coord.q},${coord.r}`;
+      const targetTile = [...s.map.tiles.values()].find((tile: any) => {
+        if (tile.feature !== null) return false;
+        const terrain = s.config.terrains.get(tile.terrain);
+        return terrain?.isPassable !== false && terrain?.isWater !== true && terrain?.isDeepOcean !== true;
+      });
+      if (!targetTile) return null;
+
+      targetTile.building = null;
+      targetTile.improvement = null;
+      targetTile.resource = null;
+      s.units = new Map();
+      s.cities = new Map();
+      s.districts = new Map();
+      currentPlayer.visibility = new Set();
+      currentPlayer.explored = new Set();
+      s.phase = 'actions';
+
+      return { coord: targetTile.coord, key: coordKey(targetTile.coord) };
+    });
+    if (!scenario) test.skip(true, 'no valid fog rendering probe tile on this map');
+
+    const sampleOffsets = [
+      { x: 0, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 16 },
+    ];
+    const baseline = [];
+    for (const offset of sampleOffsets) {
+      baseline.push(await sampleGameCanvasPixel(page, scenario.coord, offset));
+    }
+
+    await page.evaluate((scenario) => {
+      const s = (window as any).__gameState;
+      if (!s) return;
+
+      const currentPlayerId = s.currentPlayerId;
+      const currentPlayer = s.players.get(currentPlayerId);
+      const enemyId = [...s.players.keys()].find((id: string) => id !== currentPlayerId);
+      const baseUnit = [...s.config.units.values()][0];
+      const targetTile = s.map.tiles.get(scenario.key);
+      if (!currentPlayer || !enemyId || !baseUnit || !targetTile) return;
+
+      targetTile.building = 'palace';
+      s.units = new Map([[
+        'fog-hidden-unit',
+        {
+          id: 'fog-hidden-unit',
+          owner: enemyId,
+          typeId: baseUnit.id,
+          position: scenario.coord,
+          movementLeft: 2,
+          health: 100,
+          experience: 0,
+          promotions: [],
+          fortified: false,
+        },
+      ]]);
+      s.cities = new Map([[
+        'fog-hidden-city',
+        {
+          id: 'fog-hidden-city',
+          name: 'Hidden',
+          owner: enemyId,
+          position: scenario.coord,
+          population: 5,
+          food: 0,
+          productionQueue: [{ type: 'unit', id: 'warrior' }],
+          productionProgress: 90,
+          buildings: [],
+          territory: [scenario.key],
+          settlementType: 'city',
+          happiness: 10,
+          isCapital: false,
+          defenseHP: 100,
+          specialization: null,
+          specialists: 0,
+          districts: [],
+        },
+      ]]);
+      s.districts = new Map([[
+        'fog-hidden-district',
+        {
+          id: 'fog-hidden-district',
+          cityId: 'fog-hidden-city',
+          type: 'city_center',
+          position: scenario.coord,
+          level: 1,
+        },
+      ]]);
+      currentPlayer.visibility = new Set();
+      currentPlayer.explored = new Set();
+      s.phase = 'actions';
+    }, scenario);
+
+    for (let i = 0; i < sampleOffsets.length; i++) {
+      const after = await sampleGameCanvasPixel(page, scenario.coord, sampleOffsets[i]);
+      expect(maxPixelDelta(baseline[i], after)).toBeLessThanOrEqual(4);
+    }
   });
 
   test('fortify unit via keyboard', async ({ page }) => {
