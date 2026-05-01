@@ -12,11 +12,11 @@
  * GameState (side-map keyed by PlayerId) lands in cycle C; potential
  * inlining into PlayerState happens in cycle E if safe.
  *
- * Rulebook: .claude/workflow/design/civ7-rulebook.md §14 (Governments
+ * Rulebook: .codex/workflow/design/civ7-rulebook.md §14 (Governments
  * and Social Policies) and §4.5 (Celebrations).
- * Plan:     .claude/workflow/design/government-system.md.
+ * Plan:     .codex/workflow/design/government-system.md.
  * Rulebook
- * expansion: .claude/workflow/design/rulebook-government-expansion.md.
+ * expansion: .codex/workflow/design/rulebook-government-expansion.md.
  */
 
 import type { PlayerId, BuildingId, CityId } from './Ids';

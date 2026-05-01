@@ -8,7 +8,7 @@ import { coordToKey } from '../../hex/HexMath';
  * Cycle 2 of the building-placement rework — coverage for the
  * `CANCEL_BUILDING_PLACEMENT` action.
  *
- * See `.claude/workflow/design/building-placement-rework.md` §2.2 and §3.4.
+ * See `.codex/workflow/design/building-placement-rework.md` §2.2 and §3.4.
  */
 
 const CITY_POSITION = { q: 3, r: 3 };

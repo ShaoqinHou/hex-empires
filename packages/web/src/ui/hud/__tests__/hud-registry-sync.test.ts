@@ -4,12 +4,12 @@
  * Asserts bidirectional coverage between:
  *   - `HUDElementId` union in `packages/web/src/ui/hud/hudRegistry.ts`
  *     (and the `HUD_REGISTRY` Map keys it backs)
- *   - The human-readable table in `.claude/workflow/design/hud-elements.md`
+ *   - The human-readable table in `.codex/workflow/design/hud-elements.md`
  *
  * Motivated by commit-review finding F-c6155628 on `600662a` (the J-shortcut
  * blind-eval commit): a new HUD id (`idleUnitsToast`) was added to the
  * registry but never added to `hud-elements.md`. The rule in
- * `.claude/rules/ui-overlays.md` mandates both, but nothing enforced it,
+ * `.codex/rules/ui-overlays.md` mandates both, but nothing enforced it,
  * so the two registries drift silently. This test forces them back in
  * sync on every `npm test`.
  *
@@ -18,7 +18,7 @@
  * union wins — this test's error message says which direction is missing
  * so the fix is obvious.
  *
- * See `.claude/workflow/design/phase-6d-findings.md` for context.
+ * See `.codex/workflow/design/phase-6d-findings.md` for context.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -28,10 +28,10 @@ import { fileURLToPath } from 'node:url';
 import { ALL_HUD_ELEMENT_IDS, HUD_REGISTRY } from '../hudRegistry';
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
-// web package root → monorepo root → .claude/workflow/design/hud-elements.md
+// web package root → monorepo root → .codex/workflow/design/hud-elements.md
 const HUD_ELEMENTS_DOC = resolve(
   CURRENT_DIR,
-  '../../../../../../.claude/workflow/design/hud-elements.md',
+  '../../../../../../.codex/workflow/design/hud-elements.md',
 );
 
 /**
@@ -71,7 +71,7 @@ describe('hud registry ↔ hud-elements.md sync', () => {
     const missing = [...registryIds].filter((id) => !docIds.has(id));
     expect(
       missing,
-      `Missing rows in .claude/workflow/design/hud-elements.md — add an entry ` +
+      `Missing rows in .codex/workflow/design/hud-elements.md — add an entry ` +
         `for each id. The registry (hudRegistry.ts) is the source of truth; ` +
         `the Markdown table must track it. Missing ids: [${missing.join(', ')}]`,
     ).toEqual([]);

@@ -50,7 +50,7 @@ export function productionSystem(state: GameState, action: GameAction): GameStat
 /**
  * Compute the cancel threshold for a city's current building/wonder in queue.
  *
- * Per `.claude/workflow/design/building-placement-rework.md` §2.2, a player may
+ * Per `.codex/workflow/design/building-placement-rework.md` §2.2, a player may
  * cancel placement so long as `productionProgress` is strictly below
  * `max(10, floor(0.5 * productionPerTurn))` — i.e. less than half of one turn's
  * worth of accumulated production (with a 10-point floor so zero-production
@@ -341,7 +341,7 @@ function handlePurchaseItem(
  * Apply the auto-placement state mutation for a building whose queue item
  * carried a valid `lockedTile`. Mirrors `buildingPlacementSystem`'s map-tile
  * write; inlined here because systems cannot import each other (see
- * `.claude/rules/import-boundaries.md`). Pure — returns a new state.
+ * `.codex/rules/import-boundaries.md`). Pure — returns a new state.
  *
  * Pre-condition: `validateBuildingPlacement` has already returned `valid: true`
  * for (cityId, tile, buildingId, state). Caller is responsible for having

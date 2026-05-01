@@ -3,7 +3,7 @@
  * keyboard shortcuts, and priority class.
  *
  * Cycle 1 of the panel-manager refactor (see
- * `.claude/workflow/design/panel-manager-audit.md`). This file is pure
+ * `.codex/workflow/design/panel-manager-audit.md`). This file is pure
  * data — no React, no DOM. It lives web-side because the concept of
  * "panel" is a UI concern; the engine is panel-agnostic.
  *

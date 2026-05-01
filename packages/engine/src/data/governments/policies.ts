@@ -2,7 +2,7 @@
 //
 // Types are defined locally (see governments.ts for the rationale).
 // Shape follows the design doc at
-// `.claude/workflow/design/government-system.md` §4.2 and
+// `.codex/workflow/design/government-system.md` §4.2 and
 // `rulebook-government-expansion.md` §14.2.2.
 //
 // Every `unlockCivic` here MUST exist in ALL_CIVICS — enforced by the

@@ -4,7 +4,7 @@
  * GameProvider — placementMode state coverage.
  *
  * Cycle 3 of the building-placement rework wires a pure UI-state picker
- * onto the provider. See `.claude/workflow/design/building-placement-rework.md`
+ * onto the provider. See `.codex/workflow/design/building-placement-rework.md`
  * §4.1 for the shape; here we exercise:
  *   1. initial placementMode is null,
  *   2. enterPlacementMode sets it,

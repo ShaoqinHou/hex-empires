@@ -17,7 +17,7 @@ import { isWonderPlacementValid } from './WonderPlacementUtils';
  * This module is NOT wired into the system pipeline and does not mutate
  * state. It duplicates the territory / tile-cap / ownership checks from
  * `urbanBuildingSystem` (the system cannot be imported because systems
- * may not import each other — see `.claude/rules/import-boundaries.md`)
+ * may not import each other — see `.codex/rules/import-boundaries.md`)
  * and delegates wonder-geography questions to `isWonderPlacementValid`.
  */
 

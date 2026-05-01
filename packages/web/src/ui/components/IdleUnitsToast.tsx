@@ -22,7 +22,7 @@ export function IdleUnitsToast({ triggerCount }: IdleUnitsToastProps) {
   // Visibility derives from HUDManager registration — single source of
   // truth. Phase 6d UI-C-VF1: the earlier revision used a local
   // `useState<boolean>` alongside `register`/`dismiss`, which is the
-  // antipattern documented in `.claude/rules/ui-overlays.md`. Blind-eval
+  // antipattern documented in `.codex/rules/ui-overlays.md`. Blind-eval
   // commit-review flagged this as F-1196b755 on 600662a; fixed here.
   const isVisible = isActive('idleUnitsToast');
 

@@ -22,7 +22,7 @@ import type { CommanderPromotionId } from '../types/Commander';
  * - derived `commanderLevel` via `LEVEL_THRESHOLDS`
  * - unspent picks        -> `commanderLevel - promotions.length`
  *
- * Design doc: .claude/workflow/design/commander-system.md §3–§5.
+ * Design doc: .codex/workflow/design/commander-system.md §3–§5.
  */
 
 // ── Commander-scoped action payloads (local — not part of GameAction yet) ──

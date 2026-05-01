@@ -25,7 +25,7 @@
  *      selection-clear handler.
  *
  * Cycle (a) of the HUD UI rethink — see
- * `.claude/workflow/design/hud-ui-audit.md`.
+ * `.codex/workflow/design/hud-ui-audit.md`.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -63,7 +63,7 @@ export interface HUDEntry {
    * declare anchors simultaneously.
    *
    * Cycle (f) of the HUD UI rethink — see
-   * `.claude/workflow/design/hud-ui-audit.md`.
+   * `.codex/workflow/design/hud-ui-audit.md`.
    */
   readonly anchorKey?: string;
 }

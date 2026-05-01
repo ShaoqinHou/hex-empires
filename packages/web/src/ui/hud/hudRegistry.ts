@@ -7,7 +7,7 @@
  * registry does.
  *
  * Cycle (a) of the HUD UI rethink (see
- * `.claude/workflow/design/hud-ui-audit.md`). Later cycles wire each
+ * `.codex/workflow/design/hud-ui-audit.md`). Later cycles wire each
  * overlay through `HUDManager` + `TooltipShell`; this file simply
  * enumerates the ids the migration will touch.
  *

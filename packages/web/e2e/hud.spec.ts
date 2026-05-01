@@ -1,6 +1,6 @@
 /**
  * HUD-layer game-feel invariants — Playwright E2E sweep for the cross-cutting
- * rules in `.claude/rules/ui-overlays.md` ("Testing → Cross-cutting invariants").
+ * rules in `.codex/rules/ui-overlays.md` ("Testing → Cross-cutting invariants").
  *
  * These assertions only make sense end-to-end (real browser, real renderer,
  * real keyboard wiring): a unit / RTL test can't tell us whether a 5-second

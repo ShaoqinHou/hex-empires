@@ -221,8 +221,8 @@ canvas:focus-visible {
  * Phase 4 when PanelShell gets viewport-aware container styles. This
  * Phase 1.5 commit wires the grid template foundation only.
  *
- * See: .claude/workflow/design/ui-review/systems/S-02-position-anchoring.md
- *      .claude/workflow/design/ui-review/systems/S-03-sizing-table.md
+ * See: .codex/workflow/design/ui-review/systems/S-02-position-anchoring.md
+ *      .codex/workflow/design/ui-review/systems/S-03-sizing-table.md
  */
 
 /* Override the flex-col with a 3-row grid so chrome bar heights are

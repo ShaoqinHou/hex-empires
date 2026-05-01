@@ -6,7 +6,7 @@
  *
  * Numeric values use a decade scheme (0, 10, 20, ...). Any intermediate
  * value (15, 25, 55) is reserved; when a new layer is needed, insert
- * here, not at the call site. See .claude/workflow/design/ui-review/
+ * here, not at the call site. See .codex/workflow/design/ui-review/
  * systems/S-01-layer-and-zindex.md for rationale.
  */
 

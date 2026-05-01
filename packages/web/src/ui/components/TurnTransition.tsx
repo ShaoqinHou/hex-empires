@@ -23,7 +23,7 @@ interface TurnTransitionProps {
  *     `--hud-z-tooltip`; no raw hex.
  *   - A dedicated `position="centered"` shell mode would better express
  *     this surface; its implementation is out of scope for this cycle
- *     (see `.claude/workflow/design/hud-ui-audit.md`, cycle k) — the
+ *     (see `.codex/workflow/design/hud-ui-audit.md`, cycle k) — the
  *     audit plan calls for `position="modal-hint"` / full-screen shell
  *     in a later iteration. Until it lands, `fixed-corner` keeps the
  *     splash out of the raw-positioning anti-pattern.

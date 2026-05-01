@@ -2,7 +2,7 @@
 //
 // Types live here (locally) because the engine-level `types/Government.ts`
 // from M7 has not yet landed on this branch. We keep the shape aligned
-// with the design doc at `.claude/workflow/design/government-system.md`
+// with the design doc at `.codex/workflow/design/government-system.md`
 // §4.1–4.3 and `rulebook-government-expansion.md` §14.1 so the types can
 // be promoted to `types/Government.ts` in a later cycle without churning
 // data files.

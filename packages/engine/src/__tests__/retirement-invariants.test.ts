@@ -13,7 +13,7 @@
  *
  * **DO NOT remove or weaken these tests without an audit update.**
  *
- * Related: `.claude/scripts/verify-retirements.sh` (grep-based equivalent).
+ * Related: `.codex/scripts/verify-retirements.sh` (grep-based equivalent).
  */
 
 import { describe, expect, it } from 'vitest';

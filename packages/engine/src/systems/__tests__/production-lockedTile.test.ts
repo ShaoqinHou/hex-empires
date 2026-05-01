@@ -8,7 +8,7 @@ import { coordToKey } from '../../hex/HexMath';
  * Cycle 1 of the building-placement rework — coverage for
  * `ProductionItem.lockedTile` auto-placement on completion.
  *
- * See `.claude/workflow/design/building-placement-rework.md` §3.3 and §6.1.
+ * See `.codex/workflow/design/building-placement-rework.md` §3.3 and §6.1.
  */
 
 const CITY_POSITION = { q: 3, r: 3 };

@@ -19,10 +19,10 @@
  *
  * None of the existing engine systems touch religion beyond the `faith`
  * yield; the actions and state defined here are picked up in a later
- * cycle. See `.claude/workflow/design/religion-system.md` for the full
+ * cycle. See `.codex/workflow/design/religion-system.md` for the full
  * plan and §18 of the rulebook (merged later) for the in-game rules.
  *
- * Rulebook gap: `.claude/workflow/design/rulebook-gaps.md` §M2, §6.
+ * Rulebook gap: `.codex/workflow/design/rulebook-gaps.md` §M2, §6.
  */
 
 import type { PlayerId, CityId, UnitId, CivilizationId } from './Ids';

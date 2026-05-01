@@ -11,7 +11,7 @@
  * `spatial?: DistrictOverhaulStateV2` field to `GameState`; Cycle F will flip the
  * source of truth and drop the legacy flat-list representation.
  *
- * See `.claude/workflow/design/districts-overhaul.md` for the full 6-cycle plan.
+ * See `.codex/workflow/design/districts-overhaul.md` for the full 6-cycle plan.
  */
 
 import type { HexCoord, HexKey } from './HexCoord';

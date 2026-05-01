@@ -3,7 +3,7 @@
  * element in packages/web. Component code references these tokens; raw
  * ms literals and cubic-bezier() calls in component .tsx are a BLOCK.
  *
- * See .claude/workflow/design/ui-review/systems/S-07-motion-and-animation.md
+ * See .codex/workflow/design/ui-review/systems/S-07-motion-and-animation.md
  * for the full motion contract per element type.
  *
  * @media (prefers-reduced-motion: reduce) halves all durations and is

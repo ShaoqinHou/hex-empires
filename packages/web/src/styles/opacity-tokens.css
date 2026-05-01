@@ -3,7 +3,7 @@
  * in packages/web. Component code uses these tokens; raw decimal alphas
  * and rgba() literals in component .tsx files are a BLOCK.
  *
- * See .claude/workflow/design/ui-review/systems/S-04-transparency-semantics.md
+ * See .codex/workflow/design/ui-review/systems/S-04-transparency-semantics.md
  * for full rationale and usage rules.
  */
 

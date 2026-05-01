@@ -5,7 +5,7 @@
  * has an age, a role (land/naval/air), base cost / combat / movement,
  * an initial command aura radius, and a starting level.
  *
- * Design reference: `.claude/workflow/design/commander-system.md` §2.2
+ * Design reference: `.codex/workflow/design/commander-system.md` §2.2
  * and `civ7-rulebook.md` §6.10.
  *
  * Type scoping: `types/Commander.ts` (cycle A) intentionally did NOT

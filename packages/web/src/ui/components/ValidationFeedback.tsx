@@ -29,7 +29,7 @@ interface ValidationFeedbackProps {
  * the manager's registration map is the single source of truth.
  * Previously the component shadowed this with a local
  * `useState<boolean>(isVisible)` toggled by a separate `useEffect`,
- * the exact antipattern documented in `.claude/rules/ui-overlays.md`
+ * the exact antipattern documented in `.codex/rules/ui-overlays.md`
  * and the one the blind-eval J-shortcut agent copied (review finding
  * F-1196b755). Cleaning the exemplar here removes the transmission
  * vector so future HUD agents don't inherit the drift. The shake

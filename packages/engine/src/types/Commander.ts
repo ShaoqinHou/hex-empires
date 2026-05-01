@@ -11,8 +11,8 @@
  * existing per-unit promotion system continues to work. Wiring into
  * GameState lands in cycle C; old fields are retired in cycle E.
  *
- * Rulebook: .claude/workflow/design/civ7-rulebook.md §6.10.
- * Plan:     .claude/workflow/design/commander-system.md.
+ * Rulebook: .codex/workflow/design/civ7-rulebook.md §6.10.
+ * Plan:     .codex/workflow/design/commander-system.md.
  */
 
 import type { UnitId } from './Ids';

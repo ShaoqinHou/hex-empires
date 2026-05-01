@@ -1,7 +1,7 @@
 /**
  * End-to-end coverage for the full building-placement flow (cycle 7).
  *
- * Target flow per `.claude/workflow/design/building-placement-rework.md`:
+ * Target flow per `.codex/workflow/design/building-placement-rework.md`:
  *   CityPanel pick
  *   → placement mode launches
  *   → valid tile click → SET_PRODUCTION with locked tile

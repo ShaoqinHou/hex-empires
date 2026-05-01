@@ -10,7 +10,7 @@
  * any other overlay that wants progressive disclosure on Alt-hold. The Alt
  * key itself is currently ALSO tracked in `GameProvider` and exposed as
  * `isAltPressed`; this hook exists as the standalone primitive the HUD rule
- * doc references (`.claude/rules/ui-overlays.md` — "tier is a prop driven
+ * doc references (`.codex/rules/ui-overlays.md` — "tier is a prop driven
  * by the Alt-held state"). New HUD consumers should prefer this hook over
  * prop-drilling from GameProvider.
  */
