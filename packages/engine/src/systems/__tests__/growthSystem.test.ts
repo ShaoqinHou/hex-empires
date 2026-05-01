@@ -354,6 +354,7 @@ describe('SET_SPECIALIZATION', () => {
     const state = createTestState({ cities: new Map([['c1', town]]) });
     const next = growthSystem(state, { type: 'SET_SPECIALIZATION', cityId: 'c1', specialization: 'farming_town' });
     expect(next.cities.get('c1')!.specialization).toBe('farming_town');
+    expect(next.cities.get('c1')!.lockedTownSpecialization).toBe('farming_town');
   });
 
   it('rejects specialization when population < 7', () => {
@@ -372,13 +373,28 @@ describe('SET_SPECIALIZATION', () => {
     expect(next).toBe(state);
   });
 
-  it('rejects re-specialization once already set', () => {
-    const town = makeSpecializableTown({ specialization: 'farming_town' });
+  it('rejects switching between two non-Growing specializations once locked', () => {
+    const town = makeSpecializableTown({
+      specialization: 'farming_town',
+      lockedTownSpecialization: 'farming_town',
+    });
     const state = createTestState({ cities: new Map([['c1', town]]) });
     const next = growthSystem(state, { type: 'SET_SPECIALIZATION', cityId: 'c1', specialization: 'mining_town' });
-    // Should still be farming_town
     expect(next.cities.get('c1')!.specialization).toBe('farming_town');
     expect(next).toBe(state);
+  });
+
+  it('allows toggling between Growing Town and the locked specialization', () => {
+    const town = makeSpecializableTown({
+      specialization: 'farming_town',
+      lockedTownSpecialization: 'farming_town',
+    });
+    const state = createTestState({ cities: new Map([['c1', town]]) });
+    const growing = growthSystem(state, { type: 'SET_SPECIALIZATION', cityId: 'c1', specialization: 'growing_town' });
+    const restored = growthSystem(growing, { type: 'SET_SPECIALIZATION', cityId: 'c1', specialization: 'farming_town' });
+    expect(growing.cities.get('c1')!.specialization).toBe('growing_town');
+    expect(growing.cities.get('c1')!.lockedTownSpecialization).toBe('farming_town');
+    expect(restored.cities.get('c1')!.specialization).toBe('farming_town');
   });
 
   it('rejects specialization for a city owned by another player', () => {

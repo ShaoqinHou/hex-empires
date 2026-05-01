@@ -1,7 +1,8 @@
-import type { CityState, HexTile } from '@hex/engine';
+import type { CityState, HexTile, TownSpecialization, NonGrowingTownSpecialization } from '@hex/engine';
 import {
   calculateCityYields,
   getGrowthThreshold,
+  calculateSettlementUpgradeCost,
   calculateCityHappiness,
   calculateSettlementCapPenalty,
   applyHappinessPenalty,
@@ -51,6 +52,7 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
   const player = state.players.get(state.currentPlayerId);
   const currentAge = player?.age ?? 'antiquity';
   const playerGold = player?.gold ?? 0;
+  const upgradeCost = calculateSettlementUpgradeCost(state, state.currentPlayerId, city);
   const pendingGrowthChoices = player?.pendingGrowthChoices ?? [];
   const hasPendingGrowthChoice = pendingGrowthChoices.some(choice => choice.cityId === city.id);
   const canAssignSpecialistFromGrowth = !isTown && city.specialists < city.population - 1;
@@ -199,25 +201,37 @@ export function CityPanel({ city, onClose }: CityPanelProps) {
       {isTown && (
         <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
           <button
+            data-testid="upgrade-settlement-button"
             className="w-full px-3 py-2 text-xs font-bold rounded cursor-pointer"
             style={{
-              backgroundColor: playerGold >= 100 ? 'var(--color-gold)' : 'var(--color-bg)',
-              color: playerGold >= 100 ? 'var(--color-bg)' : 'var(--panel-muted-color)',
-              opacity: playerGold >= 100 ? 1 : 0.5,
+              backgroundColor: playerGold >= upgradeCost ? 'var(--color-gold)' : 'var(--color-bg)',
+              color: playerGold >= upgradeCost ? 'var(--color-bg)' : 'var(--panel-muted-color)',
+              opacity: playerGold >= upgradeCost ? 1 : 0.5,
             }}
-            disabled={playerGold < 100}
+            disabled={playerGold < upgradeCost}
             onClick={() => dispatch({ type: 'UPGRADE_SETTLEMENT', cityId: city.id })}
           >
-            Upgrade to City (100g)
+            Upgrade to City ({upgradeCost}g)
           </button>
         </div>
       )}
 
-      {/* Town focus selector — only shown for towns (F-10) */}
+      {/* Town specialization selector — only shown for towns (F-10) */}
       {isTown && (
-        <TownFocusSelector
-          currentFocus={(city.townFocus as TownFocusMode | undefined) ?? 'growing'}
-          onFocusChange={(focus) => dispatch({ type: 'SET_TOWN_FOCUS', cityId: city.id, focus })}
+        <TownSpecializationSelector
+          currentSpecialization={city.specialization}
+          lockedSpecialization={
+            city.lockedTownSpecialization
+            ?? (city.specialization && city.specialization !== 'growing_town'
+              ? city.specialization as NonGrowingTownSpecialization
+              : null)
+          }
+          population={city.population}
+          onSpecializationChange={(specialization) => dispatch({
+            type: 'SET_SPECIALIZATION',
+            cityId: city.id,
+            specialization,
+          })}
         />
       )}
 
@@ -602,37 +616,57 @@ function HeroProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-// ── Town Focus Selector (F-10) ────────────────────────────────────────────────
-// Displayed only for towns. Lets the player toggle between five yield modes.
-// Unlike TownSpecialization (permanent), focus can be changed freely each turn.
+// ── Town Specialization Selector (F-10) ───────────────────────────────────────
 
-type TownFocusMode = 'growing' | 'production' | 'trade' | 'science' | 'farming';
-
-interface TownFocusSelectorProps {
-  readonly currentFocus: TownFocusMode;
-  readonly onFocusChange: (focus: TownFocusMode) => void;
+interface TownSpecializationSelectorProps {
+  readonly currentSpecialization: TownSpecialization | null;
+  readonly lockedSpecialization: NonGrowingTownSpecialization | null;
+  readonly population: number;
+  readonly onSpecializationChange: (specialization: TownSpecialization) => void;
 }
 
-const TOWN_FOCUS_OPTIONS: ReadonlyArray<{ id: TownFocusMode; label: string; hint: string }> = [
-  { id: 'growing',    label: 'Growing',    hint: 'Default — prioritises food and population growth' },
-  { id: 'production', label: 'Production', hint: '+1 production per 2 territory tiles' },
-  { id: 'trade',      label: 'Trade',      hint: '+1 gold per outgoing trade route' },
-  { id: 'science',    label: 'Science',    hint: '+1 science per population point' },
-  { id: 'farming',    label: 'Farming',    hint: '+1 food per territory tile' },
+const TOWN_SPECIALIZATION_OPTIONS: ReadonlyArray<{
+  id: TownSpecialization;
+  label: string;
+  hint: string;
+}> = [
+  { id: 'growing_town', label: 'Growing Town', hint: '+50% growth rate' },
+  { id: 'farming_town', label: 'Farming Town', hint: '+2 food' },
+  { id: 'mining_town', label: 'Mining Town', hint: '+2 production' },
+  { id: 'trade_outpost', label: 'Trade Outpost', hint: '+3 gold' },
+  { id: 'fort_town', label: 'Fort Town', hint: '+5 defense HP' },
+  { id: 'religious_site', label: 'Religious Site', hint: '+3 faith' },
+  { id: 'hub_town', label: 'Hub Town', hint: '+2 gold, +1 production' },
+  { id: 'urban_center', label: 'Urban Center', hint: '+1 food, production, gold' },
+  { id: 'factory_town', label: 'Factory Town', hint: '+3 production' },
 ];
 
-function TownFocusSelector({ currentFocus, onFocusChange }: TownFocusSelectorProps) {
+function TownSpecializationSelector({
+  currentSpecialization,
+  lockedSpecialization,
+  population,
+  onSpecializationChange,
+}: TownSpecializationSelectorProps) {
   return (
-    <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--panel-border)' }}>
+    <div
+      data-testid="town-specialization-selector"
+      className="px-4 py-2"
+      style={{ borderBottom: '1px solid var(--panel-border)' }}
+    >
       <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--panel-muted-color)' }}>
-        Town Focus
+        Town Specialization
       </h3>
       <div className="flex flex-col gap-1">
-        {TOWN_FOCUS_OPTIONS.map((opt) => {
-          const isActive = currentFocus === opt.id;
+        {TOWN_SPECIALIZATION_OPTIONS.map((opt) => {
+          const isActive = currentSpecialization === opt.id;
+          const isLockedOut = lockedSpecialization !== null
+            && opt.id !== 'growing_town'
+            && opt.id !== lockedSpecialization;
+          const isDisabled = population < 7 || isLockedOut;
           return (
             <button
               key={opt.id}
+              data-testid={`town-specialization-${opt.id}`}
               className="flex items-center justify-between px-3 py-1.5 rounded text-xs cursor-pointer text-left"
               style={{
                 backgroundColor: isActive
@@ -642,14 +676,18 @@ function TownFocusSelector({ currentFocus, onFocusChange }: TownFocusSelectorPro
                   ? '1px solid var(--panel-accent-gold)'
                   : '1px solid var(--panel-border)',
                 color: isActive ? 'var(--panel-accent-gold)' : 'var(--panel-text-color)',
+                opacity: isDisabled ? 0.45 : 1,
               }}
               title={opt.hint}
+              disabled={isDisabled}
               onClick={() => {
-                if (!isActive) onFocusChange(opt.id);
+                if (!isActive) onSpecializationChange(opt.id);
               }}
             >
               <span className="font-bold">{isActive ? '● ' : '○ '}{opt.label}</span>
-              <span style={{ color: 'var(--panel-muted-color)', fontSize: '10px' }}>{opt.hint}</span>
+              <span style={{ color: 'var(--panel-muted-color)', fontSize: '10px' }}>
+                {population < 7 ? 'Requires Pop 7' : opt.hint}
+              </span>
             </button>
           );
         })}

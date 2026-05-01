@@ -3,6 +3,7 @@ import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
 import { createDefaultIPState } from '../state/IPStateFactory';
+import { clearTownSpecializationState } from '../state/TownSpecializationUtils';
 
 /**
  * AgeSystem handles age transitions and legacy milestone tracking.
@@ -238,13 +239,12 @@ function handleTransition(state: GameState, newCivId: string): GameState {
       if (city.isCapital) continue; // capital stays as city
       if (city.settlementType === 'town') continue; // already a town
       nextCities.set(cityId, {
-        ...city,
+        ...clearTownSpecializationState(city),
         settlementType: 'town' as const,
         isTown: true,
         population: 1,
         productionQueue: [],
         productionProgress: 0,
-        specialization: null,
       });
       citiesChanged = true;
     }
@@ -259,6 +259,22 @@ function handleTransition(state: GameState, newCivId: string): GameState {
         panelTarget: 'age' as const,
       });
     }
+  }
+
+  // Town focuses are per-age. Reset already-existing towns as well as towns
+  // created by the downgrade pass above. Economic Golden Age preserves city
+  // tier, but does not preserve town specialization choices.
+  {
+    const nextCities = new Map(updatedCities);
+    let townSpecializationReset = false;
+    for (const [cityId, city] of updatedCities) {
+      if (city.owner !== player.id) continue;
+      if (city.settlementType !== 'town') continue;
+      if (city.specialization === null && city.lockedTownSpecialization == null) continue;
+      nextCities.set(cityId, clearTownSpecializationState(city));
+      townSpecializationReset = true;
+    }
+    if (townSpecializationReset) updatedCities = nextCities;
   }
 
   // F-07 (population-specialists): Reset food to 0 for all cities owned by

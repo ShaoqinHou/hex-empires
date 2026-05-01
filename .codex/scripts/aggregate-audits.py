@@ -67,6 +67,21 @@ STATUS_EMOJI = {
     'EXTRA': '✗',
 }
 
+SEVERITY_PRIORITY = {
+    'HIGH': 0,
+    'MED': 1,
+    'LOW': 2,
+    'UNK': 3,
+}
+
+ACTIVE_STATUS_PRIORITY = {
+    'DIVERGED': 0,
+    'MISSING': 1,
+    'CLOSE': 2,
+    'EXTRA': 3,
+    'MATCH': 4,
+}
+
 
 def parse_audit(path):
     """Yield finding dicts from one audit file."""
@@ -111,6 +126,21 @@ def tally_audit(findings):
     for f in findings:
         t[f['status']] = t.get(f['status'], 0) + 1
     return t
+
+
+def select_top_finding(findings):
+    """Return the highest-severity active finding for mapping summaries."""
+    if not findings:
+        return None
+    candidates = [f for f in findings if f['status'] != 'MATCH'] or findings
+    return min(
+        candidates,
+        key=lambda f: (
+            SEVERITY_PRIORITY.get(f['severity'], 9),
+            ACTIVE_STATUS_PRIORITY.get(f['status'], 9),
+            f['fid'],
+        ),
+    )
 
 
 def generate_tracker_body(all_findings, per_audit_tallies):
@@ -205,16 +235,11 @@ def generate_mapping_section(slug, findings):
         f"{t['MATCH']} MATCH / {t['CLOSE']} CLOSE / {t['DIVERGED']} DIVERGED / "
         f"{t['MISSING']} MISSING / {t['EXTRA']} EXTRA"
     )
-    high_findings = [f for f in findings if f['severity'] == 'HIGH']
-    if high_findings:
-        top = min(high_findings, key=lambda f: f['fid'])
-        top_str = f"{top['fid']} — {top['title']} ({top['status']}, HIGH)"
-    else:
-        top = findings[0] if findings else None
-        top_str = (
-            f"{top['fid']} — {top['title']} ({top['status']}, {top['severity']})"
-            if top else "_(no findings)_"
-        )
+    top = select_top_finding(findings)
+    top_str = (
+        f"{top['fid']} — {top['title']} ({top['status']}, {top['severity']})"
+        if top else "_(no findings)_"
+    )
 
     # Convergence status heuristic
     if t['DIVERGED'] > 0:

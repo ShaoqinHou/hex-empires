@@ -1,4 +1,4 @@
-import type { GameState, CityState, TownSpecialization, TownFocus } from '../types/GameState';
+import type { GameState, CityState, TownSpecialization } from '../types/GameState';
 import type { GameConfig } from '../types/GameConfig';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
@@ -83,16 +83,10 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
   // City center always produces at least 2 food, 1 production
   total = addYields(total, { food: 2, production: 1 });
 
-  // Town specialization yield bonuses
-  if (city.specialization !== null) {
+  // Town specialization yield bonuses. Cleared on upgrade/age transition, but
+  // keep the town gate here so stale save data cannot leak town yields to cities.
+  if (city.settlementType === 'town' && city.specialization !== null) {
     total = addYields(total, getSpecializationYields(city.specialization));
-  }
-
-  // F-10 (settlements): Town focus yield bonuses.
-  // townFocus is a toggleable per-turn mode (distinct from the permanent specialization).
-  // Absent or 'growing' = standard behaviour (no extra bonus; growth rate handled in growthSystem).
-  if (city.settlementType === 'town' && city.townFocus !== undefined && city.townFocus !== 'growing') {
-    total = addYields(total, getTownFocusYields(city.townFocus, city, state));
   }
 
   // Specialist yields: each specialist produces +2 science and +2 culture
@@ -220,45 +214,6 @@ function clampYields(yields: YieldSet, cap: number): YieldSet {
     influence:  Math.min(yields.influence, cap),
     happiness:  Math.min(yields.happiness, cap),
   };
-}
-
-/**
- * F-10 (settlements): Yield bonuses granted by the toggleable town focus.
- * Called only when townFocus is defined and not 'growing'.
- *
- * Rules:
- *   'production' → +1 production per 2 territory tiles (food surplus channeled
- *                  into output; approximated as a simple territory-tile count)
- *   'trade'      → +1 gold per trade route originating from this town
- *   'science'    → +1 science per population point
- *   'farming'    → +1 food per worked territory tile (simple territory count)
- *   'growing'    → no explicit yield bonus (growth rate handled in growthSystem)
- */
-export function getTownFocusYields(
-  focus: TownFocus,
-  city: CityState,
-  state: GameState,
-): Partial<YieldSet> {
-  switch (focus) {
-    case 'production': {
-      const tileCount = city.territory.length;
-      return { production: Math.floor(tileCount / 2) };
-    }
-    case 'trade': {
-      let routeCount = 0;
-      for (const route of state.tradeRoutes.values()) {
-        if (route.from === city.id) routeCount++;
-      }
-      return { gold: routeCount };
-    }
-    case 'science':
-      return { science: city.population };
-    case 'farming':
-      return { food: city.territory.length };
-    case 'growing':
-    default:
-      return {};
-  }
 }
 
 /**

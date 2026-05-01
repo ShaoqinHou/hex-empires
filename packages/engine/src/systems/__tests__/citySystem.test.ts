@@ -341,7 +341,8 @@ describe('citySystem', () => {
         population: 1, food: 0, productionQueue: [], productionProgress: 0,
         buildings: [], territory: ['3,3'],
         settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 100,
-        specialization: null, specialists: 0, districts: [],
+        specialization: 'farming_town', lockedTownSpecialization: 'farming_town',
+        specialists: 0, districts: [],
       };
       const state = createTestState({
         cities: new Map([['c1', town]]),
@@ -349,8 +350,33 @@ describe('citySystem', () => {
       });
       const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
       expect(next.cities.get('c1')!.settlementType).toBe('city');
+      expect(next.cities.get('c1')!.isTown).toBe(false);
       expect(next.cities.get('c1')!.happiness).toBe(10);
+      expect(next.cities.get('c1')!.specialization).toBeNull();
+      expect(next.cities.get('c1')!.lockedTownSpecialization).toBeNull();
       expect(next.players.get('p1')!.gold).toBe(0); // 200 - 200
+    });
+
+    it('removes active Fort Town defense HP when upgrading to a city', () => {
+      const town: CityState = {
+        id: 'c1', name: 'Outpost', owner: 'p1', position: { q: 3, r: 3 },
+        population: 7, food: 0, productionQueue: [], productionProgress: 0,
+        buildings: [], territory: ['3,3'],
+        settlementType: 'town', happiness: 5, isCapital: false, defenseHP: 105,
+        specialization: 'fort_town', lockedTownSpecialization: 'fort_town',
+        specialists: 0, districts: [],
+      };
+      const state = createTestState({
+        cities: new Map([['c1', town]]),
+        players: new Map([['p1', createTestPlayer({ id: 'p1', gold: 200 })]]),
+      });
+
+      const next = citySystem(state, { type: 'UPGRADE_SETTLEMENT', cityId: 'c1' });
+
+      expect(next.cities.get('c1')!.settlementType).toBe('city');
+      expect(next.cities.get('c1')!.defenseHP).toBe(100);
+      expect(next.cities.get('c1')!.specialization).toBeNull();
+      expect(next.cities.get('c1')!.lockedTownSpecialization).toBeNull();
     });
 
     it('rejects upgrade if not enough gold', () => {
@@ -554,6 +580,49 @@ describe('W2-02 settlement VII-parity', () => {
       expect(next.cities.get('other')!.settlementType).toBe('city');
       // No change means state identity is preserved (no towns to downgrade for p1)
       expect(next).toBe(state);
+    });
+
+    it('TRANSITION_AGE clears existing town specialization during Economic Golden Age', () => {
+      const town = makeCity('town', {
+        settlementType: 'town',
+        isTown: true,
+        defenseHP: 105,
+        specialization: 'fort_town',
+        lockedTownSpecialization: 'fort_town',
+      });
+      const state = createTestState({
+        cities: new Map([['town', town]]),
+        players: new Map([[
+          'p1',
+          createTestPlayer({ id: 'p1', legacyPaths: { military: 0, economic: 3, science: 0, culture: 0 } }),
+        ]]),
+      });
+
+      const next = citySystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const updated = next.cities.get('town')!;
+
+      expect(updated.settlementType).toBe('town');
+      expect(updated.specialization).toBeNull();
+      expect(updated.lockedTownSpecialization).toBeNull();
+      expect(updated.defenseHP).toBe(100);
+    });
+
+    it('TRANSITION_AGE normalizes leaked Fort Town defense on city downgrade', () => {
+      const city = makeCity('nc1', {
+        settlementType: 'city',
+        defenseHP: 105,
+        specialization: 'fort_town',
+        lockedTownSpecialization: 'fort_town',
+      });
+      const state = createTestState({ cities: new Map([['nc1', city]]) });
+
+      const next = citySystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const updated = next.cities.get('nc1')!;
+
+      expect(updated.settlementType).toBe('town');
+      expect(updated.defenseHP).toBe(100);
+      expect(updated.specialization).toBeNull();
+      expect(updated.lockedTownSpecialization).toBeNull();
     });
   });
 });

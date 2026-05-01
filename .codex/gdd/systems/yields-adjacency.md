@@ -64,7 +64,7 @@ Yields are the statistical lifeblood of every settlement in Civ VII: they drive 
 - On action **PLACE_BUILDING** -- recalculate adjacency bonuses for the placed tile and all neighboring tiles; evaluate whether the tile now forms a Quarter
 - On action **ASSIGN_SPECIALIST** -- recalculate the tile adjacency amplification; apply Food and Happiness upkeep costs
 - On action **REMOVE_SPECIALIST** -- reverse upkeep costs; recalculate amplified adjacency
-- On action **SET_TOWN_FOCUS** (town reaches population 7) -- redirect Town Production to Gold per-turn conversion; optionally redirect Town Food to connected City
+- On action **SET_SPECIALIZATION** (town reaches population 7) -- redirect Town Production to Gold per-turn conversion; optionally redirect Town Food to connected City
 - On **age transition** -- mark age-specific buildings as obsolete; quarter formation re-evaluated for all tiles; adjacency bonuses from obsolete buildings are lost
 
 ---
@@ -157,7 +157,7 @@ Ageless buildings (Granary, Fishing Quay, Wonders, civ Unique Buildings) never b
 
 ### Town Production-to-Gold Conversion
 
-Towns (settlements below City status) convert 100 percent of their Production to Gold at a 1:1 rate per turn. This conversion stops when a Town: (a) is upgraded to a City, or (b) takes a Town Focus at population 7. The 1:1 ratio is the base; civilization bonuses can modify total Gold output (e.g. Britain gains +5 Gold per building in Towns; Carthage provides +20 percent to all Gold Towns produce).
+Towns (settlements below City status) convert 100 percent of their Production to Gold at a 1:1 rate per turn. This conversion stops when a Town is upgraded to a City; taking a Town Focus changes food routing and focus bonuses, not the town-tier production-to-gold rule. The 1:1 ratio is the base; civilization bonuses can modify total Gold output (e.g. Britain gains +5 Gold per building in Towns; Carthage provides +20 percent to all Gold Towns produce).
 
 ---
 

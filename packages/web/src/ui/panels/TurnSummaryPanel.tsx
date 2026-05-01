@@ -16,7 +16,7 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
 
   const summary = calculateResourceChanges(state, state.currentPlayerId);
 
-  // Get cities with detailed info
+  // Get settlements with detailed info
   const playerCities = [...state.cities.values()]
     .filter(c => c.owner === state.currentPlayerId)
     .map(city => {
@@ -65,7 +65,7 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
               </span>
             </div>
             <div>
-              <span style={{ color: 'var(--panel-muted-color)' }}>Cities:</span>
+              <span style={{ color: 'var(--panel-muted-color)' }}>Settlements:</span>
               <span className="ml-1 font-bold">{playerCities.length}</span>
             </div>
             {(() => {
@@ -121,10 +121,10 @@ export function TurnSummaryPanel({ onResolve }: TurnSummaryPanelProps) {
         </div>
       )}
 
-      {/* City Details */}
+      {/* Settlement Details */}
       <div className="pb-3">
         <h3 className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--panel-muted-color)' }}>
-          Cities
+          Settlements
         </h3>
         <div className="flex flex-col gap-2">
           {playerCities.map(({ city, isStarving, hasGoldDeficit }) => {

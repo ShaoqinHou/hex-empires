@@ -1,6 +1,17 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, GameEvent } from '../types/GameState';
+import type {
+  GameState,
+  GameAction,
+  CityState,
+  Age,
+  TownSpecialization,
+  NonGrowingTownSpecialization,
+  PlayerState,
+  PendingGrowthChoice,
+  GameEvent,
+} from '../types/GameState';
 import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
+import { transitionFortTownDefenseHP } from '../state/TownSpecializationUtils';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
 import { getGrowthThreshold as _getGrowthThreshold } from '../state/GrowthUtils';
 import { applyImprovementToTile, deriveImprovementType } from '../state/ImprovementRules';
@@ -17,7 +28,8 @@ const SPECIALIZATION_POP_MINIMUM = 7;
  * Constraints:
  * - Settlement must be a town (not a city)
  * - Population must be >= 7
- * - Specialization cannot be changed once set
+ * - One non-Growing specialization is locked per age
+ * - The town may toggle between Growing Town and the locked specialization
  */
 function handleSetSpecialization(
   state: GameState,
@@ -29,37 +41,49 @@ function handleSetSpecialization(
   if (city.owner !== state.currentPlayerId) return state;
   if (city.settlementType !== 'town') return state;
   if (city.population < SPECIALIZATION_POP_MINIMUM) return state;
-  if (city.specialization !== null) return state; // already specialized
 
-  // fort_town grants +5 defense HP immediately on specialization
-  const defenseHP = specialization === 'fort_town' ? city.defenseHP + 5 : city.defenseHP;
-  const updatedCity: CityState = { ...city, specialization, defenseHP };
+  const lockedSpecialization = getLockedTownSpecialization(city);
+  const nextLockedSpecialization = getNextLockedTownSpecialization(
+    specialization,
+    lockedSpecialization,
+  );
+  if (nextLockedSpecialization === null && specialization !== 'growing_town') {
+    return state;
+  }
+
+  const defenseHP = transitionFortTownDefenseHP(city, specialization);
+  const updatedCity: CityState = {
+    ...city,
+    specialization,
+    lockedTownSpecialization: nextLockedSpecialization,
+    defenseHP,
+  };
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, updatedCity);
   return { ...state, cities: updatedCities };
 }
 
-/**
- * F-10 (settlements): Set the toggleable town focus for a town.
- * Unlike SET_SPECIALIZATION (permanent), this action can be repeated freely.
- * Constraints:
- * - Settlement must be a town
- * - Owner must match the current player
- */
-function handleSetTownFocus(
-  state: GameState,
-  cityId: string,
-  focus: TownFocus,
-): GameState {
-  const city = state.cities.get(cityId);
-  if (!city) return state;
-  if (city.owner !== state.currentPlayerId) return state;
-  if (city.settlementType !== 'town') return state;
+function getLockedTownSpecialization(city: CityState): NonGrowingTownSpecialization | null {
+  if (city.lockedTownSpecialization !== undefined) {
+    return city.lockedTownSpecialization;
+  }
+  if (city.specialization !== null && city.specialization !== 'growing_town') {
+    return city.specialization;
+  }
+  return null;
+}
 
-  const updatedCity: CityState = { ...city, townFocus: focus };
-  const updatedCities = new Map(state.cities);
-  updatedCities.set(cityId, updatedCity);
-  return { ...state, cities: updatedCities };
+function getNextLockedTownSpecialization(
+  specialization: TownSpecialization,
+  lockedSpecialization: NonGrowingTownSpecialization | null,
+): NonGrowingTownSpecialization | null {
+  if (specialization === 'growing_town') {
+    return lockedSpecialization;
+  }
+  if (lockedSpecialization === null || lockedSpecialization === specialization) {
+    return specialization;
+  }
+  return null;
 }
 
 /**
@@ -79,9 +103,6 @@ function handleSetTownFocus(
 export function growthSystem(state: GameState, action: GameAction): GameState {
   if (action.type === 'SET_SPECIALIZATION') {
     return handleSetSpecialization(state, action.cityId, action.specialization);
-  }
-  if (action.type === 'SET_TOWN_FOCUS') {
-    return handleSetTownFocus(state, action.cityId, action.focus);
   }
   if (action.type === 'RESOLVE_GROWTH_CHOICE') {
     return handleResolveGrowthChoice(

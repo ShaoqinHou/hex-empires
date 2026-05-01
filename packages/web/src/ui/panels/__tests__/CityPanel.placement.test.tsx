@@ -112,7 +112,11 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
     settlementType: 'city',
     isCapital: true,
     happiness: 0,
+    defenseHP: 100,
+    specialization: null,
+    lockedTownSpecialization: null,
     specialists: 0,
+    districts: [],
     ...overrides,
   } as unknown as CityState;
 }
@@ -383,5 +387,97 @@ describe('CityPanel — building placement launch (cycle 5)', () => {
 
     const { queryByTestId } = render(<CityPanel city={city} onClose={() => {}} />);
     expect(queryByTestId('city-growth-choice')).toBeNull();
+  });
+
+  it('shows the dynamic upgrade cost for towns', () => {
+    const town = makeCity({
+      id: 'c-town',
+      settlementType: 'town',
+      isCapital: false,
+      population: 1,
+    });
+    const capital = makeCity({
+      id: 'c-cap',
+      settlementType: 'city',
+      isCapital: true,
+      position: { q: 5, r: 0 },
+    });
+    mockRef.state = makeState(makePlayer({ gold: 300 }), town, {
+      cities: new Map([[capital.id, capital], [town.id, town]]),
+    });
+
+    const { getByTestId } = render(<CityPanel city={town} onClose={() => {}} />);
+
+    const upgradeButton = getByTestId('upgrade-settlement-button') as HTMLButtonElement;
+    expect(upgradeButton.textContent).toContain('Upgrade to City (280g)');
+    expect(upgradeButton.disabled).toBe(false);
+  });
+
+  it('dispatches SET_SPECIALIZATION from the town specialization selector', () => {
+    const dispatchCalls: GameAction[] = [];
+    const town = makeCity({
+      id: 'c-town-spec',
+      settlementType: 'town',
+      isCapital: false,
+      population: 7,
+      specialization: null,
+      lockedTownSpecialization: null,
+    });
+    mockRef.dispatch = (action) => {
+      dispatchCalls.push(action);
+    };
+    mockRef.state = makeState(makePlayer(), town);
+
+    const { getByTestId } = render(<CityPanel city={town} onClose={() => {}} />);
+
+    fireEvent.click(getByTestId('town-specialization-farming_town'));
+
+    expect(dispatchCalls).toEqual([
+      { type: 'SET_SPECIALIZATION', cityId: 'c-town-spec', specialization: 'farming_town' },
+    ]);
+  });
+
+  it('dispatches SET_SPECIALIZATION for Growing Town from an unspecialized town', () => {
+    const dispatchCalls: GameAction[] = [];
+    const town = makeCity({
+      id: 'c-town-growing',
+      settlementType: 'town',
+      isCapital: false,
+      population: 7,
+      specialization: null,
+      lockedTownSpecialization: null,
+    });
+    mockRef.dispatch = (action) => {
+      dispatchCalls.push(action);
+    };
+    mockRef.state = makeState(makePlayer(), town);
+
+    const { getByTestId } = render(<CityPanel city={town} onClose={() => {}} />);
+
+    fireEvent.click(getByTestId('town-specialization-growing_town'));
+
+    expect(dispatchCalls).toEqual([
+      { type: 'SET_SPECIALIZATION', cityId: 'c-town-growing', specialization: 'growing_town' },
+    ]);
+  });
+
+  it('disables different non-Growing specializations once one is locked', () => {
+    const town = makeCity({
+      id: 'c-locked-town',
+      settlementType: 'town',
+      isCapital: false,
+      population: 7,
+      specialization: 'growing_town',
+      lockedTownSpecialization: 'mining_town',
+    });
+    mockRef.state = makeState(makePlayer(), town);
+
+    const { getByTestId } = render(<CityPanel city={town} onClose={() => {}} />);
+
+    expect(getByTestId('town-specialization-selector')).toBeTruthy();
+    const miningButton = getByTestId('town-specialization-mining_town') as HTMLButtonElement;
+    const farmingButton = getByTestId('town-specialization-farming_town') as HTMLButtonElement;
+    expect(miningButton.disabled).toBe(false);
+    expect(farmingButton.disabled).toBe(true);
   });
 });

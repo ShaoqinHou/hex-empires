@@ -43,7 +43,7 @@ The Settlement system is the central empire-building mechanic of Civ VII, govern
 - `PlayerState.settlementsOwned` — (R) — count of all owned settlements (cities + towns); compared against cap each turn
 - `CityState.tier` — (RW) — `town | city`; set on founding, conversion, and age transition
 - `CityState.population` — (RW) — current population; drives tile-claiming, specialist slots, and specialization unlock threshold
-- `CityState.focus` — (RW) — `null | growing | fort | urbanCenter | farming | mining | tradeOutpost | religiousSite | hubTown | factoryTown`; locked per age once set (except swap between Growing and the chosen focus)
+- `CityState.specialization` / `CityState.lockedTownSpecialization` — (RW) — `null | growing | fort | urbanCenter | farming | mining | tradeOutpost | religiousSite | hubTown | factoryTown`; the first non-Growing choice is locked per age, except swap between Growing and the chosen focus
 - `CityState.productionQueue` — (RW) — present only when `tier == city`; absent when `tier == town`
 - `CityState.localHappiness` — (RW) — influenced by settlement cap pressure, specialists, buildings; feeds global happiness aggregate
 - `GameState.settlementCapBase` — (R) — base cap per age before per-player bonuses
@@ -56,8 +56,8 @@ The Settlement system is the central empire-building mechanic of Civ VII, govern
 
 - On **FOUND_SETTLEMENT** (player action) — dispatched by a Founder or Settler unit; creates a new settlement; sets `tier` based on unit type (Founder → `city`, Settler → `town`); increments `settlementsOwned`; claims the center tile; consumes the founding unit
 - On **END_TURN** (every turn, all players) — evaluates food accumulation vs. growth threshold; on threshold: increments population, auto-claims adjacent tile and places improvement, or assigns specialist; for town tier: converts all production yield to gold; evaluates `settlementsOwned > settlementCap` → applies happiness penalty if exceeded
-- On action **CONVERT_TO_CITY** (player action, towns only) — deducts gold cost (scaled by city count and town population); changes `tier` from town to city; initializes `productionQueue`; removes any active focus
-- On action **SET_TOWN_FOCUS** (player action, towns with population ≥ 7) — sets `focus` field; locks for the age; redirects food yield to connected cities (except Growing Town, which retains local food for continued growth)
+- On action **UPGRADE_SETTLEMENT** (player action, towns only) — deducts gold cost (scaled by city count and town population); changes `tier` from town to city; initializes `productionQueue`; removes any active focus
+- On action **SET_SPECIALIZATION** (player action, towns with population ≥ 7) — sets `specialization` and `lockedTownSpecialization`; locks the first non-Growing choice for the age; redirects food yield to connected cities (except Growing Town, which retains local food for continued growth)
 - On **RAZE_SETTLEMENT** (player action, enemy captured settlement) — enters 12-turn razing countdown; settlement yields zeroed during countdown; on countdown expiry: removes settlement and borders; applies war-support penalty against all opponents; generates grievances with the former owner
 - On **age transition** — all non-capital cities downgrade to town tier; town focus fields reset to null; EXCEPTION: if Economic Golden Age legacy was earned in the prior age, all cities retain city tier; capital always retains city tier
 
@@ -302,7 +302,7 @@ Where:
 
 - **Settlement tier badge** — on every settlement icon on the map: small City/Town badge distinguishing tier at a glance
 - **Found City / Found Town action** — on Founder/Settler unit selection; distinct action button for each unit type
-- **Focus Menu panel** — activates when selecting a town with population ≥ 7 that has not yet been specialized
+- **Focus Menu panel** — activates when selecting any town with population ≥ 7; before lock it lists all focus options, and after lock it keeps Growing Town plus the locked non-Growing focus enabled while disabling other non-Growing focuses
 - **Convert to City button** — visible on town selection screen; shows the current gold cost
 - **Settlement Cap indicator** — in the top HUD bar or empire summary screen; shows `current / cap` count
 - **Raze / Keep modal** — appears when a captured settlement is selected; shows war support cost of razing
@@ -346,10 +346,10 @@ Where:
 
 ## Mapping to hex-empires
 
-**Status tally:** 2 MATCH / 4 CLOSE / 0 DIVERGED / 5 MISSING / 0 EXTRA
+**Status tally:** 7 MATCH / 2 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
 **Audit:** [.codex/gdd/audits/settlements.md](../audits/settlements.md)
-**Highest-severity finding:** F-07 — Age transition — cities do NOT revert to towns (MISSING, HIGH)
-**Convergence status:** Partial — 5 VII mechanic(s) absent
+**Highest-severity finding:** F-08 — Raze settlement mechanic (MISSING, HIGH)
+**Convergence status:** Partial — 2 VII mechanic(s) absent
 
 _(Full details in audit file. 11 total finding(s). Regenerated by `.codex/scripts/aggregate-audits.py`.)_
 

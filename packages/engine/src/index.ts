@@ -27,6 +27,7 @@ export type {
   UnitState,
   SettlementType,
   TownSpecialization,
+  NonGrowingTownSpecialization,
   CityState,
   ProductionItem,
   LegacyPaths,
@@ -127,7 +128,7 @@ export { GameEngine, DEFAULT_SYSTEMS } from './GameEngine';
 export { turnSystem } from './systems/turnSystem';
 export { movementSystem } from './systems/movementSystem';
 export { getMovementCost } from './hex/TerrainCost';
-export { citySystem } from './systems/citySystem';
+export { citySystem, calculateSettlementUpgradeCost } from './systems/citySystem';
 export { growthSystem, getGrowthThreshold } from './systems/growthSystem';
 export { calculateCityYields, getSpecializationYields } from './state/YieldCalculator';
 export { productionSystem } from './systems/productionSystem';

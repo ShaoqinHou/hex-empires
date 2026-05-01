@@ -2,8 +2,8 @@
 
 **System slug:** `population-specialists`
 **GDD doc:** [systems/population-specialists.md](../systems/population-specialists.md)
-**Audit date:** `2026-04-19`
-**Auditor:** `claude-sonnet-4.6`
+**Audit date:** `2026-05-02`
+**Auditor:** `codex-gpt-5.5-lead` (F-05 refresh)
 **Version target:** Firaxis patch 1.3.0 (per commitment.md)
 
 ---
@@ -21,8 +21,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 0 |
-| CLOSE | 2 |
+| MATCH | 1 |
+| CLOSE | 1 |
 | DIVERGED | 2 |
 | MISSING | 5 |
 | EXTRA | 0 |
@@ -81,15 +81,15 @@
 
 ---
 
-### F-05: Town soft-cap is 5, GDD specifies no hard town pop cap — CLOSE
+### F-05: Town pop-7 cap and specialization unlock — MATCH
 **Location:** `packages/engine/src/systems/growthSystem.ts:87-89`
 **GDD reference:** `systems/population-specialists.md` section Town vs city rules
 **Severity:** MED
 **Effort:** S
-**VII says:** Towns use the same food-bucket formula as Cities. No hard population cap documented. Town Focus unlocks at pop 7.
-**Engine does:** const townCap = (settlementType === town) ? 5 : Infinity. Towns stop growing at population 5.
-**Gap:** Hard cap of 5 not in GDD. Prevents towns from reaching pop 7, making Town Focus unreachable. Contradicts food-forwarding mechanic.
-**Recommendation:** Remove the townCap line. The Town Focus check at SPECIALIZATION_POP_MINIMUM = 7 already gates focus assignment correctly.
+**VII says:** Towns use the same food-bucket formula as Cities until the local settlement target's pop-7 town specialization threshold.
+**Engine does:** `growthSystem` caps towns at population 7 and uses `SPECIALIZATION_POP_MINIMUM = 7`, so Town Focus is reachable.
+**Gap:** None against the current local settlements target. Food forwarding after non-Growing specialization remains tracked in settlements F-11 / yields-adjacency.
+**Recommendation:** Keep the town cap and specialization threshold aligned. If a later verified Civ VII source proves uncapped towns, update the settlements GDD, audit, and regression tests together.
 
 ---
 
@@ -172,9 +172,9 @@ Paste into `.codex/gdd/systems/population-specialists.md` § "Mapping to hex-emp
 - `packages/engine/src/state/GrowthUtils.ts`
 - `packages/engine/src/state/HappinessUtils.ts`
 
-**Status:** 0 MATCH / 2 CLOSE / 2 DIVERGED / 5 MISSING / 0 EXTRA
+**Status:** 1 MATCH / 1 CLOSE / 2 DIVERGED / 5 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-01 (wrong growth constants), F-02 (specialist food cost absent), F-04 (per-tile specialist map absent — blocks adjacency amplification), F-08 (growth→choice prompt absent).
+**Highest-severity finding:** F-04 (per-tile specialist map absent — blocks adjacency amplification). Other high-impact active items: F-01 (wrong growth constants), F-02 (specialist food cost absent), F-08 (growth→choice prompt absent).
 
 ---
 
@@ -191,12 +191,12 @@ Paste into `.codex/gdd/systems/population-specialists.md` § "Mapping to hex-emp
 
 | Bucket | Findings | Total effort |
 |---|---|---|
-| S (half-day) | F-01, F-02, F-05, F-07 | 2d |
+| S (half-day) | F-01, F-02, F-07 | 1.5d |
 | M (1-3 days) | F-03, F-06, F-08, F-09 | ~8d |
 | L (week+) | F-04 | 1w+ |
-| **Total** | 9 | **~2.5w** |
+| **Active total** | 8 | **~2.25w** |
 
-Recommended order: F-01 (fix growth constants), F-02 (specialist food cost), F-05 (remove town pop cap), F-07 (age-transition reset), F-04 (per-tile specialist model — unblocks F-03 + F-09), F-03 (adjacency amplification), F-08 (growth→choice prompt), F-09 (per-tile cap), F-06 (tech/civic-gated settlement cap).
+Recommended order: F-01 (fix growth constants), F-02 (specialist food cost), F-07 (age-transition reset), F-04 (per-tile specialist model — unblocks F-03 + F-09), F-03 (adjacency amplification), F-08 (growth→choice prompt), F-09 (per-tile cap), F-06 (tech/civic-gated settlement cap).
 
 ---
 

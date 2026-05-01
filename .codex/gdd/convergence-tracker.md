@@ -31,10 +31,10 @@
 | map-terrain | `.codex/gdd/audits/map-terrain.md` | 12 | 0M / 4C / 3D / 4X / 1E |
 | mementos | `.codex/gdd/audits/mementos.md` | 6 | 0M / 0C / 0D / 6X / 0E |
 | narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 0M / 0C / 0D / 7X / 0E |
-| population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 0M / 2C / 2D / 5X / 0E |
+| population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 1M / 1C / 2D / 5X / 0E |
 | religion | `.codex/gdd/audits/religion.md` | 13 | 2M / 2C / 5D / 3X / 1E |
 | resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
-| settlements | `.codex/gdd/audits/settlements.md` | 11 | 2M / 4C / 0D / 5X / 0E |
+| settlements | `.codex/gdd/audits/settlements.md` | 11 | 7M / 2C / 0D / 2X / 0E |
 | tech-tree | `.codex/gdd/audits/tech-tree.md` | 14 | 1M / 3C / 4D / 4X / 2E |
 | tile-improvements | `.codex/gdd/audits/tile-improvements.md` | 12 | 6M / 6C / 0D / 0X / 0E |
 | trade-routes | `.codex/gdd/audits/trade-routes.md` | 10 | 0M / 1C / 3D / 5X / 1E |
@@ -136,7 +136,7 @@
 | resources | F-02 | ResourceDef has no per-age bonus table | ⚠ DIVERGED | M | `packages/engine/src/types/Resource.ts:7-9` |
 | resources | F-03 | Empire resources provide no combat strength modifier | ⊘ MISSING | L | `packages/engine/src/types/Resource.ts`, `packages/engine/src/systems/resourceSy |
 | resources | F-06 | Assigned resource bonuses not applied to city yields | ⊘ MISSING | M | `packages/engine/src/state/ResourceChangeCalculator.ts:39-188`, `packages/engine |
-| settlements | F-07 | Age transition — cities do NOT revert to towns | ⊘ MISSING | M | `ageSystem.ts:21-111` |
+| settlements | F-07 | Age transition — cities do NOT revert to towns | ≈ CLOSE | M | `ageSystem.ts:21-111` |
 | settlements | F-08 | Raze settlement mechanic | ⊘ MISSING | L | `citySystem.ts` (no `RAZE_SETTLEMENT` handler) |
 | tech-tree | F-01 | Age transition does NOT wipe research state | ⚠ DIVERGED | S | `ageSystem.ts:76-84` |
 | tech-tree | F-05 | Science formula limited to population + flat building yields | ⊘ MISSING | L | `researchSystem.ts:247-263` |
@@ -240,7 +240,7 @@
 | mementos | F-06 | Challenge evaluation and XP award (`legendsSystem`) absent | ⊘ MISSING | M | no file |
 | narrative-events | F-06 | Discovery tile mechanic absent | ⊘ MISSING | M | no file; `HexTile` has no `discoveryId` |
 | narrative-events | F-07 | Narrative-event UI (vignette popup + choices) absent | ⊘ MISSING | M | no `NarrativeEventPanel.tsx` |
-| population-specialists | F-05 | Town soft-cap is 5, GDD specifies no hard town pop cap | ≈ CLOSE | S | `packages/engine/src/systems/growthSystem.ts:87-89` |
+| population-specialists | F-05 | Town pop-7 cap and specialization unlock | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts:87-89` |
 | population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts:23-30` |
 | population-specialists | F-07 | growthEventCount not reset on age transition | ⊘ MISSING | S | `packages/engine/src/systems/growthSystem.ts` (no TRANSITION_AGE handler present |
 | population-specialists | F-09 | Specialist cap ignores Quarters / per-tile rules | ⊘ MISSING | M | `packages/engine/src/systems/specialistSystem.ts:24-44` |
@@ -253,10 +253,10 @@
 | resources | F-08 | Treasure Fleet resource category entirely absent | ⊘ MISSING | L | `packages/engine/src/data/resources/index.ts`, `packages/engine/src/types/Resour |
 | resources | F-09 | Factory category absent (Modern-age industrial resources) | ⊘ MISSING | M | `packages/engine/src/data/resources/index.ts`, `packages/engine/src/types/Resour |
 | settlements | F-01 | Town/City founding via single action | ≈ CLOSE | M | `citySystem.ts:23-25`, `citySystem.ts:78-79` |
-| settlements | F-02 | Town population cap | ≈ CLOSE | S | `growthSystem.ts:88` |
-| settlements | F-03 | Town-to-City conversion cost | ≈ CLOSE | M | `citySystem.ts:160` |
-| settlements | F-04 | Settlement Cap values per age | ≈ CLOSE | S | `HappinessUtils.ts:16-30` |
-| settlements | F-09 | Settlement Cap UI indicator | ⊘ MISSING | S | `CityPanel.tsx`, `TurnSummaryPanel.tsx` |
+| settlements | F-02 | Town population cap | ✓ MATCH | S | `growthSystem.ts:88` |
+| settlements | F-03 | Town-to-City conversion cost | ✓ MATCH | M | `citySystem.ts:160` |
+| settlements | F-04 | Settlement Cap values per age | ✓ MATCH | S | `HappinessUtils.ts:16-30` |
+| settlements | F-09 | Settlement Cap UI indicator | ✓ MATCH | S | `CityPanel.tsx`, `TurnSummaryPanel.tsx` |
 | tech-tree | F-02 | Mastery bonus is generic `+1 science` for all techs | ⚠ DIVERGED | M | `researchSystem.ts:202-213` |
 | tech-tree | F-03 | Future Tech prerequisite requires ALL age techs, not 2 speci | ⚠ DIVERGED | S | `researchSystem.ts:35-44`, `98-105` |
 | tech-tree | F-04 | Future Tech missing `+1 Wildcard Attribute Point` and next-a | ≈ CLOSE | S | `researchSystem.ts:133-151` |
@@ -321,7 +321,7 @@
 | resources | F-11 | CityState `assignedResources` / PlayerState `ownedResources` | ✗ EXTRA | S | `packages/engine/src/types/GameState.ts` (CityState, PlayerState) |
 | settlements | F-05 | Town specialization mechanics | ✓ MATCH | S | `growthSystem.ts:10-36`, `types/GameState.ts:58-67`, `YieldCalculator.ts:79-92` |
 | settlements | F-06 | Production-to-gold conversion for towns | ✓ MATCH | S | `CityPanel.tsx:97-98`, `productionSystem.ts:110`, `productionSystem.ts:322`, `re |
-| settlements | F-10 | Growing Town ↔ Focus toggle | ⊘ MISSING | S | `growthSystem.ts:19-36` |
+| settlements | F-10 | Growing Town ↔ Focus toggle | ✓ MATCH | S | `growthSystem.ts:19-36` |
 | settlements | F-11 | Food forwarding from specialized towns | ⊘ MISSING | L | `growthSystem.ts`, `resourceSystem.ts` |
 | tech-tree | F-07 | Antiquity tech content does not match GDD canonical | ≈ CLOSE | S | `data/technologies/antiquity/index.ts:212-217` |
 | tech-tree | F-13 | Exploration + Modern Future Tech have no prerequisite data | ⊘ MISSING | S | `data/technologies/exploration/index.ts`, `modern/index.ts` |
@@ -348,10 +348,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 29 |
-| CLOSE | 53 |
+| MATCH | 35 |
+| CLOSE | 50 |
 | DIVERGED | 72 |
-| MISSING | 113 |
+| MISSING | 110 |
 | EXTRA | 19 |
 | **Total findings** | **286** |
 

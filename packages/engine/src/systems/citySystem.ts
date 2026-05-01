@@ -1,6 +1,7 @@
 import type { GameState, GameAction, CityState, HexTile, SettlementType } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, range, distance } from '../hex/HexMath';
+import { clearTownSpecializationState } from '../state/TownSpecializationUtils';
 
 /** Generate deterministic city ID from state */
 function nextCityId(state: GameState): string {
@@ -187,12 +188,8 @@ function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
   if (city.owner !== state.currentPlayerId) return state;
   if (city.settlementType !== 'town') return state;
 
-  // Dynamic conversion cost: 200 + cityCount*100 - townPop*20, clamped [200, 1000]
   const playerId = state.currentPlayerId;
-  const cityCount = [...state.cities.values()].filter(
-    c => c.owner === playerId && c.settlementType === 'city'
-  ).length;
-  const upgradeCost = Math.max(200, Math.min(1000, 200 + cityCount * 100 - city.population * 20));
+  const upgradeCost = calculateSettlementUpgradeCost(state, playerId, city);
   const player = state.players.get(state.currentPlayerId);
   if (!player || player.gold < upgradeCost) return state;
 
@@ -201,8 +198,9 @@ function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
 
   const updatedCities = new Map(state.cities);
   updatedCities.set(cityId, {
-    ...city,
+    ...clearTownSpecializationState(city),
     settlementType: 'city',
+    isTown: false,
     happiness: 10,
   });
 
@@ -217,6 +215,24 @@ function handleUpgradeSettlement(state: GameState, cityId: string): GameState {
       type: 'city',
     }],
   };
+}
+
+/**
+ * Dynamic town-to-city conversion cost.
+ *
+ * Civ VII sources agree on the shape, not the exact formula: more existing
+ * cities increase cost, while a more-developed town lowers it. Keep this
+ * single helper shared between engine validation and UI display.
+ */
+export function calculateSettlementUpgradeCost(
+  state: GameState,
+  playerId: string,
+  town: CityState,
+): number {
+  const cityCount = [...state.cities.values()].filter(
+    c => c.owner === playerId && c.settlementType === 'city',
+  ).length;
+  return Math.max(200, Math.min(1000, 200 + cityCount * 100 - town.population * 20));
 }
 
 /**
@@ -239,12 +255,7 @@ function handleCityAgeTransition(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
-  // Economic Golden Age exemption: players who completed the economic legacy
-  // path (legacyPaths.economic === 3) keep all their cities at city tier on
-  // age transition. This mirrors the same exemption in ageSystem; since
-  // citySystem runs before ageSystem in the pipeline, the guard must live here.
   const hasEconomicGoldenAge = (player.legacyPaths?.economic ?? 0) === 3;
-  if (hasEconomicGoldenAge) return state;
 
   let citiesChanged = false;
   const nextCities = new Map(state.cities);
@@ -252,13 +263,21 @@ function handleCityAgeTransition(state: GameState): GameState {
   for (const [cityId, city] of state.cities) {
     // Only the transitioning player's cities are affected
     if (city.owner !== player.id) continue;
+    if (city.settlementType === 'town') {
+      if (city.specialization !== null || city.lockedTownSpecialization != null) {
+        nextCities.set(cityId, clearTownSpecializationState(city));
+        citiesChanged = true;
+      }
+      continue;
+    }
     // Capital stays as city
     if (city.isCapital) continue;
-    // Already a town — no change needed
-    if (city.settlementType === 'town') continue;
+    // Economic Golden Age preserves city tier, but town focus state was reset
+    // for existing towns above and remains per-age.
+    if (hasEconomicGoldenAge) continue;
 
     nextCities.set(cityId, {
-      ...city,
+      ...clearTownSpecializationState(city),
       settlementType: 'town' as const,
       isTown: true,
     });

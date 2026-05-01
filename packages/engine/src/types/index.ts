@@ -23,6 +23,7 @@ export type {
   UnitState,
   SettlementType,
   TownSpecialization,
+  NonGrowingTownSpecialization,
   CityState,
   ProductionItem,
   LegacyPaths,
