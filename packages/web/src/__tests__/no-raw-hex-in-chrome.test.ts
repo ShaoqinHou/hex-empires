@@ -3,7 +3,7 @@
  *
  * Scans panel, HUD, component, and layout source files for raw rgba() literals
  * inside inline style props, which violate the chrome-raw-hex-regression
- * trap documented in CLAUDE.md.
+ * trap documented in `.codex/rules/tech-conventions.md`.
  *
  * Detection: static string scan. Acceptable exclusions:
  *   - Comment-only lines.

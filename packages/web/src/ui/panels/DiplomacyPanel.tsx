@@ -227,9 +227,8 @@ function PlayersTab({ currentPlayerId, dispatch }: PlayersTabProps) {
                           label="Declare Friendship"
                           color="var(--color-food)"
                           onClick={() => dispatch({
-                            type: 'PROPOSE_DIPLOMACY',
-                            targetId: player.id,
-                            proposal: { type: 'PROPOSE_FRIENDSHIP' },
+                            type: 'DECLARE_FRIENDSHIP',
+                            targetPlayerId: player.id,
                           })}
                         />
                       )}
@@ -455,7 +454,7 @@ function IPTab({ currentPlayerId, dispatch }: IPTabProps) {
                 <DiploPanelButton
                   label="Befriend (20 Inf)"
                   color="var(--color-food)"
-                  onClick={() => dispatch({ type: 'BEFRIEND_INDEPENDENT', ipId: ip.id, influence: 20 })}
+                  onClick={() => dispatch({ type: 'BEFRIEND_INDEPENDENT', ipId: ip.id, influenceSpent: 20 })}
                 />
                 {isPlayerHighestInfluence && (
                   <DiploPanelButton

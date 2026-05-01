@@ -26,9 +26,9 @@ describe('LegacyPaths — science legacy uses Codex count (F-09)', () => {
     return {
       id,
       playerId: 'p1',
-      sourceCityId: cityId,
-      sourceBuildingId: 'library',
-      turn: 1,
+      cityId,
+      buildingId: 'library',
+      addedTurn: 1,
       placedInCityId: cityId,
       placedInBuildingId: 'library',
     };
@@ -94,9 +94,9 @@ describe('LegacyPaths — science legacy uses Codex count (F-09)', () => {
     const unplacedCodex: CodexState = {
       id: 'cx-unplaced',
       playerId: 'p1',
-      sourceCityId: 'c1',
-      sourceBuildingId: 'library',
-      turn: 1,
+      cityId: 'c1',
+      buildingId: 'library',
+      addedTurn: 1,
       // No placedInCityId — unplaced
     };
     const state = {

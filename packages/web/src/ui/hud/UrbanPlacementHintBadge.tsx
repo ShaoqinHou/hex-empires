@@ -66,7 +66,7 @@ function collectAdjacencySources(
     const key = coordToKey(coord);
     const terrainTile = state.map.tiles.get(key);
     if (terrainTile !== undefined) {
-      if (terrainTile.terrain === 'mountains') {
+      if (terrainTile.feature === 'mountains') {
         sources.push({ yield: 'production', amount: 1, source: 'Mountain' });
       }
       if (terrainTile.river.length > 0) {

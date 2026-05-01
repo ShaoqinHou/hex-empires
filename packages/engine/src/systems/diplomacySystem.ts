@@ -170,7 +170,7 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
       return {
         ...state,
         players: updatedPlayers,
-        diplomacy: { relations: updatedRelations },
+        diplomacy: { ...state.diplomacy, relations: updatedRelations },
         log: [...state.log, {
           turn: state.turn,
           playerId: sourceId,
@@ -204,8 +204,33 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
         };
       }
 
-      // ── F-13: Create a pending bilateral peace offer ──
       const existingOffers = state.diplomacy.pendingPeaceOffers ?? [];
+
+      // A non-human target may accept an explicit peace proposal immediately
+      // once the war is exhausted. Human targets still receive a pending offer.
+      const targetPlayer = state.players.get(targetId);
+      if (targetPlayer && !targetPlayer.isHuman && shouldAcceptPeaceByExhaustion(currentRelation)) {
+        const updatedRelations = new Map(state.diplomacy.relations);
+        updatedRelations.set(relationKey, makePeaceRelation(currentRelation, state.turn));
+        return {
+          ...state,
+          diplomacy: {
+            ...state.diplomacy,
+            relations: updatedRelations,
+            pendingPeaceOffers: removePeaceOffersBetween(existingOffers, sourceId, targetId),
+          },
+          log: [...state.log, {
+            turn: state.turn,
+            playerId: sourceId,
+            message: `${targetId} accepted peace`,
+            type: 'diplomacy' as const,
+            category: 'diplomatic' as const,
+            panelTarget: 'diplomacy' as const,
+          }],
+        };
+      }
+
+      // ── F-13: Create a pending bilateral peace offer ──
       // Prevent duplicate offers between the same pair this turn
       const alreadyPending = existingOffers.some(
         o => (o.proposerId === sourceId && o.targetId === targetId) ||
@@ -320,7 +345,7 @@ export function diplomacySystem(state: GameState, action: GameAction): GameState
 
   return {
     ...state,
-    diplomacy: { relations: updatedRelations },
+    diplomacy: { ...state.diplomacy, relations: updatedRelations },
     log: [...state.log, {
       turn: state.turn,
       playerId: sourceId,
@@ -352,6 +377,45 @@ function clampRelationship(value: number): number {
 
 function clampWarSupport(value: number): number {
   return Math.max(-100, Math.min(100, value));
+}
+
+function shouldAcceptPeaceByExhaustion(relation: DiplomacyRelation): boolean {
+  return relation.turnsAtWar >= 5 || Math.abs(relation.warSupport) <= 20;
+}
+
+function removePeaceOffersBetween(
+  offers: ReadonlyArray<PeaceOffer>,
+  playerA: string,
+  playerB: string,
+): ReadonlyArray<PeaceOffer> {
+  return offers.filter(o => !(
+    (o.proposerId === playerA && o.targetId === playerB) ||
+    (o.proposerId === playerB && o.targetId === playerA)
+  ));
+}
+
+function makePeaceRelation(relation: DiplomacyRelation, turn: number): DiplomacyRelation {
+  const newRelationship = clampRelationship(relation.relationship + 10);
+  return appendLedgerEntry(
+    {
+      ...relation,
+      status: getStatusFromRelationship(newRelationship),
+      turnsAtPeace: 0,
+      turnsAtWar: 0,
+      warSupport: 0,
+      warDeclarer: null,
+      isSurpriseWar: false,
+      relationship: newRelationship,
+      peaceCooldownUntilTurn: undefined,
+    },
+    {
+      id: 'made_peace',
+      value: 10,
+      turnApplied: turn,
+      turnExpires: turn + 20,
+      reason: 'Recently made peace',
+    },
+  );
 }
 
 /**
@@ -600,7 +664,7 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
   return {
     ...state,
     players: updatedPlayers,
-    diplomacy: { relations: updatedRelations },
+    diplomacy: { ...state.diplomacy, relations: updatedRelations },
     log: [...state.log, {
       turn: state.turn,
       playerId: sourceId,
@@ -801,7 +865,9 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
       updated.ledger = activeLedger;
       if (activeLedger.length > 0) {
         updated.relationship = clampRelationship(ledgerSum);
-        updated.status = getStatusFromRelationship(updated.relationship);
+        if (updated.status !== 'war') {
+          updated.status = getStatusFromRelationship(updated.relationship);
+        }
       }
     }
 
@@ -811,67 +877,11 @@ export function updateDiplomacyCounters(state: GameState, action: GameAction): G
 
   if (!changed) return state;
 
-  // F-13: Auto-resolve pending peace offers when war-exhaustion conditions are met.
-  // Condition: turnsAtWar >= 5 OR |warSupport| <= 20 for the relationship pair.
-  // Allows unilateral PROPOSE_PEACE to finalise without a separate ACCEPT_PEACE dispatch
-  // once the war has run its course.
-  const pendingOffers = state.diplomacy.pendingPeaceOffers ?? [];
-  const resolvedOfferIds = new Set<string>();
-
-  for (const offer of pendingOffers) {
-    const key = getRelationKey(offer.proposerId, offer.targetId);
-    const rel = updatedRelations.get(key);
-    if (!rel || rel.status !== 'war') continue;
-
-    const absWarSupport = Math.abs(rel.warSupport);
-    const qualifies = rel.turnsAtWar >= 5 || absWarSupport <= 20;
-    if (!qualifies) continue;
-
-    // Resolve the offer: end war, reset counters, apply relationship bump + ledger entry.
-    const newRelationship = clampRelationship(rel.relationship + 10);
-    let resolvedRel: DiplomacyRelation = {
-      ...rel,
-      status: getStatusFromRelationship(newRelationship),
-      turnsAtPeace: 0,
-      turnsAtWar: 0,
-      warSupport: 0,
-      warDeclarer: null,
-      isSurpriseWar: false,
-      relationship: newRelationship,
-      peaceCooldownUntilTurn: undefined,
-    };
-    resolvedRel = appendLedgerEntry(resolvedRel, {
-      id: 'made_peace',
-      value: 10,
-      turnApplied: state.turn,
-      turnExpires: state.turn + 20,
-      reason: 'Recently made peace',
-    });
-    updatedRelations.set(key, resolvedRel);
-    resolvedOfferIds.add(offer.id);
-  }
-
-  const remainingOffers = pendingOffers.filter(o => !resolvedOfferIds.has(o.id));
-  const autoLog = resolvedOfferIds.size > 0
-    ? pendingOffers
-        .filter(o => resolvedOfferIds.has(o.id))
-        .map(o => ({
-          turn: state.turn,
-          playerId: o.proposerId,
-          message: `Peace auto-accepted between ${o.proposerId} and ${o.targetId} (war exhaustion)`,
-          type: 'diplomacy' as const,
-          category: 'diplomatic' as const,
-          panelTarget: 'diplomacy' as const,
-        }))
-    : [];
-
   return {
     ...state,
     diplomacy: {
       ...state.diplomacy,
       relations: updatedRelations,
-      pendingPeaceOffers: remainingOffers,
     },
-    log: autoLog.length > 0 ? [...state.log, ...autoLog] : state.log,
   };
 }

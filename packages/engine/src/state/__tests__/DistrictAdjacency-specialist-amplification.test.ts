@@ -22,6 +22,7 @@ import { coordToKey } from '../../hex/HexMath';
 
 function makeTile(partial: Partial<HexTile> & { coord: HexCoord }): HexTile {
   return {
+    ...partial,
     coord: partial.coord,
     terrain: partial.terrain ?? 'grassland',
     feature: partial.feature ?? null,
@@ -31,7 +32,6 @@ function makeTile(partial: Partial<HexTile> & { coord: HexCoord }): HexTile {
     river: partial.river ?? [],
     elevation: partial.elevation ?? 0.5,
     continent: partial.continent ?? 1,
-    ...partial,
   };
 }
 

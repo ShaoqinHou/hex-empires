@@ -41,8 +41,8 @@ import {
 export function resolveAsset(category: AssetCategoryRef, key: string): AssetRef {
   const asset = category.entries.get(key);
   if (!asset) {
-    // Warn in non-production builds — process.env.NODE_ENV is injected by Vite
-    if (typeof process === 'undefined' || (process as { env?: { NODE_ENV?: string } }).env?.NODE_ENV !== 'production') {
+    // Warn in non-production builds; Vite replaces import.meta.env at build time.
+    if (!import.meta.env.PROD) {
       // eslint-disable-next-line no-console
       console.warn(`[assets] Missing key "${key}" — using fallback ${category.fallback.path}`);
     }

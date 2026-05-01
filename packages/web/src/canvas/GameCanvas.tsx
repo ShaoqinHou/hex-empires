@@ -408,7 +408,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
           const costFn = (_from: HexCoord, to: HexCoord) => {
             const tile = state.map.tiles.get(coordToKey(to));
             if (!tile) return null;
-            return getMovementCost(tile);
+            return getMovementCost(tile)?.cost ?? null;
           };
           pathPreview = findPath(selectedUnit.position, hoveredHex, costFn, selectedUnit.movementLeft);
         }
@@ -650,7 +650,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
       const costFn = (_from: HexCoord, to: HexCoord) => {
         const tile = state.map.tiles.get(coordToKey(to));
         if (!tile) return null;
-        return getMovementCost(tile);
+        return getMovementCost(tile)?.cost ?? null;
       };
       const path = findPath(selectedUnit.position, hex, costFn, selectedUnit.movementLeft);
       if (path && path.length > 0) {

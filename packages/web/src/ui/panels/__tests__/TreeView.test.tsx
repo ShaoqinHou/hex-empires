@@ -34,6 +34,12 @@ const ITEMS: TreeViewItem[] = [
 
 afterEach(() => { cleanup(); });
 
+function getCardByText(getByText: (text: string) => HTMLElement, text: string): HTMLElement {
+  const card = getByText(text).closest('[role="button"]');
+  if (!card) throw new Error(`No tree card found for "${text}"`);
+  return card as HTMLElement;
+}
+
 describe('TreeView', () => {
   it('renders one button per item', () => {
     const { getAllByRole } = render(
@@ -64,10 +70,10 @@ describe('TreeView', () => {
         onSelect={() => {}}
       />
     );
-    const alphaBtn = getByText('Alpha').closest('button') as HTMLButtonElement;
-    const betaBtn = getByText('Beta').closest('button') as HTMLButtonElement;
-    expect(alphaBtn.disabled).toBe(false);
-    expect(betaBtn.disabled).toBe(true);
+    const alphaCard = getCardByText(getByText, 'Alpha');
+    const betaCard = getCardByText(getByText, 'Beta');
+    expect(alphaCard.getAttribute('aria-disabled')).toBe('false');
+    expect(betaCard.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('calls onSelect with item id when available item clicked', () => {
@@ -83,7 +89,7 @@ describe('TreeView', () => {
         onSelect={(id) => calls.push(id)}
       />
     );
-    (getByText('Alpha').closest('button') as HTMLButtonElement).click();
+    getCardByText(getByText, 'Alpha').click();
     expect(calls).toEqual(['a']);
   });
 
@@ -100,9 +106,9 @@ describe('TreeView', () => {
         onSelect={(id) => calls.push(id)}
       />
     );
-    const alphaBtn = getByText('Alpha').closest('button') as HTMLButtonElement;
-    expect(alphaBtn.disabled).toBe(true);
-    alphaBtn.click();
+    const alphaCard = getCardByText(getByText, 'Alpha');
+    expect(alphaCard.getAttribute('aria-disabled')).toBe('true');
+    alphaCard.click();
     expect(calls).toEqual([]);
   });
 
@@ -118,8 +124,8 @@ describe('TreeView', () => {
         onSelect={() => {}}
       />
     );
-    const betaBtn = getByText('Beta').closest('button') as HTMLButtonElement;
-    expect(betaBtn.disabled).toBe(false);
+    const betaCard = getCardByText(getByText, 'Beta');
+    expect(betaCard.getAttribute('aria-disabled')).toBe('false');
   });
 
   it('shows progress header when activeId is set', () => {

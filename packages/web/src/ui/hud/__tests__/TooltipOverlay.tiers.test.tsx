@@ -164,8 +164,8 @@ describe('TooltipOverlay — compact tier', () => {
 
     const compact = container.querySelector('[data-testid="tooltip-yields-compact"]');
     expect(compact).not.toBeNull();
-    // Grassland gives 3 food → "🌾 3" appears.
-    expect(compact?.textContent ?? '').toMatch(/🌾\s*3/);
+    // Grassland gives 2 food -> "🌾 2" appears.
+    expect(compact?.textContent ?? '').toMatch(/🌾\s*2/);
     // Compact tier must NOT carry the breakdown panel.
     expect(container.querySelector('[data-testid="tooltip-yields-breakdown"]')).toBeNull();
   });

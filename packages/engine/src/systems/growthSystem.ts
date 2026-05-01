@@ -1,4 +1,4 @@
-import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, HexTile } from '../types/GameState';
+import type { GameState, GameAction, CityState, Age, TownSpecialization, TownFocus, PlayerState, PendingGrowthChoice, HexTile, GameEvent } from '../types/GameState';
 import type { ResourceId, ImprovementId } from '../types/Ids';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { coordToKey, neighbors, keyToCoord } from '../hex/HexMath';
@@ -216,7 +216,7 @@ export function growthSystem(state: GameState, action: GameAction): GameState {
   // the player sees a "You gained access to X" notification in the HUD.
   let updatedLog = state.log;
   if (newResourceAcquisitions.size > 0) {
-    const newEntries: typeof state.log = [];
+    const newEntries: GameEvent[] = [];
     for (const [playerId, resourceIds] of newResourceAcquisitions) {
       for (const resourceId of resourceIds) {
         const resourceDef = state.config.resources.get(resourceId);

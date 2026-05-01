@@ -104,8 +104,55 @@ async function dismissBlockingEvents(page: Page) {
         d({ type: 'DISMISS_EVENT', eventMessage: e['message'], eventTurn: e['turn'] });
       }
     }
+
+    const currentPlayer = (s.players as Map<string, Record<string, unknown>>).get(pid);
+    if (currentPlayer) {
+      const crisisPhase = currentPlayer['crisisPhase'] as string | undefined;
+      const crisisPolicies = (currentPlayer['crisisPolicies'] as string[] | undefined) ?? [];
+      const crisisPolicySlots = (currentPlayer['crisisPolicySlots'] as number | undefined) ?? 0;
+      if (crisisPhase && crisisPhase !== 'none' && crisisPhase !== 'resolved' && crisisPolicies.length < crisisPolicySlots) {
+        for (let i = crisisPolicies.length; i < crisisPolicySlots; i++) {
+          d({ type: 'FORCE_CRISIS_POLICY', policyId: `e2e_auto_policy_${t}_${i}` });
+        }
+      }
+
+      const celebrationPending = currentPlayer['pendingCelebrationChoice'] as { governmentId?: string } | null | undefined;
+      if (celebrationPending) {
+        const govId = celebrationPending['governmentId'];
+        const govDef = govId ? (s as any).config?.governments?.get?.(govId) : undefined;
+        const bonuses = (govDef?.celebrationBonuses as Array<{ id: string }> | undefined) ?? [];
+        d({ type: 'PICK_CELEBRATION_BONUS', playerId: pid, bonusId: bonuses[0]?.id ?? 'productivity' });
+      }
+
+      const transitionPhase = s['transitionPhase'] as string | undefined;
+      const playersReady = (s['playersReadyToTransition'] as string[] | undefined) ?? [];
+      if ((transitionPhase === 'pending' || transitionPhase === 'in-progress') && !playersReady.includes(pid)) {
+        const playerAge = currentPlayer['age'] as string | undefined;
+        const nextAge = playerAge === 'antiquity' ? 'exploration' : playerAge === 'exploration' ? 'modern' : null;
+        const civMap = (s as any).config?.civilizations as Map<string, { age: string; id: string }> | undefined;
+        if (nextAge && civMap) {
+          for (const [, civ] of civMap) {
+            if (civ.age === nextAge) {
+              d({ type: 'TRANSITION_AGE', newCivId: civ.id });
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const crises = (s as { crises?: Array<Record<string, unknown>> }).crises ?? [];
+    for (const crisis of crises) {
+      if (!crisis['active'] || crisis['resolvedBy'] != null || !crisis['pendingResolution']) continue;
+      const crisisId = crisis['id'] as string;
+      const slottedPolicies = crisis['slottedPolicies'];
+      const already = slottedPolicies instanceof Map ? slottedPolicies.get(pid) ?? [] : [];
+      if (already.length === 0) {
+        d({ type: 'SLOT_CRISIS_POLICY', playerId: pid, crisisId, policyId: `e2e_auto_slot_${t}_${crisisId}` });
+      }
+    }
   });
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(120);
 }
 
 async function endTurn(page: Page) {

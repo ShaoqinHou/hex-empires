@@ -64,7 +64,7 @@ export interface HexMap {
 
 // ── Units ──
 
-export type UnitCategory = 'melee' | 'ranged' | 'siege' | 'cavalry' | 'naval' | 'civilian' | 'religious';
+export type UnitCategory = 'melee' | 'ranged' | 'siege' | 'cavalry' | 'naval' | 'civilian' | 'religious' | 'support';
 
 export interface UnitState {
   readonly id: UnitId;
@@ -178,7 +178,7 @@ export interface CityState {
    * forthcoming `PLACE_URBAN_BUILDING` action; legacy systems read the
    * pre-existing `buildings`/`districts` fields when these are absent.
    *
-   * See `.claude/workflow/design/districts-overhaul.md` for the rollout plan
+   * See `.codex/workflow/design/districts-overhaul.md` for the rollout plan
    * and `types/DistrictOverhaul.ts` for the V2 type definitions.
    */
   readonly urbanTiles?: ReadonlyMap<HexKey, UrbanTileV2>;
@@ -1203,6 +1203,7 @@ export type GameAction =
   | { readonly type: 'PROMOTE_UNIT'; readonly unitId: UnitId; readonly promotionId: string }
   | { readonly type: 'UPGRADE_SETTLEMENT'; readonly cityId: CityId }
   | { readonly type: 'PURCHASE_ITEM'; readonly cityId: CityId; readonly itemId: string; readonly itemType: 'unit' | 'building' }
+  | { readonly type: 'REPAIR_BUILDING'; readonly cityId: CityId; readonly buildingId: BuildingId }
   | { readonly type: 'SET_CIVIC'; readonly civicId: string }
   | { readonly type: 'PROPOSE_ENDEAVOR'; readonly targetId: PlayerId; readonly endeavorType: string }
   | { readonly type: 'RESPOND_ENDEAVOR'; readonly endeavorId: string; readonly response: 'support' | 'accept' | 'reject' }
@@ -1254,6 +1255,14 @@ export type GameAction =
   | { readonly type: 'UPGRADE_UNIT'; readonly unitId: UnitId }
   // ── M12 Integration: religion / government / urban building / commander ──
   | { readonly type: 'ADOPT_PANTHEON'; readonly playerId: PlayerId; readonly pantheonId: string }
+  | {
+      readonly type: 'FOUND_RELIGION';
+      readonly playerId: PlayerId;
+      readonly cityId: CityId;
+      readonly religionName: string;
+      readonly founderBelief: string;
+      readonly followerBelief: string;
+    }
   | { readonly type: 'SET_GOVERNMENT'; readonly playerId: PlayerId; readonly governmentId: string }
   /** Slot a policy into a flat wildcard slot by index (VII §14.2 — no per-category slots). */
   | { readonly type: 'SLOT_POLICY'; readonly playerId: PlayerId; readonly slotIndex: number; readonly policyId: string }

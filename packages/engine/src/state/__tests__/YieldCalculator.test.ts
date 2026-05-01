@@ -4,6 +4,7 @@ import { createTestState } from '../../systems/__tests__/helpers';
 import type { CityState, HexTile } from '../../types/GameState';
 import type { BuildingDef } from '../../types/Building';
 import type { NaturalWonderDef } from '../../types/NaturalWonder';
+import type { TechnologyId } from '../../types/Ids';
 import { coordToKey } from '../../hex/HexMath';
 
 function makeCity(overrides: Partial<CityState> = {}): CityState {
@@ -261,7 +262,7 @@ describe('Y2.3: tech-effect yields applied in YieldCalculator', () => {
     const players = new Map(state.players);
     players.set('p1', {
       ...state.players.get('p1')!,
-      researchedTechs: [testTechId as import('../../types/GameState').TechnologyId],
+      researchedTechs: [testTechId as TechnologyId],
     });
     const testState = { ...state, config, players };
 
@@ -294,7 +295,7 @@ describe('Y2.3: tech-effect yields applied in YieldCalculator', () => {
     const players = new Map(state.players);
     players.set('p1', {
       ...state.players.get('p1')!,
-      researchedTechs: [testTechId as import('../../types/GameState').TechnologyId],
+      researchedTechs: [testTechId as TechnologyId],
     });
     const testState = { ...state, config, players };
 

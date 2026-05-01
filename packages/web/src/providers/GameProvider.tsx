@@ -374,7 +374,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const costFn = (_from: HexCoord, to: HexCoord) => {
       const tile = state.map.tiles.get(coordToKey(to));
       if (!tile) return null;
-      return getMovementCost(tile);
+      return getMovementCost(tile)?.cost ?? null;
     };
     return getReachable(selectedUnit.position, selectedUnit.movementLeft, costFn);
   }, [selectedUnit, state]);

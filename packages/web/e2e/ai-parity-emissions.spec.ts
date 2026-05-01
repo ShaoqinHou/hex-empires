@@ -75,20 +75,20 @@ async function dismissBlockingEvents(page: Page) {
     if (crisisPhase && crisisPhase !== 'none' && crisisPhase !== 'resolved' && crisisPolicies.length < crisisPolicySlots) {
       const needed = crisisPolicySlots - crisisPolicies.length;
       for (let i = 0; i < needed; i++) {
-        d({ type: 'FORCE_CRISIS_POLICY', policyId: `auto_policy_${i}` });
+        d({ type: 'FORCE_CRISIS_POLICY', policyId: `e2e_auto_policy_${t}_${crisisPolicies.length + i}` });
       }
     }
 
     // 3. Auto-slot for X5.2 per-crisis pendingResolution gate (SLOT_CRISIS_POLICY)
     const crises = (s as { crises?: Array<Record<string, unknown>> }).crises ?? [];
     for (const crisis of crises) {
-      if (!crisis['active'] || crisis['resolvedBy'] !== null) continue;
+      if (!crisis['active'] || crisis['resolvedBy'] != null) continue;
       if (!crisis['pendingResolution']) continue;
       const crisisId = crisis['id'] as string;
-      const slottedMap = crisis['slottedPolicies'] as Map<string, string[]> | undefined;
-      const already = slottedMap?.get(pid) ?? [];
+      const slottedPolicies = crisis['slottedPolicies'];
+      const already = slottedPolicies instanceof Map ? slottedPolicies.get(pid) ?? [] : [];
       if (already.length === 0) {
-        d({ type: 'SLOT_CRISIS_POLICY', playerId: pid, crisisId, policyId: 'auto_slot' });
+        d({ type: 'SLOT_CRISIS_POLICY', playerId: pid, crisisId, policyId: `e2e_auto_slot_${t}_${crisisId}` });
       }
     }
 

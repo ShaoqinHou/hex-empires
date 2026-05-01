@@ -308,7 +308,7 @@ function processNormalResearch(state: GameState): GameState {
         turn: state.turn,
         playerId: player.id,
         message: `Researched ${completedTechId}!`,
-        type: 'research',
+        type: 'research' as const,
         severity: 'warning' as const,
         category: 'research' as const,
         panelTarget: 'tech' as const,

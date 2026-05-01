@@ -105,12 +105,12 @@ afterEach(() => {
   mockRef.dispatch = () => undefined;
 });
 
-// Helper: find a card button by the civic's display name.
-function findCivicButton(container: HTMLElement, civicName: string): HTMLButtonElement {
-  const buttons = Array.from(container.querySelectorAll('button'));
-  const match = buttons.find(b => b.textContent?.includes(civicName));
-  if (!match) throw new Error(`No button found for civic "${civicName}"`);
-  return match as HTMLButtonElement;
+// Helper: find a clickable card by the civic's display name.
+function findCivicCard(container: HTMLElement, civicName: string): HTMLElement {
+  const cards = Array.from(container.querySelectorAll('[role="button"]'));
+  const match = cards.find(card => card.textContent?.includes(civicName));
+  if (!match) throw new Error(`No card found for civic "${civicName}"`);
+  return match as HTMLElement;
 }
 
 // ── Tests ──
@@ -123,9 +123,9 @@ describe('CivicTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer());
 
     const { container } = render(<CivicTreePanel onClose={() => {}} />);
-    const btn = findCivicButton(container, 'Code of Laws');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findCivicCard(container, 'Code of Laws');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_CIVIC', civicId: 'code_of_laws' }]);
   });
@@ -137,9 +137,9 @@ describe('CivicTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer({ researchedCivics: ['code_of_laws'] }));
 
     const { container } = render(<CivicTreePanel onClose={() => {}} />);
-    const btn = findCivicButton(container, 'Craftsmanship');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findCivicCard(container, 'Craftsmanship');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_CIVIC', civicId: 'craftsmanship' }]);
   });
@@ -153,9 +153,9 @@ describe('CivicTreePanel — click-to-research', () => {
     }));
 
     const { container } = render(<CivicTreePanel onClose={() => {}} />);
-    const btn = findCivicButton(container, 'Foreign Trade');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findCivicCard(container, 'Foreign Trade');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_CIVIC', civicId: 'foreign_trade' }]);
   });
@@ -166,9 +166,9 @@ describe('CivicTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer({ researchedCivics: ['code_of_laws'] }));
 
     const { container } = render(<CivicTreePanel onClose={() => {}} />);
-    const btn = findCivicButton(container, 'Code of Laws');
-    expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);
+    const card = findCivicCard(container, 'Code of Laws');
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(card);
 
     expect(calls).toEqual([]);
   });
@@ -180,9 +180,9 @@ describe('CivicTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer());
 
     const { container } = render(<CivicTreePanel onClose={() => {}} />);
-    const btn = findCivicButton(container, 'Craftsmanship');
-    expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);
+    const card = findCivicCard(container, 'Craftsmanship');
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(card);
 
     expect(calls).toEqual([]);
   });

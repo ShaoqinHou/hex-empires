@@ -493,7 +493,7 @@ describe('visibilitySystem', () => {
         districts: [],
       };
       const state = { ...baseState, cities: new Map([['city1', city]]) };
-      const next = visibilitySystem(state, { type: 'FOUND_CITY', unitId: 'u1', position: { q: 3, r: 3 }, name: 'Rome' });
+      const next = visibilitySystem(state, { type: 'FOUND_CITY', unitId: 'u1', name: 'Rome' });
       const visibility = next.players.get('p1')!.visibility;
       // (5,3) is in range-3 of city at (3,3) but Distant Lands — must NOT be visible
       expect(visibility.has(coordToKey({ q: 5, r: 3 }))).toBe(false);

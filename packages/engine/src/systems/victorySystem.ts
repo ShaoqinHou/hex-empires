@@ -1,4 +1,4 @@
-import type { GameState, GameAction, VictoryProgress, VictoryType, VictoryLegacyProgressEntry } from '../types/GameState';
+import type { GameState, GameAction, PlayerState, VictoryProgress, VictoryType, VictoryLegacyProgressEntry } from '../types/GameState';
 import type { PlayerId } from '../types/Ids';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
 
@@ -19,7 +19,7 @@ export const ARTIFACTS_FOR_CULTURAL_VICTORY = 10;
  * VictorySystem checks win conditions at the end of each turn.
  *
  * Victory types (X5.1 VII-parity rewrite):
- * - Domination: eliminate all rival players (they lose all cities -- units alone do not keep a player alive)
+ * - Domination: eliminate all rival players after they have had settlements to conquer
  * - Science: complete 3 Space Race projects (spaceMilestonesComplete >= 3) [W5-01]
  *   Scaffold fallback: all 10 modern techs researched (if no project data available)
  * - Culture: World's Fair wonder built + >= ARTIFACTS_FOR_CULTURAL_VICTORY (10) artifacts collected [X5.1]
@@ -59,7 +59,7 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
   // F-11: Collect ALL winners this turn before picking one.
   // If multiple players achieve victory on the same turn, tiebreak by
   // highest totalCareerLegacyPoints; on further tie, insertion order wins.
-  const winners: Array<{ playerId: string; winType: VictoryType; player: typeof player }> = [];
+  const winners: Array<{ playerId: string; winType: VictoryType; player: PlayerState }> = [];
 
   for (const [playerId, player] of state.players) {
     const playerProgress: VictoryProgress[] = [
@@ -114,17 +114,16 @@ export function victorySystem(state: GameState, action: GameAction): GameState {
 
 function checkDomination(state: GameState, playerId: string): VictoryProgress {
   // Domination: must have at least one city AND all other players must have
-  // lost all their cities (eliminated). A player stripped of all cities is
-  // eliminated even if stray units survive -- units alone do not constitute
-  // a living empire (Civ VII rulebook §7.2 -- W2-08).
+  // lost all settlements. A player that has never founded a settlement yet is
+  // still alive while a founding unit survives; once they have settlement
+  // history, stray non-founding units no longer block domination.
   const ownedCities = [...state.cities.values()].filter(c => c.owner === playerId).length;
   const otherPlayersTotal = state.players.size - 1;
 
-  // Count players that still have at least one city
+  // Count players still alive for domination purposes.
   const otherPlayersAlive = [...state.players.keys()].filter(pid => {
     if (pid === playerId) return false;
-    const hasCities = [...state.cities.values()].some(c => c.owner === pid);
-    return hasCities;
+    return isAliveForDomination(state, pid);
   }).length;
 
   const progress = otherPlayersTotal > 0
@@ -136,6 +135,22 @@ function checkDomination(state: GameState, playerId: string): VictoryProgress {
     progress,
     achieved: otherPlayersAlive === 0 && ownedCities > 0 && otherPlayersTotal > 0,
   };
+}
+
+function isAliveForDomination(state: GameState, playerId: string): boolean {
+  const hasCurrentSettlement = [...state.cities.values()].some(c => c.owner === playerId);
+  if (hasCurrentSettlement) return true;
+
+  const hasSettlementHistory = [...state.cities.values()].some(
+    c => c.foundedBy === playerId || c.originalOwner === playerId,
+  );
+  if (hasSettlementHistory) return false;
+
+  return [...state.units.values()].some(unit => {
+    if (unit.owner !== playerId || unit.health <= 0) return false;
+    const unitDef = state.config.units.get(unit.typeId);
+    return unitDef?.abilities.includes('found_city') === true;
+  });
 }
 
 function checkScience(state: GameState, playerId: string): VictoryProgress {

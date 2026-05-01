@@ -327,9 +327,9 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
         }
       }
 
-      // Auto-accept incoming peace: peaceful leaders always accept, aggressive reject
-      // We model this by the low-aggression AI also proposing peace to encourage resolution
-      // (The diplomacySystem auto-accepts after turnsAtWar >= 5 regardless of who proposes)
+      // Peaceful leaders may propose peace when they are losing. The
+      // diplomacy system resolves only explicit peace proposals; turn counters
+      // do not passively end wars.
     }
   }
 

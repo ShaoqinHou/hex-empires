@@ -82,7 +82,7 @@ function applyInitiateEspionage(
   // Create the operation
   const op: EspionageOperation = {
     id: generateOpId(currentPlayerId, targetPlayerId, state.turn, getOps(state).length),
-    actionId,
+    actionId: actionDef.id,
     ownerId: currentPlayerId,
     targetPlayerId,
     startedOnTurn: state.turn,

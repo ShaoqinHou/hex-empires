@@ -195,7 +195,7 @@ describe('UrbanPlacementHintBadge', () => {
     // hex (1, 0) neighbours include (0, 0), (2, 0), (1, -1), (1, 1), (0, 1), (2, -1).
     // Put a mountain at (0, 0) so the placement tile (1, 0) earns +1 Production.
     const tiles = new Map<string, HexTile>([
-      [coordKey(0, 0), makeTile(0, 0, { terrain: 'mountains' })],
+      [coordKey(0, 0), makeTile(0, 0, { feature: 'mountains' })],
       [coordKey(1, 0), makeTile(1, 0)],
       [coordKey(2, 0), makeTile(2, 0)],
     ]);

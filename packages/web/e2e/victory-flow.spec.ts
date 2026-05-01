@@ -58,11 +58,15 @@ async function getVictoryState(page: Page) {
           }),
         ),
       },
+      age: {
+        modernThreshold: s.age.ageThresholds.modern,
+      },
       players: [...s.players.entries()].map(([id, p]: [string, any]) => ({
         id,
         isHuman: p.isHuman,
         gold: p.gold,
         score: p.score,
+        ageProgress: p.ageProgress,
         researchedTechs: [...(p.researchedTechs ?? [])],
       })),
     };
@@ -94,7 +98,7 @@ test.describe('Victory-condition pipeline', () => {
     expect(vs.turn).toBe(1);
   });
 
-  test('after 5 turns, score-victory progress is non-negative and matches turn/300 ratio', async ({ page }) => {
+  test('after 5 turns, score-victory progress is non-negative and matches age progress ratio', async ({ page }) => {
     await startGame(page);
     await advanceTurns(page, 5);
 
@@ -112,14 +116,12 @@ test.describe('Victory-condition pipeline', () => {
     // and bounded. Upper bound 0.1 covers any plausible 15-turn advancement.
     expect(scoreProg!.progress).toBeGreaterThan(0);
     expect(scoreProg!.progress).toBeLessThan(0.1);
-    // Score victory triggers only at turn-limit (300); must not be achieved yet.
+    // Score victory triggers only when Modern age progress reaches 100%; must not be achieved yet.
     expect(scoreProg!.achieved).toBe(false);
-    // progress should be proportional to turn count (progress = min(1, turn/300)).
-    // Allow a small tolerance — the progress map is written at end of the last
-    // player's END_TURN, so the recorded turn may lag vs.turn by up to 1.
-    const expectedProgress = vs.turn / 300;
-    expect(scoreProg!.progress).toBeGreaterThan(expectedProgress - 0.01);
-    expect(scoreProg!.progress).toBeLessThan(expectedProgress + 0.01);
+    // progress should track the player's current age progress ratio.
+    const expectedProgress = Math.min(1, human!.ageProgress / vs.age.modernThreshold);
+    expect(scoreProg!.progress).toBeGreaterThanOrEqual(expectedProgress - 0.011);
+    expect(scoreProg!.progress).toBeLessThanOrEqual(expectedProgress + 0.011);
   });
 
   test('engine safely rejects ATTACK_CITY against a non-existent city id (no crash, no winner)', async ({ page }) => {

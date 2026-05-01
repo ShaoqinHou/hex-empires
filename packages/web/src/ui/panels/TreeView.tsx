@@ -175,9 +175,23 @@ function TreeNodeCard({
 
   const opacity = prereqsMet || isResearched ? 1 : 0.45;
 
+  const handleCardClick = () => {
+    if (canResearch) onSelect();
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!canResearch) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect();
+    }
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      aria-disabled={!canResearch}
+      tabIndex={canResearch ? 0 : -1}
       className="rounded-lg p-2 text-left transition-all relative overflow-hidden"
       style={{
         gridColumn: item.treePosition.col + 1,
@@ -190,8 +204,8 @@ function TreeNodeCard({
         animation,
         ['--tree-pulse-accent' as string]: isActive ? accentColor : undefined,
       }}
-      onClick={onSelect}
-      disabled={!canResearch}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
     >
       {/* Researched checkmark overlay */}
       {isResearched && !isMastered && (
@@ -291,7 +305,7 @@ function TreeNodeCard({
           </div>
         </div>
       )}
-    </button>
+    </div>
   );
 }
 

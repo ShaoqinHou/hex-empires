@@ -50,6 +50,7 @@ export type {
   AgeState,
   RngState,
   CodexState,
+  IndependentPowerState,
   GameState,
   DiplomacyProposal,
   GameAction,

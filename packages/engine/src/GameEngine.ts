@@ -46,7 +46,7 @@ import { discoverySystem } from './systems/discoverySystem';
 
 /**
  * Default engine pipeline. Ordered to match the documented system
- * sequence in CLAUDE.md.
+ * sequence in the Codex workflow docs.
  *
  * M12 Integration wired four standalone systems into this pipeline
  * AFTER `combatSystem` and BEFORE `resourceSystem`:

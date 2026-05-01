@@ -238,7 +238,7 @@ describe('town focus yield computation', () => {
     const state = createTestState({
       cities: new Map([['c1', city]]),
       tradeRoutes: new Map([
-        ['r1', { id: 'r1', from: 'c1', to: 'c2', gold: 2, turnsRemaining: 10 }],
+        ['r1', { id: 'r1', from: 'c1', to: 'c2', owner: 'p1', resources: [], isSea: false, caravanUnitId: 'caravan1' }],
       ]),
     });
     const base = calculateCityYields(makeCity({ townFocus: undefined }), state);

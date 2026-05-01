@@ -105,12 +105,12 @@ afterEach(() => {
   mockRef.dispatch = () => undefined;
 });
 
-// Helper: find a card button by the tech's display name.
-function findTechButton(container: HTMLElement, techName: string): HTMLButtonElement {
-  const buttons = Array.from(container.querySelectorAll('button'));
-  const match = buttons.find(b => b.textContent?.includes(techName));
-  if (!match) throw new Error(`No button found for tech "${techName}"`);
-  return match as HTMLButtonElement;
+// Helper: find a clickable card by the tech's display name.
+function findTechCard(container: HTMLElement, techName: string): HTMLElement {
+  const cards = Array.from(container.querySelectorAll('[role="button"]'));
+  const match = cards.find(card => card.textContent?.includes(techName));
+  if (!match) throw new Error(`No card found for tech "${techName}"`);
+  return match as HTMLElement;
 }
 
 // ── Tests ──
@@ -123,9 +123,9 @@ describe('TechTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer());
 
     const { container } = render(<TechTreePanel onClose={() => {}} />);
-    const btn = findTechButton(container, 'Pottery');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findTechCard(container, 'Pottery');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_RESEARCH', techId: 'pottery' }]);
   });
@@ -137,9 +137,9 @@ describe('TechTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer({ researchedTechs: ['pottery'] }));
 
     const { container } = render(<TechTreePanel onClose={() => {}} />);
-    const btn = findTechButton(container, 'Writing');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findTechCard(container, 'Writing');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_RESEARCH', techId: 'writing' }]);
   });
@@ -154,9 +154,9 @@ describe('TechTreePanel — click-to-research', () => {
     }));
 
     const { container } = render(<TechTreePanel onClose={() => {}} />);
-    const btn = findTechButton(container, 'Animal Husbandry');
-    expect(btn.disabled).toBe(false);
-    fireEvent.click(btn);
+    const card = findTechCard(container, 'Animal Husbandry');
+    expect(card.getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(card);
 
     expect(calls).toEqual([{ type: 'SET_RESEARCH', techId: 'animal_husbandry' }]);
   });
@@ -167,9 +167,9 @@ describe('TechTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer({ researchedTechs: ['pottery'] }));
 
     const { container } = render(<TechTreePanel onClose={() => {}} />);
-    const btn = findTechButton(container, 'Pottery');
-    expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);
+    const card = findTechCard(container, 'Pottery');
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(card);
 
     expect(calls).toEqual([]);
   });
@@ -181,9 +181,9 @@ describe('TechTreePanel — click-to-research', () => {
     mockRef.state = makeState(makePlayer());
 
     const { container } = render(<TechTreePanel onClose={() => {}} />);
-    const btn = findTechButton(container, 'Writing');
-    expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);
+    const card = findTechCard(container, 'Writing');
+    expect(card.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(card);
 
     expect(calls).toEqual([]);
   });

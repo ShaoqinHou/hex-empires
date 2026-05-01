@@ -333,6 +333,26 @@ describe('updateDiplomacyCounters', () => {
     expect(rel.warSupport).toBe(25);
   });
 
+  it('preserves war status while pruning and applying ledger modifiers', () => {
+    const state = stateWithRelation({
+      status: 'war',
+      relationship: -40,
+      turnsAtWar: 0,
+      warSupport: -50,
+      ledger: [{
+        id: 'surprise_war',
+        value: -40,
+        turnApplied: 1,
+        reason: 'Declared surprise war on us',
+      }],
+    });
+    const next = updateDiplomacyCounters(state, { type: 'END_TURN' });
+    const rel = next.diplomacy.relations.get('p1:p2')!;
+    expect(rel.status).toBe('war');
+    expect(rel.relationship).toBe(-40);
+    expect(rel.turnsAtWar).toBe(1);
+  });
+
   it('increments turnsAtPeace during peace', () => {
     const state = stateWithRelation({ status: 'neutral', turnsAtPeace: 5, relationship: 0 });
     const next = updateDiplomacyCounters(state, { type: 'END_TURN' });

@@ -71,6 +71,23 @@ describe('victorySystem', () => {
     expect(next.victory.winType).toBe('domination');
   });
 
+  it('does not trigger domination while an unfounded rival still has a settler', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const cities = new Map([
+      ['c1', makeCity('c1', 'p1')],
+    ]);
+    const units = new Map([
+      ['u1', makeUnit('u1', 'p2', { q: 3, r: 3 })],
+    ]);
+    units.set('u1', { ...units.get('u1')!, typeId: 'settler' });
+    const state = createTestState({ players, cities, units, currentPlayerId: 'p2' });
+    const next = victorySystem(state, { type: 'END_TURN' });
+    expect(next.victory.winner).toBeNull();
+  });
+
   it('detects science victory when all modern techs researched (culture gate removed — W2-08 F-04)', () => {
     // The invented culture >= 100 gate is removed; techs alone are sufficient.
     const modernTechs = [
