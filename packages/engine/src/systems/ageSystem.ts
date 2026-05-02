@@ -255,7 +255,6 @@ function handleTransition(state: GameState, newCivId: string): GameState {
         ...clearTownSpecializationState(city),
         settlementType: 'town' as const,
         isTown: true,
-        population: 1,
         productionQueue: [],
         productionProgress: 0,
       });

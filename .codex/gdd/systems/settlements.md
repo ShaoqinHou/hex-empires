@@ -346,7 +346,7 @@ Where:
 
 ## Mapping to hex-empires
 
-**Status tally:** 7 MATCH / 2 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
+**Status tally:** 8 MATCH / 1 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
 **Audit:** [.codex/gdd/audits/settlements.md](../audits/settlements.md)
 **Highest-severity finding:** F-08 — Raze settlement mechanic (MISSING, HIGH)
 **Convergence status:** Partial — 2 VII mechanic(s) absent

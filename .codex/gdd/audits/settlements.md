@@ -28,8 +28,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 7 |
-| CLOSE | 2 |
+| MATCH | 8 |
+| CLOSE | 1 |
 | DIVERGED | 0 |
 | MISSING | 2 |
 | EXTRA | 0 |
@@ -118,16 +118,16 @@
 
 ---
 
-### F-07: Age transition — cities do NOT revert to towns — CLOSE
+### F-07: Age transition — non-capital cities downgrade to towns while preserving population — MATCH
 
-**Location:** `ageSystem.ts:21-111`
+**Location:** `ageSystem.ts:242-260`; `citySystem.ts:238-285`
 **GDD reference:** `systems/settlements.md` § "Age Transition Effects on Settlements"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** On age transition: all non-capital cities downgrade to town tier. Capital always retains city tier. Economic Golden Age legacy exempts all current cities. Town specializations reset to null.
-**Engine does:** `ageSystem` downgrades non-capital player cities to towns, clears queues/progress, clears town specialization locks, and exempts cities when `legacyPaths.economic === 3`. `citySystem` mirrors the tier/focus reset as defense-in-depth.
-**Gap:** The downgrade currently resets non-capital city population to 1, which is not clearly authorized by the settlements GDD/source snapshot.
-**Recommendation:** Decide whether population reset is intentional. If not, preserve population during age downgrade.
+**Engine does:** `ageSystem` downgrades non-capital player cities to towns, preserves population, clears queues/progress, clears town specialization locks, and exempts cities when `legacyPaths.economic === 3`. `citySystem` mirrors the tier/focus reset as defense-in-depth and also preserves population.
+**Gap:** None for the local downgrade behavior.
+**Recommendation:** Keep `ageSystem` and `citySystem` downgrade semantics aligned so the pipeline and isolated-system behavior do not diverge.
 
 ---
 
@@ -198,7 +198,6 @@ UI shows specialist section only for `!isTown`. Engine-level `CityState.speciali
 |---|---|---|---|
 | M-01 | Raze settlement 12-turn countdown | No `RAZE_SETTLEMENT` action or countdown state | L |
 | M-02 | Food forwarding from specialized towns | No yield routing from towns to connected cities | L |
-| M-03 | Age downgrade population behavior | Non-capital city downgrade resets population to 1; source intent unclear | S |
 
 ---
 
@@ -213,7 +212,7 @@ Paste into `.codex/gdd/systems/settlements.md` § "Mapping to hex-empires":
 - `packages/engine/src/state/HappinessUtils.ts`
 - `packages/web/src/ui/panels/CityPanel.tsx`
 
-**Status:** 7 MATCH / 2 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA (see `.codex/gdd/audits/settlements.md`)
+**Status:** 8 MATCH / 1 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA (see `.codex/gdd/audits/settlements.md`)
 
 **Highest-severity finding:** F-08 — raze settlement mechanic absent (HIGH)
 
@@ -221,11 +220,10 @@ Paste into `.codex/gdd/systems/settlements.md` § "Mapping to hex-empires":
 
 ## Open questions
 
-1. Should age-transition city downgrade preserve population instead of resetting non-capitals to population 1?
-2. Does the age-transition downgrade fire immediately in `TRANSITION_AGE`, or at the start of the next age's first turn?
-3. For Economic Golden Age exemption: is `legacyPaths.economic === 3` the right signal, or does the engine need an explicit boolean flag on `PlayerState`?
-4. Food forwarding connection model: is hex-proximity an acceptable approximation, or does a formal road/trade-route graph need to be checked?
-5. Raze + religion interaction: does `state.religions` currently track each religion's founding city? Needs cross-check before implementing the raze guard.
+1. Does the age-transition downgrade fire immediately in `TRANSITION_AGE`, or at the start of the next age's first turn?
+2. For Economic Golden Age exemption: is `legacyPaths.economic === 3` the right signal, or does the engine need an explicit boolean flag on `PlayerState`?
+3. Food forwarding connection model: is hex-proximity an acceptable approximation, or does a formal road/trade-route graph need to be checked?
+4. Raze + religion interaction: does `state.religions` currently track each religion's founding city? Needs cross-check before implementing the raze guard.
 
 ---
 

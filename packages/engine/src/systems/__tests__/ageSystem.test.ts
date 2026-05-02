@@ -545,7 +545,7 @@ describe('F-07: age-transition city downgrade (W2-02)', () => {
     };
   }
 
-  it('non-capital cities revert to towns on age transition', () => {
+  it('non-capital cities revert to towns on age transition while preserving population', () => {
     const player = createTestPlayer({
       age: 'antiquity', civilizationId: 'rome', ageProgress: 50,
       legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
@@ -553,7 +553,9 @@ describe('F-07: age-transition city downgrade (W2-02)', () => {
     const capital = makeAgeCity({ id: 'cap', name: 'Capital', isCapital: true });
     const nonCap = makeAgeCity({
       id: 'nc1', name: 'Colony', position: { q: 5, r: 0 },
-      productionQueue: [{ type: 'building', id: 'granary' }], productionProgress: 10,
+      productionQueue: [{ type: 'building', id: 'granary' }],
+      productionProgress: 10,
+      population: 6,
     });
     const state = createTestState({
       players: new Map([['p1', player]]),
@@ -566,6 +568,7 @@ describe('F-07: age-transition city downgrade (W2-02)', () => {
     expect(next.cities.get('nc1')!.productionQueue).toHaveLength(0);
     expect(next.cities.get('nc1')!.productionProgress).toBe(0);
     expect(next.cities.get('nc1')!.specialization).toBeNull();
+    expect(next.cities.get('nc1')!.population).toBe(6);
   });
 
   it('Economic Golden Age exemption: non-capital cities preserved', () => {
@@ -1166,7 +1169,7 @@ describe('X1.1: isTown flag', () => {
     });
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     expect(next.cities.get('nc1')!.isTown).toBe(true);
-    expect(next.cities.get('nc1')!.population).toBe(1);
+    expect(next.cities.get('nc1')!.population).toBe(7);
   });
 
   it('capital stays city and isTown falsy', () => {
@@ -1187,7 +1190,7 @@ describe('X1.1: isTown flag', () => {
     expect(next.cities.get('cap')!.isTown).toBeFalsy();
   });
 
-  it('population drops to 1', () => {
+  it('population is preserved when non-capital becomes a town', () => {
     const player = transitionReadyPlayer();
     const city = createTestCity({
       id: 'nc2',
@@ -1202,7 +1205,7 @@ describe('X1.1: isTown flag', () => {
       age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     });
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
-    expect(next.cities.get('nc2')!.population).toBe(1);
+    expect(next.cities.get('nc2')!.population).toBe(8);
   });
 });
 

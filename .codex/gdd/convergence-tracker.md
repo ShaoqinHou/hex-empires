@@ -34,7 +34,7 @@
 | population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 5M / 3C / 1D / 0X / 0E |
 | religion | `.codex/gdd/audits/religion.md` | 13 | 7M / 4C / 2D / 0X / 0E |
 | resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
-| settlements | `.codex/gdd/audits/settlements.md` | 11 | 7M / 2C / 0D / 2X / 0E |
+| settlements | `.codex/gdd/audits/settlements.md` | 11 | 8M / 1C / 0D / 2X / 0E |
 | tech-tree | `.codex/gdd/audits/tech-tree.md` | 14 | 6M / 5C / 2D / 1X / 0E |
 | tile-improvements | `.codex/gdd/audits/tile-improvements.md` | 12 | 6M / 6C / 0D / 0X / 0E |
 | trade-routes | `.codex/gdd/audits/trade-routes.md` | 10 | 3M / 3C / 1D / 2X / 1E |
@@ -136,7 +136,7 @@
 | resources | F-02 | ResourceDef has no per-age bonus table | ⚠ DIVERGED | M | `packages/engine/src/types/Resource.ts:7-9` |
 | resources | F-03 | Empire resources provide no combat strength modifier | ⊘ MISSING | L | `packages/engine/src/types/Resource.ts`, `packages/engine/src/systems/resourceSy |
 | resources | F-06 | Assigned resource bonuses not applied to city yields | ⊘ MISSING | M | `packages/engine/src/state/ResourceChangeCalculator.ts:39-188`, `packages/engine |
-| settlements | F-07 | Age transition — cities do NOT revert to towns | ≈ CLOSE | M | `ageSystem.ts:21-111` |
+| settlements | F-07 | Age transition — non-capital cities downgrade to towns while | ✓ MATCH | M | `ageSystem.ts:242-260`; `citySystem.ts:238-285` |
 | settlements | F-08 | Raze settlement mechanic | ⊘ MISSING | L | `citySystem.ts` (no `RAZE_SETTLEMENT` handler) |
 | tech-tree | F-01 | Age transition wipes active research state | ✓ MATCH | S | `ageSystem.ts` `handleTransition`; `GameEngine.ts` transition pipeline guard |
 | tech-tree | F-05 | Science formula covers codices/policies but still lacks full | ≈ CLOSE | L | `researchSystem.ts:247-263` |
@@ -350,8 +350,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 76 |
-| CLOSE | 64 |
+| MATCH | 77 |
+| CLOSE | 63 |
 | DIVERGED | 52 |
 | MISSING | 80 |
 | EXTRA | 14 |
