@@ -2,10 +2,9 @@ import type { GameState, GameAction } from '../types/GameState';
 
 /**
  * FortifySystem handles the FORTIFY_UNIT action.
- * Fortified units get +5 combat strength (flat additive) and expend all remaining
- * movement. The CS bonus is applied in combatSystem.getEffectiveDefenseStrength
- * (B6 implementation). Note: the +5 CS is additive, not a +50% multiplicative
- * modifier (previous comment was a Civ VI holdover).
+ * Fortified units consume all remaining movement and gain a flat +5 combat
+ * strength on defense. The CS bonus is applied in
+ * combatSystem.getEffectiveDefenseStrength.
  */
 export function fortifySystem(state: GameState, action: GameAction): GameState {
   if (action.type !== 'FORTIFY_UNIT') return state;

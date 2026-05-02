@@ -24,10 +24,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 5 |
+| MATCH | 8 |
 | CLOSE | 1 |
-| DIVERGED | 5 |
-| MISSING | 2 |
+| DIVERGED | 3 |
+| MISSING | 1 |
 | EXTRA | 1 |
 
 **Total findings:** 14
@@ -36,15 +36,15 @@
 
 ## Detailed findings
 
-### F-01: fortify-bonus-comment-wrong --- DIVERGED
+### F-01: fortify-bonus-comment-wrong --- MATCH
 
 **Location:** packages/engine/src/systems/fortifySystem.ts:1-6
 **GDD reference:** systems/combat.md section Fortification Bonus
 **Severity:** HIGH  **Effort:** S
 **VII says:** Fortify grants +5 CS on defense (flat additive).
-**Engine does:** The JSDoc comment says Fortified units get +50% defense bonus but combatSystem.ts:249-253 applies strength += 5 (flat +5). Code is correct; comment contradicts the GDD.
-**Gap:** Stale +50% comment in fortifySystem.ts header is a Civ-VI-ism. Civ VI used multiplicative 50%; Civ VII and engine use flat +5.
-**Recommendation:** Fix header comment to +5 CS flat defense bonus (additive). One-line fix, zero behavior change.
+**Engine does:** `fortifySystem.ts` now documents a flat +5 combat-strength defense bonus, and `combatSystem.ts` applies the same flat +5 when a fortified unit defends.
+**Gap:** None. The stale Civ VI-style +50% wording has been removed.
+**Recommendation:** Keep fortify documentation aligned with `combatSystem.getEffectiveDefenseStrength` if the defense formula changes.
 
 ---
 
@@ -72,15 +72,15 @@
 
 ---
 
-### F-04: zoc-ranged-units-project-zoc --- DIVERGED
+### F-04: zoc-ranged-units-project-zoc --- MATCH
 
 **Location:** packages/engine/src/systems/movementSystem.ts:234-256
 **GDD reference:** systems/combat.md section Zone of Control (ZoC)
 **Severity:** MED  **Effort:** S
 **VII says:** Only melee and siege units project ZoC. Ranged units do NOT project ZoC.
-**Engine does:** isInEnemyZoC stops movement when any adjacent enemy has category !== civilian. Ranged units (category ranged) therefore project ZoC, contradicting VII rules.
-**Gap:** Ranged units wrongly project ZoC. Predicate should be category === melee || category === siege.
-**Recommendation:** Change the ZoC predicate in movementSystem.ts:250 from category !== civilian to category === melee || category === siege. Low effort; ranged units no longer lock down adjacent enemy movement.
+**Engine does:** `isInEnemyZoC` only returns true for adjacent enemy units whose category is `melee` or `siege`. Movement tests cover both ranged enemies not projecting ZoC and melee enemies still stopping movement.
+**Gap:** None for the current ZoC projector predicate.
+**Recommendation:** Keep the ranged/non-ranged regression tests when movement rules are refactored.
 
 ---
 
@@ -156,15 +156,15 @@
 
 ---
 
-### F-11: civilian-capture-missing --- MISSING
+### F-11: civilian-capture-missing --- MATCH
 
-**Location:** packages/engine/src/systems/combatSystem.ts (entire file)
+**Location:** packages/engine/src/systems/movementSystem.ts:362-431; packages/engine/src/systems/__tests__/movementSystem.test.ts:588
 **GDD reference:** systems/combat.md section Retreat -- Capture vs kill subsection
 **Severity:** MED  **Effort:** M
 **VII says:** Civilian units (Settlers, Builders, Scouts) are captured not killed when a military unit enters their tile. Military units at 0 HP are always eliminated.
-**Engine does:** All units at 0 HP are deleted from the map. No distinction between military elimination and civilian capture exists.
-**Gap:** Civilian capture is entirely absent. Settlers/builders are deleted instead of changing ownership, removing a core Civ VII strategic interaction.
-**Recommendation:** After defender HP reaches 0: if defender category is civilian and attacker is military, transfer ownership to attacker instead of deleting. Medium effort.
+**Engine does:** `movementSystem` resolves civilian/religious capture after movement: eligible combat units transfer ownership of enemy settler, explorer, merchant, or missionary units on the destination tile and zero the captured unit's movement. Tests cover settler, explorer, merchant, and missionary capture.
+**Gap:** None for movement-entry capture. `ATTACK_UNIT` still deletes units at 0 HP, but civilian capture is modeled through the movement path that enters the civilian's hex.
+**Recommendation:** Keep capture behavior in movement unless the action model gains an explicit civilian attack/capture command.
 
 ---
 
@@ -207,7 +207,6 @@
 ## Extras to retire
 
 - combatSystem.ts:187-191 -- firstStrikeBonus (+5 CS at full HP) has no VII basis; retire or move to a named promotion.
-- fortifySystem.ts:4-6 -- Header comment +50% defense bonus is a Civ-VI-ism; fix the comment.
 
 ---
 
@@ -215,7 +214,6 @@
 
 - **Directional battlefront / facing** (UnitState.facing) -- required for VII flanking model; absent entirely.
 - **Multi-district siege model** -- VII requires per-district HP pools and sequential destruction; engine has single city HP bar.
-- **Civilian unit capture** -- settlers/builders should be captured not killed; currently all 0-HP units are deleted.
 - **bombardStrength separation** -- GDD defines a separate bombardStrength for siege units vs fortified districts/naval; engine uses single rangedCombat field.
 
 ---
@@ -224,7 +222,7 @@
 
 Paste into .codex/gdd/systems/combat.md section Mapping to hex-empires:
 
-Status: 4 MATCH / 2 CLOSE / 4 DIVERGED / 3 MISSING / 1 EXTRA (audit: .codex/gdd/audits/combat.md)
+Status: 8 MATCH / 1 CLOSE / 3 DIVERGED / 1 MISSING / 1 EXTRA (audit: .codex/gdd/audits/combat.md)
 Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; combatSystem uses flat subtraction. Fix: extract shared computeEffectiveCS utility.
 
 ---
@@ -234,7 +232,7 @@ Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; 
 1. Should bombardStrength (vs fortifications/naval) be a separate UnitDef field from rangedStrength? GDD models them separately; engine conflates into rangedCombat.
 2. What is the canonical XP value for attack and defense awards? Engine uses hardcoded +5/+3; no VII source confirms these.
 3. Should the First Strike bonus be retained as a custom hex-empires mechanic or retired for VII purity?
-4. ZoC fix (F-04) will change AI behavior since ranged units currently pin enemies -- verify AI tactics still work after the fix.
+4. Are current AI tactics still calibrated after ranged units stopped projecting ZoC?
 
 ---
 
@@ -242,11 +240,11 @@ Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; 
 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
-| S (half-day) | F-01, F-03, F-04, F-06, F-10, F-12, F-13, F-14 | ~4h |
-| M (1-3 days) | F-02, F-07, F-11 | ~6d |
+| S (half-day) | F-03, F-10, F-13, F-14 | ~3h |
+| M (1-3 days) | F-02 | ~3d |
 | L (week+) | F-09 | ~2w |
-| **Total** | 14 findings | **~3w** |
+| **Total** | 6 open findings | **~2.5w** |
 
-Recommended order: F-13 then F-03 (unify preview/combat formula -- highest player-experience impact, S effort) -> F-04 (ZoC ranged fix) -> F-14 (retire First Strike) -> F-01 (comment fix) -> F-07 (support bonus) -> F-02 (directional flanking) -> F-11 (civilian capture) -> F-09 (district siege model).
+Recommended order: F-13 then F-03 (unify preview/combat formula -- highest player-experience impact, S effort) -> F-14 (retire First Strike) -> F-02 (directional flanking) -> F-09 (district siege model).
 
 ---

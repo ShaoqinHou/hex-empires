@@ -19,7 +19,7 @@
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
-| combat | `.codex/gdd/audits/combat.md` | 14 | 5M / 1C / 5D / 2X / 1E |
+| combat | `.codex/gdd/audits/combat.md` | 14 | 8M / 1C / 3D / 1X / 1E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
@@ -75,7 +75,7 @@
 | civilizations | F-07 | Unique building / unique infrastructure | ⚠ DIVERGED | M | packages/engine/src/data/civilizations/types.ts:14, all civ data files |
 | civilizations | F-08 | Civ unlock system (historical-path / leader-unlock / quest) | ⊘ MISSING | L | packages/engine/src/state/GameInitializer.ts, packages/engine/src/systems/ageSys |
 | civilizations | F-09 | Traditions / unique civic tree | ⊘ MISSING | L | packages/engine/src/data/civilizations/types.ts |
-| combat | F-01 | fortify-bonus-comment-wrong - | ⚠ DIVERGED | UNK | packages/engine/src/systems/fortifySystem.ts:1-6 |
+| combat | F-01 | fortify-bonus-comment-wrong - | ✓ MATCH | UNK | packages/engine/src/systems/fortifySystem.ts:1-6 |
 | combat | F-02 | flanking-directional-vs-unit-count - | ⚠ DIVERGED | UNK | packages/engine/src/systems/combatSystem.ts:288-323 |
 | combat | F-03 | health-penalty-formula-diverged - | ⚠ DIVERGED | UNK | packages/engine/src/systems/combatSystem.ts:182-197 vs CombatPreview.ts:708-719 |
 | combat | F-09 | siege-district-hp-model-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts:340-496 |
@@ -192,9 +192,9 @@
 | civilizations | F-04 | Unique ability | ≈ CLOSE | M | packages/engine/src/data/civilizations/types.ts:8-12, all civ data files |
 | civilizations | F-05 | Unique unit | ≈ CLOSE | M | packages/engine/src/data/civilizations/types.ts:13, all civ data files |
 | civilizations | F-11 | GameInitializer uses Date.now() as seed | ✗ EXTRA | S | packages/engine/src/state/GameInitializer.ts:19 |
-| combat | F-04 | zoc-ranged-units-project-zoc - | ⚠ DIVERGED | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
+| combat | F-04 | zoc-ranged-units-project-zoc - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
 | combat | F-07 | support-bonus-standalone - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
-| combat | F-11 | civilian-capture-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts (entire file) |
+| combat | F-11 | civilian-capture-missing - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:362-431; packages/engine/src/syste |
 | combat | F-14 | first-strike-bonus-extra - | ✗ EXTRA | UNK | packages/engine/src/systems/combatSystem.ts:187-191 |
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
 | commanders | F-07 | `commander-respawn-absent` | ⊘ MISSING | M | `packages/engine/src/types/Commander.ts`, all systems |
@@ -350,10 +350,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 89 |
+| MATCH | 92 |
 | CLOSE | 75 |
-| DIVERGED | 48 |
-| MISSING | 62 |
+| DIVERGED | 46 |
+| MISSING | 61 |
 | EXTRA | 12 |
 | **Total findings** | **286** |
 
