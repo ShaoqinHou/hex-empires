@@ -19,7 +19,7 @@
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
-| combat | `.codex/gdd/audits/combat.md` | 14 | 10M / 2C / 1D / 1X / 0E |
+| combat | `.codex/gdd/audits/combat.md` | 14 | 11M / 2C / 0D / 1X / 0E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
@@ -76,7 +76,7 @@
 | civilizations | F-08 | Civ unlock system (historical-path / leader-unlock / quest) | ⊘ MISSING | L | packages/engine/src/state/GameInitializer.ts, packages/engine/src/systems/ageSys |
 | civilizations | F-09 | Traditions / unique civic tree | ⊘ MISSING | L | packages/engine/src/data/civilizations/types.ts |
 | combat | F-01 | fortify-bonus-comment-wrong - | ✓ MATCH | UNK | packages/engine/src/systems/fortifySystem.ts:1-6 |
-| combat | F-02 | flanking-directional-vs-unit-count - | ⚠ DIVERGED | UNK | packages/engine/src/systems/combatSystem.ts:288-323 |
+| combat | F-02 | flanking-directional-vs-unit-count - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:55-104; packages/engine/src/systems |
 | combat | F-03 | health-penalty-formula-diverged - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:4-27; packages/engine/src/systems/c |
 | combat | F-09 | siege-district-hp-model-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts:340-496 |
 | combat | F-13 | combat-preview-formula-divergence - | ✓ MATCH | UNK | packages/engine/src/state/CombatPreview.ts:705-743; packages/engine/src/systems/ |
@@ -350,9 +350,9 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 94 |
+| MATCH | 95 |
 | CLOSE | 76 |
-| DIVERGED | 44 |
+| DIVERGED | 43 |
 | MISSING | 61 |
 | EXTRA | 11 |
 | **Total findings** | **286** |

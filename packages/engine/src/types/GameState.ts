@@ -87,7 +87,7 @@ export interface UnitState {
   /**
    * The direction this unit is facing (0–5, pointy-top hex directions matching HEX_DIRECTIONS index).
    * 0 = E, 1 = NE, 2 = NW, 3 = W, 4 = SW, 5 = SE.
-   * Optional for backward compatibility — units without a facing value use the legacy count-based flanking.
+   * Optional for backward compatibility — units without a facing value are not locked into a battlefront.
    */
   readonly facing?: 0 | 1 | 2 | 3 | 4 | 5;
   /**

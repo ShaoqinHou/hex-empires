@@ -4,11 +4,13 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
 import { nextRandom } from './SeededRng';
 import {
+  calculateBattlefrontFlankingBonus,
   calculateFirstStrikeCombatBonus,
   COMBAT_DAMAGE_RANDOM_MAX,
   COMBAT_DAMAGE_RANDOM_MIN,
   computeCombatDamage,
   computeEffectiveCS,
+  hexDirectionIndex,
 } from './CombatAnalytics';
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
 import { getCommanderAuraCombatBonus } from './CommanderAura';
@@ -810,15 +812,7 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
 }
 
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
-  const defNeighbors = neighbors(defenderPosition);
-  let flankingCount = 0;
-  for (const [, u] of state.units) {
-    if (u.id === attacker.id) continue;
-    if (u.owner !== attacker.owner) continue;
-    const isAdjacent = defNeighbors.some(n => n.q === u.position.q && n.r === u.position.r);
-    if (isAdjacent) flankingCount++;
-  }
-  return Math.min(flankingCount * 2, 6);
+  return calculateBattlefrontFlankingBonus(state, attacker, defenderPosition);
 }
 
 function checkAdjacentAlly(attacker: UnitState, defender: UnitState, state: GameState): boolean {
@@ -914,13 +908,7 @@ function isRiverEdgeBetweenPreview(
   attackerPos: HexCoord,
   defenderPos: HexCoord,
 ): boolean {
-  const dq = defenderPos.q - attackerPos.q;
-  const dr = defenderPos.r - attackerPos.r;
-  const HEX_DIRECTIONS = [
-    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
-    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
-  ];
-  const edgeIndex = HEX_DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
+  const edgeIndex = hexDirectionIndex(attackerPos, defenderPos);
   if (edgeIndex === -1) return false;
   return attackerTile.river.includes(edgeIndex);
 }

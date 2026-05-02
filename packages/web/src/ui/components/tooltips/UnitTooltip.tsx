@@ -63,7 +63,7 @@ export function UnitTooltip({ unitDef, unitState, showState = false, promotions 
       'religious': 'Can spread religion',
       'support': 'Can heal adjacent units',
       'charge': '+10 strength vs wounded units',
-      'flank': '+5 strength per adjacent ally',
+      'flank': '+5 strength on direct rear battlefront attacks',
       'volley': 'Ranged attacks deal full damage at all ranges',
       'tortoise': '+10 defense when adjacent to enemy',
       'blitz': 'Can attack multiple times per turn',

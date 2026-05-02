@@ -6,7 +6,7 @@
 ## 6 STALE findings (audit written before fixes landed)
 
 - religion F-11: `ReligionPanel` IS wired in `App.tsx:216` + `panelRegistry.ts:80` (shortcut R)
-- combat F-02: Directional facing/rear-arc partially implemented at `combatSystem.ts:349-402`; rear bonus is +5 (not +3/+6)
+- combat F-02: Directional battlefront flanking implemented through `CombatAnalytics.calculateBattlefrontFlankingBonus`; live combat and preview share +2/+3/+5 angle bonuses with Military Training and front-anchor gates.
 - combat F-03/F-13: `computeEffectiveCS` extracted in `CombatAnalytics.ts:12`; used by both `combatSystem.ts:240` + `CombatPreview.ts:715`
 - combat F-09: `handleAttackDistrict` fully implemented at `combatSystem.ts:617-759` with `districtHPs` map
 - commanders F-02: `GameState.ts:712` has `readonly commanders?: ReadonlyMap<string, CommanderState>`

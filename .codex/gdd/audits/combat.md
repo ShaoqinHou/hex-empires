@@ -24,9 +24,9 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 10 |
+| MATCH | 11 |
 | CLOSE | 2 |
-| DIVERGED | 1 |
+| DIVERGED | 0 |
 | MISSING | 1 |
 | EXTRA | 0 |
 
@@ -48,15 +48,15 @@
 
 ---
 
-### F-02: flanking-directional-vs-unit-count --- DIVERGED
+### F-02: flanking-directional-vs-unit-count --- MATCH
 
-**Location:** packages/engine/src/systems/combatSystem.ts:288-323
+**Location:** packages/engine/src/state/CombatAnalytics.ts:55-104; packages/engine/src/systems/combatSystem.ts:320-340,445-469; packages/engine/src/state/CombatPreview.ts:730-749,806-808
 **GDD reference:** systems/combat.md section Flanking and the Battlefront System
 **Severity:** HIGH  **Effort:** M
-**VII says:** A directional battlefront is established on first melee hit; defending unit faces attacker; subsequent attacks from flank (90 deg) or rear (180 deg) gain CS bonuses based on direction.
-**Engine does:** No facing/battlefront system. calculateFlankingBonus counts friendly military units adjacent to the defender -- +2 CS per flanker, capped at +6 (3 flankers), military_training required and 2+ flankers minimum.
-**Gap:** Engine has a unit-count flanking model (Civ VI-ish), not a directional battlefront. No UnitState.facing field. VII directional bonuses (+3 flank / +6 rear) are absent.
-**Recommendation:** Add facing?: HexDirection to UnitState; set on first melee engagement; calculate bonus from attack angle vs facing. Current count-based bonus can be repurposed as the separate support bonus (F-07).
+**VII says:** A melee engagement establishes a directional battlefront without manual facing; attacks from front-side, rear-side, and direct-rear vulnerable positions gain +2/+3/+5 CS once Military Training is unlocked. Source refresh 2026-05-03: Firaxis Dev Diary #5 confirms automatic battlefront facing; Fandom Combat_(Civ7) exposes the angle bonus values.
+**Engine does:** `UnitState.facing` exists. Surviving melee unit combat locks attacker and defender to face each other. `calculateBattlefrontFlankingBonus` requires Military Training, a defender facing, a same-owner melee/cavalry anchor on the defender's front tile, and a melee/cavalry attacker; then applies +2/+3/+5 by attack angle. `combatSystem` and `CombatPreview` both use the shared helper.
+**Gap:** None for the audited battlefront/flanking core. Commander and promotion modifiers that amplify flanking are still separate content/effect work.
+**Recommendation:** Keep all live and preview flanking logic routed through `CombatAnalytics.calculateBattlefrontFlankingBonus`; do not reintroduce count-based flanking outside the standalone support bonus.
 
 ---
 
@@ -115,7 +115,7 @@
 **Severity:** MED  **Effort:** S
 **VII says:** +2 CS per adjacent friendly unit. Any adjacent friendly provides it; no minimum count.
 **Engine does:** `combatSystem` and `CombatPreview` now apply a standalone support bonus of +2 CS per adjacent friendly unit, independently for attacker and defender. The bonus is not limited to a `support` unit category and has no minimum count.
-**Gap:** None for standalone support. Directional battlefront flanking remains separate F-02 work.
+**Gap:** None for standalone support. Directional battlefront flanking is handled separately in F-02.
 **Recommendation:** Keep preview and live resolution helpers aligned whenever flanking/support math changes.
 
 ---
@@ -188,7 +188,7 @@
 **VII says:** Effective CS must be calculated consistently in all contexts -- preview must match actual resolution.
 **Engine does:** `combatSystem` and `CombatPreview` both call `computeEffectiveCS` for wounded CS, both include civ/leader `MODIFY_COMBAT` effects, resource combat bonuses, commander aura, support, war-support penalty, river penalty, and ability-gated First Strike in their attack-strength paths. Focused preview parity tests cover the shared HP formula and damage preview/resolution agreement.
 **Gap:** None for the audited preview/live divergence. The two files still duplicate modifier assembly, so future combat changes should keep adding paired tests.
-**Recommendation:** Keep preview parity tests near every combat-strength change. Consider extracting the full effective-strength helper once directional battlefront work (F-02) lands.
+**Recommendation:** Keep preview parity tests near every combat-strength change. Consider extracting the full effective-strength helper if modifier assembly continues to grow.
 
 ---
 
@@ -212,7 +212,6 @@ None currently tracked for combat.
 
 ## Missing items (not yet implemented)
 
-- **Directional battlefront / facing** (UnitState.facing) -- required for VII flanking model; absent entirely.
 - **Multi-district siege model** -- VII requires per-district HP pools and sequential destruction; engine has single city HP bar.
 - **bombardStrength separation** -- GDD defines a separate bombardStrength for siege units vs fortified districts/naval; engine uses single rangedCombat field.
 
@@ -222,8 +221,8 @@ None currently tracked for combat.
 
 Paste into .codex/gdd/systems/combat.md section Mapping to hex-empires:
 
-Status: 10 MATCH / 2 CLOSE / 1 DIVERGED / 1 MISSING / 0 EXTRA (audit: .codex/gdd/audits/combat.md)
-Highest-severity: F-02 -- Engine still uses count-based flanking instead of Civ VII directional battlefront/facing.
+Status: 11 MATCH / 2 CLOSE / 0 DIVERGED / 1 MISSING / 0 EXTRA (audit: .codex/gdd/audits/combat.md)
+Highest-severity: F-09 -- Multi-district siege model remains simplified.
 
 ---
 
@@ -241,10 +240,9 @@ Highest-severity: F-02 -- Engine still uses count-based flanking instead of Civ 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
 | S (half-day) | F-10, F-14 content assignment | ~1h |
-| M (1-3 days) | F-02 | ~3d |
 | L (week+) | F-09 | ~2w |
-| **Total** | 4 open findings | **~2.5w** |
+| **Total** | 3 open findings | **~2w+** |
 
-Recommended order: F-14 content assignment (unit data only, after unit source audit) -> F-02 (directional flanking) -> F-09 (district siege model).
+Recommended order: F-14 content assignment (unit data only, after unit source audit) -> F-09 (district siege model).
 
 ---

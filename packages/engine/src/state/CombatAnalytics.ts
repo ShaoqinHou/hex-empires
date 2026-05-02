@@ -1,4 +1,5 @@
-import type { GameState, UnitCategory } from '../types/GameState';
+import type { GameState, UnitCategory, UnitState } from '../types/GameState';
+import type { HexCoord } from '../types/HexCoord';
 import type { PlayerId } from '../types/Ids';
 
 /**
@@ -49,6 +50,74 @@ export function computeCombatDamage(strengthDifference: number, multiplier: numb
 
 export function computeCombatDamageFromRoll(strengthDifference: number, randomRoll: number): number {
   return computeCombatDamage(strengthDifference, combatDamageMultiplier(randomRoll));
+}
+
+export const FLANKING_TECH_ID = 'military_training';
+export const FLANKING_FRONT_SIDE_BONUS = 2;
+export const FLANKING_REAR_SIDE_BONUS = 3;
+export const FLANKING_DIRECT_REAR_BONUS = 5;
+
+type HexDirection = NonNullable<UnitState['facing']>;
+
+const HEX_DIRECTIONS: ReadonlyArray<HexCoord> = [
+  { q: 1, r: 0 },   // 0 E
+  { q: 1, r: -1 },  // 1 NE
+  { q: 0, r: -1 },  // 2 NW
+  { q: -1, r: 0 },  // 3 W
+  { q: -1, r: 1 },  // 4 SW
+  { q: 0, r: 1 },   // 5 SE
+];
+
+function isFlankingCombatant(state: GameState, unit: UnitState): boolean {
+  if (unit.health <= 0) return false;
+  const category = state.config.units.get(unit.typeId)?.category;
+  return category === 'melee' || category === 'cavalry';
+}
+
+function findUnitAtPosition(state: GameState, position: HexCoord): UnitState | undefined {
+  for (const unit of state.units.values()) {
+    if (unit.position.q === position.q && unit.position.r === position.r) return unit;
+  }
+  return undefined;
+}
+
+export function hexDirectionIndex(from: HexCoord, to: HexCoord): number {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  return HEX_DIRECTIONS.findIndex(direction => direction.q === dq && direction.r === dr);
+}
+
+export function hexDirectionTarget(from: HexCoord, direction: HexDirection): HexCoord {
+  const offset = HEX_DIRECTIONS[direction];
+  return { q: from.q + offset.q, r: from.r + offset.r };
+}
+
+export function calculateBattlefrontFlankingBonus(
+  state: GameState,
+  attacker: UnitState,
+  defenderPosition: HexCoord,
+): number {
+  if (!isFlankingCombatant(state, attacker)) return 0;
+  const attackerPlayer = state.players.get(attacker.owner);
+  if (!attackerPlayer?.researchedTechs.includes(FLANKING_TECH_ID)) return 0;
+
+  const defender = findUnitAtPosition(state, defenderPosition);
+  if (!defender || defender.facing === undefined) return 0;
+
+  const anchorPosition = hexDirectionTarget(defender.position, defender.facing);
+  const anchor = findUnitAtPosition(state, anchorPosition);
+  if (!anchor || anchor.id === attacker.id || anchor.owner !== attacker.owner || !isFlankingCombatant(state, anchor)) {
+    return 0;
+  }
+
+  const attackDirection = hexDirectionIndex(defender.position, attacker.position);
+  if (attackDirection === -1) return 0;
+
+  const relativeDirection = (attackDirection - defender.facing + 6) % 6;
+  if (relativeDirection === 1 || relativeDirection === 5) return FLANKING_FRONT_SIDE_BONUS;
+  if (relativeDirection === 2 || relativeDirection === 4) return FLANKING_REAR_SIDE_BONUS;
+  if (relativeDirection === 3) return FLANKING_DIRECT_REAR_BONUS;
+  return 0;
 }
 
 /**

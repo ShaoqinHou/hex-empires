@@ -4,7 +4,13 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus, getWarSupportBonus } from '../state/EffectUtils';
-import { calculateFirstStrikeCombatBonus, computeCombatDamageFromRoll, computeEffectiveCS } from '../state/CombatAnalytics';
+import {
+  calculateBattlefrontFlankingBonus,
+  calculateFirstStrikeCombatBonus,
+  computeCombatDamageFromRoll,
+  computeEffectiveCS,
+  hexDirectionIndex,
+} from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 import type { ActiveTreaty } from '../types/Treaty';
@@ -36,7 +42,7 @@ function hasDenouncePresencePenalty(unitOwner: string, opponentOwner: string, st
 /**
  * CombatSystem handles unit attacks (both unit-vs-unit and unit-vs-city).
  * Combat formula (Civ-style):
- * - Damage = 30 * e^(strengthDiff / 25)
+ * - Damage = 30 * e^((ln(100/30)/30) * strengthDiff)
  * - strengthDiff = attacker effective strength - defender effective strength
  * - Modifiers: terrain defense, fortification, flanking, health penalty
  */
@@ -116,6 +122,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
 
   const updatedUnits = new Map(state.units);
   const logEntries = [...state.log];
+  let defenderRetreated = false;
 
   // Update attacker
   if (newAttackerHealth <= 0) {
@@ -199,6 +206,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     });
 
     if (retreatPosition) {
+      defenderRetreated = true;
       logEntries.push({
         turn: state.turn,
         playerId: state.currentPlayerId,
@@ -215,6 +223,10 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
         severity: 'info',
       });
     }
+  }
+
+  if (attackerRange === 0 && newAttackerHealth > 0 && newDefenderHealth > 0 && !defenderRetreated) {
+    lockBattlefront(updatedUnits, attacker.id, defender.id);
   }
 
   // Also increment kills if the attacker was killed (defender got the kill)
@@ -430,101 +442,28 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
 }
 
 /**
- * Flanking bonus per rulebook §6.7 + VII directional battlefront model (W4-03):
- *
- * Directional model (when defender has facing):
- *   - If the attacker is in the defender's rear arc (opposite to defender.facing ±1 direction),
- *     grant +5 CS rear-flank bonus (VII rear attack).
- *   - Otherwise fall through to the legacy count-based support bonus.
- *
- * Legacy / support model (when defender lacks facing or attacker is not in rear arc):
- *   - Requires military_training tech (F9).
- *   - Attacker must be melee/cavalry (F7).
- *   - Requires 2+ friendly MILITARY units adjacent to defender (F2, F5).
- *   - +2 CS per qualifying flanker, capped at +6 (3 flankers).
+ * Civ VII battlefront flanking:
+ *   - Requires Military Training, a defender facing, and a same-owner
+ *     battlefront anchor in the defender's front tile.
+ *   - Front-side / rear-side / direct-rear attacks grant +2 / +3 / +5 CS.
+ *   - Count-based adjacent-unit bonuses live in calculateSupportBonus instead.
  */
 function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
-  // F7: attacker must be melee/cavalry for any flanking to apply.
-  const attackerDef = state.config.units.get(attacker.typeId);
-  const attackerCategory = attackerDef?.category;
-  if (attackerCategory !== 'melee' && attackerCategory !== 'cavalry') return 0;
-
-  // Directional rear-flank check: requires the defender unit to have a known facing.
-  const defender = findUnitAtPosition(defenderPosition, state);
-  if (defender && defender.facing !== undefined) {
-    const attackAngleDir = hexDirectionIndex(defenderPosition, attacker.position);
-    if (attackAngleDir !== -1) {
-      // Rear arc: 3 directions centred on the direction OPPOSITE to defender's facing.
-      const oppositeDir = (defender.facing + 3) % 6;
-      if (isInRearArc(attackAngleDir, oppositeDir)) {
-        return 5; // VII rear-flank = +5 CS
-      }
-    }
-  }
-
-  // Legacy count-based support bonus (no facing or not a rear attack).
-  // F9: attacker's owner must have researched Military Training.
-  const attackerPlayer = state.players.get(attacker.owner);
-  if (!attackerPlayer) return 0;
-  if (!attackerPlayer.researchedTechs.includes('military_training')) return 0;
-
-  const defNeighbors = neighbors(defenderPosition);
-  let flankingCount = 0;
-  for (const [, u] of state.units) {
-    if (u.id === attacker.id) continue;           // exclude the attacker itself
-    if (u.owner !== attacker.owner) continue;      // only count friendly units
-    // F5: civilians and religious units do not contribute to flanking.
-    const uDef = state.config.units.get(u.typeId);
-    const uCategory = uDef?.category;
-    if (uCategory === 'civilian' || uCategory === 'religious') continue;
-    const isAdjacent = defNeighbors.some(n => n.q === u.position.q && n.r === u.position.r);
-    if (isAdjacent) flankingCount++;
-  }
-  // F2: rulebook requires 2+ friendly flankers — a single flanker grants nothing.
-  if (flankingCount < 2) return 0;
-  // Y5.1: +3 CS per flanking ally, capped at +9 (max 3 effective flankers)
-  return Math.min(flankingCount * 3, 9);
+  return calculateBattlefrontFlankingBonus(state, attacker, defenderPosition);
 }
 
 /**
- * Find a unit located at the given hex position.
- * Used to look up the defender's facing for directional flanking.
+ * Lock two surviving melee combatants into a battlefront facing each other.
  */
-function findUnitAtPosition(position: HexCoord, state: GameState): UnitState | undefined {
-  for (const [, u] of state.units) {
-    if (u.position.q === position.q && u.position.r === position.r) return u;
-  }
-  return undefined;
-}
-
-/**
- * Returns the HEX_DIRECTIONS index (0–5) for the direction from `from` to `to`
- * when they are exactly adjacent, or -1 if not adjacent or not a unit-step direction.
- * HEX_DIRECTIONS: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE
- */
-function hexDirectionIndex(from: HexCoord, to: HexCoord): number {
-  const dq = to.q - from.q;
-  const dr = to.r - from.r;
-  const HEX_DIRECTIONS = [
-    { q: 1, r: 0 },   // 0 E
-    { q: 1, r: -1 },  // 1 NE
-    { q: 0, r: -1 },  // 2 NW
-    { q: -1, r: 0 },  // 3 W
-    { q: -1, r: 1 },  // 4 SW
-    { q: 0, r: 1 },   // 5 SE
-  ];
-  return HEX_DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
-}
-
-/**
- * Returns true if `attackDir` is within the rear arc centred on `oppositeDir`.
- * The rear arc covers 3 directions: oppositeDir-1, oppositeDir, oppositeDir+1 (mod 6).
- * This is a 180° rear half-plane in hex direction space.
- */
-function isInRearArc(attackDir: number, oppositeDir: number): boolean {
-  const diff = ((attackDir - oppositeDir) + 6) % 6;
-  // diff === 0 → directly behind; diff === 1 → one step CW; diff === 5 → one step CCW
-  return diff === 0 || diff === 1 || diff === 5;
+function lockBattlefront(units: Map<string, UnitState>, attackerId: string, defenderId: string): void {
+  const attacker = units.get(attackerId);
+  const defender = units.get(defenderId);
+  if (!attacker || !defender) return;
+  const attackerFacing = hexDirectionIndex(attacker.position, defender.position);
+  const defenderFacing = hexDirectionIndex(defender.position, attacker.position);
+  if (attackerFacing === -1 || defenderFacing === -1) return;
+  units.set(attacker.id, { ...attacker, facing: attackerFacing as NonNullable<UnitState['facing']> });
+  units.set(defender.id, { ...defender, facing: defenderFacing as NonNullable<UnitState['facing']> });
 }
 
 /** Check if the attacker has a friendly unit adjacent to the defender */

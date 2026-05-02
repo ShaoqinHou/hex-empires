@@ -307,8 +307,8 @@ Base Damage = 30 (when attacker and defender have equal strength)
 ### 6.7 Flanking
 
 - Unlocked after researching **Military Training**.
-- Requires **2+ friendly units** adjacent to the target.
-- Melee combat creates a **Battlefront** (front facing). Attacks from the side or rear gain flanking bonus.
+- Requires an existing **Battlefront** anchor: a friendly melee/cavalry unit engaged on the target's front tile.
+- Melee combat creates a **Battlefront** (front facing). Attacks from front-side / rear-side / direct-rear vulnerable tiles gain +2 / +3 / +5 CS.
 - Cavalry ignores Zone of Control (ZoC) via **Swift** ability, making them ideal flankers.
 - Ironclad has +50% from Flanking.
 

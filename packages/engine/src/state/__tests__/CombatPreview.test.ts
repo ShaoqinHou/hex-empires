@@ -141,20 +141,22 @@ describe('calculateCombatPreview', () => {
     expect(preview.defenderWillDie).toBe(true);
   });
 
-  it('includes flanking bonus in modifiers', () => {
-    // Attacker at (3,3), defender at (4,3)
-    // Flankers at (5,3), (4,4), (3,4)
+  it('includes battlefront flanking bonus in modifiers', () => {
+    // Defender faces its battlefront anchor to the west; attacker hits from direct rear.
     const units = new Map([
-      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
-      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-      ['f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2 })],
-      ['f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: { q: 4, r: 4 }, movementLeft: 2 })],
+      ['anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 0, health: 100 })],
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 3 as const })],
     ]);
-    const state = createTestState({ units });
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: ['military_training'] })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, currentPlayerId: 'p1' });
     const preview = calculateCombatPreview(state, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);
-    expect(preview.modifiers.flankingBonus).toBe(4); // 2 flankers * 2
+    expect(preview.modifiers.flankingBonus).toBe(5);
   });
 
   it('adds +2 support per adjacent friendly to attacker and +4 with two', () => {

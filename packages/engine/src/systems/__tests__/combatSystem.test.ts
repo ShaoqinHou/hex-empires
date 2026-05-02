@@ -253,92 +253,68 @@ describe('combatSystem', () => {
   });
 });
 
-describe('combatSystem — flanking bonus', () => {
-  /**
-   * To isolate the flanking bonus we compare attacker damage dealt to the defender
-   * under identical conditions except for the number of friendly flankers.
-   * More flankers → higher attacker strength → more damage to defender → lower defender HP.
-   */
+describe('combatSystem — battlefront flanking', () => {
+  function buildBattlefrontState(opts: {
+    attackerPosition?: { q: number; r: number };
+    defenderFacing?: 0 | 1 | 2 | 3 | 4 | 5;
+    includeAnchor?: boolean;
+    researchedTechs?: string[];
+  } = {}) {
+    const defenderFacing = Object.prototype.hasOwnProperty.call(opts, 'defenderFacing') ? opts.defenderFacing : 3;
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: opts.attackerPosition ?? { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: defenderFacing })],
+    ]);
+    if (opts.includeAnchor !== false) {
+      units.set('anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 0, health: 100 }));
+    }
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: opts.researchedTechs ?? ['military_training'] })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    return createTestState({ units, players, currentPlayerId: 'p1', rng: { seed: 7, counter: 0 } });
+  }
 
-  function buildFlankedState(flankerCount: 0 | 1 | 2 | 3 | 4) {
-    // Attacker at (3,3), defender at (4,3).
-    // Positions adjacent to the defender (its 6 neighbours): (5,3),(4,4),(3,4),(4,2),(3,3),(5,2)
-    // We use (5,3), (4,4), (3,4) as flanker slots (excluding the attacker's own hex).
-    const flankerPositions = [
-      { q: 5, r: 3 },
-      { q: 4, r: 4 },
-      { q: 3, r: 4 },
-      { q: 5, r: 2 },
-    ];
-
+  it('surviving melee combatants face each other after the first melee exchange', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
     ]);
-
-    for (let i = 0; i < flankerCount; i++) {
-      const fid = `f${i + 1}`;
-      units.set(fid, createTestUnit({ id: fid, owner: 'p1', typeId: 'warrior', position: flankerPositions[i], movementLeft: 2 }));
-    }
-
-    // Rulebook §6.7: flanking requires Military Training researched.
-    const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', researchedTechs: ['military_training'] })],
-      ['p2', createTestPlayer({ id: 'p2' })],
-    ]);
-
-    return createTestState({ units, players, currentPlayerId: 'p1' });
-  }
-
-  it('0 flankers: no bonus (baseline)', () => {
-    // We just verify the test runs; baseline is established by comparing against 2-flanker case.
-    const state = buildFlankedState(0);
+    const state = createTestState({ units, currentPlayerId: 'p1', rng: { seed: 7, counter: 0 } });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const defender = next.units.get('d1');
-    // Defender should take damage
-    if (defender) expect(defender.health).toBeLessThan(100);
+
+    expect(next.units.get('a1')?.facing).toBe(0);
+    expect(next.units.get('d1')?.facing).toBe(3);
   });
 
-  it('1 flanker: no bonus applied (rulebook §6.7 requires 2+ flankers)', () => {
-    const state0 = buildFlankedState(0);
-    const state1 = buildFlankedState(1);
-    // Same RNG seed; 1 flanker grants 0 bonus, so damage should be identical.
-    const next0 = combatSystem(state0, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const next1 = combatSystem(state1, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const def0HP = next0.units.get('d1')?.health ?? 0;
-    const def1HP = next1.units.get('d1')?.health ?? 0;
-    expect(def1HP).toBe(def0HP);
+  it('direct rear attack gains battlefront flanking when an anchor holds the front', () => {
+    const rear = combatSystem(buildBattlefrontState(), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const noFacing = combatSystem(buildBattlefrontState({ defenderFacing: undefined }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(rear.units.get('d1')?.health ?? 0).toBeLessThan(noFacing.units.get('d1')?.health ?? 0);
   });
 
-  it('2 flankers: defender takes more damage than with 0 flankers (2+ threshold met)', () => {
-    const state0 = buildFlankedState(0);
-    const state2 = buildFlankedState(2);
-    const next0 = combatSystem(state0, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const next2 = combatSystem(state2, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const def0HP = next0.units.get('d1')?.health ?? 0;
-    const def2HP = next2.units.get('d1')?.health ?? 0;
-    expect(def2HP).toBeLessThan(def0HP);
+  it('requires Military Training and an existing same-owner battlefront anchor', () => {
+    const withBonus = combatSystem(buildBattlefrontState(), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const noTech = combatSystem(buildBattlefrontState({ researchedTechs: [] }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const noAnchor = combatSystem(buildBattlefrontState({ includeAnchor: false }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    const bonusHP = withBonus.units.get('d1')?.health ?? 0;
+    expect(bonusHP).toBeLessThan(noTech.units.get('d1')?.health ?? 0);
+    expect(bonusHP).toBeLessThan(noAnchor.units.get('d1')?.health ?? 0);
   });
 
-  it('3 flankers: defender takes more damage than with 2 flankers', () => {
-    const state2 = buildFlankedState(2);
-    const state3 = buildFlankedState(3);
-    const next2 = combatSystem(state2, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const next3 = combatSystem(state3, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const def2HP = next2.units.get('d1')?.health ?? 0;
-    const def3HP = next3.units.get('d1')?.health ?? 0;
-    expect(def3HP).toBeLessThan(def2HP);
-  });
+  it('count-only adjacent units no longer create flanking without a battlefront', () => {
+    const baseline = buildBattlefrontState({ attackerPosition: { q: 3, r: 3 }, defenderFacing: undefined, includeAnchor: false });
+    const units = new Map(baseline.units);
+    units.set('f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 2 }, health: 100 }));
+    units.set('f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: { q: 4, r: 4 }, health: 100 }));
+    units.set('f3', createTestUnit({ id: 'f3', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, health: 100 }));
 
-  it('4 flankers: same damage as 3 flankers (cap at +6 from 3 units)', () => {
-    const state3 = buildFlankedState(3);
-    const state4 = buildFlankedState(4);
-    const next3 = combatSystem(state3, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const next4 = combatSystem(state4, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const def3HP = next3.units.get('d1')?.health ?? 0;
-    const def4HP = next4.units.get('d1')?.health ?? 0;
-    // 4th flanker adds no extra bonus (cap is already reached at 3)
-    expect(def4HP).toBe(def3HP);
+    const nextBaseline = combatSystem(baseline, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextCountOnly = combatSystem({ ...baseline, units }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextCountOnly.units.get('d1')?.health).toBe(nextBaseline.units.get('d1')?.health);
   });
 });
 
@@ -859,72 +835,6 @@ describe('combatSystem — S6: war support CS penalty', () => {
 
     // No war → no penalty; penalised state deals less damage → defender has more HP
     expect(defHPPeace).toBeLessThanOrEqual(defHPPenalised);
-  });
-});
-
-// ── W4-03: Directional flanking ──
-
-describe('combatSystem — W4-03: directional rear-flank bonus', () => {
-  it('rear attack on a defender with facing = 0 (E) gets +5 CS when attacker is in western arc', () => {
-    // Defender faces E (0). Rear is W (3). Attacker at q=3,r=3, defender at q=4,r=3.
-    // Attack direction: from defender (4,3) → attacker (3,3) = dq=-1,dr=0 = direction 3 (W) = rear.
-    const units = new Map([
-      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
-      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
-    ]);
-    const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1' })],
-      ['p2', createTestPlayer({ id: 'p2' })],
-    ]);
-    const state = createTestState({ units, players, currentPlayerId: 'p1' });
-    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    // Rear flank = +5 CS for attacker → more damage → defender has lower HP than without flank.
-    // We compare against a front attack (attacker in front of defender).
-    const frontUnits = new Map([
-      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
-      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
-    ]);
-    const frontState = createTestState({ units: frontUnits, players, currentPlayerId: 'p1' });
-    const frontNext = combatSystem(frontState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-
-    const rearDefHP = next.units.get('d1')?.health ?? 100;
-    const frontDefHP = frontNext.units.get('d1')?.health ?? 100;
-    // Rear attack deals more damage → defender has less HP remaining
-    expect(rearDefHP).toBeLessThanOrEqual(frontDefHP);
-  });
-
-  it('front attack on a defender with facing gets no rear-flank bonus (same as facing=undefined)', () => {
-    // Attacker is at q=5,r=3 — east side of defender at q=4,r=3. Attack direction = direction 0 (E) from defender.
-    // Defender faces E (0). Front = E (0). Rear arc = W (3) ± 1. E is NOT in rear arc → no rear bonus.
-    // Defender faces E (0) means rear is W. Attacker is to the E = front = no bonus.
-    // Same position for both scenarios (same RNG seed), only facing differs; facing shouldn't change outcome
-    // when it's a front attack (attacker at e=5,r=3 relative to defender at 4,3).
-    const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1' })],
-      ['p2', createTestPlayer({ id: 'p2' })],
-    ]);
-
-    // Defender facing E (0) — attacker also to the E → front attack
-    const unitsFrontFacing = new Map([
-      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
-      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 0 as const })],
-    ]);
-    // No facing
-    const unitsNoFacing = new Map([
-      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
-      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-    ]);
-
-    const stateWithFrontFacing = createTestState({ units: unitsFrontFacing, players, currentPlayerId: 'p1' });
-    const stateNoFacing = createTestState({ units: unitsNoFacing, players, currentPlayerId: 'p1' });
-
-    const nextFront = combatSystem(stateWithFrontFacing, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-    const nextNoFacing = combatSystem(stateNoFacing, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-
-    // Front attack with facing should not grant rear bonus — same result as no-facing
-    const frontDefHP = nextFront.units.get('d1')?.health ?? 100;
-    const noFacingDefHP = nextNoFacing.units.get('d1')?.health ?? 100;
-    expect(frontDefHP).toBe(noFacingDefHP);
   });
 });
 

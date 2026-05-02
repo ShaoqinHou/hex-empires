@@ -10,6 +10,7 @@ import {
   computeCombatDamage,
   computeCombatDamageFromRoll,
   calculateFirstStrikeCombatBonus,
+  calculateBattlefrontFlankingBonus,
 } from '../CombatAnalytics';
 import type { CityState } from '../../types/GameState';
 import { createTestState, createTestUnit, createTestPlayer } from '../../systems/__tests__/helpers';
@@ -73,6 +74,37 @@ describe('computeCombatDamage', () => {
   it('maps normalized random rolls to the Civ VII 70-130% range', () => {
     expect(computeCombatDamageFromRoll(0, 0)).toBe(21);
     expect(computeCombatDamageFromRoll(0, 1)).toBe(39);
+  });
+});
+
+describe('calculateBattlefrontFlankingBonus', () => {
+  function buildBattlefront(attackerPosition: { q: number; r: number }, researchedTechs: ReadonlyArray<string> = ['military_training']) {
+    const units = new Map([
+      ['anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, health: 100 })],
+      ['attacker', createTestUnit({ id: 'attacker', owner: 'p1', typeId: 'warrior', position: attackerPosition, health: 100 })],
+      ['defender', createTestUnit({ id: 'defender', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 3 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    return createTestState({ units, players, currentPlayerId: 'p1' });
+  }
+
+  it('uses Civ VII angle bands: +2 front-side, +3 rear-side, +5 direct rear', () => {
+    expect(calculateBattlefrontFlankingBonus(buildBattlefront({ q: 4, r: 2 }), createTestUnit({ id: 'attacker', owner: 'p1', position: { q: 4, r: 2 } }), { q: 4, r: 3 })).toBe(2);
+    expect(calculateBattlefrontFlankingBonus(buildBattlefront({ q: 5, r: 2 }), createTestUnit({ id: 'attacker', owner: 'p1', position: { q: 5, r: 2 } }), { q: 4, r: 3 })).toBe(3);
+    expect(calculateBattlefrontFlankingBonus(buildBattlefront({ q: 5, r: 3 }), createTestUnit({ id: 'attacker', owner: 'p1', position: { q: 5, r: 3 } }), { q: 4, r: 3 })).toBe(5);
+  });
+
+  it('requires Military Training and an existing battlefront anchor', () => {
+    const rearAttacker = createTestUnit({ id: 'attacker', owner: 'p1', position: { q: 5, r: 3 } });
+    expect(calculateBattlefrontFlankingBonus(buildBattlefront({ q: 5, r: 3 }, []), rearAttacker, { q: 4, r: 3 })).toBe(0);
+
+    const noAnchor = buildBattlefront({ q: 5, r: 3 });
+    const units = new Map(noAnchor.units);
+    units.delete('anchor');
+    expect(calculateBattlefrontFlankingBonus({ ...noAnchor, units }, rearAttacker, { q: 4, r: 3 })).toBe(0);
   });
 });
 

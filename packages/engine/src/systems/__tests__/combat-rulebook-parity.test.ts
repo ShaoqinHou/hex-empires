@@ -403,70 +403,58 @@ describe('R66: Walls — +100 HP to district, walls must be destroyed before cap
 
 // ── §6.7 Flanking ──
 
-describe('R67: Flanking — +3 CS per adjacent friendly unit (capped at +9)', () => {
-  function buildFlankedScenario(flankers: number, seed: number): GameState {
-    // Attacker at (3,3), defender at (4,3). Neighbors of (4,3) include (5,3), (4,4), (5,2), (3,4), (4,2), (3,3 itself=attacker).
-    const flankerCoords = [
-      { q: 5, r: 3 },
-      { q: 5, r: 2 },
-      { q: 4, r: 2 },
-      { q: 4, r: 4 },
-      { q: 3, r: 4 },
-    ].slice(0, flankers);
-
+describe('R67: Flanking — Civ VII directional battlefront bonuses', () => {
+  function buildBattlefrontScenario(seed: number, opts: {
+    attackerPosition?: { q: number; r: number };
+    defenderFacing?: 0 | 1 | 2 | 3 | 4 | 5;
+    includeAnchor?: boolean;
+    researchedTechs?: string[];
+  } = {}): GameState {
+    const defenderFacing = Object.prototype.hasOwnProperty.call(opts, 'defenderFacing') ? opts.defenderFacing : 3;
     const units = new Map<string, UnitState>();
-    units.set('a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 }));
-    units.set('d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 }));
-    flankerCoords.forEach((pos, i) => {
-      units.set(`f${i}`, createTestUnit({ id: `f${i}`, owner: 'p1', typeId: 'warrior', position: pos, movementLeft: 2, health: 100 }));
-    });
-    // Rulebook §6.7: flanking requires Military Training researched.
+    units.set('a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: opts.attackerPosition ?? { q: 5, r: 3 }, movementLeft: 2, health: 100 }));
+    units.set('d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: defenderFacing }));
+    if (opts.includeAnchor !== false) {
+      units.set('anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 0, health: 100 }));
+    }
     const players = new Map([
-      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra', researchedTechs: ['military_training'] })],
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra', researchedTechs: opts.researchedTechs ?? ['military_training'] })],
       ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
     ]);
     return createTestState({ units, players, currentPlayerId: 'p1', rng: { seed, counter: 0 } });
   }
 
-  it('2 flankers increases damage vs 0 flankers (2+ threshold met)', () => {
-    // Rulebook §6.7 requires 2+ flankers; a single flanker grants no bonus.
-    let dmg0 = 0, dmg2 = 0;
+  it('direct rear battlefront attack increases damage vs the same attack without facing', () => {
+    let rearDamage = 0;
+    let noFacingDamage = 0;
     for (let seed = 1; seed <= 100; seed++) {
-      const r0 = combatSystem(buildFlankedScenario(0, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      const r2 = combatSystem(buildFlankedScenario(2, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      dmg0 += (100 - (r0.units.get('d1')?.health ?? 0));
-      dmg2 += (100 - (r2.units.get('d1')?.health ?? 0));
+      const rear = combatSystem(buildBattlefrontScenario(seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+      const noFacing = combatSystem(buildBattlefrontScenario(seed, { defenderFacing: undefined }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+      rearDamage += 100 - (rear.units.get('d1')?.health ?? 0);
+      noFacingDamage += 100 - (noFacing.units.get('d1')?.health ?? 0);
     }
-    expect(dmg2).toBeGreaterThan(dmg0);
+    expect(rearDamage).toBeGreaterThan(noFacingDamage);
   });
 
-  it('4 flankers deal same damage as 3 when the extra flanker adds no support adjacency', () => {
-    let dmg3 = 0, dmg4 = 0;
-    for (let seed = 1; seed <= 50; seed++) {
-      const r3 = combatSystem(buildFlankedScenario(3, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      const r4 = combatSystem(buildFlankedScenario(4, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      dmg3 += (100 - (r3.units.get('d1')?.health ?? 0));
-      dmg4 += (100 - (r4.units.get('d1')?.health ?? 0));
-    }
-    expect(dmg4).toBe(dmg3);
+  it('flanking requires Military Training and a same-owner battlefront anchor', () => {
+    const rear = combatSystem(buildBattlefrontScenario(7), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const noTech = combatSystem(buildBattlefrontScenario(7, { researchedTechs: [] }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const noAnchor = combatSystem(buildBattlefrontScenario(7, { includeAnchor: false }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(rear.units.get('d1')?.health ?? 0).toBeLessThan(noTech.units.get('d1')?.health ?? 0);
+    expect(rear.units.get('d1')?.health ?? 0).toBeLessThan(noAnchor.units.get('d1')?.health ?? 0);
   });
 
-  it('R67a: flanking bonus magnitude ≈ +4 CS at the 2-flanker threshold', () => {
-    // Baseline: no flankers. Warrior vs warrior, avg damage ≈ 30.
-    // With 2 flankers (minimum per §6.7): +6 CS, avg ≈ 30 × e^(6/25) ≈ 38.1.
-    let total = 0, totalFl = 0;
-    for (let seed = 1; seed <= 200; seed++) {
-      const base = combatSystem(buildFlankedScenario(0, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      const fl = combatSystem(buildFlankedScenario(2, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
-      total += 100 - base.units.get('d1')!.health;
-      totalFl += 100 - fl.units.get('d1')!.health;
-    }
-    const avg = total / 200;
-    const avgFl = totalFl / 200;
-    const delta = avgFl - avg;
-    // Expected delta: ≈ 38.1 - 30 = 8.1. Allow a generous margin.
-    expect(delta).toBeGreaterThan(1);
-    expect(delta).toBeLessThan(10);
+  it('adjacent-unit count alone does not create a flanking bonus', () => {
+    const baseline = buildBattlefrontScenario(11, { attackerPosition: { q: 3, r: 3 }, defenderFacing: undefined, includeAnchor: false });
+    const units = new Map(baseline.units);
+    units.set('f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 2 }, movementLeft: 2, health: 100 }));
+    units.set('f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: { q: 4, r: 4 }, movementLeft: 2, health: 100 }));
+    units.set('f3', createTestUnit({ id: 'f3', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 }));
+
+    const base = combatSystem(baseline, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const countOnly = combatSystem({ ...baseline, units }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(countOnly.units.get('d1')?.health).toBe(base.units.get('d1')?.health);
   });
 });
 

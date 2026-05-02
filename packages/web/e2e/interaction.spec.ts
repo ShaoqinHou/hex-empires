@@ -970,6 +970,15 @@ test.describe('Building placement overlay (Cycle 4)', () => {
     const settler = await ownUnit(page, 'settler');
     const cityTile = settler.position;
     await dispatch(page, { type: 'FOUND_CITY', unitId: settler.id, name: 'TestCity' });
+    await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      const p = s.players.get(s.currentPlayerId);
+      if (!p) return;
+      s.players.set(p.id, {
+        ...p,
+        researchedTechs: Array.from(new Set([...(p.researchedTechs ?? []), 'pottery'])),
+      });
+    });
     const after = await getState(page);
     if (after!.cityCount === 0) test.skip(true, 'founding rejected on this seed');
     // Return the first own city.

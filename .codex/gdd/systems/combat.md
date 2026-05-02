@@ -139,17 +139,18 @@ Key ZoC rules:
 
 ### Flanking and the Battlefront System
 
-When a melee unit first attacks another unit, a **battlefront** is established. The defending unit’s facing direction is set toward the attacker. Subsequent attacks from non-front directions gain a flanking bonus. [Source: Firaxis Dev Diary #5]
+When a melee unit attacks another unit and both combatants survive in adjacent tiles, a **battlefront** is established. Both units face each other automatically; the player does not manually choose facing. Subsequent attacks by other melee/cavalry units from vulnerable directions can gain a flanking bonus. [Source: Firaxis Dev Diary #5]
 
 Flanking bonus tiers:
 
 | Attack direction | CS bonus to attacker |
 |---|---|
 | Front (same direction as established battlefront) | +0 CS |
-| Flank (90 degrees from battlefront) | +3 CS [INFERRED; exact value unconfirmed] |
-| Rear (180 degrees from battlefront) | +6 CS [INFERRED; exact value unconfirmed] |
+| Adjacent to front side | +2 CS |
+| Adjacent to rear side | +3 CS |
+| Directly to rear | +5 CS |
 
-**Flanking requires the Military Training technology** to unlock the battlefront mechanic. Before researching Military Training, attacks from any direction deal no flanking bonus. [Source: Game8 Ground Combat Guide]
+**Flanking requires the Military Training technology**. Before researching Military Training, an engagement can still establish unit facing for continuity, but attacks from any direction deal no flanking bonus. [Source: Fandom Combat_(Civ7), source refresh 2026-05-03.]
 
 The **Skirmish** promotion grants **+50% to any flanking bonus received**, making cavalry and mobile units significantly more dangerous when attacking from flank or rear positions. [Source: Fandom Combat_(Civ7) via search]
 
@@ -229,7 +230,7 @@ function effectiveCS(unit, tile, isFortified, adjacentFriendlyCount, flankingBon
     fortify  = +5 if isFortified else 0
     walls    = +15 if insideFortifiedDistrict and districtHasWalls else 0
     support  = adjacentFriendlyCount * 2
-    flanking = flankingBonus                      # 0 front, +3 flank, +6 rear [INFERRED]
+    flanking = flankingBonus                      # 0 front, +2 front-side, +3 rear-side, +5 rear
     warAdv   = -warSupportPenalty if warSupportPenalty > 0 else 0
     return base + wounded + first + terrain + fortify + walls + support + flanking + warAdv
 ```
@@ -331,21 +332,20 @@ The following mechanics are new or significantly changed from Civ VI:
 ---
 ## Open Questions
 
-1. **Exact flanking CS values:** The +3/+6 CS for flank/rear attack is [INFERRED]. No primary source has confirmed exact numeric values.
-2. **Spearman anti-cavalry bonus:** Whether spearman-line units retain a specific CS bonus against cavalry is unconfirmed. Fandom Land_unit_(Civ7) suggests anti-cavalry class is gone, but hints at unit-specific spearman promotions.
-3. **War Support floor:** The exact minimum value for War Support (and thus the maximum CS penalty it can impose) is not documented in any sourced material.
-4. **Enemy territory healing rate:** 5 HP vs. 10 HP conflict between GamesRadar and a second source. Needs direct Fandom wiki verification once 403 is resolved.
-5. **District siege split damage ratio:** When a siege unit with the Siege ability attacks a fortified district, how is damage split between the district HP and the unit inside? No primary source found.
+1. **Spearman anti-cavalry bonus:** Whether spearman-line units retain a specific CS bonus against cavalry is unconfirmed. Fandom Land_unit_(Civ7) suggests anti-cavalry class is gone, but hints at unit-specific spearman promotions.
+2. **War Support floor:** The exact minimum value for War Support (and thus the maximum CS penalty it can impose) is not documented in any sourced material.
+3. **Enemy territory healing rate:** 5 HP vs. 10 HP conflict between GamesRadar and a second source. Needs direct Fandom wiki verification once 403 is resolved.
+4. **District siege split damage ratio:** When a siege unit with the Siege ability attacks a fortified district, how is damage split between the district HP and the unit inside? No primary source found.
 6. **Ranged unit melee defense CS:** When a ranged unit is forced into melee, does it use rangedStrength or combatStrength for defense? [INFERRED] to use combatStrength like Civ VI but not confirmed.
 7. **Promotion list completeness:** The full list of combat-affecting promotions (beyond Skirmish and the inferred heal-rate promotions) is not sourced.
 
 ---
 ## Mapping to hex-empires
 
-**Status tally:** 10 MATCH / 2 CLOSE / 1 DIVERGED / 1 MISSING / 0 EXTRA
+**Status tally:** 11 MATCH / 2 CLOSE / 0 DIVERGED / 1 MISSING / 0 EXTRA
 **Audit:** [.codex/gdd/audits/combat.md](../audits/combat.md)
-**Highest-severity finding:** F-02 — flanking-directional-vs-unit-count - (DIVERGED, HIGH)
-**Convergence status:** Divergent — 1 finding(s) require(s) architectural refactor
+**Highest-severity finding:** F-09 — siege-district-hp-model-missing - (MISSING, HIGH)
+**Convergence status:** Partial — 1 VII mechanic(s) absent
 
 _(Full details in audit file. 14 total finding(s). Regenerated by `.codex/scripts/aggregate-audits.py`.)_
 
@@ -368,12 +368,11 @@ _(Full details in audit file. 14 total finding(s). Regenerated by `.codex/script
 
 **[INFERRED] list:**
 
-1. Flanking CS values (+3 flank, +6 rear) are not confirmed by primary source.
-2. Religion combat tenet effects exist but are not specifically documented for Civ VII.
-3. War Support has a floor (cap on maximum CS penalty).
-4. Melee simultaneous elimination is possible.
-5. Battlefront facing resets on unit teleport/transport.
-7. Ranged units use melee CS for defense when melee-attacked.
-8. Wall +15 CS bonus applies to melee defense only, not ranged return fire.
-9. Cavalry suffers no additional contextual CS penalty beyond terrain bonus in rough terrain.
+1. Religion combat tenet effects exist but are not specifically documented for Civ VII.
+2. War Support has a floor (cap on maximum CS penalty).
+3. Melee simultaneous elimination is possible.
+4. Battlefront facing resets on unit teleport/transport.
+5. Ranged units use melee CS for defense when melee-attacked.
+6. Wall +15 CS bonus applies to melee defense only, not ranged return fire.
+7. Cavalry suffers no additional contextual CS penalty beyond terrain bonus in rough terrain.
 

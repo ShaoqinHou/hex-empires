@@ -9,7 +9,7 @@ import { createGameConfig } from '../../state/GameConfigFactory';
 /**
  * Y5 combat depth tests (Y5.1, Y5.2, Y5.3).
  *
- * Y5.1 — Flanking bonus: +3 CS per flanking ally, capped at +9 (3 effective flankers).
+ * Y5.1 — Flanking bonus: Civ VII directional battlefront bonuses.
  * Y5.2 — Terrain modifiers: Forest +25%, Mountain +50%, Hills +25%, River crossing -25%.
  * Y5.3 — Support adjacency: adjacent friendly support unit grants +2 CS.
  *
@@ -65,61 +65,41 @@ function avgDamage(buildFn: (seed: number) => GameState, samples = 200): number 
 
 // ── Y5.1: Flanking bonus ─────────────────────────────────────────────────────
 
-describe('Y5.1: flanking bonus — +3 CS per ally, cap +9', () => {
-  const FLANK_A = { q: 5, r: 3 }; // adjacent to defender (4,3)
-  const FLANK_B = { q: 5, r: 2 };
-  const FLANK_C = { q: 4, r: 2 };
-  const FLANK_E = { q: 4, r: 4 };
+describe('Y5.1: battlefront flanking — directional bonuses', () => {
+  function battlefrontUnits(opts: {
+    attackerPosition?: { q: number; r: number };
+    defenderFacing?: 0 | 1 | 2 | 3 | 4 | 5;
+    includeAnchor?: boolean;
+  } = {}) {
+    const defenderFacing = Object.prototype.hasOwnProperty.call(opts, 'defenderFacing') ? opts.defenderFacing : 3;
+    const units = new Map<string, UnitState>([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: opts.attackerPosition ?? { q: 5, r: 3 }, movementLeft: 2, health: 99 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: defenderFacing })],
+    ]);
+    if (opts.includeAnchor !== false) {
+      units.set('anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, health: 100 }));
+    }
+    return units;
+  }
 
-  it('1 flanking ally → +3 CS (base case; requires military_training & 1+ adjacent ally above 2-ally floor)', () => {
-    // Per rulebook the minimum is 2 allies for legacy flanking. But the directional
-    // rear-flank model fires at 1. Since both units here are melee and military_training
-    // is unlocked, the legacy path requires 2+. With only 1 flanker the legacy bonus
-    // should remain 0. We verify WITH 2 flankers to isolate the +3-per-ally math.
-    const baseline = damageTo(buildScenario({ seed: 7 }));
-    const with2 = damageTo(buildScenario({
-      seed: 7,
-      units: new Map([
-        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
-        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-        ['f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: FLANK_A, health: 100 })],
-        ['f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: FLANK_B, health: 100 })],
-      ]),
-    }));
-    // 2 flankers → +6 CS (3 * 2). Attacker deals more damage.
-    expect(with2).toBeGreaterThan(baseline);
+  it('direct rear attack behind an established battlefront increases damage', () => {
+    const withBattlefront = damageTo(buildScenario({ seed: 7, units: battlefrontUnits() }));
+    const noFacing = damageTo(buildScenario({ seed: 7, units: battlefrontUnits({ defenderFacing: undefined }) }));
+    expect(withBattlefront).toBeGreaterThan(noFacing);
   });
 
-  it('1 flanking ally (below 2+ threshold) grants zero bonus', () => {
-    const baseline = damageTo(buildScenario({ seed: 9 }));
-    const with1 = damageTo(buildScenario({
-      seed: 9,
-      units: new Map([
-        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
-        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-        ['f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: FLANK_A, health: 100 })],
-      ]),
-    }));
-    // Single flanker = legacy path requires 2+, so zero bonus → same damage as baseline.
-    expect(with1).toBe(baseline);
-  });
-
-  it('4 flanking allies → same damage as 3 when the extra ally adds no support adjacency', () => {
-    const units3 = new Map([
+  it('existing adjacent units do not create flanking without battlefront facing', () => {
+    const baseline = new Map<string, UnitState>([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
-      ['f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: FLANK_A, health: 100 })],
-      ['f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: FLANK_B, health: 100 })],
-      ['f3', createTestUnit({ id: 'f3', owner: 'p1', typeId: 'warrior', position: FLANK_C, health: 100 })],
     ]);
-    const units4 = new Map([
-      ...units3,
-      ['f4', createTestUnit({ id: 'f4', owner: 'p1', typeId: 'warrior', position: FLANK_E, health: 100 })],
+    const countOnly = new Map<string, UnitState>([
+      ...baseline,
+      ['f1', createTestUnit({ id: 'f1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 2 }, health: 100 })],
+      ['f2', createTestUnit({ id: 'f2', owner: 'p1', typeId: 'warrior', position: { q: 4, r: 4 }, health: 100 })],
+      ['f3', createTestUnit({ id: 'f3', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, health: 100 })],
     ]);
-    const with3 = damageTo(buildScenario({ seed: 13, units: units3 }));
-    const with4 = damageTo(buildScenario({ seed: 13, units: units4 }));
-    // Both capped at +9 (3 effective allies), with the same separate support count.
-    expect(with4).toBe(with3);
+    expect(damageTo(buildScenario({ seed: 9, units: countOnly }))).toBe(damageTo(buildScenario({ seed: 9, units: baseline })));
   });
 });
 
