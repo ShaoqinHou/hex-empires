@@ -96,7 +96,11 @@ Run-Step "spawn-worktree-safety-doc" {
     "outside the current repo",
     "Do not place agent worktrees under this repository",
     "git rev-parse --show-toplevel",
-    "Unsafe worktree"
+    "Unsafe worktree",
+    "isolated clone fallback",
+    "agent-clones",
+    "git clone --branch",
+    "Unsafe clone"
   )) {
     if ($skill -notmatch [regex]::Escape($required)) {
       throw "spawn-worktree skill missing safety guidance: $required"

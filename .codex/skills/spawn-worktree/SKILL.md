@@ -9,6 +9,11 @@ Creates a git worktree with a `safe-commit.sh` sentinel so the agent's
 commits are machine-blocked from landing anywhere other than the worktree
 itself.
 
+If this repository is itself checked out through parent-module git metadata,
+`git worktree` can resolve the new checkout's top-level to the shared
+`.git/modules/...` directory instead of the working tree. In that case, do not
+use the worktree. Use the isolated-clone fallback below.
+
 Phase 6d WF-GUARD-1 — motivated by the Phase 6c leak where an agent's
 commit landed on `main` despite being assigned to a worktree.
 
@@ -19,8 +24,9 @@ commit landed on `main` despite being assigned to a worktree.
   in-flight work.
 - Commits must stay inside the worktree until the orchestrator cherry-picks them.
 
-Do NOT use for single-agent work or when you want the agent to commit
-directly to a branch you own.
+Do NOT use for single-agent work or when you want the agent to commit directly
+to a branch you own. If the worktree validation fails, switch to an isolated
+clone sandbox instead of relaxing the guard.
 
 ## Protocol
 
@@ -72,6 +78,42 @@ if ((git -C $WORKTREE_DIR status --short | Measure-Object).Count -ne 0) {
 }
 ```
 
+If this validation fails with a top-level under `.git/modules/...`, or `git
+status --short` shows repository-wide deletions plus untracked `.git` internals,
+remove the failed worktree and use the isolated clone fallback. This is expected
+for the current Codex checkout of `hex-empires`.
+
+### 1b. Isolated clone fallback for module-backed checkouts
+
+Use a clone when `git worktree` cannot pass the top-level/status validation.
+The clone is slower to create but has independent `.git` metadata and validates
+cleanly on Windows.
+
+```powershell
+$BRANCH = "codex/<task-slug>"
+$CLONE_DIR = Join-Path $env:LOCALAPPDATA "Codex\agent-clones\hex-empires\<task-slug>"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CLONE_DIR) | Out-Null
+git clone --branch codex/civ7-refactor-cycle --single-branch "C:\Users\housh\.codex\worktrees\0f31\hex-empires" $CLONE_DIR
+git -C $CLONE_DIR checkout -b $BRANCH
+
+$top = (git -C $CLONE_DIR rev-parse --show-toplevel).Trim()
+$expected = (Resolve-Path $CLONE_DIR).Path
+if (($top -replace "\\", "/").TrimEnd("/") -ne ($expected -replace "\\", "/").TrimEnd("/")) {
+  throw "Unsafe clone: git top-level resolved to $top, expected $expected"
+}
+if ((git -C $CLONE_DIR status --short | Measure-Object).Count -ne 0) {
+  throw "Unsafe clone: new clone is not clean"
+}
+```
+
+For clone sandboxes, give the agent the clone path and branch. After the agent
+commits, integrate with:
+
+```powershell
+git fetch $CLONE_DIR $BRANCH
+git cherry-pick FETCH_HEAD
+```
+
 ### 3. Hand the worktree path to the agent
 
 Spawn the subagent with a task prompt that names the worktree absolute path and
@@ -113,6 +155,7 @@ The sentinel file is `.gitignore`'d so it never lands in any commit.
 | Agent spawns a shell outside the worktree and inherits CWD | **BLOCK** | must cd in |
 | `.git` dir resolves through a shared dir pointing at main | **BLOCK** | forces investigation |
 | New worktree is nested under the current repo and reports mass deletions | **DO NOT USE** | remove it and recreate outside the repo |
+| External worktree still resolves to `.git/modules/...` or reports mass deletions | **DO NOT USE** | remove it and use the isolated clone fallback |
 | Agent uses `git worktree` to create ANOTHER worktree inside theirs and commits there | pass (that sub-worktree's toplevel matches) | might be surprising but is correct per git semantics |
 | Agent removes the sentinel and commits | pass | escape hatch; logged only if the agent also sets `Skip-Review:` trailer |
 | Normal user runs `git commit` with no sentinel present | pass | no-op (guard is opt-in via sentinel existence) |
