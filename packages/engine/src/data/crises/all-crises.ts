@@ -123,6 +123,43 @@ export const TRADE_DISRUPTION: CrisisEventDef = {
   ],
 } as const;
 
+export const EXPLORATION_REVOLUTION: CrisisEventDef = {
+  id: 'exploration_revolution',
+  name: 'Flames in the Capital',
+  description:
+    'Rival factions, newly politicized guilds, and radical preachers have ignited unrest in your capital. The old order may not survive the night.',
+  triggerCondition: 'turn_reached',
+  triggerValue: 55,
+  age: 'exploration',
+  crisisType: 'revolution',
+  choices: [
+    {
+      id: 'negotiate_reforms',
+      text: 'Negotiate sweeping reforms and placate the city elders (+2 culture, -2 gold).',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 2 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: -2 },
+      ],
+    },
+    {
+      id: 'mobilize_militias',
+      text: 'Mobilize loyal militias and crush unrest (+2 production, -1 culture).',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'production', value: 2 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: -1 },
+      ],
+    },
+    {
+      id: 'call_new_constitution',
+      text: 'Call for a new constitutional assembly (+1 faith, +1 science).',
+      effects: [
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'faith', value: 1 },
+        { type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 1 },
+      ],
+    },
+  ],
+} as const;
+
 export const SOLAR_ECLIPSE: CrisisEventDef = {
   id: 'solar_eclipse',
   name: 'Solar Eclipse',
@@ -169,6 +206,7 @@ export const ALL_CRISES: ReadonlyArray<CrisisEventDef> = [
   NATURAL_DISASTER,
   RELIGIOUS_SCHISM,
   TRADE_DISRUPTION,
+  EXPLORATION_REVOLUTION,
   SOLAR_ECLIPSE,
   ...EXPANSION_CRISES,
 ];

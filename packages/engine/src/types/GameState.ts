@@ -481,6 +481,16 @@ export interface PlayerState {
   readonly policySwapWindowOpen?: boolean;
   /** True if the player's government is locked for the current age (one-switch rule) */
   readonly governmentLockedForAge?: boolean;
+  /**
+   * Forced government-selection prompt opened by crisis flows.
+   * While present, only governments listed in `options` may be selected.
+   */
+  readonly pendingGovernmentChoice?: {
+    readonly reason: 'revolutions_final_stage';
+    readonly options: ReadonlyArray<string>;
+    readonly sourceCrisisType: 'revolution';
+    readonly sourceStage: 1 | 2 | 3;
+  } | null;
 
   // ── Crisis Phase (W2-05) ──
   /**

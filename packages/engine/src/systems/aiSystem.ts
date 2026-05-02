@@ -626,10 +626,19 @@ function pickCivVIIParityAction(
   state: GameState,
   player: Pick<
     PlayerState,
-    'id' | 'civilizationId' | 'faith' | 'researchedCivics' | 'pantheonId' | 'governmentId' | 'slottedPolicies'
+    'id' | 'civilizationId' | 'faith' | 'researchedCivics' | 'pantheonId' | 'governmentId' | 'slottedPolicies' | 'pendingGovernmentChoice'
   >,
   ourCities: ReadonlyArray<CityState>,
 ): GameAction | null {
+  const pendingGovernmentChoice = player.pendingGovernmentChoice ?? null;
+  if (pendingGovernmentChoice !== null && pendingGovernmentChoice.options.length > 0) {
+    return {
+      type: 'SET_GOVERNMENT',
+      playerId: player.id,
+      governmentId: pendingGovernmentChoice.options[0],
+    };
+  }
+
   // Shared helper: does the player have any city with a Temple?
   const hasTempleCity = ourCities.some(c =>
     (c.buildings as ReadonlyArray<string>).includes('temple'),
@@ -701,6 +710,7 @@ function pickCivVIIParityAction(
     const candidate = [...state.config.governments.values()].find(g =>
       g.age === state.age.currentAge &&
       researched.has(g.unlockCivic) &&
+      g.crisisRequired === undefined &&
       (g.civRequired === undefined || g.civRequired === player.civilizationId)
     );
     if (candidate) {

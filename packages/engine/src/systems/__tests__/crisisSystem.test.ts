@@ -221,6 +221,30 @@ describe('crisisSystem', () => {
       const next = crisisSystem(state, { type: 'END_TURN' });
       expect(next.crises.find(c => c.id === 'age_crisis')).toBeUndefined();
     });
+
+    it('does not trigger crises from a different age', () => {
+      const state = createTestState({
+        turn: 55,
+        age: { currentAge: 'antiquity', ageThresholds: { exploration: 100, modern: 200 } },
+        config: {
+          ...createTestState().config,
+          crises: [
+            {
+              id: 'exploration_revolution_test',
+              name: 'Exploration Revolution',
+              description: 'Wrong-age crisis.',
+              triggerCondition: 'turn_reached',
+              triggerValue: 55,
+              age: 'exploration',
+              crisisType: 'revolution',
+              choices: [{ id: 'act', text: 'Act', effects: [] }],
+            },
+          ],
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      expect(next.crises.find(c => c.id === 'exploration_revolution_test')).toBeUndefined();
+    });
   });
 
   describe('crisis stage advancement (W2-05 F-03)', () => {
@@ -258,6 +282,103 @@ describe('crisisSystem', () => {
       const updatedPlayer = next.players.get('p1')!;
       expect(updatedPlayer.crisisPhase).toBe('stage3');
       expect(updatedPlayer.crisisPolicySlots).toBe(4);
+    });
+
+    it('opens a forced revolutionary government choice at Exploration Revolutions stage3', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        ageProgress: 90,
+        crisisPhase: 'stage2',
+        crisisPolicySlots: 3,
+        crisisPolicies: ['p1', 'p2', 'p3'],
+        governmentId: 'feudal_monarchy',
+        slottedPolicies: ['discipline', null, null, null],
+        governmentLockedForAge: true,
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: {
+          currentAge: 'exploration',
+          ageThresholds: { exploration: 100, modern: 100 },
+          activeCrisisType: 'revolution',
+        },
+        crises: [{
+          id: 'exploration_revolution',
+          name: 'Flames in the Capital',
+          active: true,
+          turn: 55,
+          choices: [],
+          resolvedBy: null,
+          choiceMade: null,
+          stage: 2,
+          pendingResolution: false,
+        }],
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage3');
+      expect(updatedPlayer.governmentId).toBeNull();
+      expect(updatedPlayer.slottedPolicies).toEqual([]);
+      expect(updatedPlayer.governmentLockedForAge).toBe(false);
+      expect(updatedPlayer.pendingGovernmentChoice).toEqual({
+        reason: 'revolutions_final_stage',
+        sourceCrisisType: 'revolution',
+        sourceStage: 3,
+        options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+      });
+    });
+
+    it('does not open revolutionary government choice without an active final Revolutions crisis', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        ageProgress: 90,
+        crisisPhase: 'stage2',
+        crisisPolicySlots: 3,
+        crisisPolicies: ['p1', 'p2', 'p3'],
+        governmentId: 'feudal_monarchy',
+        governmentLockedForAge: true,
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: {
+          currentAge: 'exploration',
+          ageThresholds: { exploration: 100, modern: 100 },
+          activeCrisisType: 'revolution',
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage3');
+      expect(updatedPlayer.governmentId).toBe('feudal_monarchy');
+      expect(updatedPlayer.pendingGovernmentChoice ?? null).toBeNull();
+    });
+
+    it('does not open revolutionary government choice for non-Revolutions crises', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        ageProgress: 90,
+        crisisPhase: 'stage2',
+        crisisPolicySlots: 3,
+        crisisPolicies: ['p1', 'p2', 'p3'],
+        governmentId: 'feudal_monarchy',
+        governmentLockedForAge: true,
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        age: {
+          currentAge: 'exploration',
+          ageThresholds: { exploration: 100, modern: 100 },
+          activeCrisisType: 'wars_of_religion',
+        },
+      });
+      const next = crisisSystem(state, { type: 'END_TURN' });
+      const updatedPlayer = next.players.get('p1')!;
+      expect(updatedPlayer.crisisPhase).toBe('stage3');
+      expect(updatedPlayer.governmentId).toBe('feudal_monarchy');
+      expect(updatedPlayer.pendingGovernmentChoice ?? null).toBeNull();
     });
 
     it('does NOT advance resolved phase', () => {

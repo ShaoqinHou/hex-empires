@@ -37,6 +37,11 @@ export interface GovernmentCelebrationBonus {
   readonly description: string;
 }
 
+export interface GovernmentCrisisRequirement {
+  readonly crisisType: 'revolution';
+  readonly minStage: 1 | 2 | 3;
+}
+
 export interface GovernmentDef {
   readonly id: string;
   readonly name: string;
@@ -50,6 +55,8 @@ export interface GovernmentDef {
   readonly celebrationBonuses: readonly [GovernmentCelebrationBonus, GovernmentCelebrationBonus];
   /** If set, this government is only available to the specified civilization. Undefined = universal. */
   readonly civRequired?: string;
+  /** If set, this government is only available through a matching crisis flow. */
+  readonly crisisRequired?: GovernmentCrisisRequirement;
 }
 
 // ── Antiquity ──
@@ -224,6 +231,7 @@ export const REVOLUTIONARY_REPUBLIC: GovernmentDef = {
       description: 'Empire war support increased by 6 for the celebration window.',
     },
   ],
+  crisisRequired: { crisisType: 'revolution', minStage: 3 },
 };
 
 export const REVOLUTIONARY_AUTHORITARIANISM: GovernmentDef = {
@@ -247,6 +255,7 @@ export const REVOLUTIONARY_AUTHORITARIANISM: GovernmentDef = {
       description: 'Influence toward Sanctions increased by 100% for the celebration window.',
     },
   ],
+  crisisRequired: { crisisType: 'revolution', minStage: 3 },
 };
 
 export const CONSTITUTIONAL_MONARCHY: GovernmentDef = {
@@ -270,6 +279,7 @@ export const CONSTITUTIONAL_MONARCHY: GovernmentDef = {
       description: 'Influence toward Diplomatic Endeavors increased by 100% for the celebration window.',
     },
   ],
+  crisisRequired: { crisisType: 'revolution', minStage: 3 },
 };
 
 // ── Modern ──

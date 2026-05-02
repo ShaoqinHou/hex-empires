@@ -88,6 +88,11 @@ export interface GovernmentCelebrationBonus {
   readonly effects: ReadonlyArray<EffectDef>;
 }
 
+export interface GovernmentCrisisRequirement {
+  readonly crisisType: 'revolution';
+  readonly minStage: 1 | 2 | 3;
+}
+
 // ── Government definition ──
 
 /**
@@ -115,6 +120,7 @@ export interface GovernmentDef {
   ];
   readonly legacyBonus: EffectDef | null;
   readonly description: string;
+  readonly crisisRequired?: GovernmentCrisisRequirement;
 }
 
 // ── Policy definition ──

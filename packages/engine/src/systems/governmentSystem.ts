@@ -76,14 +76,39 @@ export function findPolicy(id: PolicyId, config: GameConfig): PolicyDef | undefi
   return config.policies.get(id);
 }
 
+function pendingGovernmentChoiceIncludes(
+  player: PlayerState,
+  governmentId: GovernmentId,
+): boolean {
+  return player.pendingGovernmentChoice?.options.includes(governmentId) ?? false;
+}
+
+function satisfiesCrisisRequirement(
+  player: PlayerState,
+  gov: GovernmentDef,
+): boolean {
+  if (!gov.crisisRequired) return true;
+
+  const pendingChoice = player.pendingGovernmentChoice ?? null;
+  if (pendingChoice === null) return false;
+  if (!pendingChoice.options.includes(gov.id)) return false;
+  return (
+    pendingChoice.sourceCrisisType === gov.crisisRequired.crisisType &&
+    pendingChoice.sourceStage >= gov.crisisRequired.minStage
+  );
+}
+
 /**
  * Pure validator: can the player adopt the named Government?
  * - Government must exist.
  * - Government's age must match the current game age (civic-tree F-07 age-gate).
- * - Player's `researchedCivics` must include the Government's unlockCivic.
+ * - Player's `researchedCivics` must include the Government's unlockCivic,
+ *   unless this is a forced crisis-government choice.
  * - Civ-specific Governments require the player's current civilization.
+ * - Crisis-specific Governments require a matching pending Government choice.
  * - Player must not already be on that Government.
- * - Player must not have `governmentLockedForAge === true`.
+ * - Player must not have `governmentLockedForAge === true`, unless resolving
+ *   a forced crisis-government choice.
  */
 export function canAdoptGovernment(
   state: GameState,
@@ -93,17 +118,27 @@ export function canAdoptGovernment(
   const player = state.players.get(playerId);
   if (!player) return false;
 
-  // Per-age lock (W2-03 CT F-07)
-  if (player.governmentLockedForAge === true) return false;
-
   const gov = findGovernment(governmentId, state.config);
   if (!gov) return false;
+
+  const hasPendingChoice = (player.pendingGovernmentChoice ?? null) !== null;
+  const isPendingChoice = pendingGovernmentChoiceIncludes(player, governmentId);
+
+  // Forced crisis-government prompts are exclusive: no other government may be
+  // selected until the prompt is resolved.
+  if (hasPendingChoice && !isPendingChoice) return false;
+
+  // Per-age lock (W2-03 CT F-07). Crisis-forced governments are the one
+  // documented exception.
+  if (player.governmentLockedForAge === true && !isPendingChoice) return false;
 
   // Age-gate (civic-tree F-07): government must belong to the current age.
   // A player in Antiquity cannot adopt a Modern government such as Communism.
   if (gov.age !== state.age.currentAge) return false;
 
-  if (!player.researchedCivics.includes(gov.unlockCivic)) return false;
+  if (!satisfiesCrisisRequirement(player, gov)) return false;
+
+  if (!isPendingChoice && !player.researchedCivics.includes(gov.unlockCivic)) return false;
 
   if (gov.civRequired !== undefined && player.civilizationId !== gov.civRequired) {
     return false;
@@ -196,6 +231,8 @@ function applyAdoptGovernment(
   const gov = findGovernment(governmentId, state.config);
   if (!gov) return state;
 
+  const resolvesPendingGovernmentChoice = pendingGovernmentChoiceIncludes(player, governmentId);
+
   const updated: PlayerWithGovernment = {
     ...player,
     governmentId,
@@ -203,6 +240,13 @@ function applyAdoptGovernment(
     slottedPolicies: emptySlotArray(gov, state.age.currentAge, player),
     // Lock this player's government for the rest of the age (W2-03 CT F-07)
     governmentLockedForAge: true,
+    ...(resolvesPendingGovernmentChoice
+      ? {
+          pendingGovernmentChoice: null,
+          pendingCelebrationChoice: { governmentId },
+          crisisPhase: 'resolved' as const,
+        }
+      : {}),
   };
 
   return updatePlayer(state, playerId, updated);

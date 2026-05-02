@@ -100,6 +100,7 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     crisisLegacyUnlocked: false,
     policySwapWindowOpen: false,
     governmentLockedForAge: false,
+    pendingGovernmentChoice: null,
     // Z3.2: Dedicated milestone fields — default 0
     artifactsInMuseums: 0,
     distantLandPoints: 0,

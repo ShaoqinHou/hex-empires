@@ -178,6 +178,15 @@ describe('ALL_GOVERNMENTS', () => {
       expect(g!.unlockCivic, `${id} unlockCivic must be nationalism`).toBe('nationalism');
     }
   });
+
+  it('three exploration crisis-locked governments require the final Revolutions crisis stage', () => {
+    const crisisLocked = ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'];
+    for (const id of crisisLocked) {
+      const g = ALL_GOVERNMENTS.find((gov) => gov.id === id);
+      expect(g, `${id} must exist`).toBeDefined();
+      expect(g!.crisisRequired).toEqual({ crisisType: 'revolution', minStage: 3 });
+    }
+  });
 });
 
 // ── Policies ──

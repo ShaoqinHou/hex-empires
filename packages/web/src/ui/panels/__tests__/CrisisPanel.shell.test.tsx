@@ -109,6 +109,11 @@ function makeStateWithCrisisPhase(
         ['god_king', { id: 'god_king', name: 'God King', category: 'economic', description: '+2 Gold per turn.', bonus: {} }],
         ['urban_planning', { id: 'urban_planning', name: 'Urban Planning', category: 'economic', description: '+1 Production per city.', bonus: {} }],
       ]),
+      governments: new Map([
+        ['revolutionary_republic', { id: 'revolutionary_republic', name: 'Revolutionary Republic', description: 'Born of popular revolution.' }],
+        ['revolutionary_authoritarianism', { id: 'revolutionary_authoritarianism', name: 'Revolutionary Authoritarianism', description: 'Authoritarian revolutionary order.' }],
+        ['constitutional_monarchy', { id: 'constitutional_monarchy', name: 'Constitutional Monarchy', description: 'A constitutional settlement.' }],
+      ]),
     } as unknown as GameState['config'],
     diplomacy: { relations: new Map() },
     victory: { winner: null, winType: null, progress: new Map() },
@@ -190,6 +195,35 @@ describe('CrisisPanel (persistent PanelShell)', () => {
     expect(mockRef.dispatch).toHaveBeenCalledWith({
       type: 'FORCE_CRISIS_POLICY',
       policyId: 'discipline',
+    });
+  });
+
+  it('renders and dispatches a forced revolutionary government choice', () => {
+    const state = makeStateWithCrisisPhase('stage3', 4, ['discipline', 'god_king', 'urban_planning']);
+    const player = state.players.get('p1')!;
+    const updatedPlayers = new Map(state.players);
+    updatedPlayers.set('p1', {
+      ...player,
+      pendingGovernmentChoice: {
+        reason: 'revolutions_final_stage',
+        sourceCrisisType: 'revolution',
+        sourceStage: 3,
+        options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+      },
+    });
+    mockRef.state = { ...state, players: updatedPlayers };
+    const { getByTestId, queryByTestId } = render(
+      <PanelManagerProvider initialPanel="crisis">
+        <CrisisPanel onClose={() => {}} />
+      </PanelManagerProvider>
+    );
+
+    expect(queryByTestId('panel-close-crisis')).toBeNull();
+    fireEvent.click(getByTestId('crisis-government-revolutionary_republic'));
+    expect(mockRef.dispatch).toHaveBeenCalledWith({
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolutionary_republic',
     });
   });
 

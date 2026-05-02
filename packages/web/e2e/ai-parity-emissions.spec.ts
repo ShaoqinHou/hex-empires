@@ -3,13 +3,13 @@
  * dispatches the new Civ VII parity actions introduced by M20's a3428ad:
  * ADOPT_PANTHEON, SET_GOVERNMENT, SLOT_POLICY.
  *
- * Strategy: start a multi-AI game with a deterministic seed, advance ~30–50
- * END_TURNs, then inspect the AI PlayerState for non-null `pantheonId` /
- * `governmentId`. Assertions are tolerant — if a specific field never fires
- * on the chosen seed, we fall back to a weaker but still verifiable claim
- * (faith > 0, a civic has been researched, etc.).
+ * Strategy: start multi-AI games with deterministic seeds, advance turns, and
+ * inspect AI PlayerState for parity fields. Pantheon adoption is seeded with
+ * explicit valid prerequisites so the assertion proves AI action dispatch
+ * instead of depending on incidental faith economy outcomes.
  *
- * All helpers are inline (no cross-spec imports per task constraint).
+ * Scenario helpers are local; shared turn advancement handles existing
+ * gameplay blockers consistently with the rest of the E2E suite.
  */
 import { test, expect, Page } from '@playwright/test';
 import { advanceTurns, endTurnAndWait } from './helpers/turnFlow';
@@ -174,6 +174,53 @@ async function aiSnapshot(page: Page): Promise<AIPlayerSnapshot[]> {
   });
 }
 
+async function seedAIPantheonCandidate(page: Page): Promise<{ playerId: string; cityId: string }> {
+  return page.evaluate(() => {
+    const s = (window as any).__gameState;
+    if (!s) throw new Error('Cannot seed AI pantheon candidate before game state is ready');
+
+    const players = s.players as Map<string, Record<string, unknown>>;
+    const cities = s.cities as Map<string, Record<string, unknown>>;
+    const ais = [...players.values()].filter((p) => !(p as { isHuman?: boolean }).isHuman);
+    const candidate = ais.find((ai) => [...cities.values()].some((city) => city['owner'] === ai['id']));
+    if (!candidate) throw new Error('No AI with a founded city is available for pantheon seeding');
+
+    const city = [...cities.values()].find((c) => c['owner'] === candidate['id']);
+    if (!city) throw new Error(`AI ${String(candidate['id'])} has no city to receive a Temple`);
+
+    const researchedCivics = new Set([...((candidate['researchedCivics'] as string[] | undefined) ?? []), 'mysticism']);
+    players.set(candidate['id'] as string, {
+      ...candidate,
+      faith: Math.max((candidate['faith'] as number | undefined) ?? 0, 25),
+      pantheonId: null,
+      researchedCivics: [...researchedCivics],
+    });
+
+    const buildings = new Set([...((city['buildings'] as string[] | undefined) ?? []), 'temple']);
+    cities.set(city['id'] as string, {
+      ...city,
+      buildings: [...buildings],
+    });
+
+    return {
+      playerId: candidate['id'] as string,
+      cityId: city['id'] as string,
+    };
+  });
+}
+
+async function expectSeededAIAdoptsPantheon(page: Page, numAI: number, seed: number) {
+  await startMultiAI(page, numAI, seed);
+  await advance(page, 10);
+  const seeded = await seedAIPantheonCandidate(page);
+  await advance(page, 1);
+  const ais = await aiSnapshot(page);
+  const target = ais.find((p) => p.id === seeded.playerId);
+  expect(target).toBeDefined();
+  expect(target!.pantheonId).not.toBeNull();
+  expect(typeof target!.pantheonId).toBe('string');
+}
+
 async function turn(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __gameState: { turn: number } }).__gameState.turn);
 }
@@ -218,23 +265,12 @@ test.describe('AI parity emissions over turns', () => {
     }
   });
 
-  test('after ~30 turns — at least one AI adopted a pantheon OR accumulated faith', async ({ page }) => {
+  test('seeded prerequisites — an AI adopts a pantheon on its next turn', async ({ page }) => {
     test.setTimeout(60_000);
-    await startMultiAI(page, 2, 2);
-    await advance(page, 30);
+    await expectSeededAIAdoptsPantheon(page, 2, 2);
     const ais = await aiSnapshot(page);
     expect(ais.length).toBeGreaterThanOrEqual(1);
-
-    const withPantheon = ais.filter((p) => p.pantheonId !== null);
-    if (withPantheon.length > 0) {
-      // Strong claim: AI actually dispatched ADOPT_PANTHEON.
-      expect(withPantheon.length).toBeGreaterThanOrEqual(1);
-      expect(typeof withPantheon[0].pantheonId).toBe('string');
-    } else {
-      // Fallback: at least one AI has faith > 0 — pantheon prerequisite.
-      const withFaith = ais.filter((p) => p.faith > 0);
-      expect(withFaith.length).toBeGreaterThanOrEqual(1);
-    }
+    expect(ais.some((p) => p.pantheonId !== null)).toBe(true);
   });
 
   test('after ~50 turns — at least one AI set a government OR researched a civic', async ({ page }) => {
@@ -281,24 +317,20 @@ test.describe('AI parity emissions over turns', () => {
     expect(seen[seen.length - 1] - startTurn).toBe(40);
   });
 
-  test('with 2 AI opponents — at least one AI accumulates non-zero faith by turn 30', async ({ page }) => {
+  test('with 2 AI opponents — seeded pantheon prerequisites resolve through AI turn logic', async ({ page }) => {
     test.setTimeout(60_000);
-    await startMultiAI(page, 2, 2);
-    await advance(page, 30);
+    await expectSeededAIAdoptsPantheon(page, 2, 2);
     const ais = await aiSnapshot(page);
     expect(ais.length).toBe(2);
-    const anyFaith = ais.some((p) => p.faith > 0 || p.pantheonId !== null);
-    expect(anyFaith).toBe(true);
+    expect(ais.some((p) => p.pantheonId !== null)).toBe(true);
   });
 
-  test('with 3 AI opponents — at least one AI accumulates non-zero faith by turn 30', async ({ page }) => {
+  test('with 3 AI opponents — seeded pantheon prerequisites resolve through AI turn logic', async ({ page }) => {
     test.setTimeout(60_000);
-    await startMultiAI(page, 3, 5);
-    await advance(page, 30);
+    await expectSeededAIAdoptsPantheon(page, 3, 5);
     const ais = await aiSnapshot(page);
     expect(ais.length).toBe(3);
-    const anyFaith = ais.some((p) => p.faith > 0 || p.pantheonId !== null);
-    expect(anyFaith).toBe(true);
+    expect(ais.some((p) => p.pantheonId !== null)).toBe(true);
   });
 
   test('parity fields are exposed on player snapshot (schema check)', async ({ page }) => {

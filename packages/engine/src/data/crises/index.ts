@@ -6,6 +6,7 @@ export {
   NATURAL_DISASTER,
   RELIGIOUS_SCHISM,
   TRADE_DISRUPTION,
+  EXPLORATION_REVOLUTION,
   SOLAR_ECLIPSE,
 } from './all-crises';
 export {

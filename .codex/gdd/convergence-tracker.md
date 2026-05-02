@@ -23,7 +23,7 @@
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 1M / 2C / 1D / 4X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
-| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 4M / 4C / 0D / 0X / 0E |
+| government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 5M / 3C / 0D / 0X / 0E |
 | independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 0M / 0C / 1D / 7X / 0E |
 | leaders | `.codex/gdd/audits/leaders.md` | 11 | 1M / 1C / 3D / 5X / 1E |
 | legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 13 | 1M / 4C / 5D / 3X / 0E |
@@ -93,7 +93,7 @@
 | diplomacy-influence | F-07 | Independent Powers interaction | ⊘ MISSING | L | Entire engine |
 | government-policies | F-01 | Typed slot categories retained -- all slots should be wildca | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
 | government-policies | F-02 | Chiefdom listed as a VII government -- does not exist in VII | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts` |
-| government-policies | F-03 | Exploration Age government roster wrong | ≈ CLOSE | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
+| government-policies | F-03 | Exploration Age government roster wrong | ✓ MATCH | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/data |
 | government-policies | F-05 | Government celebration bonuses missing from GovernmentDef da | ≈ CLOSE | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
 | independent-powers | F-01 | `IndependentPowerState` entity absent | ⊘ MISSING | M | `types/GameState.ts` |
 | independent-powers | F-02 | `independentPowerSystem.ts` absent | ⊘ MISSING | L | `systems/` (no file) |
@@ -350,8 +350,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 48 |
-| CLOSE | 56 |
+| MATCH | 49 |
+| CLOSE | 55 |
 | DIVERGED | 65 |
 | MISSING | 99 |
 | EXTRA | 18 |

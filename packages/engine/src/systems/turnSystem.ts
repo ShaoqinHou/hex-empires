@@ -264,6 +264,17 @@ function handleEndTurn(state: GameState): GameState {
       };
     }
 
+    if ((currentPlayer?.pendingGovernmentChoice?.options.length ?? 0) > 0) {
+      return {
+        ...state,
+        lastValidation: {
+          valid: false,
+          reason: 'Choose a revolutionary government before ending your turn.',
+          category: 'general',
+        },
+      };
+    }
+
     const hasBlockingEvent = state.log.some(
       e => e.turn === state.turn &&
            e.playerId === state.currentPlayerId &&

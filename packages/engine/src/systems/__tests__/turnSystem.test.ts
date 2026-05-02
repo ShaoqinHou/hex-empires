@@ -380,6 +380,28 @@ describe('turnSystem — END_TURN blocksTurn guard', () => {
   });
 
   describe('END_TURN crisis policy gate (W2-05 F-03)', () => {
+    it('blocks END_TURN while a forced revolutionary government choice is pending', () => {
+      const player = createTestPlayer({
+        id: 'p1',
+        isHuman: true,
+        pendingGovernmentChoice: {
+          reason: 'revolutions_final_stage',
+          sourceCrisisType: 'revolution',
+          sourceStage: 3,
+          options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+        },
+      });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+      });
+      const next = turnSystem(state, { type: 'END_TURN' });
+      expect(next.lastValidation).not.toBeNull();
+      expect(next.lastValidation!.valid).toBe(false);
+      if (next.lastValidation!.valid === false) {
+        expect(next.lastValidation!.reason).toContain('revolutionary government');
+      }
+    });
+
     it('blocks END_TURN when crisis policy slots are unfilled', () => {
       const player = createTestPlayer({
         id: 'p1',

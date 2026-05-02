@@ -60,16 +60,16 @@
 
 ---
 
-### F-03: Exploration Age government roster wrong -- CLOSE
+### F-03: Exploration Age government roster wrong -- MATCH
 
-**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/data/crises/all-crises.ts`, `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/systems/crisisSystem.ts`, `packages/engine/src/systems/turnSystem.ts`, `packages/web/src/ui/panels/CrisisPanel.tsx`
 **GDD reference:** `government-policies.md` § "Exploration Age Governments"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Exploration Age standard governments are **Theocracy**, **Plutocracy**, **Feudal Monarchy**. Plus three crisis-unlocked revolutionary governments (Revolutionary Republic, Revolutionary Authoritarianism, Constitutional Monarchy) available only if Revolutions crisis fires.
-**Engine does:** Exploration Age data now includes `THEOCRACY`, `PLUTOCRACY`, `FEUDAL_MONARCHY`, `REVOLUTIONARY_REPUBLIC`, `REVOLUTIONARY_AUTHORITARIANISM`, and `CONSTITUTIONAL_MONARCHY`.
-**Gap:** The revolutionary governments are data-present but are not actually gated by a Revolutions crisis outcome; `unlockCivic: 'nationalism'` is only a proxy.
-**Recommendation:** Add an explicit crisis requirement field and enforce it in `canAdoptGovernment`, including the forced revolutionary replacement flow when the Revolutions crisis reaches its final stage.
+**Engine does:** Exploration Age data includes the three standard governments plus `REVOLUTIONARY_REPUBLIC`, `REVOLUTIONARY_AUTHORITARIANISM`, and `CONSTITUTIONAL_MONARCHY`, each with `crisisRequired: { crisisType: 'revolution', minStage: 3 }`. Exploration crisis data now includes a selectable `revolution` crisis type. Normal government adoption excludes crisis-gated governments; when an Exploration Revolutions crisis reaches stage 3, `crisisSystem` revokes the current government, opens a three-option `pendingGovernmentChoice`, `turnSystem` blocks END_TURN until that choice is resolved, `governmentSystem` allows the forced choice through the age lock and triggers a pending celebration for the new revolutionary government, AI resolves the same pending choice, and `CrisisPanel` exposes the three choices for human players.
+**Gap:** None for explicit Revolutions gating and forced revolutionary replacement flow.
+**Recommendation:** Keep crisis-gated governments data-driven via `crisisRequired`; future crisis-policy cleanup should reuse the same final-stage prompt instead of adding a parallel revolutionary switch path.
 
 ---
 
@@ -146,10 +146,9 @@ None. (The typed-slot categories in F-01 are technically extras but paired with 
 
 ## Missing items
 
-1. Revolutionary Exploration governments need explicit Revolutions-crisis gating and forced switch behavior (F-03).
-2. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
-3. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
-4. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
+1. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
+2. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
+3. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
 
 ---
 
@@ -168,19 +167,22 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 - `packages/engine/src/systems/governmentSystem.ts`
 - `packages/engine/src/types/Government.ts`
 - `packages/engine/src/data/governments/governments.ts`
+- `packages/engine/src/data/crises/all-crises.ts`
+- `packages/engine/src/systems/crisisSystem.ts`
+- `packages/engine/src/systems/turnSystem.ts`
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
+- `packages/web/src/ui/panels/CrisisPanel.tsx`
 
-**Status:** 4 MATCH / 4 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
+**Status:** 5 MATCH / 3 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity active findings:** F-03 — revolutionary Exploration governments are data-present but not Revolutions-gated; F-05 — celebration bonuses are data-present but not structured as canonical effects.
+**Highest-severity active finding:** F-05 — celebration bonuses are data-present but not structured as canonical effects.
 
 ---
 
 ## Open questions
 
-1. What exact state flag should gate the three revolutionary Exploration governments after a Revolutions crisis?
-2. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
-3. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
+1. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
+2. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
 
 ---
 
@@ -189,11 +191,11 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 | Bucket | Findings | Total effort |
 |---|---|---|
 | S (half-day) | F-08 | 0.5d |
-| M (1-3 days) | F-03, F-05, F-07 | ~5-7d |
+| M (1-3 days) | F-05, F-07 | ~3-5d |
 | L (week+) | — | — |
-| **Remaining active work** | 4 | **~5.5-7.5d** |
+| **Remaining active work** | 3 | **~3.5-5.5d** |
 
-Recommended order: F-03 (Revolutions gating/forced switch), F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
+Recommended order: F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
 
 ---
 

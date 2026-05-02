@@ -123,6 +123,82 @@ describe('governmentSystem', () => {
     expect(canAdoptGovernment(state, 'p1', 'revolucion')).toBe(false);
   });
 
+  it('SET_GOVERNMENT rejects revolutionary governments without a Revolutions final-stage choice', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        researchedCivics: ['nationalism'],
+      }),
+    );
+    const state = createTestState({
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+    const action: GovernmentAction = {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolutionary_republic',
+    };
+    const next = governmentSystem(state, action);
+    expect(next).toBe(state);
+    expect(canAdoptGovernment(state, 'p1', 'revolutionary_republic')).toBe(false);
+  });
+
+  it('SET_GOVERNMENT rejects non-option governments while a Revolutions choice is pending', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        researchedCivics: ['divine_right'],
+        pendingGovernmentChoice: {
+          reason: 'revolutions_final_stage',
+          sourceCrisisType: 'revolution',
+          sourceStage: 3,
+          options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+        },
+      }),
+      { governmentLockedForAge: false },
+    );
+    const state = createTestState({
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+    const next = governmentSystem(state, {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'feudal_monarchy',
+    });
+    expect(next).toBe(state);
+    expect(canAdoptGovernment(state, 'p1', 'feudal_monarchy')).toBe(false);
+  });
+
+  it('SET_GOVERNMENT rejects revolutionary governments before the required crisis stage', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        pendingGovernmentChoice: {
+          reason: 'revolutions_final_stage',
+          sourceCrisisType: 'revolution',
+          sourceStage: 2,
+          options: ['revolutionary_republic'],
+        },
+      }),
+    );
+    const state = createTestState({
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+    expect(canAdoptGovernment(state, 'p1', 'revolutionary_republic')).toBe(false);
+    const next = governmentSystem(state, {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolutionary_republic',
+    });
+    expect(next).toBe(state);
+  });
+
   it('SET_GOVERNMENT initializes government fields when PlayerState lacks them', () => {
     const player = createTestPlayer({
       id: 'p1',
@@ -182,6 +258,48 @@ describe('governmentSystem', () => {
     expect(updated.slottedPolicies[1]).toBeNull();
     // Sets the age lock (W2-03 CT F-07)
     expect(updated.governmentLockedForAge).toBe(true);
+  });
+
+  it('SET_GOVERNMENT resolves a Revolutions forced choice despite the age lock', () => {
+    const player = withGovernmentFields(
+      createTestPlayer({
+        id: 'p1',
+        age: 'exploration',
+        researchedCivics: [],
+        crisisPhase: 'stage3',
+        pendingGovernmentChoice: {
+          reason: 'revolutions_final_stage',
+          sourceCrisisType: 'revolution',
+          sourceStage: 3,
+          options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+        },
+      }),
+      {
+        governmentId: 'feudal_monarchy',
+        governmentLockedForAge: true,
+        slottedPolicies: ['urban_planning', null, null, null],
+      },
+    );
+    const state = createTestState({
+      age: { currentAge: 'exploration', ageThresholds: { exploration: 50, modern: 100 } },
+      players: new Map([['p1', player]]),
+    });
+
+    expect(canAdoptGovernment(state, 'p1', 'revolutionary_republic')).toBe(true);
+    const next = governmentSystem(state, {
+      type: 'SET_GOVERNMENT',
+      playerId: 'p1',
+      governmentId: 'revolutionary_republic',
+    });
+    const updated = next.players.get('p1')!;
+
+    expect(updated.governmentId).toBe('revolutionary_republic');
+    expect(updated.governmentLockedForAge).toBe(true);
+    expect(updated.slottedPolicies).toHaveLength(4);
+    expect(updated.slottedPolicies?.every(slot => slot === null)).toBe(true);
+    expect(updated.pendingGovernmentChoice).toBeNull();
+    expect(updated.pendingCelebrationChoice).toEqual({ governmentId: 'revolutionary_republic' });
+    expect(updated.crisisPhase).toBe('resolved');
   });
 
   it('SET_GOVERNMENT allows Revolucion for Mexico players in the Modern Age', () => {

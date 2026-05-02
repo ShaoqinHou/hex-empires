@@ -1,6 +1,12 @@
 import type { GameState, GameAction, CrisisState, CityState } from '../types/GameState';
 import type { CrisisEventDef } from '../data/crises/types';
 
+const REVOLUTIONARY_GOVERNMENT_OPTIONS = [
+  'revolutionary_republic',
+  'revolutionary_authoritarianism',
+  'constitutional_monarchy',
+] as const;
+
 /**
  * CrisisSystem handles narrative/crisis events.
  *
@@ -46,6 +52,7 @@ function checkCrisisTriggers(state: GameState): GameState {
 
   for (const def of state.config.crises) {
     if (triggeredIds.has(def.id)) continue;
+    if (def.age && def.age !== state.age.currentAge) continue;
 
     // F-04: if the age system seeded an active crisis type, skip crises
     // that have a different crisisType (crises without crisisType are always eligible)
@@ -215,6 +222,18 @@ function advanceCrisisStages(state: GameState): GameState {
   }
 
   const phaseChanged = newPhase !== currentPhase;
+  const hasActiveRevolutionCrisis = updatedCrises.some(crisis => {
+    if (!crisis.active || crisis.resolvedBy !== null) return false;
+    const def = state.config.crises.find(d => d.id === crisis.id);
+    return def?.crisisType === 'revolution' && def.age === 'exploration';
+  });
+  const opensRevolutionaryGovernmentChoice =
+    state.age.currentAge === 'exploration' &&
+    state.age.activeCrisisType === 'revolution' &&
+    hasActiveRevolutionCrisis &&
+    newPhase === 'stage3' &&
+    currentPhase !== 'stage3' &&
+    (player.pendingGovernmentChoice ?? null) === null;
 
   if (!crisisesChanged && !phaseChanged) return state;
 
@@ -227,6 +246,19 @@ function advanceCrisisStages(state: GameState): GameState {
       crisisPhase: newPhase,
       crisisPolicySlots: newSlots,
       crisisPolicies: (player.crisisPolicies ?? []).slice(0, newSlots),
+      ...(opensRevolutionaryGovernmentChoice
+        ? {
+            governmentId: null,
+            slottedPolicies: [],
+            governmentLockedForAge: false,
+            pendingGovernmentChoice: {
+              reason: 'revolutions_final_stage' as const,
+              sourceCrisisType: 'revolution' as const,
+              sourceStage: 3 as const,
+              options: [...REVOLUTIONARY_GOVERNMENT_OPTIONS],
+            },
+          }
+        : {}),
     });
     nextState = { ...nextState, players: updatedPlayers };
   }
@@ -240,6 +272,15 @@ function advanceCrisisStages(state: GameState): GameState {
       turn: state.turn,
       playerId: player.id,
       message: `Crisis escalated to ${newPhase} — fill ${newSlots} policy slots before ending your turn.`,
+      type: 'crisis' as const,
+      severity: 'critical' as const,
+      category: 'crisis' as const,
+      panelTarget: 'crisis' as const,
+    }] : []),
+    ...(opensRevolutionaryGovernmentChoice ? [{
+      turn: state.turn,
+      playerId: player.id,
+      message: 'The Revolutions crisis has revoked your government. Choose a revolutionary government.',
       type: 'crisis' as const,
       severity: 'critical' as const,
       category: 'crisis' as const,

@@ -213,6 +213,42 @@ describe('aiSystem — Civ VII parity emissions', () => {
     expect(set!.governmentId).toBe('revolucion');
   });
 
+  it('AI does not emit SET_GOVERNMENT for crisis-gated governments during normal adoption', () => {
+    const state = {
+      ...aiStateWith({
+        pantheonId: 'already_picked',
+        governmentId: null,
+        age: 'exploration',
+        researchedCivics: ['nationalism'],
+      }),
+      age: { currentAge: 'exploration' as const, ageThresholds: { exploration: 50, modern: 100 } },
+    };
+    const actions = generateAIActions(state);
+    expect(findAction(actions, 'SET_GOVERNMENT')).toBeUndefined();
+  });
+
+  it('AI resolves a pending Revolutions government choice', () => {
+    const state = {
+      ...aiStateWith({
+        pantheonId: 'already_picked',
+        governmentId: null,
+        age: 'exploration',
+        researchedCivics: [],
+        pendingGovernmentChoice: {
+          reason: 'revolutions_final_stage',
+          sourceCrisisType: 'revolution',
+          sourceStage: 3,
+          options: ['revolutionary_republic', 'revolutionary_authoritarianism', 'constitutional_monarchy'],
+        },
+      }),
+      age: { currentAge: 'exploration' as const, ageThresholds: { exploration: 50, modern: 100 } },
+    };
+    const actions = generateAIActions(state);
+    const set = findAction(actions, 'SET_GOVERNMENT');
+    expect(set).toBeDefined();
+    expect(set!.governmentId).toBe('revolutionary_republic');
+  });
+
   it('AI with no government and no researched unlock civic does NOT emit SET_GOVERNMENT', () => {
     const state = aiStateWith({
       pantheonId: 'already_picked',

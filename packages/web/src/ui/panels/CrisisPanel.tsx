@@ -37,8 +37,18 @@ export function CrisisPanel({ onClose }: CrisisPanelProps) {
 
   const filledCount = (player?.crisisPolicies ?? []).length;
   const requiredSlots = player?.crisisPolicySlots ?? 0;
-  const allFilled = filledCount >= requiredSlots;
   const selectedPolicies = new Set(player?.crisisPolicies ?? []);
+  const pendingGovernmentChoice = player?.pendingGovernmentChoice ?? null;
+  const governmentOptions = (pendingGovernmentChoice?.options ?? []).map(id => {
+    const gov = state.config.governments?.get(id);
+    return {
+      id,
+      name: gov?.name ?? id,
+      description: gov?.description ?? '',
+    };
+  });
+  const hasPendingGovernmentChoice = governmentOptions.length > 0;
+  const allFilled = filledCount >= requiredSlots && !hasPendingGovernmentChoice;
 
   // Crisis type lookup via age.activeCrisisType → config.crises
   const activeCrisisType = state.age.activeCrisisType;
@@ -53,6 +63,10 @@ export function CrisisPanel({ onClose }: CrisisPanelProps) {
 
   const handlePolicyClick = (policyId: string) => {
     dispatch({ type: 'FORCE_CRISIS_POLICY', policyId });
+  };
+
+  const handleGovernmentClick = (governmentId: string) => {
+    dispatch({ type: 'SET_GOVERNMENT', playerId: state.currentPlayerId, governmentId });
   };
 
   // Collect all policies from config
@@ -100,6 +114,26 @@ export function CrisisPanel({ onClose }: CrisisPanelProps) {
         ))}
       </div>
 
+      {hasPendingGovernmentChoice && (
+        <div style={governmentChoiceStyle}>
+          <div style={sectionTitleStyle}>Revolutionary Government</div>
+          <div style={gridStyle}>
+            {governmentOptions.map(gov => (
+              <button
+                key={gov.id}
+                type="button"
+                onClick={() => handleGovernmentClick(gov.id)}
+                style={cardStyle}
+                data-testid={`crisis-government-${gov.id}`}
+              >
+                <div style={cardTitleStyle}>{gov.name}</div>
+                <div style={cardDescStyle}>{gov.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Policy card grid */}
       <div style={gridStyle}>
         {allPolicies.map(policy => {
@@ -132,7 +166,7 @@ export function CrisisPanel({ onClose }: CrisisPanelProps) {
       </div>
 
       {/* Status hint when not all slots filled */}
-      {!allFilled && (
+      {!hasPendingGovernmentChoice && !allFilled && (
         <p style={hintStyle}>
           Select {requiredSlots - filledCount} more {requiredSlots - filledCount === 1 ? 'policy' : 'policies'} to resolve this crisis stage.
         </p>
@@ -181,6 +215,19 @@ const dotsRowStyle: CSSProperties = {
   gap: '6px',
   justifyContent: 'center',
   marginBottom: 'var(--panel-padding-md)',
+};
+
+const governmentChoiceStyle: CSSProperties = {
+  borderBottom: '1px solid var(--panel-border)',
+  marginBottom: 'var(--panel-padding-md)',
+  paddingBottom: 'var(--panel-padding-md)',
+};
+
+const sectionTitleStyle: CSSProperties = {
+  font: 'var(--type-heading)',
+  color: 'var(--panel-text-color)',
+  fontSize: '14px',
+  marginBottom: 'var(--panel-padding-sm)',
 };
 
 const dotStyle: CSSProperties = {

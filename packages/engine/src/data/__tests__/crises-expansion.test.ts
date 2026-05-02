@@ -143,4 +143,15 @@ describe('crises expansion catalog', () => {
       expect(validTriggers.has(crisis.triggerCondition)).toBe(true);
     }
   });
+
+  it('exploration crises include a revolution type for age-seeded selection (F-03)', () => {
+    const explorationRevolutions = ALL_CRISES
+      .filter((crisis) => crisis.age === 'exploration' && crisis.crisisType === 'revolution')
+      .map((crisis) => crisis.id);
+    expect(explorationRevolutions.length).toBeGreaterThan(0);
+  });
+
+  it('adds the exploration revolution crisis entry to ALL_CRISES', () => {
+    expect(ALL_CRISES.find((crisis) => crisis.id === 'exploration_revolution')).toBeDefined();
+  });
 });
