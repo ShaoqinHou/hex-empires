@@ -131,7 +131,7 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'logistics_forced_march',
+      promotionId: 'logistics_quartermaster',
     };
     expect(commanderPromotionSystem(state, action)).toBe(state);
   });

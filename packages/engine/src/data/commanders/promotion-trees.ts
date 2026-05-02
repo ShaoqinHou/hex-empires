@@ -127,49 +127,94 @@ const ASSAULT_ADVANCEMENT: CommanderPromotionDef = {
   },
 } as const;
 
-// ── Logistics tree (movement + healing) ──
+// ── Logistics tree (sustain + logistics) ──
 
-const LOGISTICS_TIER1: CommanderPromotionDef = {
-  id: 'logistics_forced_march',
-  name: 'Forced March',
-  description: '+1 movement to all friendly units in radius.',
+const LOGISTICS_QUARTERMASTER: CommanderPromotionDef = {
+  id: 'logistics_quartermaster',
+  name: 'Quartermaster',
+  description: '+1 Gold per packed unit.',
   tree: 'logistics',
   tier: 1,
   prerequisites: [],
   aura: {
-    type: 'AURA_EXTRA_MOVEMENT',
-    target: 'all',
+    type: 'AURA_GOLD_PER_PACKED_UNIT',
     value: 1,
-    radius: 1,
   },
 } as const;
 
-const LOGISTICS_TIER2: CommanderPromotionDef = {
-  id: 'logistics_field_medic',
-  name: 'Field Medic',
-  description: 'Heal 5 HP per turn to friendly units in radius.',
+const LOGISTICS_RECRUITMENT: CommanderPromotionDef = {
+  id: 'logistics_recruitment',
+  name: 'Recruitment',
+  description: '+15% Production toward Land Units while stationed on a District.',
+  tree: 'logistics',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED',
+    value: 15,
+  },
+} as const;
+
+const LOGISTICS_REGIMENTS: CommanderPromotionDef = {
+  id: 'logistics_regiments',
+  name: 'Regiments',
+  description: '+2 unit slots and faster reinforcement.',
   tree: 'logistics',
   tier: 2,
-  prerequisites: ['logistics_forced_march'],
+  prerequisites: ['logistics_quartermaster', 'logistics_recruitment'],
+  prerequisiteMode: 'any',
   aura: {
-    type: 'AURA_HEAL_PER_TURN',
-    target: 'all',
-    amount: 5,
-    radius: 1,
+    type: 'AURA_EXPAND_STACK',
+    delta: 2,
+    reinforcementSpeed: 1,
   },
 } as const;
 
-const LOGISTICS_TIER3: CommanderPromotionDef = {
-  id: 'logistics_supply_lines',
-  name: 'Supply Lines',
-  description: 'Heal 10 HP per turn to friendly units in radius.',
+const LOGISTICS_FIELD_MEDIC: CommanderPromotionDef = {
+  id: 'logistics_field_medic',
+  name: 'Field Medic',
+  description: '+5 Healing for Land Units in enemy/neutral territory.',
   tree: 'logistics',
   tier: 3,
-  prerequisites: ['logistics_field_medic'],
+  prerequisites: ['logistics_regiments'],
   aura: {
     type: 'AURA_HEAL_PER_TURN',
-    target: 'all',
-    amount: 10,
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    amount: 5,
+    radius: 1,
+    territoryScope: 'enemy_or_neutral_territory',
+  },
+} as const;
+
+const LOGISTICS_LOOTING: CommanderPromotionDef = {
+  id: 'logistics_looting',
+  name: 'Looting',
+  description: '+50% yield and HP from pillaging within radius.',
+  tree: 'logistics',
+  tier: 3,
+  prerequisites: ['logistics_regiments'],
+  aura: {
+    type: 'AURA_PILLAGE_BONUS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    radius: 1,
+    yieldBonusPercent: 50,
+    hpBonusPercent: 50,
+  },
+} as const;
+
+const LOGISTICS_SURVIVAL_TRAINING: CommanderPromotionDef = {
+  id: 'logistics_survival_training',
+  name: 'Survival Training',
+  description:
+    'Grants the Commando ability to Land Units; Doubles terrain combat and allows infantry cliff move/attack.',
+  tree: 'logistics',
+  tier: 4,
+  prerequisites: ['logistics_field_medic', 'logistics_looting'],
+  prerequisiteMode: 'any',
+  aura: {
+    type: 'AURA_GRANT_ABILITY',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    abilityId: 'commando',
     radius: 1,
   },
 } as const;
@@ -351,9 +396,12 @@ export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
   ASSAULT_SHOCK_TACTICS,
   ASSAULT_ENFILADE,
   ASSAULT_ADVANCEMENT,
-  LOGISTICS_TIER1,
-  LOGISTICS_TIER2,
-  LOGISTICS_TIER3,
+  LOGISTICS_QUARTERMASTER,
+  LOGISTICS_RECRUITMENT,
+  LOGISTICS_REGIMENTS,
+  LOGISTICS_FIELD_MEDIC,
+  LOGISTICS_LOOTING,
+  LOGISTICS_SURVIVAL_TRAINING,
   BASTION_TIER1,
   BASTION_TIER2,
   BASTION_NAVAL_ENGINEERING,

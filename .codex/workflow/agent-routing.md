@@ -37,7 +37,10 @@ Spark is appropriate when the prompt can be almost procedural:
 - Known local patterns and examples.
 - No external research.
 - No ambiguous game-design decision.
-- A small test/build command the worker can run.
+- A small test/build command the worker can run. If the write scope includes
+  TypeScript types, exported data shapes, or shared package APIs, include the
+  package type-check command too, for example
+  `npx tsc --noEmit -p packages/engine`.
 
 Do not route to Spark when the task depends on:
 
@@ -106,6 +109,8 @@ Every worker result gets a lead pass before staging:
 
 1. Inspect changed files and test output.
 2. Confirm the diff matches the brief and does not hide extra behavior.
-3. Run at least the narrow validation locally.
+3. Run at least the narrow validation locally. For TypeScript type/data/API
+   edits, also run the relevant package type-check locally even when the worker
+   reported green unit tests.
 4. Update GDD/audit/tracker artifacts when parity status changes.
 5. Commit only after the lead can explain the change.

@@ -1447,10 +1447,11 @@ export type GameAction =
   | { readonly type: 'PLACE_CODEX'; readonly codexId: string; readonly buildingId: BuildingId; readonly cityId: CityId }
   // ── W4-04: Commander army pack/unpack ──
   /**
-   * Pack up to 4 units adjacent to the commander into the army stack.
+   * Pack adjacent units into the army stack. Capacity is commander-state
+   * driven: 4 base, expanded by promotions such as Logistics Regiments.
    * Validates: commander exists, all unitIds are adjacent, all are owned by
-   * the same player, and total ≤ 4. Removes packed units from state.units and
-   * stores snapshots in CommanderState.packedUnitStates.
+   * the same player, and total is within effective capacity. Removes packed
+   * units from state.units and stores snapshots in CommanderState.packedUnitStates.
    */
   | { readonly type: 'ASSEMBLE_ARMY'; readonly commanderId: string; readonly unitIds: ReadonlyArray<string> }
   /**
@@ -1458,13 +1459,15 @@ export type GameAction =
    * Restores packed snapshots and clears packedInCommanderId on restored units.
    */
   | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string }
-  // ── X4.1: Commander PACK/UNPACK (remove-from-map semantics, cap 6) ──
+  // ── X4.1: Commander PACK/UNPACK (remove-from-map semantics) ──
   /**
-   * Pack up to 6 units adjacent to the commander into the army stack.
+   * Pack adjacent units into the army stack using the same effective capacity
+   * rules as ASSEMBLE_ARMY.
    * Removes packed units from state.units and stores full snapshots in
    * CommanderState.packedUnitStates.
    * Validates: commander exists, all unitIds adjacent, all owned by same player,
-   * count ≤ 6, none already packed in a different commander.
+   * count is within effective capacity, none already packed in a different
+   * commander.
    */
   | { readonly type: 'PACK_ARMY'; readonly commanderId: UnitId; readonly unitsToPack: ReadonlyArray<UnitId> }
   /**

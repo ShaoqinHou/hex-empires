@@ -3,8 +3,9 @@ import type { CommanderState } from '../types/Commander';
 import { COMMANDER_BASE_STACK_CAP } from '../types/Commander';
 import { coordToKey, distance, neighbors } from '../hex/HexMath';
 
-/** Max units that can be packed via PACK_ARMY (X4.1 — remove-from-map semantics). */
-const PACK_ARMY_CAP = 6 as const;
+const STACK_CAPACITY_PROMOTION_IDS: ReadonlySet<string> = new Set([
+  'logistics_regiments',
+]);
 
 /**
  * Commander Army Pack / Unpack system — W4-04.
@@ -21,7 +22,7 @@ const PACK_ARMY_CAP = 6 as const;
  *   3. Each unit must be owned by the same player as the commander unit.
  *   4. Each unit must be adjacent (distance ≤ 1) to the commander's position.
  *   5. Existing packed units plus new unitIds count must be ≤ cap
- *      (ASSEMBLE=4, PACK=6).
+ *      (4 base, + promotion-driven stack expansion such as Regiments).
  *   6. No unit may already be packed into a different commander.
  *
  * Age persistence (F-08) is handled by ageSystem. This system only preserves
@@ -30,11 +31,11 @@ const PACK_ARMY_CAP = 6 as const;
 export function commanderArmySystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'ASSEMBLE_ARMY':
-      return handlePack(state, action.commanderId, action.unitIds, COMMANDER_BASE_STACK_CAP);
+      return handlePack(state, action.commanderId, action.unitIds);
     case 'DEPLOY_ARMY':
       return handleDeploy(state, action.commanderId);
     case 'PACK_ARMY':
-      return handlePack(state, action.commanderId, action.unitsToPack, PACK_ARMY_CAP);
+      return handlePack(state, action.commanderId, action.unitsToPack);
     case 'UNPACK_ARMY':
       return handleDeploy(state, action.commanderId);
     default:
@@ -48,7 +49,6 @@ function handlePack(
   state: GameState,
   commanderId: string,
   unitIds: ReadonlyArray<string>,
-  capacity: number,
 ): GameState {
   const commanders = state.commanders;
   if (!commanders) return state;
@@ -58,6 +58,7 @@ function handlePack(
 
   const commanderUnit = state.units.get(commanderId);
   if (!commanderUnit) return state;
+  const capacity = effectiveCommanderPackCapacity(state, commanderUnit, commander);
 
   // Validate count
   if (unitIds.length === 0) return state;
@@ -232,6 +233,27 @@ function existingPackedUnitSnapshots(
   return legacyPackedUnits;
 }
 
+function effectiveCommanderPackCapacity(
+  state: GameState,
+  commanderUnit: UnitState,
+  commander: CommanderState,
+): number {
+  let capacity = COMMANDER_BASE_STACK_CAP;
+  const promotionIds = commanderPromotionIds(commanderUnit, commander);
+
+  for (const promotionId of promotionIds) {
+    const promotion = state.config.commanderPromotions?.get(promotionId);
+    if (
+      STACK_CAPACITY_PROMOTION_IDS.has(promotionId) &&
+      promotion?.aura.type === 'AURA_EXPAND_STACK'
+    ) {
+      capacity += promotion.aura.delta;
+    }
+  }
+
+  return capacity;
+}
+
 function freeAdjacentMapTiles(
   state: GameState,
   commanderUnit: UnitState,
@@ -254,10 +276,7 @@ function commanderDeploysWithMovement(
   commanderUnit: UnitState,
   commander: CommanderState,
 ): boolean {
-  const promotionIds = new Set([
-    ...commander.promotions,
-    ...commanderUnit.promotions,
-  ]);
+  const promotionIds = commanderPromotionIds(commanderUnit, commander);
 
   for (const promotionId of promotionIds) {
     const promotion = state.config.commanderPromotions?.get(promotionId);
@@ -265,4 +284,14 @@ function commanderDeploysWithMovement(
   }
 
   return false;
+}
+
+function commanderPromotionIds(
+  commanderUnit: UnitState,
+  commander: CommanderState,
+): ReadonlySet<string> {
+  return new Set([
+    ...commander.promotions,
+    ...commanderUnit.promotions,
+  ]);
 }

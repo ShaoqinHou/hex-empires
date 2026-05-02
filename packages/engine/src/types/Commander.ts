@@ -89,9 +89,20 @@ export type AuraEffectDef =
   /** HP healed per turn to friendly units in range. */
   | {
       readonly type: 'AURA_HEAL_PER_TURN';
-      readonly target: AuraTarget;
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
       readonly amount: number;
       readonly radius: number;
+      readonly territoryScope?: 'enemy_territory' | 'neutral_territory' | 'enemy_or_neutral_territory';
+    }
+  /** Gold granted to the commander owner per packed unit. */
+  | {
+      readonly type: 'AURA_GOLD_PER_PACKED_UNIT';
+      readonly value: number;
+    }
+  /** Production bonus for land units while stationed in a District. */
+  | {
+      readonly type: 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED';
+      readonly value: number;
     }
   /** Extra movement points to friendly units in range. */
   | {
@@ -115,6 +126,9 @@ export type AuraEffectDef =
   | {
       readonly type: 'AURA_EXPAND_STACK';
       readonly delta: number;
+      /** Optional metadata carrying reinforcement pace for consumers that
+       * parse Regiments data. */
+      readonly reinforcementSpeed?: number;
     }
   /** Fortification bonus to friendly units in range. */
   | {
@@ -129,6 +143,14 @@ export type AuraEffectDef =
       readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
       readonly abilityId: string;
       readonly radius: number;
+    }
+  /** Pillage bonus while near the commander (yield and health recovery). */
+  | {
+      readonly type: 'AURA_PILLAGE_BONUS';
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
+      readonly radius: number;
+      readonly yieldBonusPercent: number;
+      readonly hpBonusPercent: number;
     }
   /** Lets units deploy from this commander without losing remaining movement. */
   | {

@@ -102,6 +102,21 @@ describe('Commander types — compile-time shape tests', () => {
     const deployMove: AuraEffectDef = {
       type: 'AURA_DEPLOY_WITH_MOVEMENT',
     };
+    const goldPerPacked: AuraEffectDef = {
+      type: 'AURA_GOLD_PER_PACKED_UNIT',
+      value: 1,
+    };
+    const productionBonus: AuraEffectDef = {
+      type: 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED',
+      value: 15,
+    };
+    const pillage: AuraEffectDef = {
+      type: 'AURA_PILLAGE_BONUS',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      radius: 1,
+      yieldBonusPercent: 50,
+      hpBonusPercent: 50,
+    };
 
     const variants: ReadonlyArray<AuraEffectDef> = [
       modCs,
@@ -113,9 +128,12 @@ describe('Commander types — compile-time shape tests', () => {
       fort,
       grantAbility,
       deployMove,
+      goldPerPacked,
+      productionBonus,
+      pillage,
     ];
     const kinds = new Set(variants.map((v) => v.type));
-    expect(kinds.size).toBe(9);
+    expect(kinds.size).toBe(12);
     // Discriminant narrowing works:
     if (heal.type === 'AURA_HEAL_PER_TURN') {
       expect(heal.amount).toBe(5);
@@ -125,6 +143,17 @@ describe('Commander types — compile-time shape tests', () => {
     }
     if (grantAbility.type === 'AURA_GRANT_ABILITY') {
       expect(grantAbility.abilityId).toBe('first_strike');
+    }
+    if (goldPerPacked.type === 'AURA_GOLD_PER_PACKED_UNIT') {
+      expect(goldPerPacked.value).toBe(1);
+    }
+    if (productionBonus.type === 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED') {
+      expect(productionBonus.value).toBe(15);
+    }
+    if (pillage.type === 'AURA_PILLAGE_BONUS') {
+      expect(pillage.radius).toBe(1);
+      expect(pillage.yieldBonusPercent).toBe(50);
+      expect(pillage.hpBonusPercent).toBe(50);
     }
     if (deployMove.type === 'AURA_DEPLOY_WITH_MOVEMENT') {
       expect(deployMove.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');

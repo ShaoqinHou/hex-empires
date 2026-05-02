@@ -20,6 +20,9 @@ const VALID_AURA_TYPES: ReadonlyArray<AuraEffectDef['type']> = [
   'AURA_MODIFY_CS',
   'AURA_MODIFY_RS',
   'AURA_HEAL_PER_TURN',
+  'AURA_GOLD_PER_PACKED_UNIT',
+  'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED',
+  'AURA_PILLAGE_BONUS',
   'AURA_EXTRA_MOVEMENT',
   'AURA_EXPAND_RADIUS',
   'AURA_EXPAND_STACK',
@@ -148,10 +151,23 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
           break;
         case 'AURA_HEAL_PER_TURN':
           expect(a.amount).not.toBe(0);
+          expect(a.radius).toBeGreaterThan(0);
+          break;
+        case 'AURA_GOLD_PER_PACKED_UNIT':
+        case 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED':
+          expect(a.value).not.toBe(0);
           break;
         case 'AURA_EXPAND_RADIUS':
         case 'AURA_EXPAND_STACK':
           expect(a.delta).not.toBe(0);
+          if (a.type === 'AURA_EXPAND_STACK' && a.reinforcementSpeed != null) {
+            expect(a.reinforcementSpeed).toBeGreaterThanOrEqual(0);
+          }
+          break;
+        case 'AURA_PILLAGE_BONUS':
+          expect(a.radius).toBeGreaterThan(0);
+          expect(a.yieldBonusPercent).not.toBe(0);
+          expect(a.hpBonusPercent).not.toBe(0);
           break;
         case 'AURA_GRANT_ABILITY':
           expect(a.abilityId.length).toBeGreaterThan(0);
@@ -298,6 +314,91 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     expect(initiative!.tier).toBe(1);
     expect(initiative!.prerequisites).toEqual([]);
     expect(initiative!.aura.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
+  });
+
+  it('matches sourced Army Logistics promotion tree and prereqs from Civ VII', () => {
+    const logistics = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'logistics');
+    expect(logistics.map(p => p.id)).toEqual([
+      'logistics_quartermaster',
+      'logistics_recruitment',
+      'logistics_regiments',
+      'logistics_field_medic',
+      'logistics_looting',
+      'logistics_survival_training',
+    ]);
+
+    const quartermaster = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_quartermaster');
+    expect(quartermaster).toBeDefined();
+    expect(quartermaster!.name).toBe('Quartermaster');
+    expect(quartermaster!.tier).toBe(1);
+    expect(quartermaster!.prerequisites).toEqual([]);
+    expect(quartermaster!.aura.type).toBe('AURA_GOLD_PER_PACKED_UNIT');
+    if (quartermaster!.aura.type === 'AURA_GOLD_PER_PACKED_UNIT') {
+      expect(quartermaster!.aura.value).toBe(1);
+    }
+
+    const recruitment = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_recruitment');
+    expect(recruitment).toBeDefined();
+    expect(recruitment!.name).toBe('Recruitment');
+    expect(recruitment!.tier).toBe(1);
+    expect(recruitment!.prerequisites).toEqual([]);
+    expect(recruitment!.aura.type).toBe('AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED');
+    if (recruitment!.aura.type === 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED') {
+      expect(recruitment!.aura.value).toBe(15);
+    }
+
+    const regiments = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_regiments');
+    expect(regiments).toBeDefined();
+    expect(regiments!.name).toBe('Regiments');
+    expect(regiments!.tier).toBe(2);
+    expect(regiments!.prerequisiteMode).toBe('any');
+    expect(regiments!.prerequisites).toEqual(
+      expect.arrayContaining(['logistics_quartermaster', 'logistics_recruitment']),
+    );
+    expect(regiments!.aura.type).toBe('AURA_EXPAND_STACK');
+    if (regiments!.aura.type === 'AURA_EXPAND_STACK') {
+      expect(regiments!.aura.delta).toBe(2);
+      expect(regiments!.aura.reinforcementSpeed).toBe(1);
+    }
+
+    const fieldMedic = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_field_medic');
+    expect(fieldMedic).toBeDefined();
+    expect(fieldMedic!.name).toBe('Field Medic');
+    expect(fieldMedic!.tier).toBe(3);
+    expect(fieldMedic!.prerequisites).toEqual(['logistics_regiments']);
+    expect(fieldMedic!.aura.type).toBe('AURA_HEAL_PER_TURN');
+    if (fieldMedic!.aura.type === 'AURA_HEAL_PER_TURN') {
+      expect(fieldMedic!.aura.amount).toBe(5);
+      expect(fieldMedic!.aura.territoryScope).toBe('enemy_or_neutral_territory');
+      expect(fieldMedic!.aura.radius).toBe(1);
+    }
+
+    const looting = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_looting');
+    expect(looting).toBeDefined();
+    expect(looting!.name).toBe('Looting');
+    expect(looting!.tier).toBe(3);
+    expect(looting!.prerequisites).toEqual(['logistics_regiments']);
+    expect(looting!.aura.type).toBe('AURA_PILLAGE_BONUS');
+    if (looting!.aura.type === 'AURA_PILLAGE_BONUS') {
+      expect(looting!.aura.radius).toBe(1);
+      expect(looting!.aura.yieldBonusPercent).toBe(50);
+      expect(looting!.aura.hpBonusPercent).toBe(50);
+    }
+
+    const survival = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'logistics_survival_training');
+    expect(survival).toBeDefined();
+    expect(survival!.name).toBe('Survival Training');
+    expect(survival!.tier).toBe(4);
+    expect(survival!.prerequisites).toEqual(
+      expect.arrayContaining(['logistics_field_medic', 'logistics_looting']),
+    );
+    expect(survival!.prerequisiteMode).toBe('any');
+    expect(survival!.aura.type).toBe('AURA_GRANT_ABILITY');
+    if (survival!.aura.type === 'AURA_GRANT_ABILITY') {
+      expect(survival!.aura.abilityId).toBe('commando');
+      expect(survival!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(survival!.aura.radius).toBe(1);
+    }
   });
 });
 

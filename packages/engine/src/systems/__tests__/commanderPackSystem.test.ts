@@ -87,7 +87,82 @@ describe('commanderArmySystem — PACK_ARMY (X4.1)', () => {
     expect(packedIds).toContain('u3');
   });
 
-  it('rejects packing 7 units (exceeds PACK_ARMY_CAP of 6)', () => {
+  it('rejects packing 5 units without Regiments', () => {
+    const positions = [
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+      { q: -1, r: 0 }, { q: 0, r: -1 },
+    ];
+    const extraUnits = new Map<string, ReturnType<typeof createTestUnit>>();
+    for (let i = 0; i < positions.length; i++) {
+      const id = `u${i + 1}`;
+      extraUnits.set(id, createTestUnit({ id, owner: 'p1', position: positions[i] }));
+    }
+
+    const state = stateWithCommander(makeCommander({ unitId: 'cmd1' }), extraUnits);
+    const result = commanderArmySystem(state, {
+      type: 'PACK_ARMY',
+      commanderId: 'cmd1',
+      unitsToPack: ['u1', 'u2', 'u3', 'u4', 'u5'],
+    });
+
+    expect(result).toBe(state);
+  });
+
+  it('packs up to 6 units when the commander has Regiments', () => {
+    const positions = [
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+      { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 },
+    ];
+    const extraUnits = new Map<string, ReturnType<typeof createTestUnit>>();
+    for (let i = 0; i < positions.length; i++) {
+      const id = `u${i + 1}`;
+      extraUnits.set(id, createTestUnit({ id, owner: 'p1', position: positions[i] }));
+    }
+
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1', promotions: ['logistics_regiments'] }),
+      extraUnits,
+    );
+    const unitIds = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'];
+    const next = commanderArmySystem(state, {
+      type: 'PACK_ARMY',
+      commanderId: 'cmd1',
+      unitsToPack: unitIds,
+    });
+
+    expect(next).not.toBe(state);
+    expect(next.commanders!.get('cmd1')!.attachedUnits).toEqual(unitIds);
+    expect(next.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(6);
+    for (const unitId of unitIds) {
+      expect(next.units.has(unitId)).toBe(false);
+    }
+  });
+
+  it('does not expand PACK_ARMY capacity for non-Regiments stack placeholder promotions', () => {
+    const positions = [
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+      { q: -1, r: 0 }, { q: 0, r: -1 },
+    ];
+    const extraUnits = new Map<string, ReturnType<typeof createTestUnit>>();
+    for (let i = 0; i < positions.length; i++) {
+      const id = `u${i + 1}`;
+      extraUnits.set(id, createTestUnit({ id, owner: 'p1', position: positions[i] }));
+    }
+
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1', promotions: ['leadership_grand_retinue'] }),
+      extraUnits,
+    );
+    const result = commanderArmySystem(state, {
+      type: 'PACK_ARMY',
+      commanderId: 'cmd1',
+      unitsToPack: ['u1', 'u2', 'u3', 'u4', 'u5'],
+    });
+
+    expect(result).toBe(state);
+  });
+
+  it('rejects packing 7 units even with Regiments', () => {
     // Create 7 units adjacent to commander at q=0,r=0
     const positions = [
       { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
@@ -104,7 +179,10 @@ describe('commanderArmySystem — PACK_ARMY (X4.1)', () => {
     // 7th unit at same hex as commander (distance 0, still ≤ 1)
     extraUnits.set('u7', createTestUnit({ id: 'u7', owner: 'p1', position: { q: 0, r: 0 } }));
 
-    const state = stateWithCommander(makeCommander({ unitId: 'cmd1' }), extraUnits);
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1', promotions: ['logistics_regiments'] }),
+      extraUnits,
+    );
     const unitIds = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'];
 
     const result = commanderArmySystem(state, {

@@ -192,7 +192,7 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     expect(next.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(4);
   });
 
-  it('rejects when unitIds count exceeds COMMANDER_BASE_STACK_CAP (4)', () => {
+  it('rejects when unitIds count exceeds COMMANDER_BASE_STACK_CAP (4) without Regiments', () => {
     const positions = [
       { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
       { q: -1, r: 0 }, { q: 0, r: -1 },
@@ -215,6 +215,61 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
       unitIds,
     });
     expect(result).toBe(state); // unchanged
+  });
+
+  it('allows expanded unit slots when the commander has Regiments', () => {
+    const positions = [
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+      { q: -1, r: 0 }, { q: 0, r: -1 },
+    ];
+    const extraUnits = new Map(
+      positions.map((pos, i) => {
+        const id = `u${i + 1}`;
+        return [id, createTestUnit({ id, owner: 'p1', position: pos })];
+      }),
+    );
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1', promotions: ['logistics_regiments'] }),
+      extraUnits,
+    );
+    const unitIds = Array.from(extraUnits.keys());
+
+    const next = commanderArmySystem(state, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds,
+    });
+
+    expect(next).not.toBe(state);
+    for (const unitId of unitIds) {
+      expect(next.units.has(unitId)).toBe(false);
+    }
+    expect(next.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(5);
+  });
+
+  it('does not expand unit slots for non-Regiments stack placeholder promotions', () => {
+    const positions = [
+      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+      { q: -1, r: 0 }, { q: 0, r: -1 },
+    ];
+    const extraUnits = new Map(
+      positions.map((pos, i) => {
+        const id = `u${i + 1}`;
+        return [id, createTestUnit({ id, owner: 'p1', position: pos })];
+      }),
+    );
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1', promotions: ['leadership_grand_retinue'] }),
+      extraUnits,
+    );
+
+    const result = commanderArmySystem(state, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds: Array.from(extraUnits.keys()),
+    });
+
+    expect(result).toBe(state);
   });
 
   it('rejects unit owned by a different player', () => {

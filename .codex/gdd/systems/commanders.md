@@ -91,7 +91,6 @@ Army Commanders unlock via the **Discipline civic** in the Antiquity Civics tree
 - Base commander movement: 2 tiles `[INFERRED-FANDOM]`
 - With **Mobility** (Maneuver tree): +1 movement, ignores terrain penalties
 - With **Service** commendation: +1 movement for land units in radius
-- **Quick Deployment** (Logistics): packed units +1 movement
 
 ### XP Accrual
 
@@ -119,7 +118,7 @@ Each promotion point unlocks one node from the 5 promotion trees. Points bank in
 |---|---|---|
 | Bastion | Defense | Steadfast: +2 CS defending for land units in command radius; Garrison: fortified districts +10 HP near commander |
 | Assault | Offense | Initiative: move+act on unpack; Rout: Infantry +2 CS attacking; Storm: Ranged +2 CS attacking; Shock Tactics: Cavalry +3 CS attacking; Enfilade: Siege +3 CS attacking; Advancement: Infantry/Cavalry First Strike |
-| Logistics | Sustain + capacity | Regiments: +2 unit slots; Quick Deployment: packed units +1 movement; Field Repairs: units +5 HP/turn in neutral/owned |
+| Logistics | Sustain + capacity | Quartermaster: +1 Gold per packed unit; Recruitment: +15% Production toward land units while stationed on a District; Regiments: +2 unit slots and faster reinforcement; Field Medic: +5 Healing in enemy/neutral territory; Looting: +50% yield/HP from pillaging; Survival Training: Commando plus terrain/cliff benefits |
 | Maneuver | Mobility | Mobility: +1 movement + ignore terrain; Breakthrough: ignore ZoC |
 | Leadership | Non-combat | Zeal: stackable +5% yield per commander; Unity: +10% Influence in cities with stationed commander; Statesmanship: +1 Amenity |
 
@@ -289,7 +288,7 @@ XP thresholds per level: not published.
 - Exact XP thresholds per level (not published)
 - Fleet Commander unlock condition (age confirmed, trigger not)
 - Exact placement/distribution of Fleet Commander retained naval units after age transition
-- Full 30-node promotion tree listings
+- Full Fleet Commander, Aerodrome Commander, Squadron Commander, and Aircraft Carrier promotion tree listings
 - Bulwark promotion tree location
 - Service commendation exact beneficiary (commander vs units)
 - XP per attack vs per kill
