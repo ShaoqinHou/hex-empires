@@ -89,8 +89,8 @@
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Narrative events evaluate on turn end and specific moments such as tech completion, battle wins, Golden Ages, religion choices, weather, war, and age transitions.
-**Engine does:** `narrativeEventSystem` is wired after `researchSystem`. It handles `END_TURN` candidate evaluation, queues one event, resolves choices, applies supported effects, writes tag output, and records fired ids. `researchSystem` now calls the shared narrative enqueue helper when normal or Future Tech research completes, so the first eligible `TECH_RESEARCHED` event uses the same pending/fired pipeline.
-**Gap:** Battle, religion, weather, war, and age-transition trigger moments are not yet hooked. Non-yield effect kinds are still limited or no-op, and `NarrativeRequirements` does not yet expose a tech-id-specific filter.
+**Engine does:** `narrativeEventSystem` is wired after `researchSystem`. It handles `END_TURN` candidate evaluation, queues one event, resolves choices, applies supported effects, writes tag output, and records fired ids. `researchSystem` now calls the shared narrative enqueue helper when normal or Future Tech research completes, so the first eligible `TECH_RESEARCHED` event uses the same pending/fired pipeline. `religionSystem` also queues the first eligible `RELIGION_CHOSEN` event after successful pantheon adoption or religion founding.
+**Gap:** Battle, weather, war, and age-transition trigger moments are not yet hooked. Non-yield effect kinds are still limited or no-op, and `NarrativeRequirements` does not yet expose a tech-id-specific filter.
 **Recommendation:** Continue adding one-shot trigger hooks from the owning systems; next candidates are battle/war and age-transition triggers. Add specific requirement fields only when content needs them.
 
 ---
@@ -137,7 +137,7 @@
 ## Close follow-ups
 
 - F-01: grow the authored event registry after trigger/effect behavior stabilizes.
-- F-04: hook battle, religion, weather, war, and age-transition triggers one at a time; add tech-id-specific filtering only when authored content needs it.
+- F-04: hook battle, weather, war, and age-transition triggers one at a time; add tech-id-specific filtering only when authored content needs it.
 - F-06: unify movement discovery consumption with event resolution.
 - F-07: add choice effect previews, discovery map markers, and systemic banners.
 

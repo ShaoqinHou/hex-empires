@@ -38,8 +38,9 @@ export interface NarrativeRequirements {
    * 'BATTLE_WON' — evaluated when a combat results in an enemy unit death.
    * 'TECH_RESEARCHED' — evaluated when a tech completes.
    * 'DISCOVERY_EXPLORED' — fired by movementSystem when a unit steps on a discoveryId tile.
+   * 'RELIGION_CHOSEN' — evaluated after pantheon adoption or religion founding.
    */
-  readonly triggerType?: 'END_TURN' | 'BATTLE_WON' | 'TECH_RESEARCHED' | 'DISCOVERY_EXPLORED';
+  readonly triggerType?: 'END_TURN' | 'BATTLE_WON' | 'TECH_RESEARCHED' | 'DISCOVERY_EXPLORED' | 'RELIGION_CHOSEN';
 }
 
 /**

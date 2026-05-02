@@ -40,6 +40,7 @@ import type {
   ReligionSlotState,
 } from '../types/Religion';
 import { distance } from '../hex/HexMath';
+import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 
 /**
  * Widened action type accepted by religionSystem. The pipeline's
@@ -177,12 +178,14 @@ function handleAdoptPantheon(
     type: 'legacy',
   };
 
-  return {
+  const nextState: GameState = {
     ...state,
     players: updatedPlayers,
     log: [...state.log, event],
     religion: updatedReligionSlot,
   };
+
+  return enqueueFirstEligibleNarrativeEvent(nextState, 'RELIGION_CHOSEN', { playerId });
 }
 
 // ── FOUND_RELIGION ──────────────────────────────────────────────────
@@ -307,12 +310,14 @@ function handleFoundReligion(
       : []),
   ];
 
-  return {
+  const nextState: GameState = {
     ...state,
     players: updatedPlayers,
     log: [...state.log, ...events],
     religion: updatedReligionSlot,
   };
+
+  return enqueueFirstEligibleNarrativeEvent(nextState, 'RELIGION_CHOSEN', { playerId });
 }
 
 // ── SPREAD_RELIGION ──────────────────────────────────────────────────

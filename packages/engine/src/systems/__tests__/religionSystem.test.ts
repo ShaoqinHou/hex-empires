@@ -2,8 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { religionSystem, canAdoptPantheon } from '../religionSystem';
 import type { ReligionAction, ReligionRecord } from '../../types/Religion';
 import type { CityState, GameState } from '../../types/GameState';
+import type { NarrativeEventDef } from '../../types/NarrativeEvent';
 import { createTestState, createTestPlayer } from './helpers';
 import { ALL_RELICS } from '../../data/relics';
+
+const RELIGION_CHOSEN_EVENT: NarrativeEventDef = {
+  id: 'religion_chosen_test',
+  title: 'A New Faith',
+  vignette: 'The people gather around a shared belief.',
+  requirements: { triggerType: 'RELIGION_CHOSEN' },
+  category: 'religion',
+  choices: [{ label: 'Acknowledge', effects: [] }],
+};
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
   return {
@@ -39,6 +49,19 @@ function withReligionSlot(
   religions: ReadonlyArray<ReligionRecord>,
 ): GameState {
   return { ...state, religion: { religions } };
+}
+
+function withNarrativeEvents(
+  state: GameState,
+  events: ReadonlyArray<NarrativeEventDef>,
+): GameState {
+  return {
+    ...state,
+    config: {
+      ...state.config,
+      narrativeEvents: new Map(events.map(event => [event.id, event])),
+    },
+  };
 }
 
 describe('religionSystem', () => {
@@ -113,6 +136,21 @@ describe('religionSystem', () => {
       expect(last.type).toBe('legacy');
       expect(last.playerId).toBe('p1');
       expect(last.message).toContain('God of War');
+    });
+
+    it('queues a RELIGION_CHOSEN narrative event after pantheon adoption', () => {
+      const state = withNarrativeEvents(createTestState({
+        players: new Map([['p1', createTestPlayer({ id: 'p1', faith: 100, researchedCivics: ['mysticism'] })]]),
+      }), [RELIGION_CHOSEN_EVENT]);
+
+      const next = religionSystem(state, {
+        type: 'ADOPT_PANTHEON',
+        playerId: 'p1',
+        pantheonId: 'god_of_war',
+      });
+
+      expect(next.pendingNarrativeEvents).toContain('religion_chosen_test');
+      expect(next.firedNarrativeEvents).toContain('religion_chosen_test');
     });
 
     it('does not mutate the original state (immutability)', () => {
@@ -443,6 +481,29 @@ describe('religionSystem', () => {
       expect(next.religion!.religions[0].name).toBe('Zen');
       expect(next.religion!.religions[0].foundedOnTurn).toBe(4);
       expect(next.players.get('p1')!.faith).toBe(500);
+    });
+
+    it('queues a RELIGION_CHOSEN narrative event after religion founding', () => {
+      const city = createTestCity({ id: 'c1', owner: 'p1', buildings: ['temple'] });
+      const state = withNarrativeEvents(createTestState({
+        players: new Map([[
+          'p1',
+          createTestPlayer({ id: 'p1', faith: 500, researchedCivics: ['piety'] }),
+        ]]),
+        cities: new Map([['c1', city]]),
+      }), [RELIGION_CHOSEN_EVENT]);
+
+      const next = religionSystem(state, {
+        type: 'FOUND_RELIGION',
+        playerId: 'p1',
+        cityId: 'c1',
+        religionName: 'Zen',
+        founderBelief: 'world_church',
+        followerBelief: 'jesuit_education',
+      });
+
+      expect(next.pendingNarrativeEvents).toContain('religion_chosen_test');
+      expect(next.firedNarrativeEvents).toContain('religion_chosen_test');
     });
   });
 
