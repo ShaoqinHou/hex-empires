@@ -62,11 +62,11 @@ afterEach(() => {
 });
 
 describe('DiplomacyPanel (PanelShell migration)', () => {
-  it('renders inside a PanelShell with id="diplomacy" and priority="info"', () => {
+  it('renders inside a PanelShell with id="diplomacy" and priority="overlay"', () => {
     mockRef.state = makeState();
     const { getByTestId } = render(<DiplomacyPanel onClose={() => {}} />);
     const shell = getByTestId('panel-shell-diplomacy');
-    expect(shell.getAttribute('data-panel-priority')).toBe('info');
+    expect(shell.getAttribute('data-panel-priority')).toBe('overlay');
     expect(shell.getAttribute('data-panel-id')).toBe('diplomacy');
   });
 

@@ -39,7 +39,7 @@ export function DiplomacyPanel({ onClose }: DiplomacyPanelProps) {
   const currentPlayerId = state.currentPlayerId;
 
   return (
-    <PanelShell id="diplomacy" title="Diplomacy" onClose={onClose} priority="info">
+    <PanelShell id="diplomacy" title="Diplomacy" onClose={onClose} priority="overlay">
       {/* ── Tab bar ── */}
       <div
         className="flex gap-1 mb-3"
