@@ -5,6 +5,7 @@ import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
+import { createUnitMoveAnimationPlan } from './AnimationTrigger';
 import { animationEventBus } from '../hooks/AnimationEventBus';
 import { RANGED_PROJECTILE_COLOR } from './canvasTokens';
 import type { HexCoord, CityState } from '@hex/engine';
@@ -240,9 +241,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
 
       switch (action.type) {
         case 'MOVE_UNIT': {
-          const unit = nextState.units.get(action.unitId);
-          if (unit && action.path.length > 0) {
-            am.add(am.createUnitMoveAnimation(action.unitId, unit.owner, unit.typeId, action.path, 400));
+          const plan = createUnitMoveAnimationPlan(prevState, nextState, action);
+          if (plan) {
+            am.add(am.createUnitMoveAnimation(action.unitId, plan.ownerId, plan.unitTypeId, plan.path, 400));
           }
           break;
         }

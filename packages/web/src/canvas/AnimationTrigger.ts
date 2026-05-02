@@ -5,7 +5,8 @@
  * Animations are queued in the AnimationManager and rendered by AnimationRenderer.
  */
 
-import type { HexCoord, UnitState, CityState, GameState } from '@hex/engine';
+import type { HexCoord, GameState } from '@hex/engine';
+import { coordToKey } from '@hex/engine';
 import type {
   UnitMoveAnimation,
   MeleeAttackAnimation,
@@ -18,6 +19,37 @@ import type {
 } from './AnimationManager';
 import { AnimationManager } from './AnimationManager';
 import type { GameAction } from '@hex/engine';
+
+export interface UnitMoveAnimationPlan {
+  readonly ownerId: string;
+  readonly unitTypeId: string;
+  readonly path: ReadonlyArray<HexCoord>;
+}
+
+export function createUnitMoveAnimationPlan(
+  prevState: GameState,
+  newState: GameState,
+  action: { type: 'MOVE_UNIT'; unitId: string; path: ReadonlyArray<HexCoord> },
+): UnitMoveAnimationPlan | null {
+  const prevUnit = prevState.units.get(action.unitId);
+  const unit = newState.units.get(action.unitId);
+  if (!prevUnit || !unit) return null;
+
+  const prevKey = coordToKey(prevUnit.position);
+  const nextKey = coordToKey(unit.position);
+  if (prevKey === nextKey) return null;
+
+  const actualPathEndIndex = action.path.findIndex(coord => coordToKey(coord) === nextKey);
+  const traversedPath = actualPathEndIndex >= 0
+    ? action.path.slice(0, actualPathEndIndex + 1)
+    : [unit.position];
+
+  return {
+    ownerId: unit.owner,
+    unitTypeId: unit.typeId,
+    path: [prevUnit.position, ...traversedPath],
+  };
+}
 
 /**
  * Trigger animations based on state changes after an action.
@@ -63,15 +95,14 @@ function triggerMoveAnimation(
   newState: GameState,
   action: { type: 'MOVE_UNIT'; unitId: string; path: ReadonlyArray<HexCoord> },
 ): void {
-  const unit = newState.units.get(action.unitId);
-  if (!unit) return;
+  const plan = createUnitMoveAnimationPlan(prevState, newState, action);
+  if (!plan) return;
 
-  // Create movement animation along the path
   const anim = manager.createUnitMoveAnimation(
     action.unitId,
-    unit.owner,
-    unit.typeId,
-    action.path,
+    plan.ownerId,
+    plan.unitTypeId,
+    plan.path,
     400, // 400ms duration
   );
   manager.add(anim);

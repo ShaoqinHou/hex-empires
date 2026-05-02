@@ -169,6 +169,51 @@ describe('system-wiring — visibilitySystem order', () => {
     expect(next.players.get('p1')!.visibility.has(oldOnly)).toBe(false);
     expect(next.players.get('p1')!.explored.has(oldOnly)).toBe(true);
   });
+
+  it('refreshes visibility around the same unit after a full turn cycle', () => {
+    const oldExclusive = coordToKey({ q: 2, r: 3 });
+    const firstVisible = coordToKey({ q: 6, r: 3 });
+    const secondVisible = coordToKey({ q: 7, r: 3 });
+
+    let state = createTestState({
+      phase: 'start',
+      currentPlayerId: 'p1',
+      players: new Map([
+        ['p1', createTestPlayer({ id: 'p1' })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      units: new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2 })],
+      ]),
+    });
+
+    state = engine.applyAction(state, { type: 'START_TURN' });
+    state = engine.applyAction(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 4, r: 3 }],
+    });
+
+    const afterFirstMove = state;
+    expect(afterFirstMove.units.get('u1')!.position).toEqual({ q: 4, r: 3 });
+    expect(afterFirstMove.players.get('p1')!.visibility.has(firstVisible)).toBe(true);
+
+    state = engine.applyAction(state, { type: 'END_TURN' });
+    state = engine.applyAction(state, { type: 'START_TURN' });
+    state = engine.applyAction(state, { type: 'END_TURN' });
+    state = engine.applyAction(state, { type: 'START_TURN' });
+
+    state = engine.applyAction(state, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 5, r: 3 }],
+    });
+
+    expect(state.units.get('u1')!.position).toEqual({ q: 5, r: 3 });
+    expect(state.players.get('p1')!.visibility.has(secondVisible)).toBe(true);
+    expect(state.players.get('p1')!.visibility.has(oldExclusive)).toBe(false);
+    expect(state.players.get('p1')!.explored.has(oldExclusive)).toBe(true);
+  });
 });
 
 describe('system-wiring — rejected END_TURN short-circuit', () => {
