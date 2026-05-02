@@ -22,7 +22,11 @@ function Run-Step {
   )
   Write-Output "== $Name =="
   try {
+    $global:LASTEXITCODE = 0
     & $Block
+    if ($LASTEXITCODE -ne 0) {
+      throw "$Name exited with code $LASTEXITCODE"
+    }
   } catch {
     Fail "$Name failed: $($_.Exception.Message)"
   }
