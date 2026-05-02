@@ -22,7 +22,7 @@ export function createDefaultIPState(def: {
     befriendProgress: 0,
     suzerainPlayerId: null,
     isIncorporated: false,
-    isCityState: true,
+    isCityState: false,
     bonusPool: [...def.bonusPool],
   };
 }

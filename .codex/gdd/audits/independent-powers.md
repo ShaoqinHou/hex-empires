@@ -1,20 +1,24 @@
-# Independent Powers — hex-empires Audit
+# Independent Powers - hex-empires Audit
 
 **System slug:** `independent-powers`
 **GDD doc:** [systems/independent-powers.md](../systems/independent-powers.md)
-**Audit date:** `2026-04-19`
-**Auditor:** `claude-sonnet-4.6`
+**Audit date:** `2026-05-02`
+**Auditor:** `codex`
 **Version target:** Firaxis patch 1.3.0
 
 ---
 
 ## Engine files audited
 
-- `packages/engine/src/types/GameState.ts` (no IP fields)
-- `packages/engine/src/systems/diplomacySystem.ts` (no IP handlers)
-- `packages/engine/src/data/leaders/all-leaders.ts` (Pericles ability diverged)
-- `packages/engine/src/data/` (no `independent-powers/` directory)
+- `packages/engine/src/types/GameState.ts`
+- `packages/engine/src/state/IPStateFactory.ts`
+- `packages/engine/src/systems/independentPowerSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/GameEngine.ts`
+- `packages/engine/src/data/independent-powers/`
+- `packages/engine/src/data/leaders/all-leaders.ts`
 - `packages/web/src/ui/panels/DiplomacyPanel.tsx`
+- `packages/web/src/ui/panels/panelRegistry.ts`
 
 ---
 
@@ -22,10 +26,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 1 |
-| CLOSE | 1 |
-| DIVERGED | 1 |
-| MISSING | 5 |
+| MATCH | 2 |
+| CLOSE | 6 |
+| DIVERGED | 0 |
+| MISSING | 0 |
 | EXTRA | 0 |
 
 **Total findings:** 8
@@ -34,154 +38,150 @@
 
 ## Detailed findings
 
-### F-01: `IndependentPowerState` entity absent — MISSING
+### F-01: Independent Power state and action surface exist -- MATCH
 
-**Location:** `types/GameState.ts`
-**GDD reference:** `systems/independent-powers.md` § "Entities"
+**Location:** `packages/engine/src/types/GameState.ts:425-429,1054-1064,1113,1363-1377`; `packages/engine/src/state/IPStateFactory.ts:10-28`
+**GDD reference:** `systems/independent-powers.md` section "Entities"
 **Severity:** HIGH
 **Effort:** M
-**VII says:** `GameState.independentPowers: ReadonlyMap<id, IndependentPowerState>`. Each entry: `{ id, type, attitude, befriendProgress, suzerainPlayerId, isIncorporated, isCityState }`. 6 type categories: militaristic/cultural/scientific/economic/diplomatic/expansionist.
-**Engine does:** No `independentPowers` field on `GameState`. No `IndependentPowerState` interface. `GameAction` union has no BEFRIEND_INDEPENDENT, ADD_SUPPORT, INCITE_RAID, BOLSTER_MILITARY, PROMOTE_GROWTH, LEVY_UNIT, INCORPORATE, or DISPERSE. `PlayerState` has no `suzerainties` or `suzerainBonuses`.
-**Gap:** Zero engine representation.
-**Recommendation:** Add `IndependentPowerState` type. Add `GameState.independentPowers` Map. Add 7 IP actions to `GameAction` union. Create `data/independent-powers/` content directory.
+**VII says:** `GameState.independentPowers` tracks typed Independent Powers with attitude, befriend progress, suzerain, incorporated state, city-state conversion state, and bonus pool. Player state tracks suzerainties and selected suzerain bonuses. Actions cover befriending, support, raid incitement, suzerain actions, incorporation, dispersal, and bonus selection.
+**Engine does:** `IndependentPowerState`, `GameState.independentPowers`, `PlayerState.suzerainties`, `PlayerState.suzerainBonuses`, and the IP action union are present. `createDefaultIPState` now starts entries as `isCityState: false`; `grantSuzerainty` converts them to `isCityState: true`.
+**Gap:** None for the local type/action surface.
+**Recommendation:** Keep the lifecycle invariant explicit: Independent Power -> befriended city-state -> incorporated settlement.
 
 ---
 
-### F-02: `independentPowerSystem.ts` absent — MISSING
+### F-02: Dedicated independentPowerSystem is wired but behavior depth is still partial -- CLOSE
 
-**Location:** `systems/` (no file)
-**GDD reference:** `systems/independent-powers.md` § "Triggers", "Mechanics"
+**Location:** `packages/engine/src/systems/independentPowerSystem.ts`; `packages/engine/src/GameEngine.ts:39,112`
+**GDD reference:** `systems/independent-powers.md` sections "Triggers" and "Mechanics"
 **Severity:** HIGH
 **Effort:** L
-**VII says:** Handles 9 triggers: START_OF_AGE re-seed, END_TURN befriend-progress increment, 7 player actions. Befriend threshold = 60 points at 2 pts/turn base; first player to threshold wins exclusive suzerainty.
-**Engine does:** No system file. `diplomacySystem.ts` handles only inter-player relations. No NPC faction pipeline slot.
-**Gap:** Largest single Influence-spend category (Incorporate 240/480/720 vs Endeavor 50) has no pipeline.
-**Recommendation:** Create `independentPowerSystem.ts`. Register in `GameEngine` pipeline after `diplomacySystem`. Wire START_OF_AGE to `ageSystem`.
+**VII says:** The IP system owns befriend progress, exclusive suzerainty, suzerain actions, hostile behavior, incorporation, dispersal, and bonus choice.
+**Engine does:** `independentPowerSystem` is in `DEFAULT_SYSTEMS` after diplomacy. It handles `BEFRIEND_INDEPENDENT`, `ADD_SUPPORT`, `INCITE_RAID`, `BOLSTER_MILITARY`, `PROMOTE_GROWTH`, `LEVY_UNIT`, `INCORPORATE`, `DISPERSE`, `SUZERAIN_BONUS_SELECTED`, and `END_TURN`. It deducts influence, grants exclusive suzerainty at 60 progress, logs actions, and has focused system tests.
+**Gap:** Several actions are still simplified: bolster/promote/levy are log-only, automatic per-turn befriend progress is not modeled, and hostile behavior emits logs instead of units. The system exists and is wired, but not yet mechanically complete.
+**Recommendation:** Split remaining behavior into small slices: real suzerain action effects, automatic progress rules, and hostile unit spawning/pathing.
 
 ---
 
-### F-03: Age-transition IP reset absent — MISSING
+### F-03: Age-transition reset removes and reseeds IPs -- MATCH
 
-**Location:** `systems/ageSystem.ts`
-**GDD reference:** `systems/independent-powers.md` § "Age Transition — Full Reset"
+**Location:** `packages/engine/src/systems/ageSystem.ts:213-239,395`
+**GDD reference:** `systems/independent-powers.md` section "Age Transition - Full Reset"
 **Severity:** HIGH
-**Effort:** S (after F-01/F-02)
-**VII says:** On TRANSITION_AGE: all unincorporated IPs + non-incorporated city-states removed; `independentPowers` cleared + re-seeded for new age; all `suzerainties` cleared. Incorporated settlements survive as Towns.
-**Engine does:** `ageSystem.ts` has no code touching `independentPowers` (field doesn't exist).
-**Gap:** Sharpest divergence from Civ VI city-states (VII age-reset) absent.
-**Recommendation:** After F-01: remove non-incorporated entries, clear `suzerainties`, seed fresh set via seeded-RNG from config.
+**Effort:** S
+**VII says:** On age transition, unincorporated IPs and city-states reset; incorporated settlements survive; suzerainties clear; the next age gets a fresh IP set.
+**Engine does:** `ageSystem` keeps incorporated IPs, removes non-incorporated entries, reseeds IPs whose config age matches the next age, clears all players' `suzerainties`, and clears `suzerainBonuses`.
+**Gap:** None for the local reset model.
+**Recommendation:** Keep age reset tests tied to both removal and suzerainty clearing so future transition refactors do not leak old-age city-states.
 
 ---
 
-### F-04: Suzerain bonus selection absent — MISSING
+### F-04: Suzerain bonus selection state exists, but bonus effects and selection UX are incomplete -- CLOSE
 
-**Location:** `types/GameState.ts` (PlayerState), `web/src/ui/panels/`
-**GDD reference:** `systems/independent-powers.md` § "Suzerain Status and Bonus Selection"
-**Severity:** HIGH
-**Effort:** M
-**VII says:** On Befriend completion, winning player chooses from 2-3 option pool tied to city-state type. Chosen bonus removed from pool; later same-type suzerains get smaller selection. Many bonuses scale with same-type suzerain count.
-**Engine does:** `PlayerState` has no `suzerainties`/`suzerainBonuses`. Pericles ability description says "5% culture per city-state you are suzerain of" but `EffectDef` is flat `MODIFY_YIELD culture +2` (description/impl decoupled).
-**Gap:** Pool + selection UI + depletion absent.
-**Recommendation:** Add `suzerainties: ReadonlyArray<string>` and `suzerainBonuses: Map<string, string>` to `PlayerState`. Add `IndependentPowerState.bonusPool`. Add `SUZERAIN_BONUS_SELECTED` action. Fix Pericles.
-
----
-
-### F-05: Hostile Independent Powers (Barbarian analog) absent — MISSING
-
-**Location:** `systems/` (no NPC spawning)
-**GDD reference:** `systems/independent-powers.md` § "Hostile IPs — Military Threat", "Incite Raid"
+**Location:** `packages/engine/src/systems/independentPowerSystem.ts:257-283`; `packages/engine/src/types/GameState.ts:425-429,1063`
+**GDD reference:** `systems/independent-powers.md` section "Suzerain Status and Bonus Selection"
 **Severity:** HIGH
 **Effort:** M
-**VII says:** Hostile IPs spawn military units each turn toward nearest player settlement. Replaces all Civ VI barbarian functionality. `INCITE_RAID` (30 Influence) lets players weaponize hostile/neutral IP against rival for 1 turn.
-**Engine does:** No hostile-IP spawning. No NPC AI loop. `aiSystem.ts` controls player-owned AIs only. Comment in `GameState.ts` mentions `'barbarian near capital'` severity — dead hint with no emitter.
-**Gap:** Early-game military threat + proxy-raider mechanic absent.
-**Recommendation:** Add NPC-faction turn after all player turns. Hostile IPs spawn one unit per N turns (seeded RNG). INCITE_RAID redirects IP unit toward incite target.
+**VII says:** On befriending completion, the winning player chooses from a 2-3 option pool tied to city-state type; chosen bonuses deplete the pool and produce gameplay effects, many scaling with same-type suzerain count.
+**Engine does:** `bonusPool` exists, `SUZERAIN_BONUS_SELECTED` validates that the player is suzerain, removes the selected bonus from the pool, and stores the selected bonus id on `PlayerState.suzerainBonuses`.
+**Gap:** Selected bonus ids are not yet applied as effects, the player-facing choice flow is thin, and same-type scaling is not implemented.
+**Recommendation:** Add effect definitions/evaluation for selected suzerain bonuses before adding more bonus content.
 
 ---
 
-### F-06: Data content registry (named IP factions) absent — MISSING
+### F-05: Hostile IP and INCITE_RAID are present, but no real raider units spawn -- CLOSE
 
-**Location:** `data/` (no directory)
-**GDD reference:** `systems/independent-powers.md` § "Content flowing through this system"
+**Location:** `packages/engine/src/systems/independentPowerSystem.ts:161-186,287-325`; `packages/engine/src/systems/__tests__/independentPowerSystem.test.ts`
+**GDD reference:** `systems/independent-powers.md` sections "Hostile IPs - Military Threat" and "Incite Raid"
+**Severity:** HIGH
+**Effort:** M
+**VII says:** Hostile IPs replace barbarians by spawning military units toward settlements; `INCITE_RAID` spends 30 Influence to weaponize a hostile/neutral IP against a rival for a short duration.
+**Engine does:** `INCITE_RAID` costs 30 Influence, rejects incorporated IPs, rejects converted city-states, flips the target IP to hostile, and logs the raid. `END_TURN` emits hostile-IP raid log entries on a three-turn cadence.
+**Gap:** There is no spawned unit, raid target state, duration counter, settlement targeting, or pathing behavior. The current implementation is a traceable placeholder rather than a gameplay threat.
+**Recommendation:** Add explicit raid state and spawned NPC unit ownership before tuning hostile IP AI.
+
+---
+
+### F-06: Named IP data registry exists but roster and map seeding remain minimal -- CLOSE
+
+**Location:** `packages/engine/src/data/independent-powers/`; `packages/engine/src/types/GameConfig.ts`; `packages/engine/src/state/GameConfigFactory.ts`
+**GDD reference:** `systems/independent-powers.md` section "Content flowing through this system"
 **Severity:** MED
 **Effort:** S skeleton, M full roster
-**VII says:** Named factions with per-entry data: type, default attitude, suzerain bonus pool (age-specific), tile seeding. ~20+ named factions. Confirmed: Kumbi Saleh/Soninke, Carantania/Slav, Tilantongo/Mixtec, Etelkoz/Magyar.
-**Engine does:** No `data/independent-powers/`, no `IndependentPowerDef`, no barrel.
-**Gap:** Zero content.
-**Recommendation:** Create `data/independent-powers/{name}.ts` + `ALL_INDEPENDENT_POWERS` barrel + `GameConfig.independentPowers` registry. Minimum viable: 3 IPs per age.
+**VII says:** Named factions have type, default attitude, suzerain bonus pool, age, and map seeding data. The roster is broad and age-aware.
+**Engine does:** A data directory and registry exist with entries including Carantania, Etelkoz, Kumbi Saleh, Samarkand, Tilantongo, and Zanzibar. Config creation exposes the registry to systems.
+**Gap:** The roster is still small, entries use placeholder positions from `createDefaultIPState`, and map generation does not yet place IPs as real settlements/outposts.
+**Recommendation:** Add roster content only after map placement and bonus effects have stable mechanics to attach to.
 
 ---
 
-### F-07: DiplomacyPanel IP tab absent — MISSING
+### F-07: DiplomacyPanel has an Independent Powers tab, with panel-priority drift -- CLOSE
 
-**Location:** `DiplomacyPanel.tsx` (1-327)
-**GDD reference:** `systems/independent-powers.md` § "UI requirements"
+**Location:** `packages/web/src/ui/panels/DiplomacyPanel.tsx:11,48-52,337-467`; `packages/web/src/ui/panels/panelRegistry.ts:77`
+**GDD reference:** `systems/independent-powers.md` section "UI requirements"
 **Severity:** MED
 **Effort:** S frame, M full
-**VII says:** Primary IP interaction surface: "Independents and City-States" tab in Leader screen. Lists discovered IPs with attitude, befriend progress bar, Influence cost per action.
-**Engine does:** Panel renders `state.players` only. IPs wouldn't appear even if they existed. Panel priority `info` (cross-cut `diplomacy-influence.md` F-15).
-**Gap:** Entire IP interaction absent.
-**Recommendation:** Add 2nd section to `DiplomacyPanel` or create `IndependentPowersPanel.tsx` reading `state.independentPowers`. Change panel priority `info` → `overlay`.
+**VII says:** The main leader/diplomacy surface lists discovered Independents and City-States, attitude, befriend progress, and Influence actions.
+**Engine does:** `DiplomacyPanel` has an `Ind. Powers` tab that reads `state.independentPowers`, displays non-incorporated entries, and dispatches IP actions such as befriending and suzerain bonus selection. `panelRegistry` classifies diplomacy as `overlay`.
+**Gap:** `DiplomacyPanel` still passes `priority="info"` to `PanelShell`, drifting from the registry. Discovery filtering, detailed costs, and full bonus-selection UX remain thin.
+**Recommendation:** Align the component priority with the registry, then deepen the tab once bonus effects and raid units exist.
 
 ---
 
-### F-08: Pericles suzerain-count scaling data bug — DIVERGED
+### F-08: Pericles no longer has a wrong flat culture effect, but dynamic suzerain scaling is not implemented -- CLOSE
 
-**Location:** `data/leaders/all-leaders.ts:27-37`
-**GDD reference:** `systems/independent-powers.md` § "Suzerain bonus stacking"
+**Location:** `packages/engine/src/data/leaders/all-leaders.ts:79-91`
+**GDD reference:** `systems/independent-powers.md` section "Suzerain bonus stacking"
 **Severity:** LOW
-**Effort:** S (after F-04)
-**VII says:** Pericles' "Surrounded by Glory" scales with city-states held as suzerain.
-**Engine does:** Effect is flat `MODIFY_YIELD culture +2`. Description text accurate; `effects` array wrong.
-**Gap:** Description/implementation decoupled.
-**Recommendation:** Once F-04's `suzerainties` exists, change effect to dynamic multiplier. Interim: add comment flag.
+**Effort:** S
+**VII says:** Pericles' Delian League / Surrounded by Glory effect scales culture by number of city-states held as suzerain.
+**Engine does:** The former flat `MODIFY_YIELD culture +2` effect has been removed; comments now flag that dynamic `MODIFY_YIELD_PER_SUZERAIN` support is needed before the effect can be represented.
+**Gap:** Dynamic per-suzerain yield scaling is still unsupported in the effect engine.
+**Recommendation:** Add a dynamic effect shape or leader-specific effect evaluator once suzerainty counts are stable.
 
 ---
 
-## Extras to retire
+## Close follow-ups
 
-None.
+- F-02: implement real suzerain action effects and automatic progress rules.
+- F-04: apply selected suzerain bonus effects and build a proper choice surface.
+- F-05: create explicit raid state plus spawned hostile units.
+- F-06: expand roster after map placement and bonus effects are stable.
+- F-07: align DiplomacyPanel priority with panelRegistry and add discovery filtering.
+- F-08: implement dynamic Pericles suzerain-count culture scaling.
 
 ---
 
 ## Missing items
 
-1. `IndependentPowerState` + `independentPowers` Map on GameState (F-01).
-2. `independentPowerSystem.ts` (F-02).
-3. Age-transition IP reset (F-03).
-4. Suzerain bonus pool + `PlayerState.suzerainties` (F-04).
-5. Hostile IP spawning + `INCITE_RAID` (F-05).
-6. Data content registry (F-06).
-7. DiplomacyPanel IP tab / IndependentPowersPanel (F-07).
-
----
-
-## Cross-audit note
-
-`diplomacy-influence.md` F-07 already flagged this system gap HIGH. That entry is superseded by this audit. When planning, use this as authoritative.
+None as total absences. Remaining work is partial-implementation depth.
 
 ---
 
 ## Mapping recommendation for GDD system doc
 
-Paste into `.codex/gdd/systems/independent-powers.md` § "Mapping to hex-empires":
+Paste into `.codex/gdd/systems/independent-powers.md` section "Mapping to hex-empires":
 
 **Engine files:**
-- Currently: no dedicated IP files.
-- Closest analog: `diplomacySystem.ts` (covers player-player only).
-- To add: `types/IndependentPower.ts`, `data/independent-powers/`, `systems/independentPowerSystem.ts`, UI tab or `IndependentPowersPanel.tsx`.
+- `packages/engine/src/types/GameState.ts`
+- `packages/engine/src/state/IPStateFactory.ts`
+- `packages/engine/src/systems/independentPowerSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/data/independent-powers/`
+- `packages/web/src/ui/panels/DiplomacyPanel.tsx`
 
-**Status:** 1 MATCH / 1 CLOSE / 1 DIVERGED / 5 MISSING / 0 EXTRA
+**Status:** 2 MATCH / 6 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-01 / F-02 — entire system architecturally absent. F-05 — hostile IPs (barbarian replacement) absent.
+**Highest-severity finding:** F-05 - hostile Independent Powers and `INCITE_RAID` are present but still log-only instead of spawning and directing real units.
 
 ---
 
 ## Open questions
 
-1. IP spawning — on map at age init, or via narrative/exploration triggers?
-2. Incorporation mechanic — does it convert IP tile to Town, or require separate founding?
-3. Same-type stacking formula — linear, diminishing, or step-function?
+1. Should IPs be placed by map generation as settlements/outposts, or only instantiated by age seed data first?
+2. Should `INCITE_RAID` support neutral IPs only, hostile IPs only, or both before city-state conversion?
+3. What effect representation should selected suzerain bonuses use so Pericles and same-type scaling can share it?
 
 ---
 
@@ -189,12 +189,12 @@ Paste into `.codex/gdd/systems/independent-powers.md` § "Mapping to hex-empires
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-03, F-06, F-07, F-08 | 2d |
-| M | F-01, F-04, F-05 | ~7d |
-| L | F-02 | ~1.5w |
-| **Total** | 8 | **~3.5w** |
+| S | F-07, F-08 | ~1d |
+| M | F-02, F-04, F-05, F-06 | ~8d |
+| L | - | 0 |
+| **Total** | 6 close follow-ups | **~2w** |
 
-Recommended order: F-01 (type layer) → F-06 (data skeleton) → F-02 (system) → F-03 (age reset) → F-04 (bonus selection) → F-05 (hostile units) → F-07 (UI tab) → F-08 (Pericles fix). F-01-F-03 in single commit.
+Recommended order: F-07 -> F-04 -> F-08 -> F-05 -> F-02 -> F-06.
 
 ---
 

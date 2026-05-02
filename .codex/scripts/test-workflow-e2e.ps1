@@ -87,6 +87,24 @@ Run-Step "agent-routing-check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-agent-routing.ps1"
 }
 
+Run-Step "spawn-worktree-safety-doc" {
+  $skill = Get-Content -Raw ".codex/skills/spawn-worktree/SKILL.md"
+  if ($skill -match 'WORKTREE_DIR="\s*\.codex/worktrees/' -or $skill -match "WORKTREE_DIR='\s*\.codex/worktrees/") {
+    throw "spawn-worktree skill still instructs nested .codex/worktrees creation"
+  }
+  foreach ($required in @(
+    "outside the current repo",
+    "Do not place agent worktrees under this repository",
+    "git rev-parse --show-toplevel",
+    "Unsafe worktree"
+  )) {
+    if ($skill -notmatch [regex]::Escape($required)) {
+      throw "spawn-worktree skill missing safety guidance: $required"
+    }
+  }
+  Write-Output "spawn-worktree safety documented"
+}
+
 Run-Step "asset-workflow-check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-asset-workflow.ps1"
 }

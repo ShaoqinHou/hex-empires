@@ -24,15 +24,29 @@ directly to a branch you own.
 
 ## Protocol
 
-### 1. Spawn the worktree
+### 1. Spawn the worktree outside the current repo
 
 ```bash
 # Pick a unique branch name and worktree directory name
-BRANCH="eval/<task-slug>"
-WORKTREE_DIR=".codex/worktrees/<task-slug>"
+BRANCH="codex/<task-slug>"
+WORKTREE_DIR="$HOME/.codex/agent-worktrees/hex-empires/<task-slug>"
 
 git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 ```
+
+On Windows/PowerShell, prefer an absolute path outside the current checkout:
+
+```powershell
+$BRANCH = "codex/<task-slug>"
+$WORKTREE_DIR = Join-Path $env:LOCALAPPDATA "Codex\agent-worktrees\hex-empires\<task-slug>"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $WORKTREE_DIR) | Out-Null
+git worktree add -b $BRANCH $WORKTREE_DIR HEAD
+```
+
+Do not place agent worktrees under this repository, including
+`.codex/worktrees/<task-slug>`. Nested worktrees inside an existing worktree can
+resolve `git rev-parse --show-toplevel` to the shared `.git/modules/...`
+directory on Windows, causing status to appear as repository-wide deletions.
 
 ### 2. Drop the sentinel
 
@@ -43,6 +57,19 @@ git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 SENTINEL_PATH="$WORKTREE_DIR/.codex/worktree-sentinel"
 mkdir -p "$WORKTREE_DIR/.codex"
 (cd "$WORKTREE_DIR" && git rev-parse --show-toplevel) > "$SENTINEL_PATH"
+```
+
+Immediately validate the worktree before giving it to an agent:
+
+```powershell
+$top = (git -C $WORKTREE_DIR rev-parse --show-toplevel).Trim()
+$expected = (Resolve-Path $WORKTREE_DIR).Path
+if (($top -replace "\\", "/").TrimEnd("/") -ne ($expected -replace "\\", "/").TrimEnd("/")) {
+  throw "Unsafe worktree: git top-level resolved to $top, expected $expected"
+}
+if ((git -C $WORKTREE_DIR status --short | Measure-Object).Count -ne 0) {
+  throw "Unsafe worktree: new worktree is not clean"
+}
 ```
 
 ### 3. Hand the worktree path to the agent
@@ -85,6 +112,7 @@ The sentinel file is `.gitignore`'d so it never lands in any commit.
 | Agent `cd ..`'s to the main repo and commits | **BLOCK** with mismatch message | must cd back |
 | Agent spawns a shell outside the worktree and inherits CWD | **BLOCK** | must cd in |
 | `.git` dir resolves through a shared dir pointing at main | **BLOCK** | forces investigation |
+| New worktree is nested under the current repo and reports mass deletions | **DO NOT USE** | remove it and recreate outside the repo |
 | Agent uses `git worktree` to create ANOTHER worktree inside theirs and commits there | pass (that sub-worktree's toplevel matches) | might be surprising but is correct per git semantics |
 | Agent removes the sentinel and commits | pass | escape hatch; logged only if the agent also sets `Skip-Review:` trailer |
 | Normal user runs `git commit` with no sentinel present | pass | no-op (guard is opt-in via sentinel existence) |

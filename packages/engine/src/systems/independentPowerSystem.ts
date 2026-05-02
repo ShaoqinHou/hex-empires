@@ -89,6 +89,7 @@ function grantSuzerainty(state: GameState, ipId: string): GameState {
   const ips = updateIP(state, ipId, ip => ({
     ...ip,
     suzerainPlayerId: state.currentPlayerId,
+    isCityState: true,
     attitude: 'friendly' as const,
   }));
 
@@ -167,6 +168,7 @@ function handleInciteRaid(
 
   const ip = state.independentPowers?.get(targetIpId);
   if (!ip || ip.isIncorporated) return state;
+  if (ip.isCityState) return state;
   if (!state.players.has(againstPlayerId)) return state;
 
   const stateAfterDeduct = deductInfluence(state, INCITE_RAID_COST);

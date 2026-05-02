@@ -15,7 +15,7 @@
 | System | Audit file | Findings | Status tally |
 |---|---|---|---|
 | ages | `.codex/gdd/audits/ages.md` | 17 | 11M / 5C / 1D / 0X / 0E |
-| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 2M / 0C / 3D / 5X / 2E |
+| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 7M / 3C / 0D / 2X / 0E |
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
@@ -24,7 +24,7 @@
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
 | government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 6M / 2C / 0D / 0X / 0E |
-| independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 0M / 0C / 1D / 7X / 0E |
+| independent-powers | `.codex/gdd/audits/independent-powers.md` | 8 | 2M / 6C / 0D / 0X / 0E |
 | leaders | `.codex/gdd/audits/leaders.md` | 11 | 1M / 1C / 3D / 5X / 1E |
 | legacy-paths | `.codex/gdd/audits/legacy-paths.md` | 13 | 1M / 4C / 5D / 3X / 0E |
 | legends | `.codex/gdd/audits/legends.md` | 8 | 0M / 1C / 2D / 5X / 0E |
@@ -58,11 +58,11 @@
 | ages | F-05 | `no-tech-tree-reset-on-transition` | ✓ MATCH | M | `packages/engine/src/systems/ageSystem.ts` |
 | ages | F-06 | `no-civic-tree-reset-on-transition` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts` |
 | buildings-wonders | F-01 | `isAgeless`, `isCivUnique`, `civId` fields present on `Build | ✓ MATCH | S | `packages/engine/src/types/Building.ts` |
-| buildings-wonders | F-02 | `ageSystem` performs zero building obsolescence on TRANSITIO | ⊘ MISSING | M | `packages/engine/src/systems/ageSystem.ts` |
-| buildings-wonders | F-03 | `wonderPlacementSystem` is a one-line no-op; not wired | ✗ EXTRA | M | `packages/engine/src/systems/wonderPlacementSystem.ts` |
-| buildings-wonders | F-04 | Quarter formation ignores ageless-pair; `unique_quarter` kin | ⚠ DIVERGED | M | `packages/engine/src/systems/urbanBuildingSystem.ts:61-88`, `packages/engine/src |
-| buildings-wonders | F-05 | Specialist adjacency amplification unimplemented | ⊘ MISSING | M | `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/Cit |
-| buildings-wonders | F-09 | `urbanBuildingSystem` not wired into GameEngine | ✗ EXTRA | L | `packages/engine/src/systems/urbanBuildingSystem.ts:26-30` |
+| buildings-wonders | F-02 | `ageSystem` removes older non-ageless city buildings, but V2 | ≈ CLOSE | M | `packages/engine/src/systems/ageSystem.ts:307-341`; `packages/engine/src/systems |
+| buildings-wonders | F-03 | Wonder geography validation is enforced through the placemen | ≈ CLOSE | M | `packages/engine/src/systems/wonderPlacementSystem.ts`; `packages/engine/src/sta |
+| buildings-wonders | F-04 | Quarter formation supports unique quarters, ageless pairs, a | ✓ MATCH | M | `packages/engine/src/systems/urbanBuildingSystem.ts:61-127`; `packages/engine/sr |
+| buildings-wonders | F-05 | Specialist adjacency amplification implemented with capped s | ✓ MATCH | M | `packages/engine/src/state/DistrictAdjacency.ts:213-231`; `packages/engine/src/s |
+| buildings-wonders | F-09 | `urbanBuildingSystem` wired into GameEngine | ✓ MATCH | L | `packages/engine/src/GameEngine.ts:16-105`; `packages/engine/src/__tests__/syste |
 | celebrations | F-01 | Celebration trigger uses per-turn excess happiness sum, not  | ⚠ DIVERGED | M | `packages/engine/src/systems/resourceSystem.ts:61-77,158-174` |
 | celebrations | F-02 | Threshold formula is custom linear, not VII age-specific tab | ⚠ DIVERGED | S | `packages/engine/src/systems/resourceSystem.ts:18-32` |
 | celebrations | F-03 | Celebration grants fixed production bonus only, not governme | ⚠ DIVERGED | L | `packages/engine/src/systems/resourceSystem.ts:20-22,171-173` |
@@ -95,11 +95,11 @@
 | government-policies | F-02 | Chiefdom listed as a VII government -- does not exist in VII | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts` |
 | government-policies | F-03 | Exploration Age government roster wrong | ✓ MATCH | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/data |
 | government-policies | F-05 | Government celebration bonuses missing from GovernmentDef da | ✓ MATCH | M | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/type |
-| independent-powers | F-01 | `IndependentPowerState` entity absent | ⊘ MISSING | M | `types/GameState.ts` |
-| independent-powers | F-02 | `independentPowerSystem.ts` absent | ⊘ MISSING | L | `systems/` (no file) |
-| independent-powers | F-03 | Age-transition IP reset absent | ⊘ MISSING | S | `systems/ageSystem.ts` |
-| independent-powers | F-04 | Suzerain bonus selection absent | ⊘ MISSING | M | `types/GameState.ts` (PlayerState), `web/src/ui/panels/` |
-| independent-powers | F-05 | Hostile Independent Powers (Barbarian analog) absent | ⊘ MISSING | M | `systems/` (no NPC spawning) |
+| independent-powers | F-01 | Independent Power state and action surface exist | ✓ MATCH | M | `packages/engine/src/types/GameState.ts:425-429,1054-1064,1113,1363-1377`; `pack |
+| independent-powers | F-02 | Dedicated independentPowerSystem is wired but behavior depth | ≈ CLOSE | L | `packages/engine/src/systems/independentPowerSystem.ts`; `packages/engine/src/Ga |
+| independent-powers | F-03 | Age-transition reset removes and reseeds IPs | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts:213-239,395` |
+| independent-powers | F-04 | Suzerain bonus selection state exists, but bonus effects and | ≈ CLOSE | M | `packages/engine/src/systems/independentPowerSystem.ts:257-283`; `packages/engin |
+| independent-powers | F-05 | Hostile IP and INCITE_RAID are present, but no real raider u | ≈ CLOSE | M | `packages/engine/src/systems/independentPowerSystem.ts:161-186,287-325`; `packag |
 | leaders | F-02 | Attribute system (6-tree RPG layer) absent | ⊘ MISSING | L | `types/GameState.ts` (PlayerState), `data/leaders/types.ts` |
 | legacy-paths | F-01 | Dual schema not wired | ⚠ DIVERGED | M | `LegacyPaths.ts:30-459`, `ageSystem.ts:229-279` |
 | legacy-paths | F-02 | No conquest multiplier | ⚠ DIVERGED | S | `LegacyPaths.ts:163-186`, `ageSystem.ts:236` |
@@ -170,12 +170,12 @@
 | ages | F-10 | `dark-age-penalties-only` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts:140–220` |
 | ages | F-11 | `legacy-points-not-random-yields` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts:39–49` |
 | ages | F-12 | `civ-selection-pool-unfiltered` | ≈ CLOSE | M | `packages/web/src/ui/panels/AgeTransitionPanel.tsx:21` |
-| buildings-wonders | F-06 | Wonder adjacency bonus to neighbors unimplemented | ⊘ MISSING | S | `packages/engine/src/state/DistrictAdjacency.ts` |
+| buildings-wonders | F-06 | Wonder adjacency bonus to neighbors implemented | ✓ MATCH | S | `packages/engine/src/state/DistrictAdjacency.ts:189-208`; `packages/engine/src/s |
 | buildings-wonders | F-07 | `requiredCivic` present; tech/civic/civ gates enforced at qu | ✓ MATCH | S | `packages/engine/src/types/Building.ts`, `packages/engine/src/systems/production |
 | buildings-wonders | F-08 | Rival-wonder race notification + mid-queue cancellation abse | ⊘ MISSING | M | `packages/engine/src/systems/productionSystem.ts` |
-| buildings-wonders | F-10 | growth/production use base yield calculator (no adjacency) | ⚠ DIVERGED | S | `packages/engine/src/systems/growthSystem.ts:69`, `productionSystem.ts:328` |
+| buildings-wonders | F-10 | growth/production consume the adjacency-aware yield calculat | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts:13,134`; `packages/engine/src/syste |
 | buildings-wonders | F-11 | `DEMOLISH_BUILDING` type-only; no system handles it | ⊘ MISSING | M | `packages/engine/src/types/DistrictOverhaul.ts:150-160` |
-| buildings-wonders | F-12 | Two parallel placement systems (one-slot vs two-slot tile mo | ⚠ DIVERGED | L | `buildingPlacementSystem.ts`, `urbanBuildingSystem.ts` |
+| buildings-wonders | F-12 | Legacy one-slot placement system is retired from the pipelin | ≈ CLOSE | L | `buildingPlacementSystem.ts`, `urbanBuildingSystem.ts` |
 | celebrations | F-06 | Happiness accumulator and active-bonus state not reset on ag | ⚠ DIVERGED | S | `packages/engine/src/systems/ageSystem.ts` |
 | celebrations | F-08 | Active celebration stored as bonus%+timer, not { bonusId, tu | ≈ CLOSE | S | `packages/engine/src/types/GameState.ts` lines 175-176 |
 | celebrations | F-12 | Leader synergies (Jose Rizal, Ashoka) not implemented | ⊘ MISSING | M | `packages/engine/src/systems/resourceSystem.ts` (no leader-ability hooks) |
@@ -213,8 +213,8 @@
 | government-policies | F-04 | Modern Age government roster incomplete | ✓ MATCH | S | `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/syst |
 | government-policies | F-06 | Government system not wired to celebration slot grants | ✓ MATCH | S | `packages/engine/src/state/PolicySlotUtils.ts`, `packages/engine/src/systems/gov |
 | government-policies | F-07 | Crisis policy slots entirely absent | ≈ CLOSE | M | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/crisisSys |
-| independent-powers | F-06 | Data content registry (named IP factions) absent | ⊘ MISSING | S | `data/` (no directory) |
-| independent-powers | F-07 | DiplomacyPanel IP tab absent | ⊘ MISSING | S | `DiplomacyPanel.tsx` (1-327) |
+| independent-powers | F-06 | Named IP data registry exists but roster and map seeding rem | ≈ CLOSE | S | `packages/engine/src/data/independent-powers/`; `packages/engine/src/types/GameC |
+| independent-powers | F-07 | DiplomacyPanel has an Independent Powers tab, with panel-pri | ≈ CLOSE | S | `packages/web/src/ui/panels/DiplomacyPanel.tsx:11,48-52,337-467`; `packages/web/ |
 | leaders | F-03 | Leader roster is 9 leaders; VII shipped 21 unique (26 w/ per | ⚠ DIVERGED | M | `data/leaders/all-leaders.ts` |
 | leaders | F-04 | `LeaderDef.agendas` is free-form string array, not typed | ⚠ DIVERGED | M | `data/leaders/types.ts:8` |
 | leaders | F-05 | Persona system absent from LeaderDef | ⊘ MISSING | M | `data/leaders/types.ts` |
@@ -304,7 +304,7 @@
 | diplomacy-influence | F-10 | hasFriendship / PROPOSE_FRIENDSHIP | ✗ EXTRA | S | `packages/engine/src/types/GameState.ts:235`, `packages/engine/src/systems/diplo |
 | diplomacy-influence | F-15 | DiplomacyPanel priority | ≈ CLOSE | S | `packages/web/src/ui/panels/DiplomacyPanel.tsx:38` |
 | government-policies | F-08 | Policy swap window not enforced | ≈ CLOSE | S | `packages/engine/src/systems/governmentSystem.ts:127-159` (`canSlotPolicy`) |
-| independent-powers | F-08 | Pericles suzerain-count scaling data bug | ⚠ DIVERGED | S | `data/leaders/all-leaders.ts:27-37` |
+| independent-powers | F-08 | Pericles no longer has a wrong flat culture effect, but dyna | ≈ CLOSE | S | `packages/engine/src/data/leaders/all-leaders.ts:79-91` |
 | leaders | F-01 | Leader persists across age transition | ✓ MATCH | S | `ageSystem.ts:75-84` |
 | leaders | F-08 | Leader unique ability names diverge from VII | ⚠ DIVERGED | S | `data/leaders/all-leaders.ts` |
 | leaders | F-09 | Starting bias and historical civ pairing absent | ⊘ MISSING | S | `data/leaders/types.ts` |
@@ -350,11 +350,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 77 |
-| CLOSE | 63 |
-| DIVERGED | 52 |
-| MISSING | 80 |
-| EXTRA | 14 |
+| MATCH | 84 |
+| CLOSE | 72 |
+| DIVERGED | 48 |
+| MISSING | 70 |
+| EXTRA | 12 |
 | **Total findings** | **286** |
 
 

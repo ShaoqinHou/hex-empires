@@ -2,8 +2,8 @@
 
 **System slug:** `buildings-wonders`
 **GDD doc:** [systems/buildings-wonders.md](../systems/buildings-wonders.md)
-**Audit date:** `2026-04-19`
-**Auditor:** `claude-sonnet-4.6`
+**Audit date:** `2026-05-02`
+**Auditor:** `codex`
 **Version target:** Firaxis patch 1.3.0
 
 ---
@@ -13,11 +13,16 @@
 - `packages/engine/src/systems/buildingPlacementSystem.ts`
 - `packages/engine/src/systems/urbanBuildingSystem.ts`
 - `packages/engine/src/systems/wonderPlacementSystem.ts`
+- `packages/engine/src/systems/ageSystem.ts`
+- `packages/engine/src/systems/growthSystem.ts`
+- `packages/engine/src/systems/productionSystem.ts`
+- `packages/engine/src/state/DistrictAdjacency.ts`
+- `packages/engine/src/state/CityYieldsWithAdjacency.ts`
 - `packages/engine/src/state/BuildingPlacementValidator.ts`
 - `packages/engine/src/state/WonderPlacement.ts`
+- `packages/engine/src/GameEngine.ts`
 - `packages/engine/src/types/Building.ts`
 - `packages/engine/src/types/DistrictOverhaul.ts`
-- `packages/engine/src/systems/productionSystem.ts`
 
 ---
 
@@ -25,11 +30,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 2 |
-| CLOSE | 0 |
-| DIVERGED | 3 |
-| MISSING | 5 |
-| EXTRA | 2 |
+| MATCH | 7 |
+| CLOSE | 3 |
+| DIVERGED | 0 |
+| MISSING | 2 |
+| EXTRA | 0 |
 
 **Total findings:** 12
 
@@ -50,68 +55,68 @@
 
 ---
 
-### F-02: `ageSystem` performs zero building obsolescence on TRANSITION_AGE — MISSING
+### F-02: `ageSystem` removes older non-ageless city buildings, but V2 urban-tile records are not scrubbed — CLOSE
 
-**Location:** `packages/engine/src/systems/ageSystem.ts`
+**Location:** `packages/engine/src/systems/ageSystem.ts:307-341`; `packages/engine/src/systems/__tests__/ageSystem.test.ts:1449-1523`
 **GDD reference:** `systems/buildings-wonders.md` § "Age transition" (cross-cut `ages.md` F-09)
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Non-ageless buildings lose all effect yields and adjacency on age transition.
-**Engine does:** `ageSystem` handles TRANSITION_AGE but contains no code touching `CityState.buildings`, `urbanTiles`, or yields.
-**Gap:** Post-transition cities retain full prior-age yields indefinitely.
-**Recommendation:** On TRANSITION_AGE, iterate each city's urbanTiles; for each non-ageless building, write `obsolete: true` or zero its yield contribution. Requires F-01.
+**Engine does:** `ageSystem` filters older non-ageless building ids out of each transitioning player's `CityState.buildings`, keeps ageless buildings/wonders and same-or-newer-age buildings, and has focused tests for ageless persistence and older-age removal.
+**Gap:** V2 spatial placement stores building ids in `CityState.urbanTiles`; the transition path does not yet remove or mark obsolete older non-ageless entries there, so adjacency derived from urban-tile neighbors can remain stale.
+**Recommendation:** Extend the age-transition obsolescence pass to scrub or mark obsolete non-ageless buildings in `city.urbanTiles` and recompute quarters when a two-slot tile changes.
 
 ---
 
-### F-03: `wonderPlacementSystem` is a one-line no-op; not wired — EXTRA
+### F-03: Wonder geography validation is enforced through the placement validator, but the system wrapper remains pass-through — CLOSE
 
-**Location:** `packages/engine/src/systems/wonderPlacementSystem.ts`
+**Location:** `packages/engine/src/systems/wonderPlacementSystem.ts`; `packages/engine/src/state/BuildingPlacementValidator.ts:86-94`; `packages/engine/src/systems/urbanBuildingSystem.ts:167-171`
 **GDD reference:** `systems/buildings-wonders.md` § "Wonder placement rules"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Wonder placement validates geographic constraints (adjacent river, coast, mountain, etc.) and enforces one-per-world uniqueness.
-**Engine does:** `export function wonderPlacementSystem(state, _action) { return state; }`. Comment says "NOT yet wired into SYSTEMS pipeline." Geographic rules exist in `WonderPlacement.ts` + `WonderPlacementUtils.ts` but called from `BuildingPlacementValidator` only.
-**Gap:** Dead stub file + unwired placement logic.
-**Recommendation:** Wire `wonderPlacementSystem` into `GameEngine.ts` SYSTEMS array OR retire the stub.
+**Engine does:** `BuildingPlacementValidator` calls `isWonderPlacementValid` for `isWonder` buildings, and `urbanBuildingSystem` rejects invalid wonder placements through that validator. `wonderPlacementSystem` is present in `DEFAULT_SYSTEMS`, but its pipeline function is still pass-through because validation happens in the helper path.
+**Gap:** The wrapper/comment still present a stale "not wired" story, and one-per-world uniqueness is handled later by production/final locks rather than by the placement preflight itself.
+**Recommendation:** Either retire the pass-through system wrapper and keep the validator API as the source of truth, or make the wrapper own placement-specific logging/uniqueness checks so its pipeline slot has clear value.
 
 ---
 
-### F-04: Quarter formation ignores ageless-pair; `unique_quarter` kind missing — DIVERGED
+### F-04: Quarter formation supports unique quarters, ageless pairs, and pure-age pairs — MATCH
 
-**Location:** `packages/engine/src/systems/urbanBuildingSystem.ts:61-88`, `packages/engine/src/types/DistrictOverhaul.ts:83`
+**Location:** `packages/engine/src/systems/urbanBuildingSystem.ts:61-127`; `packages/engine/src/types/DistrictOverhaul.ts:87-110`; `packages/engine/src/systems/__tests__/urbanBuildingSystem.test.ts:406-708`
 **GDD reference:** `systems/buildings-wonders.md` § "Quarter formation" (cross-cut `tile-improvements.md` F-07)
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Two quarter paths: (1) Unique quarter — two civ-unique buildings co-located; (2) Generic quarter — two same-age or two ageless buildings co-located.
-**Engine does:** `computeQuarter` only checks `first.age === second.age` for `pure_age`. No ageless-pair check. No `unique_quarter` kind in `QuarterKindV2` — civ-unique pairs (Acropolis, Forum, Necropolis) receive no named bonus.
-**Gap:** Both VII quarter bonus types malformed.
-**Recommendation:** Add `'unique_quarter' | 'ageless_pair'` to `QuarterKindV2`. Update `computeQuarter` to detect both via `isAgeless` and `civId` flags (needs F-01).
+**Engine does:** `QuarterKindV2` includes `pure_age`, `unique_quarter`, and `ageless_pair`. `computeQuarter` checks the named quarter catalog first with civ-lock, then ageless pairs, then same-age non-ageless pairs, with tests for each path and the non-matching fallback.
+**Gap:** None for quarter kind detection.
+**Recommendation:** Keep unique-quarter detection before pure-age fallback so civ-unique pairs do not collapse to generic quarters.
 
 ---
 
-### F-05: Specialist adjacency amplification unimplemented — MISSING
+### F-05: Specialist adjacency amplification implemented with capped specialist counts — MATCH
 
-**Location:** `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/CityYieldsWithAdjacency.ts`
+**Location:** `packages/engine/src/state/DistrictAdjacency.ts:213-231`; `packages/engine/src/state/__tests__/DistrictAdjacency-specialist-amplification.test.ts`
 **GDD reference:** `systems/buildings-wonders.md` § "Specialist amplification" (cross-cut `yields-adjacency.md` F-04/F-05, `population-specialists.md` F-03)
 **Severity:** HIGH
 **Effort:** M
 **VII says:** `effectiveAdjacency = baseAdjacency × (1 + SPECIALIST_AMPLIFIER × specialistCount)`.
-**Engine does:** `DistrictAdjacency.computeAdjacencyBonus` never reads `UrbanTileV2.specialistAssigned`. `specialistAssigned` is `boolean` not count.
-**Gap:** Specialists cost food but grant no adjacency amplification.
-**Recommendation:** Change `specialistAssigned: boolean` to `specialistCount: number`. In `computeAdjacencyBonus`, multiply tile adjacency by `(1 + 0.5 * specialistCount)`.
+**Engine does:** `DistrictAdjacency.computeAdjacencyBonus` reads `UrbanTileV2.specialistCount`, caps it at `SPECIALIST_AMPLIFIER_MAX_COUNT`, and multiplies adjacency yields by `1 + SPECIALIST_AMPLIFIER * cappedCount`. Tests cover zero, one, two, capped three-plus, and multi-yield amplification.
+**Gap:** None for the local amplification formula.
+**Recommendation:** Keep `specialistCount` as the numeric source of truth; avoid reintroducing boolean specialist flags in V2 urban-tile code.
 
 ---
 
-### F-06: Wonder adjacency bonus to neighbors unimplemented — MISSING
+### F-06: Wonder adjacency bonus to neighbors implemented — MATCH
 
-**Location:** `packages/engine/src/state/DistrictAdjacency.ts`
+**Location:** `packages/engine/src/state/DistrictAdjacency.ts:189-208`; `packages/engine/src/state/__tests__/DistrictAdjacency-wonder.test.ts`
 **GDD reference:** `systems/buildings-wonders.md` § "Wonder adjacency"
 **Severity:** MED
 **Effort:** S
 **VII says:** "Each Wonder occupies a full tile and provides adjacency bonuses to every surrounding Building."
-**Engine does:** `computeAdjacencyBonus` checks Mountain, River, and building-to-building neighbors only. Never checks `buildingDef.isWonder === true` neighbor.
-**Gap:** Wonders contribute zero outward adjacency.
-**Recommendation:** Add wonder-neighbor check + define `WONDER_ADJACENCY_PER_NEIGHBOR = { culture: 2, science: 1 }`.
+**Engine does:** `computeAdjacencyBonus` detects neighboring buildings with `isWonder === true`, applies a per-wonder `adjacencyEffect` when present, and falls back to `WONDER_ADJACENCY_PER_NEIGHBOR` otherwise. Tests cover Pyramids, Hanging Gardens, Great Library, and generic fallback behavior.
+**Gap:** None for local neighbor adjacency application.
+**Recommendation:** Keep per-wonder `adjacencyEffect` data authoritative when present; use the generic fallback only for wonders without a specific rule.
 
 ---
 
@@ -141,29 +146,29 @@
 
 ---
 
-### F-09: `urbanBuildingSystem` not wired into GameEngine — EXTRA
+### F-09: `urbanBuildingSystem` wired into GameEngine — MATCH
 
-**Location:** `packages/engine/src/systems/urbanBuildingSystem.ts:26-30`
+**Location:** `packages/engine/src/GameEngine.ts:16-105`; `packages/engine/src/__tests__/system-wiring.test.ts:248-354`
 **GDD reference:** `systems/buildings-wonders.md` § "V2 spatial model"
 **Severity:** HIGH
 **Effort:** L
 **VII says:** V2 spatial model (2-slot urban tiles, quarters, specialist amp) is core VII-parity.
-**Engine does:** Comment: "NOT yet wired into GameEngine pipeline — Cycle F integration." `PLACE_URBAN_BUILDING` is in `GameAction` union but system is absent from `SYSTEMS` array. Dispatching is a no-op.
-**Gap (root blocker):** `city.urbanTiles` is never populated. Quarter formation (F-04), adjacency bonuses (F-05, F-06), specialist amplification all effectively dead for real gameplay.
-**Recommendation:** Cycle F wiring: add `urbanBuildingSystem` to `GameEngine.SYSTEMS`. Retire legacy `buildingPlacementSystem`.
+**Engine does:** `GameEngine.DEFAULT_SYSTEMS` imports and includes `adaptUrbanBuilding`, and system-wiring tests assert `PLACE_URBAN_BUILDING` mutates `city.urbanTiles` through the pipeline. The legacy `buildingPlacementSystem` is no longer in the default pipeline.
+**Gap:** None for default pipeline wiring.
+**Recommendation:** Keep pipeline wiring tests around so future system-order changes cannot silently drop the V2 placement path.
 
 ---
 
-### F-10: growth/production use base yield calculator (no adjacency) — DIVERGED
+### F-10: growth/production consume the adjacency-aware yield calculator — MATCH
 
-**Location:** `packages/engine/src/systems/growthSystem.ts:69`, `productionSystem.ts:328`
+**Location:** `packages/engine/src/systems/growthSystem.ts:13,134`; `packages/engine/src/systems/productionSystem.ts:6,86,411`
 **GDD reference:** `systems/buildings-wonders.md` § "Yield pipeline"
 **Severity:** MED
 **Effort:** S
 **VII says:** Growth, production, etc. flow from full yield calculation including adjacency + quarter bonuses.
-**Engine does:** Both systems call `calculateCityYields` (base, no adjacency) instead of `calculateCityYieldsWithAdjacency`.
-**Gap:** Mountain-adjacent cities grow and produce at same rate as flat-terrain cities.
-**Recommendation:** Swap to `calculateCityYieldsWithAdjacency` in both systems.
+**Engine does:** `growthSystem` and `productionSystem` import `calculateCityYieldsWithAdjacency`; growth uses it for food surplus and production uses it for cancel thresholds and per-turn production progress.
+**Gap:** None for these two yield consumers.
+**Recommendation:** Route new city-yield consumers through the adjacency-aware helper unless a subsystem explicitly needs raw base yields.
 
 ---
 
@@ -180,35 +185,31 @@
 
 ---
 
-### F-12: Two parallel placement systems (one-slot vs two-slot tile model) — DIVERGED
+### F-12: Legacy one-slot placement system is retired from the pipeline but still present for compatibility — CLOSE
 
 **Location:** `buildingPlacementSystem.ts`, `urbanBuildingSystem.ts`
 **GDD reference:** `systems/buildings-wonders.md` § "Urban tile slot rules"
 **Severity:** MED
 **Effort:** L
 **VII says:** Urban tile has exactly 2 building slots.
-**Engine does:** `buildingPlacementSystem` enforces 1-per-tile (`if (actualTile.building) return invalid`). `urbanBuildingSystem` allows 2-per-tile. Both callable. Two sources of truth (`HexTile.building` vs `CityState.urbanTiles`).
-**Gap:** Legacy one-building constraint contradicts VII two-slot model.
-**Recommendation:** Retire `buildingPlacementSystem` after F-09 Cycle F wiring.
+**Engine does:** `urbanBuildingSystem` is the default-pipeline placement path and allows two buildings per urban tile. `buildingPlacementSystem` is marked deprecated and removed from `DEFAULT_SYSTEMS`, but the legacy file and `PLACE_BUILDING` action shape remain for compatibility/tests.
+**Gap:** The compatibility surface can still confuse future work because `HexTile.building` and `PLACE_BUILDING` remain visible even though new placement should use `CityState.urbanTiles` and `PLACE_URBAN_BUILDING`.
+**Recommendation:** Keep the deprecation comments, prevent new callers, and eventually delete the legacy action/module once dependent tests and UI affordances are migrated.
 
 ---
 
-## Extras to retire
+## Close follow-ups
 
-- `wonderPlacementSystem.ts` (F-03) — no-op stub; wire in or retire.
-- Legacy `buildingPlacementSystem.ts` (F-12) — superseded by `urbanBuildingSystem.ts` once Cycle F lands.
+- F-02: scrub or mark obsolete V2 `urbanTiles` entries on age transition.
+- F-03: decide whether `wonderPlacementSystem` should own behavior or be retired in favor of the validator helper.
+- F-12: finish retiring legacy `PLACE_BUILDING`/`buildingPlacementSystem` compatibility surface.
 
 ---
 
 ## Missing items
 
-1. `ageSystem` obsolescence handler (F-02).
-2. Quarter kinds `unique_quarter` + `ageless_pair` (F-04).
-3. Specialist adjacency amplification (F-05).
-4. Wonder adjacency to neighbors (F-06).
-5. Rival-wonder race UX (F-08).
-6. `urbanBuildingSystem` wired into `GameEngine.SYSTEMS` (F-09) — root blocker.
-7. `DEMOLISH_BUILDING` handler (F-11).
+1. Rival-wonder race UX (F-08).
+2. `DEMOLISH_BUILDING` handler (F-11).
 
 ---
 
@@ -218,22 +219,24 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 
 **Engine files:**
 - `packages/engine/src/systems/buildingPlacementSystem.ts` (legacy)
-- `packages/engine/src/systems/urbanBuildingSystem.ts` (V2, not yet wired)
-- `packages/engine/src/systems/wonderPlacementSystem.ts` (no-op stub)
-- `packages/engine/src/types/Building.ts` (missing ageless fields)
+- `packages/engine/src/systems/urbanBuildingSystem.ts` (V2, wired)
+- `packages/engine/src/systems/wonderPlacementSystem.ts` (pass-through wrapper; validator helper is consumed by V2 placement)
+- `packages/engine/src/state/DistrictAdjacency.ts`
+- `packages/engine/src/state/CityYieldsWithAdjacency.ts`
+- `packages/engine/src/types/Building.ts`
 - `packages/engine/src/types/DistrictOverhaul.ts` (V2 types)
 
-**Status:** 0 MATCH / 0 CLOSE / 4 DIVERGED / 6 MISSING / 2 EXTRA
+**Status:** 7 MATCH / 3 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-09 — `urbanBuildingSystem` not wired (root blocker); F-01 — missing `isAgeless`/`civId` fields (unblocks F-02, F-04, F-05).
+**Highest-severity finding:** F-02 — V2 urban-tile building obsolescence not yet scrubbed on age transition (CLOSE, HIGH).
 
 ---
 
 ## Open questions
 
-1. Cycle F timing?
-2. `WONDER_ADJACENCY_PER_NEIGHBOR` exact values?
-3. `SPECIALIST_AMPLIFIER` numeric value (proposed 0.5)?
+1. Should age-transition obsolescence remove non-ageless entries from `urbanTiles`, or mark them obsolete for possible demolition UI?
+2. Should wonder one-per-world uniqueness be checked in placement preflight in addition to production completion/final lock?
+3. What is the intended deletion timeline for legacy `PLACE_BUILDING` and `buildingPlacementSystem`?
 
 ---
 
@@ -241,12 +244,12 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-01, F-06, F-07, F-10 | 2d |
-| M | F-02, F-03, F-04, F-05, F-08, F-11 | ~10d |
-| L | F-09, F-12 | 2w+ |
-| **Total** | 12 | **~3.5w** |
+| S | F-03, F-12 | ~1d |
+| M | F-02, F-08, F-11 | ~5d |
+| L | — | 0 |
+| **Total** | 5 active follow-up items | **~1w** |
 
-Recommended order: F-01 → F-09 → F-02 → F-04 → F-05 → F-06 → F-07 → F-10 → F-08 → F-11 → F-12 → F-03.
+Recommended order: F-02 → F-08 → F-11 → F-12 → F-03.
 
 ---
 

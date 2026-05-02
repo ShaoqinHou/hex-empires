@@ -58,7 +58,7 @@ function makeIP(overrides: Partial<IndependentPowerState> = {}): IndependentPowe
     befriendProgress: 0,
     suzerainPlayerId: null,
     isIncorporated: false,
-    isCityState: true,
+    isCityState: false,
     bonusPool: ['bonus_a', 'bonus_b', 'bonus_c'],
     ...overrides,
   };
@@ -155,6 +155,7 @@ describe('independentPowerSystem', () => {
       });
       const ip = next.independentPowers?.get('test_ip')!;
       expect(ip.suzerainPlayerId).toBe('p1');
+      expect(ip.isCityState).toBe(true);
       expect(ip.attitude).toBe('friendly');
       const player = next.players.get('p1')!;
       expect(player.suzerainties).toContain('test_ip');
@@ -171,6 +172,36 @@ describe('independentPowerSystem', () => {
       });
       // No change to befriendProgress for hostile IPs
       expect(next.independentPowers?.get('test_ip')!.befriendProgress).toBe(0);
+    });
+  });
+
+  describe('INCITE_RAID', () => {
+    it('rejects inciting an independent power after it converts to a city-state', () => {
+      const state = makeState({
+        players: new Map([
+          ['p1', makePlayer({ influence: 100 })],
+          ['p2', makePlayer({ id: 'p2' })],
+        ]),
+        independentPowers: new Map([[
+          'test_ip',
+          makeIP({
+            attitude: 'friendly',
+            isCityState: true,
+            suzerainPlayerId: 'p1',
+          }),
+        ]]),
+      });
+
+      const next = independentPowerSystem(state, {
+        type: 'INCITE_RAID',
+        targetIpId: 'test_ip',
+        againstPlayerId: 'p2',
+        influenceSpent: 30,
+      });
+
+      expect(next.players.get('p1')!.influence).toBe(100);
+      expect(next.independentPowers?.get('test_ip')!.attitude).toBe('friendly');
+      expect(next.log).toHaveLength(0);
     });
   });
 
@@ -265,7 +296,7 @@ describe('independentPowerSystem', () => {
       expect(ipState.befriendProgress).toBe(0);
       expect(ipState.suzerainPlayerId).toBeNull();
       expect(ipState.isIncorporated).toBe(false);
-      expect(ipState.isCityState).toBe(true);
+      expect(ipState.isCityState).toBe(false);
       expect(ipState.bonusPool).toEqual(['a', 'b']);
     });
   });
