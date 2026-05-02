@@ -10,6 +10,7 @@ import { computeCombatDamageFromRoll, computeEffectiveCS } from '../CombatAnalyt
 import { combatSystem } from '../../systems/combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
 import { nextRandom } from '../SeededRng';
+import type { CommanderState } from '../../types/Commander';
 
 describe('calculateCombatPreview', () => {
   it('returns cannot-attack preview when attacker not found', () => {
@@ -374,6 +375,32 @@ describe('calculateCombatPreview', () => {
         units: new Map(base.config.units).set('warrior', firstStrikeWarrior),
       },
     };
+    const preview = calculateCombatPreview(state, 'a1', 'd1');
+
+    expect(preview.canAttack).toBe(true);
+    expect(preview.modifiers.firstStrikeBonus).toBe(true);
+  });
+
+  it('includes commander-granted Advancement First Strike in preview modifiers', () => {
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['assault_advancement'],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 } })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      commanders: new Map([['cmd1', commander]]),
+    });
     const preview = calculateCombatPreview(state, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);

@@ -195,7 +195,7 @@
 | combat | F-04 | zoc-ranged-units-project-zoc - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
 | combat | F-07 | support-bonus-standalone - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
 | combat | F-11 | civilian-capture-missing - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:362-431; packages/engine/src/syste |
-| combat | F-14 | first-strike-ability-support - | ≈ CLOSE | UNK | packages/engine/src/state/CombatAnalytics.ts:20-38; packages/engine/src/systems/ |
+| combat | F-14 | first-strike-ability-support - | ≈ CLOSE | UNK | packages/engine/src/state/CombatAnalytics.ts:20-46; packages/engine/src/state/Co |
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
 | commanders | F-07 | `commander-respawn-absent` | ⊘ MISSING | M | `packages/engine/src/types/Commander.ts`, all systems |
 | commanders | F-09 | `panel-wired-but-read-only` | ≈ CLOSE | S | `packages/web/src/ui/panels/CommanderPanel.tsx:19,27-32` |

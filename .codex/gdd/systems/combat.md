@@ -87,7 +87,7 @@ Unit hit points are standardized at **100 HP** maximum across all unit types.
 
 **Wounded-unit penalty:** A unit’s effective CS decreases as it takes damage. The penalty is `round(10 - HP / 10)`, capped at **−10 CS** when a unit is below 10 HP. This roughly behaves like **−1 CS per 10 HP lost**, but uses rounded additive CS loss rather than multiplicative strength scaling. [Source: Fandom Combat_(Civ7), source refresh 2026-05-03.]
 
-**First Strike:** Some units can have a First Strike ability that grants **+5 CS** when the unit is at full HP. This is an ability-gated modifier, not a universal full-health bonus. [Source: Fandom Unit_(Civ7), source refresh 2026-05-03.]
+**First Strike:** Some units can have a First Strike ability that grants **+5 CS** when the unit is at full HP. This is an ability-gated modifier, not a universal full-health bonus. The ability can be native to a unit definition or granted by Commander promotions such as Army Commander Assault IV **Advancement** to Infantry/Cavalry units within Command Radius. [Sources: Fandom Unit_(Civ7) and List_of_promotions_in_Civ7, source refresh 2026-05-03.]
 
 ### Damage Calculation
 

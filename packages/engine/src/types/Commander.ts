@@ -121,6 +121,13 @@ export type AuraEffectDef =
       readonly target: AuraTarget;
       readonly value: number;
       readonly radius: number;
+    }
+  /** Grants a named unit ability to matching friendly units in range. */
+  | {
+      readonly type: 'AURA_GRANT_ABILITY';
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
+      readonly abilityId: string;
+      readonly radius: number;
     };
 
 // ── Promotion definitions ──
@@ -138,7 +145,7 @@ export interface CommanderPromotionDef {
   readonly name: string;
   readonly description: string;
   readonly tree: CommanderTree;
-  readonly tier: 1 | 2 | 3;
+  readonly tier: 1 | 2 | 3 | 4;
   readonly prerequisites: ReadonlyArray<CommanderPromotionId>;
   readonly aura: AuraEffectDef;
 }

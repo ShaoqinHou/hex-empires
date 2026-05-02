@@ -1,6 +1,7 @@
 import type { GameState, UnitCategory, UnitState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { PlayerId } from '../types/Ids';
+import { hasCommanderGrantedAbility } from './CommanderAura';
 
 /**
  * Computes effective combat strength given base CS and current HP.
@@ -21,13 +22,21 @@ export function computeEffectiveCS(baseCS: number, hp: number, maxHP: number = 1
 
 export const FIRST_STRIKE_COMBAT_BONUS = 5;
 
-export function hasUnitAbility(state: GameState, unit: { readonly typeId: string }, abilityId: string): boolean {
-  return state.config.units.get(unit.typeId)?.abilities.includes(abilityId) ?? false;
+type UnitAbilityContext = {
+  readonly id: string;
+  readonly typeId: string;
+  readonly owner: string;
+  readonly position: HexCoord;
+};
+
+export function hasUnitAbility(state: GameState, unit: UnitAbilityContext, abilityId: string): boolean {
+  if (state.config.units.get(unit.typeId)?.abilities.includes(abilityId)) return true;
+  return hasCommanderGrantedAbility(state, unit, abilityId);
 }
 
 export function calculateFirstStrikeCombatBonus(
   state: GameState,
-  unit: { readonly typeId: string; readonly health: number },
+  unit: UnitAbilityContext & { readonly health: number },
   isAttacking: boolean,
 ): number {
   return isAttacking && unit.health === 100 && hasUnitAbility(state, unit, 'first_strike')

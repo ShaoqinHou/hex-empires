@@ -1124,6 +1124,39 @@ describe('combatSystem — commander aura', () => {
     }
   });
 
+  it('commander Advancement grants First Strike in live combat for full-HP melee attackers', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const commanderBase: import('../../types/Commander').CommanderState = {
+      unitId: 'cmd1', xp: 300, commanderLevel: 4, unspentPromotionPicks: 0,
+      promotions: [], tree: 'assault', attachedUnits: [], packed: false,
+    };
+    const stateWithoutAdvancement = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderBase]]),
+      currentPlayerId: 'p1',
+    });
+    const stateWithAdvancement = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderBase, promotions: ['assault_advancement'] }]]),
+      currentPlayerId: 'p1',
+    });
+
+    const nextWithout = combatSystem({ ...stateWithoutAdvancement, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWith = combatSystem({ ...stateWithAdvancement, rng: { seed: 42, counter: 0 } }, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextWith.units.get('d1')!.health).toBeLessThan(nextWithout.units.get('d1')!.health);
+  });
+
   // -- Y1.1: ideologyPoints from kills --
 
   it('Y1.1: kill without ideology civic awards 0 ideologyPoints', () => {

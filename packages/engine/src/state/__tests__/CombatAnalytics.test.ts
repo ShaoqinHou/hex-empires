@@ -13,6 +13,7 @@ import {
   calculateBattlefrontFlankingBonus,
 } from '../CombatAnalytics';
 import type { CityState } from '../../types/GameState';
+import type { CommanderState } from '../../types/Commander';
 import { createTestState, createTestUnit, createTestPlayer } from '../../systems/__tests__/helpers';
 
 // ── W4-03: computeEffectiveCS ──
@@ -59,6 +60,99 @@ describe('computeEffectiveCS', () => {
     expect(calculateFirstStrikeCombatBonus(state, unit, true)).toBe(5);
     expect(calculateFirstStrikeCombatBonus(state, { ...unit, health: 99 }, true)).toBe(0);
     expect(calculateFirstStrikeCombatBonus(state, unit, false)).toBe(0);
+  });
+
+  it('applies commander-granted Advancement First Strike to full-HP melee and cavalry attackers in radius', () => {
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['assault_advancement'],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const units = new Map([
+      ['attacker', createTestUnit({ id: 'attacker', owner: 'p1', typeId: 'warrior', position: { q: 1, r: 0 }, health: 100 })],
+      ['cavalry', createTestUnit({ id: 'cavalry', owner: 'p1', typeId: 'horseman', position: { q: 0, r: 1 }, health: 100 })],
+      ['archer', createTestUnit({ id: 'archer', owner: 'p1', typeId: 'archer', position: { q: 1, r: -1 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      commanders: new Map([['cmd1', commander]]),
+    });
+
+    expect(calculateFirstStrikeCombatBonus(state, state.units.get('attacker')!, true)).toBe(5);
+    expect(calculateFirstStrikeCombatBonus(state, state.units.get('cavalry')!, true)).toBe(5);
+    expect(calculateFirstStrikeCombatBonus(state, state.units.get('archer')!, true)).toBe(0);
+    expect(calculateFirstStrikeCombatBonus(state, { ...state.units.get('attacker')!, health: 99 }, true)).toBe(0);
+    expect(calculateFirstStrikeCombatBonus(state, state.units.get('attacker')!, false)).toBe(0);
+  });
+
+  it('does not apply commander-granted First Strike from enemy, out-of-range, or unpromoted commanders', () => {
+    const attacker = createTestUnit({ id: 'attacker', owner: 'p1', typeId: 'warrior', position: { q: 1, r: 0 }, health: 100 });
+    const promotedCommander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['assault_advancement'],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const baseUnits = new Map([
+      ['attacker', attacker],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 0 }, health: 100 })],
+    ]);
+    const outOfRange = createTestState({
+      units: baseUnits,
+      commanders: new Map([['cmd1', promotedCommander]]),
+    });
+    expect(calculateFirstStrikeCombatBonus(outOfRange, attacker, true)).toBe(0);
+
+    const enemyCommander = createTestState({
+      units: new Map([
+        ['attacker', attacker],
+        ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 0, r: 0 }, health: 100 })],
+      ]),
+      commanders: new Map([['cmd1', promotedCommander]]),
+    });
+    expect(calculateFirstStrikeCombatBonus(enemyCommander, attacker, true)).toBe(0);
+
+    const unpromoted = createTestState({
+      units: new Map([
+        ['attacker', attacker],
+        ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, health: 100 })],
+      ]),
+      commanders: new Map([['cmd1', { ...promotedCommander, promotions: [] }]]),
+    });
+    expect(calculateFirstStrikeCombatBonus(unpromoted, attacker, true)).toBe(0);
+  });
+
+  it('recognizes Advancement picked on the commander unit promotion array', () => {
+    const attacker = createTestUnit({ id: 'attacker', owner: 'p1', typeId: 'warrior', position: { q: 1, r: 0 }, health: 100 });
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const state = createTestState({
+      units: new Map([
+        ['attacker', attacker],
+        ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: ['assault_advancement'] })],
+      ]),
+      commanders: new Map([['cmd1', commander]]),
+    });
+
+    expect(calculateFirstStrikeCombatBonus(state, attacker, true)).toBe(5);
   });
 });
 

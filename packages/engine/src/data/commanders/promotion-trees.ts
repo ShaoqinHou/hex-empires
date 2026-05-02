@@ -20,10 +20,11 @@ import type { CommanderPromotionDef } from '../../types/Commander';
  * `data/units/promotions.ts` for interim parity. The commander
  * pipeline may diverge once the Civ VII XP curve is pinned.
  */
-export const COMMANDER_PROMOTION_XP_COST: Readonly<Record<1 | 2 | 3, number>> = {
+export const COMMANDER_PROMOTION_XP_COST: Readonly<Record<1 | 2 | 3 | 4, number>> = {
   1: 15,
   2: 30,
   3: 60,
+  4: 100,
 } as const;
 
 /** A promotion plus the XP required to pick it. */
@@ -75,6 +76,21 @@ const ASSAULT_TIER3: CommanderPromotionDef = {
     type: 'AURA_MODIFY_CS',
     target: 'all',
     value: 8,
+    radius: 1,
+  },
+} as const;
+
+const ASSAULT_ADVANCEMENT: CommanderPromotionDef = {
+  id: 'assault_advancement',
+  name: 'Advancement',
+  description: 'Melee and cavalry units in radius gain First Strike at full HP.',
+  tree: 'assault',
+  tier: 4,
+  prerequisites: ['assault_overwhelming_force'],
+  aura: {
+    type: 'AURA_GRANT_ABILITY',
+    target: ['melee', 'cavalry'],
+    abilityId: 'first_strike',
     radius: 1,
   },
 } as const;
@@ -299,6 +315,7 @@ export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
   ASSAULT_TIER1,
   ASSAULT_TIER2,
   ASSAULT_TIER3,
+  ASSAULT_ADVANCEMENT,
   LOGISTICS_TIER1,
   LOGISTICS_TIER2,
   LOGISTICS_TIER3,

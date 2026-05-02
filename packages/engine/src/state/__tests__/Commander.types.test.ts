@@ -93,6 +93,12 @@ describe('Commander types — compile-time shape tests', () => {
       value: 2,
       radius: 1,
     };
+    const grantAbility: AuraEffectDef = {
+      type: 'AURA_GRANT_ABILITY',
+      target: ['melee', 'cavalry'],
+      abilityId: 'first_strike',
+      radius: 1,
+    };
 
     const variants: ReadonlyArray<AuraEffectDef> = [
       modCs,
@@ -102,15 +108,19 @@ describe('Commander types — compile-time shape tests', () => {
       expandR,
       expandS,
       fort,
+      grantAbility,
     ];
     const kinds = new Set(variants.map((v) => v.type));
-    expect(kinds.size).toBe(7);
+    expect(kinds.size).toBe(8);
     // Discriminant narrowing works:
     if (heal.type === 'AURA_HEAL_PER_TURN') {
       expect(heal.amount).toBe(5);
     }
     if (expandR.type === 'AURA_EXPAND_RADIUS') {
       expect(expandR.delta).toBe(1);
+    }
+    if (grantAbility.type === 'AURA_GRANT_ABILITY') {
+      expect(grantAbility.abilityId).toBe('first_strike');
     }
   });
 

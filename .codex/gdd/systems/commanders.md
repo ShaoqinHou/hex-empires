@@ -12,6 +12,7 @@
 ## Sources
 
 - https://civilization.2k.com/civ-vii/game-guide/dev-diary/combat/ — Firaxis Dev Diary #5: Combat
+- https://civilization.fandom.com/wiki/List_of_promotions_in_Civ7 — Fandom: List of Commander promotions, refreshed 2026-05-03
 - https://www.thegamer.com/civilization-7-army-commanders-guide/ — TheGamer: Guide to Army Commanders
 - https://game8.co/games/Civ-7/archives/495204 — Game8: Army Commanders Explained
 - https://www.pcgamer.com/games/strategy/civilization-7-guide-to-unexplained-systems-faq/ — PC Gamer: Unexplained systems FAQ
@@ -22,7 +23,7 @@
 - https://game8.co/games/Civ-7/archives/499157 — Game8: Fleet Commander
 - https://comradekaine.com/civilization7/commanders-redefine-combat-in-civilization-7/ — ComradeKaine
 
-**Source conflicts noted:** Default stacking capacity: TheGamer says "4 units plus 1 civilian"; other sources say "up to 6 units" without noting Regiments prerequisite. Doc uses 4 base, 6 with Regiments (Logistics tree). Fandom wiki pages (Commander_(Civ7) and Army_Commander_(Civ7)) returned 403.
+**Source conflicts noted:** Default stacking capacity: TheGamer says "4 units plus 1 civilian"; other sources say "up to 6 units" without noting Regiments prerequisite. Doc uses 4 base, 6 with Regiments (Logistics tree). Fandom promotion list was accessible during the 2026-05-03 refresh and is preferred for named Commander promotion effects; older notes about Fandom Commander_(Civ7) access may be stale.
 
 ---
 

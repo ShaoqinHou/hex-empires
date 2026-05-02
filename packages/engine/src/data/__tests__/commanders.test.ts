@@ -24,6 +24,7 @@ const VALID_AURA_TYPES: ReadonlyArray<AuraEffectDef['type']> = [
   'AURA_EXPAND_RADIUS',
   'AURA_EXPAND_STACK',
   'AURA_FORTIFY_BONUS',
+  'AURA_GRANT_ABILITY',
 ];
 
 const VALID_TREES: ReadonlyArray<CommanderTree> = [
@@ -114,9 +115,9 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('uses only valid tiers (1, 2, 3)', () => {
+  it('uses only valid tiers (1, 2, 3, 4)', () => {
     for (const p of ALL_COMMANDER_PROMOTIONS) {
-      expect([1, 2, 3]).toContain(p.tier);
+      expect([1, 2, 3, 4]).toContain(p.tier);
     }
   });
 
@@ -150,6 +151,9 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
         case 'AURA_EXPAND_RADIUS':
         case 'AURA_EXPAND_STACK':
           expect(a.delta).not.toBe(0);
+          break;
+        case 'AURA_GRANT_ABILITY':
+          expect(a.abilityId.length).toBeGreaterThan(0);
           break;
       }
     }
@@ -204,6 +208,23 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     expect(COMMANDER_PROMOTION_XP_COST[3]).toBeGreaterThan(
       COMMANDER_PROMOTION_XP_COST[2],
     );
+    expect(COMMANDER_PROMOTION_XP_COST[4]).toBeGreaterThan(
+      COMMANDER_PROMOTION_XP_COST[3],
+    );
+  });
+
+  it('includes Assault Advancement as a First Strike ability grant', () => {
+    const advancement = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'assault_advancement');
+    expect(advancement).toBeDefined();
+    expect(advancement!.name).toBe('Advancement');
+    expect(advancement!.tree).toBe('assault');
+    expect(advancement!.tier).toBe(4);
+    expect(advancement!.prerequisites).toContain('assault_overwhelming_force');
+    expect(advancement!.aura.type).toBe('AURA_GRANT_ABILITY');
+    if (advancement!.aura.type === 'AURA_GRANT_ABILITY') {
+      expect(advancement!.aura.abilityId).toBe('first_strike');
+      expect(advancement!.aura.target).toEqual(['melee', 'cavalry']);
+    }
   });
 });
 

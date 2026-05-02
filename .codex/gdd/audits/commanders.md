@@ -63,14 +63,14 @@
 
 ### F-03: `promotion-trees-wrong-shape` — DIVERGED
 
-**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts:47-52`
+**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts:47-52`, `packages/engine/src/state/CommanderAura.ts`
 **GDD reference:** `systems/commanders.md` § "Promotion System"
 **Severity:** MED
 **Effort:** M (1-3 days)
-**VII says:** Five independent trees (Bastion/Assault/Logistics/Maneuver/Leadership), each with 6 nodes (30 total). Any-tree picks allowed. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
-**Engine does:** Five trees with 2-3 nodes each (16 total). Generic aura names not GDD-named. Commander.ts enforces single-tree lock via SELECT_COMMANDER_TREE — not a VII rule. Commendation system absent.
-**Gap:** Three divergences: (1) 16 nodes vs GDD 30; (2) single-tree lock invented locally; (3) commendation system entirely missing.
-**Recommendation:** Remove SELECT_COMMANDER_TREE and single-tree lock. Expand each tree to GDD-named promotions. Add CommendationDef type and commendations to CommanderState. Add EARN_COMMENDATION trigger when all 6 nodes of a tree are picked.
+**VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Assault I Initiative, II Rout/Storm, III Shock Tactics/Enfilade, and IV Advancement, where Advancement grants First Strike to Infantry and Cavalry units in Command Radius. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
+**Engine does:** Five trees are present but still mostly placeholder-shaped. The engine now supports tier-4 commander promotions and `AURA_GRANT_ABILITY`; the current Assault spine adds `assault_advancement`, granting `first_strike` to melee/cavalry units in radius from either CommanderState or UnitState promotion storage. Generic aura names and many nodes remain non-canonical. Commander.ts still carries legacy tree-lock/action shapes; commendations remain absent.
+**Gap:** The critical First Strike/Advancement behavior is implemented, but three broader divergences remain: (1) tree names/nodes still do not match the sourced promotion list; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
+**Recommendation:** Continue F-03 as a larger commander-promotion-tree rewrite: replace placeholder nodes with sourced names/effects, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
 
 ---
 

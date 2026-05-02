@@ -194,13 +194,13 @@
 
 ### F-14: first-strike-ability-support --- CLOSE
 
-**Location:** packages/engine/src/state/CombatAnalytics.ts:20-38; packages/engine/src/systems/combatSystem.ts:301-331; packages/engine/src/state/CombatPreview.ts:281-299, 614-632, 705-743
+**Location:** packages/engine/src/state/CombatAnalytics.ts:20-46; packages/engine/src/state/CommanderAura.ts:51-102; packages/engine/src/systems/combatSystem.ts:301-331; packages/engine/src/state/CombatPreview.ts:281-299, 614-632, 705-743
 **GDD reference:** systems/combat.md section Combat Strength (CS)
 **Severity:** MED  **Effort:** S
-**VII says:** First Strike is a unit ability that provides +5 CS when the unit is at full HP. Source refresh 2026-05-03: Fandom Unit_(Civ7) lists First Strike as a passive unit ability.
-**Engine does:** First Strike is now ability-gated: live combat and preview apply +5 only when the attacking unit is at 100 HP and its UnitDef has `first_strike`. Full-health units without that ability do not receive or display the bonus.
-**Gap:** Mechanics are implemented, but unit data has not been exhaustively audited to assign `first_strike` only to canonical Civ VII units.
-**Recommendation:** Resolve remaining content-data mapping through the unit-content audit rather than making First Strike a universal combat rule.
+**VII says:** First Strike is a unit ability that provides +5 CS when the unit is at full HP. Source refresh 2026-05-03: Fandom Unit_(Civ7) lists First Strike as a passive unit ability, and Fandom List_of_promotions_in_Civ7 lists Army Commander Assault IV Advancement as granting First Strike to Infantry and Cavalry units in Command Radius.
+**Engine does:** First Strike is ability-gated in live combat and preview. Native UnitDef `first_strike` still works, and Commander Aura now supports `AURA_GRANT_ABILITY`; `assault_advancement` grants `first_strike` to melee/cavalry attackers in radius when the commander has that promotion on either CommanderState or UnitState. Focused analytics, preview, and live-combat tests cover the commander-granted path.
+**Gap:** Army Commander Advancement is represented, but the broader commander promotion tree is still not canonically shaped; Fleet Commander `Fusillade`, air/packed-fighter ability grants, and any unit-native First Strike content still need source-by-source audit.
+**Recommendation:** Keep First Strike mechanics here; resolve remaining source-specific ability grants through commanders F-03 and unit-content audit rather than making First Strike universal.
 
 ---
 

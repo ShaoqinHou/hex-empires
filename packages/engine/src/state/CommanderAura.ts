@@ -14,8 +14,11 @@
  */
 
 import type { HexCoord } from '../types/HexCoord';
-import type { GameState } from '../types/GameState';
+import type { GameState, UnitState } from '../types/GameState';
+import type { AuraTarget, CommanderState } from '../types/Commander';
 import { distance } from '../hex/HexMath';
+
+type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'>;
 
 /** Base aura radius in hex rings before any AURA_EXPAND_RADIUS picks. */
 const BASE_AURA_RADIUS = 2;
@@ -47,4 +50,54 @@ export function getCommanderAuraCombatBonus(
     }
   }
   return bonus;
+}
+
+function getCommanderPromotionIds(
+  commanderUnit: UnitState,
+  commanderState: CommanderState,
+): ReadonlySet<string> {
+  return new Set([
+    ...commanderState.promotions,
+    ...commanderUnit.promotions,
+  ]);
+}
+
+function auraTargetMatches(
+  state: GameState,
+  unit: AuraTargetUnit,
+  target: AuraTarget | ReadonlyArray<AuraTarget>,
+): boolean {
+  const targets = Array.isArray(target) ? target : [target];
+  if (targets.includes('all')) return true;
+
+  const category = state.config.units.get(unit.typeId)?.category;
+  return category !== undefined && targets.includes(category);
+}
+
+export function hasCommanderGrantedAbility(
+  state: GameState,
+  unit: AuraTargetUnit,
+  abilityId: string,
+): boolean {
+  if (!state.commanders) return false;
+
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.id === unit.id) continue;
+    if (commanderUnit.owner !== unit.owner) continue;
+
+    const promotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_GRANT_ABILITY') continue;
+      if (promotion.aura.abilityId !== abilityId) continue;
+      if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
+      if (distance(commanderUnit.position, unit.position) <= promotion.aura.radius) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
