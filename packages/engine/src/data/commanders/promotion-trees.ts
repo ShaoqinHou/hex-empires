@@ -35,6 +35,18 @@ export interface CommanderPromotionEntry {
 
 // ── Assault tree (combat-flavor) ──
 
+const ASSAULT_INITIATIVE: CommanderPromotionDef = {
+  id: 'assault_initiative',
+  name: 'Initiative',
+  description: 'Units can move after unpacking from this commander.',
+  tree: 'assault',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_DEPLOY_WITH_MOVEMENT',
+  },
+} as const;
+
 const ASSAULT_TIER1: CommanderPromotionDef = {
   id: 'assault_battle_cry',
   name: 'Battle Cry',
@@ -312,6 +324,7 @@ const BASTION_NAVAL_ENGINEERING: CommanderPromotionDef = {
  * `commanderPromotionSystem` in cycle C.
  */
 export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
+  ASSAULT_INITIATIVE,
   ASSAULT_TIER1,
   ASSAULT_TIER2,
   ASSAULT_TIER3,

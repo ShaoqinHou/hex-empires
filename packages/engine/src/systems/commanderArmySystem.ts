@@ -111,6 +111,7 @@ function handleDeploy(state: GameState, commanderId: string): GameState {
 
   const commanderUnit = state.units.get(commanderId);
   if (!commanderUnit) return state;
+  const deployWithMovement = commanderDeploysWithMovement(state, commanderUnit, commander);
 
   // Determine adjacent tiles for placement
   const adjacentTiles = neighbors(commanderUnit.position);
@@ -128,7 +129,7 @@ function handleDeploy(state: GameState, commanderId: string): GameState {
         ...unit,
         packedInCommanderId: null,
         position: targetPos,
-        movementLeft: 0,
+        movementLeft: deployWithMovement ? unit.movementLeft : 0,
       });
     }
   }
@@ -214,6 +215,7 @@ function handleUnpackArmy(state: GameState, commanderId: string): GameState {
 
   const commanderUnit = state.units.get(commanderId);
   if (!commanderUnit) return state;
+  const deployWithMovement = commanderDeploysWithMovement(state, commanderUnit, commander);
 
   const packedUnits = commander.packedUnitStates ?? [];
   if (packedUnits.length === 0) return state;
@@ -242,7 +244,7 @@ function handleUnpackArmy(state: GameState, commanderId: string): GameState {
       ...unit,
       position: targetPos,
       packedInCommanderId: null,
-      movementLeft: 0,
+      movementLeft: deployWithMovement ? unit.movementLeft : 0,
     });
   }
 
@@ -256,4 +258,22 @@ function handleUnpackArmy(state: GameState, commanderId: string): GameState {
   nextCommanders.set(commanderId, updatedCommander);
 
   return { ...state, units: nextUnits, commanders: nextCommanders };
+}
+
+function commanderDeploysWithMovement(
+  state: GameState,
+  commanderUnit: UnitState,
+  commander: CommanderState,
+): boolean {
+  const promotionIds = new Set([
+    ...commander.promotions,
+    ...commanderUnit.promotions,
+  ]);
+
+  for (const promotionId of promotionIds) {
+    const promotion = state.config.commanderPromotions?.get(promotionId);
+    if (promotion?.aura.type === 'AURA_DEPLOY_WITH_MOVEMENT') return true;
+  }
+
+  return false;
 }

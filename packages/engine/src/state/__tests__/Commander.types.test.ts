@@ -99,6 +99,9 @@ describe('Commander types — compile-time shape tests', () => {
       abilityId: 'first_strike',
       radius: 1,
     };
+    const deployMove: AuraEffectDef = {
+      type: 'AURA_DEPLOY_WITH_MOVEMENT',
+    };
 
     const variants: ReadonlyArray<AuraEffectDef> = [
       modCs,
@@ -109,9 +112,10 @@ describe('Commander types — compile-time shape tests', () => {
       expandS,
       fort,
       grantAbility,
+      deployMove,
     ];
     const kinds = new Set(variants.map((v) => v.type));
-    expect(kinds.size).toBe(8);
+    expect(kinds.size).toBe(9);
     // Discriminant narrowing works:
     if (heal.type === 'AURA_HEAL_PER_TURN') {
       expect(heal.amount).toBe(5);
@@ -121,6 +125,9 @@ describe('Commander types — compile-time shape tests', () => {
     }
     if (grantAbility.type === 'AURA_GRANT_ABILITY') {
       expect(grantAbility.abilityId).toBe('first_strike');
+    }
+    if (deployMove.type === 'AURA_DEPLOY_WITH_MOVEMENT') {
+      expect(deployMove.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
     }
   });
 

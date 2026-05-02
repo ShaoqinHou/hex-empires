@@ -42,9 +42,9 @@
 **Severity:** HIGH
 **Effort:** L (week+)
 **VII says:** The core commander mechanic: ASSEMBLE_ARMY packs up to 4 adjacent units into a single formation that moves with the commander; DEPLOY_ARMY unpacks them to adjacent tiles with zero remaining movement (unless Initiative promotion active).
-**Engine does:** `commanderArmySystem` handles `ASSEMBLE_ARMY`/`DEPLOY_ARMY` plus legacy `PACK_ARMY`/`UNPACK_ARMY`. Deploy/unpack clears packed flags, places units adjacent to the commander, and sets deployed unit `movementLeft: 0`.
-**Gap:** There are still two parallel pack models (`packedInCommanderId` vs removed-unit snapshots), no Initiative/Weather Gage immediate-move exception, and no full formation-order UI.
-**Recommendation:** Consolidate onto one pack model, then add promotion exceptions and action-bar UI.
+**Engine does:** `commanderArmySystem` handles `ASSEMBLE_ARMY`/`DEPLOY_ARMY` plus legacy `PACK_ARMY`/`UNPACK_ARMY`. Deploy/unpack clears packed flags, places units adjacent to the commander, and normally sets deployed unit `movementLeft: 0`. `AURA_DEPLOY_WITH_MOVEMENT` now preserves remaining movement for both pack models, and Assault `assault_initiative` provides that effect.
+**Gap:** There are still two parallel pack models (`packedInCommanderId` vs removed-unit snapshots), no Fleet Commander Weather Gage equivalent, no full formation-order UI, and `PACK_ARMY` snapshots do not refresh while removed from `state.units`.
+**Recommendation:** Consolidate onto one pack model, add Weather Gage after Fleet Commander promotion data is sourced, then expose action-bar UI.
 
 ---
 
@@ -68,8 +68,8 @@
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Assault I Initiative, II Rout/Storm, III Shock Tactics/Enfilade, and IV Advancement, where Advancement grants First Strike to Infantry and Cavalry units in Command Radius. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
-**Engine does:** Five trees are present but still mostly placeholder-shaped. The engine now supports tier-4 commander promotions and `AURA_GRANT_ABILITY`; the current Assault spine adds `assault_advancement`, granting `first_strike` to melee/cavalry units in radius from either CommanderState or UnitState promotion storage. Generic aura names and many nodes remain non-canonical. Commander.ts still carries legacy tree-lock/action shapes; commendations remain absent.
-**Gap:** The critical First Strike/Advancement behavior is implemented, but three broader divergences remain: (1) tree names/nodes still do not match the sourced promotion list; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
+**Engine does:** Five trees are present but still mostly placeholder-shaped. The engine now supports tier-4 commander promotions, `AURA_DEPLOY_WITH_MOVEMENT`, and `AURA_GRANT_ABILITY`; the current Assault data adds `assault_initiative` and `assault_advancement`, granting deploy-with-movement and First Strike respectively from either CommanderState or UnitState promotion storage. Generic aura names and many nodes remain non-canonical. Commander.ts still carries legacy tree-lock/action shapes; commendations remain absent.
+**Gap:** The critical Initiative and Advancement behaviors are implemented, but three broader divergences remain: (1) tree names/nodes still do not match the sourced promotion list; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
 **Recommendation:** Continue F-03 as a larger commander-promotion-tree rewrite: replace placeholder nodes with sourced names/effects, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
 
 ---

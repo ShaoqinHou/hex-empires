@@ -206,6 +206,32 @@ describe('commanderArmySystem — UNPACK_ARMY (X4.1)', () => {
     expect(cmd.packedUnitStates).toEqual([]);
   });
 
+  it('preserves packed snapshot movement when the commander has Initiative', () => {
+    const u1Snapshot = createTestUnit({
+      id: 'u1',
+      owner: 'p1',
+      position: { q: 1, r: 0 },
+      movementLeft: 3,
+      packedInCommanderId: null,
+    });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1'],
+      packedUnitStates: [u1Snapshot],
+      promotions: ['assault_initiative'],
+    });
+    const state = stateWithCommander(cmdState);
+
+    const next = commanderArmySystem(state, {
+      type: 'UNPACK_ARMY',
+      commanderId: 'cmd1',
+    });
+
+    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
+    expect(next.units.get('u1')!.movementLeft).toBe(3);
+  });
+
   it('fails to unpack when there is no adjacent room (all tiles occupied)', () => {
     // Commander at q=0,r=0. Place units on all 6 adjacent tiles to block room.
     const adjacentPositions = [

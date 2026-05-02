@@ -128,6 +128,10 @@ export type AuraEffectDef =
       readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
       readonly abilityId: string;
       readonly radius: number;
+    }
+  /** Lets units deploy from this commander without losing remaining movement. */
+  | {
+      readonly type: 'AURA_DEPLOY_WITH_MOVEMENT';
     };
 
 // ── Promotion definitions ──

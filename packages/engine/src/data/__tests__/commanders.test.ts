@@ -25,6 +25,7 @@ const VALID_AURA_TYPES: ReadonlyArray<AuraEffectDef['type']> = [
   'AURA_EXPAND_STACK',
   'AURA_FORTIFY_BONUS',
   'AURA_GRANT_ABILITY',
+  'AURA_DEPLOY_WITH_MOVEMENT',
 ];
 
 const VALID_TREES: ReadonlyArray<CommanderTree> = [
@@ -155,6 +156,9 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
         case 'AURA_GRANT_ABILITY':
           expect(a.abilityId.length).toBeGreaterThan(0);
           break;
+        case 'AURA_DEPLOY_WITH_MOVEMENT':
+          expect(a.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
+          break;
       }
     }
   });
@@ -225,6 +229,16 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
       expect(advancement!.aura.abilityId).toBe('first_strike');
       expect(advancement!.aura.target).toEqual(['melee', 'cavalry']);
     }
+  });
+
+  it('includes Assault Initiative as the deploy-with-movement exception', () => {
+    const initiative = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'assault_initiative');
+    expect(initiative).toBeDefined();
+    expect(initiative!.name).toBe('Initiative');
+    expect(initiative!.tree).toBe('assault');
+    expect(initiative!.tier).toBe(1);
+    expect(initiative!.prerequisites).toEqual([]);
+    expect(initiative!.aura.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
   });
 });
 
