@@ -26,8 +26,8 @@ import type { GameState, UnitState } from '../../types/GameState';
  * Pattern mirrors M23 zoc-rulebook-parity + M24 healing-rulebook-parity.
  *
  * ── Methodology ─────────────────────────────────────────────────────────────
- * Combat damage is RNG-perturbed: 30 * e^(diff/25) * U(0.75, 1.25). For exact
- * comparisons we fix the seed, so the same strength diff always produces
+ * Combat damage is RNG-perturbed with the Civ VII sourced exponential formula
+ * and U(0.70, 1.30). For exact comparisons we fix the seed, so the same strength diff always produces
  * identical defender-HP loss. Comparing two scenarios with the same seed
  * isolates the CS delta — if flanker count changes, the diff in damage is a
  * pure signal of the flanking-bonus rule.

@@ -3,7 +3,13 @@ import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
 import { nextRandom } from './SeededRng';
-import { computeEffectiveCS } from './CombatAnalytics';
+import {
+  calculateFirstStrikeCombatBonus,
+  COMBAT_DAMAGE_RANDOM_MAX,
+  COMBAT_DAMAGE_RANDOM_MIN,
+  computeCombatDamage,
+  computeEffectiveCS,
+} from './CombatAnalytics';
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
 import { getCommanderAuraCombatBonus } from './CommanderAura';
 
@@ -254,13 +260,13 @@ export function calculateCombatPreview(
 
   const strengthDiff = attackerStrength - defenderStrength;
 
-  // Calculate damage range (random factor is 0.75 to 1.25)
-  const attackerDamageMin = Math.round(30 * Math.exp(strengthDiff / 25) * 0.75);
-  const attackerDamageMax = Math.round(30 * Math.exp(strengthDiff / 25) * 1.25);
+  // Calculate damage range (random factor is 0.70 to 1.30)
+  const attackerDamageMin = computeCombatDamage(strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
+  const attackerDamageMax = computeCombatDamage(strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const attackerDamageExpected = Math.round((attackerDamageMin + attackerDamageMax) / 2);
 
-  const defenderDamageMin = isRanged ? 0 : Math.round(30 * Math.exp(-strengthDiff / 25) * 0.75);
-  const defenderDamageMax = isRanged ? 0 : Math.round(30 * Math.exp(-strengthDiff / 25) * 1.25);
+  const defenderDamageMin = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
+  const defenderDamageMax = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const defenderDamageExpected = isRanged ? 0 : Math.round((defenderDamageMin + defenderDamageMax) / 2);
 
   // Check if units will die
@@ -283,7 +289,7 @@ export function calculateCombatPreview(
   const terrainBonusForDisplay = defenderTile ? getTerrainDefenseBonus(state, defenderTile) : { percent: 0, flat: 0 };
   // River penalty: only applies when crossing the specific edge facing the defender
   const riverPenalty = Boolean(attackerTile && isRiverEdgeBetweenPreview(attackerTile, attacker.position, defender.position));
-  const firstStrikeBonus = attacker.health === 100;
+  const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, attacker, true) > 0;
   const warSupportPenalty = calculateWarSupportPenalty(state, attacker.owner);
 
   const modifiers: CombatModifiers = {
@@ -591,13 +597,13 @@ export function calculateCityCombatPreview(
   const strengthDiff = attackerStrength - cityDefense;
 
   // Calculate damage range
-  const attackerDamageMin = Math.round(30 * Math.exp(strengthDiff / 25) * 0.75);
-  const attackerDamageMax = Math.round(30 * Math.exp(strengthDiff / 25) * 1.25);
+  const attackerDamageMin = computeCombatDamage(strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
+  const attackerDamageMax = computeCombatDamage(strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const attackerDamageExpected = Math.round((attackerDamageMin + attackerDamageMax) / 2);
 
   // City retaliation (ranged, range 2, only hits melee attackers)
-  const defenderDamageMin = isRanged ? 0 : Math.round(30 * Math.exp(-strengthDiff / 25) * 0.75);
-  const defenderDamageMax = isRanged ? 0 : Math.round(30 * Math.exp(-strengthDiff / 25) * 1.25);
+  const defenderDamageMin = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
+  const defenderDamageMax = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const defenderDamageExpected = isRanged ? 0 : Math.round((defenderDamageMin + defenderDamageMax) / 2);
 
   const maxCityHP = city.buildings.includes('walls') ? 200 : 100;
@@ -616,7 +622,7 @@ export function calculateCityCombatPreview(
   };
 
   const riverPenalty = Boolean(attackerTile && attackerTile.river.length > 0);
-  const firstStrikeBonus = attacker.health === 100;
+  const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, attacker, true) > 0;
   const warSupportPenalty = calculateWarSupportPenalty(state, attacker.owner);
 
   const modifiers: CombatModifiers = {
@@ -704,7 +710,7 @@ function getCityDefenseStrength(city: CityState): number {
 
 /**
  * Get effective combat strength for preview — mirrors combatSystem's
- * getEffectiveCombatStrength exactly (VII: multiplicative HP scaling,
+ * getEffectiveCombatStrength exactly (VII: additive wounded penalty,
  * plus all active bonuses: effects, resources, commander aura, support).
  */
 function getEffectiveCombatStrength(
@@ -716,8 +722,9 @@ function getEffectiveCombatStrength(
   defenderUnit?: UnitState,
 ): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  // VII: health scales CS multiplicatively — same formula as combatSystem
+  // VII: wounded penalty is additive — same formula as combatSystem.
   const effectiveBase = computeEffectiveCS(base, unit.health);
+  const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, unit, isAttacking);
   const flankingBonus = isAttacking && defenderPosition
     ? calculateFlankingBonus(unit, defenderPosition, state)
     : 0;
@@ -737,18 +744,18 @@ function getEffectiveCombatStrength(
   // F-07: Adjacent friendly support bonus — +2 CS per adjacent friendly unit (attack only here).
   const supportBonus = isAttacking ? calculateSupportBonus(unit, state) : 0;
 
-  const baseTotal = effectiveBase + flankingBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
+  const baseTotal = effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
   // Apply river-crossing penalty as multiplicative -25% (same as combatSystem)
   return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
 }
 
 /**
  * Get effective defense strength for preview — uses computeEffectiveCS to match
- * combatSystem's resolution formula exactly (VII: multiplicative HP scaling).
+ * combatSystem's resolution formula exactly (VII: additive wounded penalty).
  */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  // VII: health scales CS multiplicatively — same formula as combatSystem
+  // VII: wounded penalty is additive — same formula as combatSystem.
   let strength = computeEffectiveCS(base, unit.health);
 
   // Terrain defense bonus — multiplicative component on base strength

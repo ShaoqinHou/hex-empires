@@ -4,7 +4,7 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus, getWarSupportBonus } from '../state/EffectUtils';
-import { computeEffectiveCS } from '../state/CombatAnalytics';
+import { calculateFirstStrikeCombatBonus, computeCombatDamageFromRoll, computeEffectiveCS } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 import type { ActiveTreaty } from '../types/Treaty';
@@ -99,17 +99,15 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   // Calculate damage with seeded randomness
   const strengthDiff = attackerStrength - defenderStrength;
 
-  // First random: modifier for attacker damage (0.75 to 1.25)
+  // First random: modifier for attacker damage (0.70 to 1.30)
   const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
-  const modifier1 = 0.75 + randomFactor1 * 0.5;
-  const attackerDamage = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1); // damage to defender
+  const attackerDamage = computeCombatDamageFromRoll(strengthDiff, randomFactor1); // damage to defender
 
-  // Second random: modifier for defender damage (0.75 to 1.25)
+  // Second random: modifier for defender damage (0.70 to 1.30)
   const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
-  const modifier2 = 0.75 + randomFactor2 * 0.5;
   const defenderDamage = attackerRange > 0
     ? 0 // ranged units don't take damage when attacking
-    : Math.round(30 * Math.exp(-strengthDiff / 25) * modifier2); // damage to attacker (melee only)
+    : computeCombatDamageFromRoll(-strengthDiff, randomFactor2); // damage to attacker (melee only)
 
   let currentRng = rng2;
 
@@ -300,14 +298,15 @@ function calculateResourceCombatBonus(
 
 /**
  * Get effective combat strength for an attacking unit.
- * Uses computeEffectiveCS (VII: multiplicative HP scaling) so combat resolution
+ * Uses computeEffectiveCS (VII: additive wounded penalty) so combat resolution
  * and CombatPreview display agree on the same formula.
  */
 function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacking: boolean, defenderPosition?: HexCoord, attackerTile?: HexTile | null, defenderUnit?: UnitState): number {
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
-  // VII: health scales CS multiplicatively — computeEffectiveCS(base, hp) = floor(base * hp/100)
+  // VII: wounded penalty is additive: base CS minus round(10 - HP / 10).
   const effectiveBase = computeEffectiveCS(base, unit.health);
   const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
+  const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, unit, isAttacking);
   // Y5.2 (F-08): River-crossing penalty — if attacker crosses a river edge to attack,
   // apply -25% multiplicative CS penalty (standard Civ river crossing rule).
   // Checks the specific edge on the attacker's tile that faces the defender.
@@ -326,7 +325,7 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
   // Y5.3 (F-05): Adjacent friendly support bonus — +2 CS per adjacent friendly unit.
   const supportBonus = isAttacking ? calculateSupportBonus(unit, state) : 0;
-  const baseTotal = effectiveBase + flankingBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
+  const baseTotal = effectiveBase + flankingBonus + firstStrikeBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
   // Apply river-crossing penalty as multiplicative -25%
   return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
 }
@@ -367,12 +366,12 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
 
 /**
  * Get effective defense strength with terrain and fortification bonuses.
- * Uses computeEffectiveCS (VII: multiplicative HP scaling) so combat resolution
+ * Uses computeEffectiveCS (VII: additive wounded penalty) so combat resolution
  * and CombatPreview display agree on the same formula.
  */
 function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: HexTile | null): number {
   const base = getBaseCombatStrength(state, unit.typeId, false);
-  // VII: health scales CS multiplicatively — computeEffectiveCS(base, hp) = floor(base * hp/100)
+  // VII: wounded penalty is additive: base CS minus round(10 - HP / 10).
   let strength = computeEffectiveCS(base, unit.health);
 
   // Terrain defense bonus — multiplicative component on base strength
@@ -601,16 +600,14 @@ function handleAttackCity(
   // Calculate damage to city
   const strengthDiff = attackerStrength - cityDefense;
   const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
-  const modifier1 = 0.75 + randomFactor1 * 0.5;
-  const damageToCity = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1);
+  const damageToCity = computeCombatDamageFromRoll(strengthDiff, randomFactor1);
 
   // City retaliates (ranged, range 2, strength = cityDefense)
   const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
-  const modifier2 = 0.75 + randomFactor2 * 0.5;
   const retaliationStrengthDiff = cityDefense - attackerStrength;
   // Ranged retaliation: only hits melee attackers (adjacent), ranged attackers take no retaliation
   const damageToAttacker = isMelee
-    ? Math.round(30 * Math.exp(retaliationStrengthDiff / 25) * modifier2)
+    ? computeCombatDamageFromRoll(retaliationStrengthDiff, randomFactor2)
     : 0;
 
   let currentRng = rng2;
@@ -809,8 +806,7 @@ function handleAttackDistrict(
 
   const strengthDiff = attackerStrength - districtDefense;
   const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
-  const modifier1 = 0.75 + randomFactor1 * 0.5;
-  const damageToDistrict = Math.round(30 * Math.exp(strengthDiff / 25) * modifier1);
+  const damageToDistrict = computeCombatDamageFromRoll(strengthDiff, randomFactor1);
 
   const newDistrictHP = Math.max(0, currentDistrictHP - damageToDistrict);
   districtHPs.set(action.districtTile, newDistrictHP);
@@ -818,10 +814,9 @@ function handleAttackDistrict(
   // City retaliates on melee attackers
   const isMelee = baseRange === 0;
   const { value: randomFactor2, rng: rng2 } = nextRandom(rng1);
-  const modifier2 = 0.75 + randomFactor2 * 0.5;
   const retaliationStrengthDiff = districtDefense - attackerStrength;
   const damageToAttacker = isMelee
-    ? Math.round(30 * Math.exp(retaliationStrengthDiff / 25) * modifier2)
+    ? computeCombatDamageFromRoll(retaliationStrengthDiff, randomFactor2)
     : 0;
 
   const newAttackerHealth = Math.max(0, attacker.health - damageToAttacker);

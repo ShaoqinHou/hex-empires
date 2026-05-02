@@ -19,7 +19,7 @@
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
-| combat | `.codex/gdd/audits/combat.md` | 14 | 8M / 1C / 3D / 1X / 1E |
+| combat | `.codex/gdd/audits/combat.md` | 14 | 10M / 2C / 1D / 1X / 0E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
@@ -77,9 +77,9 @@
 | civilizations | F-09 | Traditions / unique civic tree | ⊘ MISSING | L | packages/engine/src/data/civilizations/types.ts |
 | combat | F-01 | fortify-bonus-comment-wrong - | ✓ MATCH | UNK | packages/engine/src/systems/fortifySystem.ts:1-6 |
 | combat | F-02 | flanking-directional-vs-unit-count - | ⚠ DIVERGED | UNK | packages/engine/src/systems/combatSystem.ts:288-323 |
-| combat | F-03 | health-penalty-formula-diverged - | ⚠ DIVERGED | UNK | packages/engine/src/systems/combatSystem.ts:182-197 vs CombatPreview.ts:708-719 |
+| combat | F-03 | health-penalty-formula-diverged - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:4-27; packages/engine/src/systems/c |
 | combat | F-09 | siege-district-hp-model-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts:340-496 |
-| combat | F-13 | combat-preview-formula-divergence - | ⚠ DIVERGED | UNK | packages/engine/src/state/CombatPreview.ts:701-719 vs combatSystem.ts:182-197 |
+| combat | F-13 | combat-preview-formula-divergence - | ✓ MATCH | UNK | packages/engine/src/state/CombatPreview.ts:705-743; packages/engine/src/systems/ |
 | commanders | F-01 | `pack-unpack-system-present-with-duplicate-paths` | ≈ CLOSE | L | `packages/engine/src/systems/commanderArmySystem.ts`; `packages/engine/src/types |
 | commanders | F-02 | `commander-state-wired-in-gamestate` | ✓ MATCH | M | `packages/engine/src/types/Commander.ts:163-172`, `packages/engine/src/types/Gam |
 | commanders | F-08 | `commander-age-persistence-partial` | ≈ CLOSE | M | `packages/engine/src/systems/commanderPromotionSystem.ts` |
@@ -195,7 +195,7 @@
 | combat | F-04 | zoc-ranged-units-project-zoc - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
 | combat | F-07 | support-bonus-standalone - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
 | combat | F-11 | civilian-capture-missing - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:362-431; packages/engine/src/syste |
-| combat | F-14 | first-strike-bonus-extra - | ✗ EXTRA | UNK | packages/engine/src/systems/combatSystem.ts:187-191 |
+| combat | F-14 | first-strike-ability-support - | ≈ CLOSE | UNK | packages/engine/src/state/CombatAnalytics.ts:20-38; packages/engine/src/systems/ |
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
 | commanders | F-07 | `commander-respawn-absent` | ⊘ MISSING | M | `packages/engine/src/types/Commander.ts`, all systems |
 | commanders | F-09 | `panel-wired-but-read-only` | ≈ CLOSE | S | `packages/web/src/ui/panels/CommanderPanel.tsx:19,27-32` |
@@ -291,7 +291,7 @@
 | celebrations | F-11 | Celebration duration ignores game speed | ≈ CLOSE | S | `packages/engine/src/systems/resourceSystem.ts:23` |
 | civic-tree | F-12 | `CivicDef.unlocks` is untyped string array | ≈ CLOSE | M | `Civic.ts:7`, `data/civics/antiquity/index.ts` |
 | civic-tree | F-13 | Standard civic completion does not grant age progress | ✓ MATCH | S | `civicSystem.ts:131` |
-| combat | F-05 | damage-formula-match - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:68-75 |
+| combat | F-05 | damage-formula-match - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:40-58; packages/engine/src/systems/ |
 | combat | F-06 | healing-rates-match - | ✓ MATCH | UNK | packages/engine/src/systems/turnSystem.ts:117-172 |
 | combat | F-08 | war-support-penalty-match - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:200-232 |
 | combat | F-10 | unit-xp-magic-numbers - | ≈ CLOSE | UNK | packages/engine/src/systems/combatSystem.ts:99-105, 147-149 |
@@ -350,11 +350,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 92 |
-| CLOSE | 75 |
-| DIVERGED | 46 |
+| MATCH | 94 |
+| CLOSE | 76 |
+| DIVERGED | 44 |
 | MISSING | 61 |
-| EXTRA | 12 |
+| EXTRA | 11 |
 | **Total findings** | **286** |
 
 

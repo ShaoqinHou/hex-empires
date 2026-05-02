@@ -7,6 +7,9 @@ import {
   averageCityDefense,
   combatStrengthRanking,
   computeEffectiveCS,
+  computeCombatDamage,
+  computeCombatDamageFromRoll,
+  calculateFirstStrikeCombatBonus,
 } from '../CombatAnalytics';
 import type { CityState } from '../../types/GameState';
 import { createTestState, createTestUnit, createTestPlayer } from '../../systems/__tests__/helpers';
@@ -14,9 +17,9 @@ import { createTestState, createTestUnit, createTestPlayer } from '../../systems
 // ── W4-03: computeEffectiveCS ──
 
 describe('computeEffectiveCS', () => {
-  it('computeEffectiveCS(30, 50) === 15', () => {
-    // floor(30 * 50/100) = floor(15) = 15
-    expect(computeEffectiveCS(30, 50)).toBe(15);
+  it('applies Civ VII wounded penalty as additive CS loss', () => {
+    // round(10 - 50 / 10) = 5, so 30 CS at 50 HP fights at 25 CS.
+    expect(computeEffectiveCS(30, 50)).toBe(25);
   });
 
   it('full HP preserves base CS exactly', () => {
@@ -24,20 +27,52 @@ describe('computeEffectiveCS', () => {
     expect(computeEffectiveCS(30, 100)).toBe(30);
   });
 
-  it('zero HP produces zero effective CS', () => {
-    expect(computeEffectiveCS(20, 0)).toBe(0);
+  it('caps wounded penalty at -10 CS', () => {
+    expect(computeEffectiveCS(20, 0)).toBe(10);
+    expect(computeEffectiveCS(20, 5)).toBe(10);
   });
 
-  it('uses floor — fractional results round down', () => {
-    // floor(20 * 91/100) = floor(18.2) = 18
-    expect(computeEffectiveCS(20, 91)).toBe(18);
-    // floor(20 * 99/100) = floor(19.8) = 19
-    expect(computeEffectiveCS(20, 99)).toBe(19);
+  it('rounds the HP-derived penalty to the nearest CS point', () => {
+    expect(computeEffectiveCS(20, 99)).toBe(20);
+    expect(computeEffectiveCS(20, 95)).toBe(19);
+    expect(computeEffectiveCS(20, 90)).toBe(19);
   });
 
   it('respects custom maxHP parameter', () => {
-    // floor(30 * 50/200) = floor(7.5) = 7
-    expect(computeEffectiveCS(30, 50, 200)).toBe(7);
+    expect(computeEffectiveCS(30, 50, 200)).toBe(22);
+  });
+
+  it('applies first strike only to attacking full-HP units with the ability', () => {
+    const base = createTestState();
+    const firstStrikeWarrior = {
+      ...base.config.units.get('warrior')!,
+      abilities: ['first_strike'],
+    };
+    const config = {
+      ...base.config,
+      units: new Map(base.config.units).set('warrior', firstStrikeWarrior),
+    };
+    const state = { ...base, config };
+    const unit = createTestUnit({ typeId: 'warrior', health: 100 });
+
+    expect(calculateFirstStrikeCombatBonus(state, unit, true)).toBe(5);
+    expect(calculateFirstStrikeCombatBonus(state, { ...unit, health: 99 }, true)).toBe(0);
+    expect(calculateFirstStrikeCombatBonus(state, unit, false)).toBe(0);
+  });
+});
+
+describe('computeCombatDamage', () => {
+  it('uses Civ VII exact exponent with 30 base damage at equal strength', () => {
+    expect(computeCombatDamage(0, 1)).toBe(30);
+  });
+
+  it('averages 100 damage at +30 CS before random variance', () => {
+    expect(computeCombatDamage(30, 1)).toBe(100);
+  });
+
+  it('maps normalized random rolls to the Civ VII 70-130% range', () => {
+    expect(computeCombatDamageFromRoll(0, 0)).toBe(21);
+    expect(computeCombatDamageFromRoll(0, 1)).toBe(39);
   });
 });
 
@@ -200,15 +235,15 @@ describe('CombatAnalytics', () => {
       expect(totalCombatStrength(state, 'p1')).toBe(0);
     });
 
-    it('sums combat * health/100 across military units', () => {
+    it('sums effective combat strength across military units', () => {
       // warrior combat = 20 (per data file)
       const units = new Map([
         ['u1', createTestUnit({ id: 'u1', owner: 'p1', typeId: 'warrior', health: 100 })],
         ['u2', createTestUnit({ id: 'u2', owner: 'p1', typeId: 'warrior', health: 50 })],
       ]);
       const state = createTestState({ units });
-      // 20 * 1.0 + 20 * 0.5 = 30
-      expect(totalCombatStrength(state, 'p1')).toBeCloseTo(30, 5);
+      // 20 + (20 - 5 wounded penalty) = 35
+      expect(totalCombatStrength(state, 'p1')).toBeCloseTo(35, 5);
     });
 
     it('skips units whose UnitDef is missing from config', () => {

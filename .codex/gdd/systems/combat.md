@@ -13,8 +13,9 @@
 Every factual claim in the sections below MUST trace to one of these, or be tagged `[INFERRED]` / `[LLM-KNOWLEDGE-ONLY]`.
 
 - https://civilization.2k.com/civ-vii/game-guide/dev-diary/combat/ — Firaxis Dev Diary #5: Combat
-- https://civilization.fandom.com/wiki/Strength_(Civ7) — Fandom: Strength (Civ7) [403 on direct fetch; content surfaced via WebSearch]
-- https://civilization.fandom.com/wiki/Combat_(Civ7) — Fandom: Combat (Civ7) [403 on direct fetch; content surfaced via WebSearch]
+- https://civilization.fandom.com/wiki/Strength_(Civ7) — Fandom: Strength (Civ7) [not rechecked in 2026-05-03 source refresh]
+- https://civilization.fandom.com/wiki/Combat_(Civ7) — Fandom: Combat (Civ7) [accessible in 2026-05-03 source refresh]
+- https://civilization.fandom.com/wiki/Unit_(Civ7) — Fandom: Unit (Civ7) [accessible in 2026-05-03 source refresh]
 - https://civilization.fandom.com/wiki/Land_unit_(Civ7) — Fandom: Land unit (Civ7) [403 on direct fetch; content surfaced via WebSearch]
 - https://game8.co/games/Civ-7/archives/499026 — Game8: Civ 7 Ground Combat Guide
 - https://game8.co/games/Civ-7/archives/499033 — Game8: Civ 7 How to Defend and Conquer Cities
@@ -26,7 +27,7 @@ Every factual claim in the sections below MUST trace to one of these, or be tagg
 - https://www.gamerant.com/civilization-vii-heal-units-guide-healing-unit-boost-heal-amount-increase-healing-civ-7/ — GameRant: Civilization VII Heal Units Guide
 - https://www.well-of-souls.com/civ/civ7_terrain.html — Well of Souls: Civ VII Terrain Analyst
 
-**Source conflicts noted:** Two sources disagree on healing rates in enemy territory: one cites 5 HP/turn, another 10 HP/turn. Fandom wiki pages for Combat_(Civ7) and Strength_(Civ7) returned HTTP 403. Conflict flagged in Healing section.
+**Source conflicts noted:** Two sources disagree on healing rates in enemy territory: one cites 5 HP/turn, another 10 HP/turn. Strength_(Civ7) still needs direct review. Conflict flagged in Healing section.
 
 ---
 
@@ -84,18 +85,20 @@ Combat Strength governs melee combat output and melee defense. All modifiers are
 
 Unit hit points are standardized at **100 HP** maximum across all unit types.
 
-**Wounded-unit penalty:** A unit’s effective CS decreases as it takes damage. The penalty is approximately **−1 CS per 10 HP lost**, beginning at 99 HP. Maximum penalty is **−10 CS** when a unit is below 10 HP. This is a continuous linear penalty, not a step function. [Source: Fandom Strength_(Civ7), surfaced via search.]
+**Wounded-unit penalty:** A unit’s effective CS decreases as it takes damage. The penalty is `round(10 - HP / 10)`, capped at **−10 CS** when a unit is below 10 HP. This roughly behaves like **−1 CS per 10 HP lost**, but uses rounded additive CS loss rather than multiplicative strength scaling. [Source: Fandom Combat_(Civ7), source refresh 2026-05-03.]
+
+**First Strike:** Some units can have a First Strike ability that grants **+5 CS** when the unit is at full HP. This is an ability-gated modifier, not a universal full-health bonus. [Source: Fandom Unit_(Civ7), source refresh 2026-05-03.]
 
 ### Damage Calculation
 
-The exact algebraic formula Firaxis uses has not been published. From community reverse-engineering and search-surfaced Fandom content:
+The combat formula surfaced in the 2026-05-03 source refresh is:
 
 - Damage is determined by the **difference in effective CS** between attacker and defender.
 - Community data suggests: one-shot is **possible at approximately +23 CS difference**, **average around +30 CS difference**, and **guaranteed at approximately +39 CS difference**. [Source: Fandom Strength_(Civ7) via search — approximate.]
 - Damage has a **random variance of ±30%**. This variance is larger than Civ VI (±25%).
 - **Damage is capped at 100** per hit.
 - Both melee attacker and defender deal damage simultaneously. Ranged and bombard attacks are one-sided — the target does NOT return fire.
-- The formula used in Civ VI was: `Damage = 30 × e^(StrengthDifference / 25) × Random(0.75, 1.25)`. Whether Civ VII uses the same base formula is **[INFERRED]**.
+- Formula: `Damage = 30 × e^((ln(100/30)/30) × StrengthDifference) × Random(0.70, 1.30)`. [Source: Fandom Combat_(Civ7), source refresh 2026-05-03.]
 
 ### Terrain Defense Bonuses
 
@@ -220,22 +223,23 @@ Pseudocode for effective CS at resolution time:
 ```
 function effectiveCS(unit, tile, isFortified, adjacentFriendlyCount, flankingBonus, warSupportPenalty):
     base = unit.combatStrength
-    wounded = floor((100 - unit.hp) / 10) * -1   # 0 at full HP, -10 at <= 10 HP
+    wounded = -clamp(round(10 - unit.hp / 10), 0, 10)
+    first   = +5 if unit.hasAbility("First Strike") and unit.hp == 100 and isAttacking else 0
     terrain = tile.defensiveBonus                 # +3 hills, +2 forest, -5 river
     fortify  = +5 if isFortified else 0
     walls    = +15 if insideFortifiedDistrict and districtHasWalls else 0
     support  = adjacentFriendlyCount * 2
     flanking = flankingBonus                      # 0 front, +3 flank, +6 rear [INFERRED]
     warAdv   = -warSupportPenalty if warSupportPenalty > 0 else 0
-    return base + wounded + terrain + fortify + walls + support + flanking + warAdv
+    return base + wounded + first + terrain + fortify + walls + support + flanking + warAdv
 ```
 
 ### Damage Formula
 
-The formula used in Civ VI (which Civ VII likely inherits [INFERRED]):
+The sourced Civ VII formula:
 
 ```
-Damage = 30 * e^(StrengthDiff / 25) * Random(0.75, 1.25)
+Damage = 30 * e^((ln(100 / 30) / 30) * StrengthDiff) * Random(0.70, 1.30)
 StrengthDiff = attackerEffectiveCS - defenderEffectiveCS
 Result capped at 100. Floored at 0 (no negative damage).
 ```
@@ -296,7 +300,7 @@ The following mechanics are new or significantly changed from Civ VI:
 3. **No anti-cavalry class.** Civ VI had an explicit anti-cavalry unit class with a class-wide combat bonus against cavalry. Civ VII removes this class; spearman-line units may retain some contextual bonus but there is no system-wide counter triangle. [Source: Fandom Land_unit_(Civ7) via search]
 4. **District-by-district siege.** Civ VII requires individual district conquest rather than city-wide HP. Civ VI had a single city HP bar. [Source: Firaxis Dev Diary #5; ScreenRant]
 5. **War Support mechanic.** New in Civ VII. Negative War Support directly penalizes military effectiveness. Civ VI had War Weariness affecting yields but not CS directly. [Source: 12grams community guide]
-6. **Larger damage variance.** Civ VII uses ±30% random variance vs. Civ VI’s ±25%. [Source: Fandom Strength_(Civ7) via search]
+6. **Larger damage variance.** Civ VII uses ±30% random variance vs. Civ VI’s ±25%. [Source: Fandom Combat_(Civ7), source refresh 2026-05-03]
 7. **Commanders as army layer.** Civ VII introduces Commanders as a separate aggregate layer above individual unit combat. Civ VI had Generals with limited radius effects. [Source: Firaxis Dev Diary #5]
 
 ---
@@ -338,10 +342,10 @@ The following mechanics are new or significantly changed from Civ VI:
 ---
 ## Mapping to hex-empires
 
-**Status tally:** 8 MATCH / 1 CLOSE / 3 DIVERGED / 1 MISSING / 1 EXTRA
+**Status tally:** 10 MATCH / 2 CLOSE / 1 DIVERGED / 1 MISSING / 0 EXTRA
 **Audit:** [.codex/gdd/audits/combat.md](../audits/combat.md)
 **Highest-severity finding:** F-02 — flanking-directional-vs-unit-count - (DIVERGED, HIGH)
-**Convergence status:** Divergent — 3 finding(s) require(s) architectural refactor
+**Convergence status:** Divergent — 1 finding(s) require(s) architectural refactor
 
 _(Full details in audit file. 14 total finding(s). Regenerated by `.codex/scripts/aggregate-audits.py`.)_
 
@@ -349,27 +353,26 @@ _(Full details in audit file. 14 total finding(s). Regenerated by `.codex/script
 
 **Research notes:**
 
-- Fandom wiki pages for Combat_(Civ7) and Strength_(Civ7) both returned HTTP 403 during research. Content was surfaced via WebSearch (Google snippet extraction), which provides partial data. This reduces confidence in exact numeric values to medium. Any value tagged [INFERRED] should be re-verified against the Fandom wiki once access is restored.
+- Fandom wiki pages for Combat_(Civ7) and Unit_(Civ7) were accessible during the 2026-05-03 source refresh. They confirm additive wounded CS loss and ability-gated First Strike. Strength_(Civ7) still needs direct review if access permits.
 - The Firaxis Dev Diary #5 (primary source) is the best-quality source but is written at a high level without exact formulas. It confirms: one-unit-per-tile, battlefront/facing, district-based siege, no anti-cavalry class, Commander system separate from unit combat.
 - Game8 guides (Ground Combat, Zone of Control, City Defense) are the most detailed secondary sources for exact mechanics. They appear to derive from game testing and are generally consistent with the Dev Diary.
-- The ±30% variance figure comes from Fandom Strength_(Civ7) via search snippets. It may be an approximation. Civ VI’s exact formula (30 * e^(diff/25) * random) is well-documented; Civ VII’s is not, but the structure is likely inherited.
+- The ±30% variance and exact exponent formula come from Fandom Combat_(Civ7), accessible in the 2026-05-03 source refresh.
 - Well of Souls Unit Analyst provides unit CS values at a specific patch version. CS values may shift with balance patches.
 
 **Document health:**
 
 - Overall confidence: medium (primary source high-level; numeric values from secondary/community sources)
-- Inferred claim count: 9 major [INFERRED] tags (see list below)
+- Inferred claim count: 5 major [INFERRED] tags (see list below)
 - Source conflict count: 1 (enemy territory healing rate)
-- Failed URL fetches: civilization.fandom.com/wiki/Combat_(Civ7) [403], civilization.fandom.com/wiki/Strength_(Civ7) [403]
+- Failed URL fetches: civilization.fandom.com/wiki/Strength_(Civ7) [not rechecked in 2026-05-03 source refresh]
 
 **[INFERRED] list:**
 
-1. Damage formula inherits Civ VI’s exponential structure.
-2. Flanking CS values (+3 flank, +6 rear) are not confirmed by primary source.
-3. Religion combat tenet effects exist but are not specifically documented for Civ VII.
-4. War Support has a floor (cap on maximum CS penalty).
-5. Melee simultaneous elimination is possible.
-6. Battlefront facing resets on unit teleport/transport.
+1. Flanking CS values (+3 flank, +6 rear) are not confirmed by primary source.
+2. Religion combat tenet effects exist but are not specifically documented for Civ VII.
+3. War Support has a floor (cap on maximum CS penalty).
+4. Melee simultaneous elimination is possible.
+5. Battlefront facing resets on unit teleport/transport.
 7. Ranged units use melee CS for defense when melee-attacked.
 8. Wall +15 CS bonus applies to melee defense only, not ranged return fire.
 9. Cavalry suffers no additional contextual CS penalty beyond terrain bonus in rough terrain.

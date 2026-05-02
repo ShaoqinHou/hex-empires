@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCombatPreview, calculateCityCombatPreview, getAttackableUnits, getAttackableCities } from '../CombatPreview';
-import { computeEffectiveCS } from '../CombatAnalytics';
+import { computeCombatDamageFromRoll, computeEffectiveCS } from '../CombatAnalytics';
 import { combatSystem } from '../../systems/combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
 import { nextRandom } from '../SeededRng';
@@ -272,8 +272,7 @@ describe('calculateCombatPreview', () => {
 
     const strengthDiff = preview.attackerStrength - preview.defenderStrength;
     const { value: randomFactor } = nextRandom(state.rng);
-    const expectedModifier = 0.75 + randomFactor * 0.5;
-    const expectedDamage = Math.round(30 * Math.exp(strengthDiff / 25) * expectedModifier);
+    const expectedDamage = computeCombatDamageFromRoll(strengthDiff, randomFactor);
 
     expect(actualDamage).toBe(expectedDamage);
   });
@@ -346,12 +345,27 @@ describe('calculateCombatPreview', () => {
     expect(preview.modifiers.targetWounded).toBe(true);
   });
 
-  it('includes first strike bonus in modifiers', () => {
+  it('includes first strike bonus in modifiers only for first-strike units', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 } })],
     ]);
-    const state = createTestState({ units });
+    const base = createTestState({ units });
+    const noAbilityPreview = calculateCombatPreview(base, 'a1', 'd1');
+    expect(noAbilityPreview.canAttack).toBe(true);
+    expect(noAbilityPreview.modifiers.firstStrikeBonus).toBe(false);
+
+    const firstStrikeWarrior = {
+      ...base.config.units.get('warrior')!,
+      abilities: ['first_strike'],
+    };
+    const state = {
+      ...base,
+      config: {
+        ...base.config,
+        units: new Map(base.config.units).set('warrior', firstStrikeWarrior),
+      },
+    };
     const preview = calculateCombatPreview(state, 'a1', 'd1');
 
     expect(preview.canAttack).toBe(true);
@@ -725,9 +739,9 @@ describe('getAttackableCities', () => {
 describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
   it('preview attackerStrength uses computeEffectiveCS(base, hp) plus active effects — single shared formula', () => {
     // A warrior at 75 HP attacks an adjacent enemy.
-    // Warrior base combat = 20 (from test config). computeEffectiveCS(20, 75) = floor(20 * 75/100) = 15.
+    // Warrior base combat = 20 (from test config). computeEffectiveCS(20, 75) = 17.
     // Default test player has Rome/Augustus leader (+5 MODIFY_COMBAT all categories).
-    // Preview attackerStrength = effectiveCS(15) + effectBonus(5) = 20.
+    // Preview attackerStrength = effectiveCS(17) + effectBonus(5) = 22.
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 75 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
@@ -741,11 +755,11 @@ describe('Z2.3: CombatPreview uses shared computeEffectiveCS formula', () => {
     const expectedEffectiveCS = computeEffectiveCS(warriorBase, 75);
     // Preview strength = effectiveCS + leader ability (Augustus +5) — mirrors combatSystem exactly.
     // Note: effectBonus (+5) is included in the shared formula, so just checking the total directly.
-    expect(preview.attackerStrength).toBe(expectedEffectiveCS + 5); // effectiveCS(15) + augustus(5) = 20
+    expect(preview.attackerStrength).toBe(expectedEffectiveCS + 5);
   });
 
   it('preview defenderStrength degrades with HP (same formula as attacker)', () => {
-    // Defender at 50 HP: computeEffectiveCS(base, 50) = floor(base * 0.5)
+    // Defender at 50 HP: computeEffectiveCS(base, 50) = base - 5.
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 50 })],
@@ -765,7 +779,7 @@ describe('DD4.2: CombatPreview vs combatSystem parity', () => {
   it('preview expectedDamageToDefender is within ±10% of actual combatSystem damage', () => {
     // Simulate the same combat with both preview and live system.
     // Both use the same strength formula — preview shows the expected (average) value;
-    // combatSystem uses a seeded random modifier in [0.75, 1.25].
+    // combatSystem uses a seeded random modifier in [0.70, 1.30].
     // At seed=42, counter=0, the actual modifier is ~1.05 → actual ≈ expected.
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],

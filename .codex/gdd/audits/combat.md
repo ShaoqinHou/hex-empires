@@ -24,11 +24,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 8 |
-| CLOSE | 1 |
-| DIVERGED | 3 |
+| MATCH | 10 |
+| CLOSE | 2 |
+| DIVERGED | 1 |
 | MISSING | 1 |
-| EXTRA | 1 |
+| EXTRA | 0 |
 
 **Total findings:** 14
 
@@ -60,15 +60,15 @@
 
 ---
 
-### F-03: health-penalty-formula-diverged --- DIVERGED
+### F-03: health-penalty-formula-diverged --- MATCH
 
-**Location:** packages/engine/src/systems/combatSystem.ts:182-197 vs CombatPreview.ts:708-719
+**Location:** packages/engine/src/state/CombatAnalytics.ts:4-27; packages/engine/src/systems/combatSystem.ts:301-331; packages/engine/src/state/CombatPreview.ts:705-743
 **GDD reference:** systems/combat.md section Combat Strength (CS) -- Wounded-unit penalty
 **Severity:** HIGH  **Effort:** S
-**VII says:** Penalty is linear: -1 CS per 10 HP lost, max -10 CS at or below 10 HP.
-**Engine does:** combatSystem.ts: Math.floor((100 - unit.health) / 10) subtracted (correct flat). CombatPreview.ts:709: healthModifier = Math.floor(unit.health / 10) / 10 (a multiplier 0.0-1.0). At 50 HP on CS 30: engine=25, preview=15.
-**Gap:** Two divergent health-penalty formulas. Preview shown to player is systematically wrong at non-full health. CombatPreview also omits civ/leader effect bonus (getCombatBonus).
-**Recommendation:** Extract computeEffectiveCS(state, unit, context) into PromotionUtils.ts or new CombatUtils.ts. Import in both combatSystem.ts and CombatPreview.ts. Flat-subtraction formula in combatSystem.ts is correct per GDD.
+**VII says:** Wounded-unit penalty is additive: `round(10 - HP / 10)`, capped at -10 CS below 10 HP. Source refresh 2026-05-03: Fandom Combat_(Civ7) exposed this formula directly.
+**Engine does:** `computeEffectiveCS` now implements the rounded additive penalty and both `combatSystem` and `CombatPreview` use that helper for HP-to-CS math.
+**Gap:** None for the wounded-unit formula. Broader effective-strength code is still duplicated between live combat and preview, but the HP formula and active combat-effect inclusion match.
+**Recommendation:** Keep `computeEffectiveCS` as the single HP-to-CS helper. If combat modifiers continue to grow, extract a fuller shared effective-strength utility in a later cleanup.
 
 ---
 
@@ -86,13 +86,13 @@
 
 ### F-05: damage-formula-match --- MATCH
 
-**Location:** packages/engine/src/systems/combatSystem.ts:68-75
+**Location:** packages/engine/src/state/CombatAnalytics.ts:40-58; packages/engine/src/systems/combatSystem.ts:99-112,602-614,811-825; packages/engine/src/state/CombatPreview.ts:257-264,594-601
 **GDD reference:** systems/combat.md section Damage Calculation
 **Severity:** LOW  **Effort:** S
-**VII says:** Damage = 30 * e^(StrengthDiff / 25) * Random(0.75, 1.25). Melee is simultaneous; ranged is one-sided.
-**Engine does:** Exactly matches: 30 * Math.exp(strengthDiff / 25) * modifier for attacker; 30 * Math.exp(-strengthDiff / 25) * modifier for defender; ranged units give 0 return damage.
-**Gap:** None. Formula and ranged one-sidedness both match the GDD.
-**Recommendation:** No change needed.
+**VII says:** Damage = `30 * e^((ln(100/30)/30) * StrengthDiff) * Random(0.70, 1.30)`. Melee is simultaneous; ranged is one-sided. Source refresh 2026-05-03: Fandom Combat_(Civ7) exposes the exact formula.
+**Engine does:** `computeCombatDamageFromRoll` implements the sourced formula and is used for unit, city, and district combat. `CombatPreview` uses the same helper constants for min/max damage ranges. Ranged unit attacks still give 0 return damage.
+**Gap:** None for the sourced damage formula and range.
+**Recommendation:** Keep all damage calculations routed through `CombatAnalytics` helpers.
 
 ---
 
@@ -180,33 +180,33 @@
 
 ---
 
-### F-13: combat-preview-formula-divergence --- DIVERGED
+### F-13: combat-preview-formula-divergence --- MATCH
 
-**Location:** packages/engine/src/state/CombatPreview.ts:701-719 vs combatSystem.ts:182-197
+**Location:** packages/engine/src/state/CombatPreview.ts:705-743; packages/engine/src/systems/combatSystem.ts:301-331; packages/engine/src/state/CombatAnalytics.ts:4-27
 **GDD reference:** systems/combat.md sections Damage Calculation and Combat Strength (CS)
 **Severity:** HIGH  **Effort:** S
 **VII says:** Effective CS must be calculated consistently in all contexts -- preview must match actual resolution.
-**Engine does:** CombatPreview.ts has its own copy of getEffectiveCombatStrength using a multiplicative health scalar (Math.floor(unit.health / 10) / 10) and omitting getCombatBonus. combatSystem.ts uses flat subtraction and includes the effect bonus. Two divergent formulas in the same codebase.
-**Gap:** Player sees incorrect preview odds. At 50 HP on CS 30 unit: preview shows 15 effective CS, engine resolves at 25 effective CS. Preview also omits civ/leader combat effect bonuses entirely.
-**Recommendation:** Extract computeEffectiveCS(state, unit, context) into PromotionUtils.ts or new CombatUtils.ts. Import in both combatSystem.ts and CombatPreview.ts. S-effort refactor with high player-experience impact.
+**Engine does:** `combatSystem` and `CombatPreview` both call `computeEffectiveCS` for wounded CS, both include civ/leader `MODIFY_COMBAT` effects, resource combat bonuses, commander aura, support, war-support penalty, river penalty, and ability-gated First Strike in their attack-strength paths. Focused preview parity tests cover the shared HP formula and damage preview/resolution agreement.
+**Gap:** None for the audited preview/live divergence. The two files still duplicate modifier assembly, so future combat changes should keep adding paired tests.
+**Recommendation:** Keep preview parity tests near every combat-strength change. Consider extracting the full effective-strength helper once directional battlefront work (F-02) lands.
 
 ---
 
-### F-14: first-strike-bonus-extra --- EXTRA
+### F-14: first-strike-ability-support --- CLOSE
 
-**Location:** packages/engine/src/systems/combatSystem.ts:187-191
-**GDD reference:** systems/combat.md (not mentioned anywhere)
+**Location:** packages/engine/src/state/CombatAnalytics.ts:20-38; packages/engine/src/systems/combatSystem.ts:301-331; packages/engine/src/state/CombatPreview.ts:281-299, 614-632, 705-743
+**GDD reference:** systems/combat.md section Combat Strength (CS)
 **Severity:** MED  **Effort:** S
-**VII says:** No First Strike bonus for attacking at full HP is mentioned in the GDD or any sourced Civ VII material.
-**Engine does:** Applies +5 CS when attacking at full HP (firstStrikeBonus = isAttacking && unit.health === 100 ? 5 : 0). No VII basis.
-**Gap:** Custom mechanic not present in Civ VII. Distorts strategic balance by incentivizing attacking before healing.
-**Recommendation:** Remove firstStrikeBonus from base combat calculation. If desired as custom hex-empires mechanic, move to a named FIRST_STRIKE promotion effect so it is explicit and data-driven.
+**VII says:** First Strike is a unit ability that provides +5 CS when the unit is at full HP. Source refresh 2026-05-03: Fandom Unit_(Civ7) lists First Strike as a passive unit ability.
+**Engine does:** First Strike is now ability-gated: live combat and preview apply +5 only when the attacking unit is at 100 HP and its UnitDef has `first_strike`. Full-health units without that ability do not receive or display the bonus.
+**Gap:** Mechanics are implemented, but unit data has not been exhaustively audited to assign `first_strike` only to canonical Civ VII units.
+**Recommendation:** Resolve remaining content-data mapping through the unit-content audit rather than making First Strike a universal combat rule.
 
 ---
 
 ## Extras to retire
 
-- combatSystem.ts:187-191 -- firstStrikeBonus (+5 CS at full HP) has no VII basis; retire or move to a named promotion.
+None currently tracked for combat.
 
 ---
 
@@ -222,8 +222,8 @@
 
 Paste into .codex/gdd/systems/combat.md section Mapping to hex-empires:
 
-Status: 8 MATCH / 1 CLOSE / 3 DIVERGED / 1 MISSING / 1 EXTRA (audit: .codex/gdd/audits/combat.md)
-Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; combatSystem uses flat subtraction. Fix: extract shared computeEffectiveCS utility.
+Status: 10 MATCH / 2 CLOSE / 1 DIVERGED / 1 MISSING / 0 EXTRA (audit: .codex/gdd/audits/combat.md)
+Highest-severity: F-02 -- Engine still uses count-based flanking instead of Civ VII directional battlefront/facing.
 
 ---
 
@@ -231,7 +231,7 @@ Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; 
 
 1. Should bombardStrength (vs fortifications/naval) be a separate UnitDef field from rangedStrength? GDD models them separately; engine conflates into rangedCombat.
 2. What is the canonical XP value for attack and defense awards? Engine uses hardcoded +5/+3; no VII source confirms these.
-3. Should the First Strike bonus be retained as a custom hex-empires mechanic or retired for VII purity?
+3. Which canonical unit definitions should receive the `first_strike` ability?
 4. Are current AI tactics still calibrated after ranged units stopped projecting ZoC?
 
 ---
@@ -240,11 +240,11 @@ Highest-severity: F-03/F-13 -- CombatPreview uses multiplicative health scalar; 
 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
-| S (half-day) | F-03, F-10, F-13, F-14 | ~3h |
+| S (half-day) | F-10, F-14 content assignment | ~1h |
 | M (1-3 days) | F-02 | ~3d |
 | L (week+) | F-09 | ~2w |
-| **Total** | 6 open findings | **~2.5w** |
+| **Total** | 4 open findings | **~2.5w** |
 
-Recommended order: F-13 then F-03 (unify preview/combat formula -- highest player-experience impact, S effort) -> F-14 (retire First Strike) -> F-02 (directional flanking) -> F-09 (district siege model).
+Recommended order: F-14 content assignment (unit data only, after unit source audit) -> F-02 (directional flanking) -> F-09 (district siege model).
 
 ---

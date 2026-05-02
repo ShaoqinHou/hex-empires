@@ -684,12 +684,11 @@ describe('combatSystem — B6: fortification flat +5 CS', () => {
   });
 });
 
-describe('combatSystem — HP health penalty (W4-03: VII multiplicative formula)', () => {
-  // VII uses computeEffectiveCS: floor(baseCS * hp/100) — continuous multiplicative,
-  // not the old discrete -1 CS per 10 HP bracket. Tests updated for W4-03.
+describe('combatSystem — HP health penalty (Civ VII additive wounded penalty)', () => {
+  // VII uses computeEffectiveCS: base CS minus round(10 - HP / 10), capped at -10 CS.
 
-  it('unit at 50 HP has exactly half the effective combat strength of the same unit at 100 HP', () => {
-    // computeEffectiveCS(20, 50) = floor(20 * 0.5) = 10; vs computeEffectiveCS(20, 100) = 20
+  it('unit at 50 HP has lower effective combat strength than the same unit at 100 HP', () => {
+    // computeEffectiveCS(20, 50) = 15; vs computeEffectiveCS(20, 100) = 20.
     // Units at different HP attack the same defender; lower HP → less damage.
     const makeState = (attackerHP: number) => createTestState({
       units: new Map([
@@ -705,14 +704,13 @@ describe('combatSystem — HP health penalty (W4-03: VII multiplicative formula)
     const next100 = combatSystem(makeState(100), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     const next50 = combatSystem(makeState(50), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
 
-    // At 100 HP attacker also gets +5 First Strike; the key invariant is the 50-HP unit deals LESS damage.
     // defHP50 > defHP100 (defender takes less damage from the weaker attacker)
     const defHP100 = next100.units.get('d1')?.health ?? -1;
     const defHP50 = next50.units.get('d1')?.health ?? -1;
     expect(defHP50).toBeGreaterThan(defHP100);
   });
 
-  it('unit at 80 HP deals less damage than unit at 90 HP (continuous scaling)', () => {
+  it('unit at 80 HP deals less damage than unit at 90 HP (rounded wounded penalty)', () => {
     const makeState = (attackerHP: number) => createTestState({
       units: new Map([
         ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],

@@ -14,8 +14,9 @@ import { coordToKey } from '../../hex/HexMath';
  * Failure messages are prefixed with a rule code (R61–R69) so the follow-up implementation
  * cycle knows exactly which rule is broken.
  *
- * Randomness note: damage uses `30 * e^(diff/25) * U(0.75, 1.25)`. Tests that depend on
- * the exact expected damage average across many seeds to cancel the multiplier.
+ * Randomness note: damage uses the Civ VII sourced exponential formula with
+ * U(0.70, 1.30). Tests that depend on exact expected damage average across many
+ * seeds to cancel the multiplier.
  */
 
 function makeCity(overrides: Partial<CityState> = {}): CityState {
@@ -131,9 +132,8 @@ describe('R61: Core Stats — CS stat drives melee damage, rangedCombat drives r
 // ── §6.2 Damage Formula ──
 
 describe('R62: Damage formula — base 30 at equal CS, ~+4% exponential per CS point', () => {
-  // All R62 tests use attacker health=99 (slightly below 100) — historically this
-  // was to avoid a first-strike bonus, which has since been removed (Z2.2). Using
-  // 99 HP still avoids any HP-scaling discrepancy in edge-case future modifiers.
+  // All R62 tests use attacker health=99 (slightly below 100) so unit abilities
+  // such as First Strike do not skew the damage-formula assertions.
   it('equal CS (warrior vs warrior, no first strike) averages ~30 damage to defender', () => {
     const avg = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, attacker: { health: 99 }, defender: { typeId: 'warrior' } }),
@@ -172,9 +172,8 @@ describe('R62: Damage formula — base 30 at equal CS, ~+4% exponential per CS p
 
 // ── §6.3 HP Degradation ──
 
-// W4-03: HP degradation updated to VII multiplicative formula: floor(baseCS * hp/100).
-// Old discrete bracket (-1 CS per 10 HP) replaced; every HP point now matters continuously.
-describe('HP degradation — VII multiplicative formula (W4-03 replaces R63 discrete brackets)', () => {
+// Civ VII wounded penalty: round(10 - HP / 10), capped at -10 CS.
+describe('HP degradation — VII additive wounded penalty', () => {
   it('defender at 70 HP takes more damage than defender at 100 HP (lower defenseCS)', () => {
     const full = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, defender: { health: 100 } }),
@@ -182,7 +181,7 @@ describe('HP degradation — VII multiplicative formula (W4-03 replaces R63 disc
     const wounded = averageDefenderDamage((seed) =>
       buildMeleeScenario({ seed, defender: { health: 70 } }),
     );
-    // computeEffectiveCS(20, 70) = 14 vs computeEffectiveCS(20, 100) = 20 → diff = +6 for attacker.
+    // computeEffectiveCS(20, 70) = 17 vs computeEffectiveCS(20, 100) = 20 -> diff = +3 for attacker.
     // Wounded defender takes more damage; expect significant difference.
     expect(wounded - full).toBeGreaterThanOrEqual(2);
   });
@@ -233,9 +232,8 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
 
   it('R64c: forest gives +25% multiplicative defense bonus (Y5.2 — vegetated terrain)', () => {
     // Y5.2: forest defenseBonusModifier = 0.25. Attacker at 99 HP (no first strike).
-    // effectiveCS(warrior 99HP) = floor(20 * 99/100) = 19.
-    // Defender CS = 19 * 1.25 = 23.75. Attacker CS = 19. Diff ≈ -4.75.
-    // Expected avg ≈ 30 × e^(-4.75/25) ≈ 24.8.
+    // effectiveCS(warrior 99HP) = 20. Defender CS = 20 * 1.25 = 25.
+    // Attacker CS = 20. Diff ≈ -5. Expected avg ≈ 30 × e^(-5/25) ≈ 24.6.
     const forestDef = averageDefenderDamage((seed) =>
       buildMeleeScenario({
         seed,
@@ -252,8 +250,8 @@ describe('R64: Terrain modifiers — defender terrain grants CS bonus', () => {
 
   it('R64a: hills gives +25% multiplicative defense bonus (Y5.2 — rough terrain)', () => {
     // Y5.2: hills defenseBonusModifier = 0.25. Attacker at 99 HP (no first strike).
-    // effectiveCS(warrior 99HP) = 19. Defender CS = 19 * 1.25 = 23.75. Diff ≈ -4.75.
-    // Expected avg ≈ 30 × e^(-4.75/25) ≈ 24.8.
+    // effectiveCS(warrior 99HP) = 20. Defender CS = 20 * 1.25 = 25. Diff ≈ -5.
+    // Expected avg ≈ 30 × e^(-5/25) ≈ 24.6.
     const hillsDef = averageDefenderDamage((seed) =>
       buildMeleeScenario({
         seed,

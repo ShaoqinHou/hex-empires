@@ -3,14 +3,52 @@ import type { PlayerId } from '../types/Ids';
 
 /**
  * Computes effective combat strength given base CS and current HP.
- * VII: health scales CS multiplicatively. Wounded unit fights weaker.
- * Unified so combat resolution and preview display agree.
+ * VII: wounded units suffer an additive CS penalty, not multiplicative scaling.
+ * The penalty follows the surfaced Civ VII formula round(10 - HP / 10), capped
+ * to 0..10, so combat resolution and preview display agree.
  *
- * Formula: effectiveCS = floor(baseCS * (hp / maxHP))
- * e.g. computeEffectiveCS(30, 50) === 15
+ * Formula: effectiveCS = baseCS - woundedPenalty
+ * e.g. computeEffectiveCS(30, 50) === 25
  */
 export function computeEffectiveCS(baseCS: number, hp: number, maxHP: number = 100): number {
-  return Math.floor(baseCS * (hp / maxHP));
+  const normalizedHp = maxHP > 0
+    ? Math.max(0, Math.min(hp, maxHP)) / maxHP * 100
+    : 0;
+  const woundedPenalty = Math.max(0, Math.min(10, Math.round(10 - normalizedHp / 10)));
+  return baseCS - woundedPenalty;
+}
+
+export const FIRST_STRIKE_COMBAT_BONUS = 5;
+
+export function hasUnitAbility(state: GameState, unit: { readonly typeId: string }, abilityId: string): boolean {
+  return state.config.units.get(unit.typeId)?.abilities.includes(abilityId) ?? false;
+}
+
+export function calculateFirstStrikeCombatBonus(
+  state: GameState,
+  unit: { readonly typeId: string; readonly health: number },
+  isAttacking: boolean,
+): number {
+  return isAttacking && unit.health === 100 && hasUnitAbility(state, unit, 'first_strike')
+    ? FIRST_STRIKE_COMBAT_BONUS
+    : 0;
+}
+
+export const COMBAT_DAMAGE_BASE = 30;
+export const COMBAT_DAMAGE_RANDOM_MIN = 0.7;
+export const COMBAT_DAMAGE_RANDOM_MAX = 1.3;
+export const COMBAT_DAMAGE_EXPONENT = Math.log(100 / COMBAT_DAMAGE_BASE) / 30;
+
+export function combatDamageMultiplier(randomRoll: number): number {
+  return COMBAT_DAMAGE_RANDOM_MIN + randomRoll * (COMBAT_DAMAGE_RANDOM_MAX - COMBAT_DAMAGE_RANDOM_MIN);
+}
+
+export function computeCombatDamage(strengthDifference: number, multiplier: number): number {
+  return Math.round(COMBAT_DAMAGE_BASE * Math.exp(COMBAT_DAMAGE_EXPONENT * strengthDifference) * multiplier);
+}
+
+export function computeCombatDamageFromRoll(strengthDifference: number, randomRoll: number): number {
+  return computeCombatDamage(strengthDifference, combatDamageMultiplier(randomRoll));
 }
 
 /**
@@ -86,7 +124,7 @@ export function militaryUnitCount(state: GameState, playerId: PlayerId): number 
 
 /**
  * Returns the player's aggregate combat strength: the sum of
- * `unitDef.combat * (unit.health / 100)` across all owned military units.
+ * effective combat strength across all owned military units.
  * Units without a registered UnitDef or with `combat === 0` are skipped.
  */
 export function totalCombatStrength(state: GameState, playerId: PlayerId): number {
@@ -97,7 +135,7 @@ export function totalCombatStrength(state: GameState, playerId: PlayerId): numbe
     if (!def) continue;
     if (!MILITARY_CATEGORIES.has(def.category)) continue;
     if (def.combat === 0) continue;
-    total += def.combat * (unit.health / 100);
+    total += computeEffectiveCS(def.combat, unit.health);
   }
   return total;
 }

@@ -249,11 +249,10 @@ describe('B6: Fortification grants flat +5 CS (rulebook §6.5)', () => {
   });
 });
 
-// ── HP degradation: VII multiplicative formula (W4-03) ──
-// Replaced old discrete bracket model with computeEffectiveCS: floor(baseCS * hp/100).
-// The continuous multiplicative model means every HP point matters, not just each 10 HP.
-describe('HP degradation: VII multiplicative formula (W4-03 — replaces discrete B7 brackets)', () => {
-  it('attacker at 50 HP deals less damage than attacker at 90 HP (continuous scaling)', () => {
+// ── HP degradation: Civ VII additive wounded penalty ──
+// computeEffectiveCS applies base CS minus round(10 - HP / 10), capped at -10 CS.
+describe('HP degradation: Civ VII additive wounded penalty', () => {
+  it('attacker at 50 HP deals less damage than attacker at 90 HP', () => {
     const makeState = (attackerHP: number) => createTestState({
       units: new Map([
         ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: attackerHP })],
