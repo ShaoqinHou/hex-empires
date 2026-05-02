@@ -19,7 +19,7 @@ export function markCommanderDefeated(
     attachedUnits: [],
     packed: false,
     packedUnitStates: [],
-    respawnTurnsRemaining: COMMANDER_RESPAWN_TURNS_STANDARD,
+    respawnTurnsRemaining: getCommanderRespawnTurnsRemaining(state, commander, defeatedUnit),
     respawnUnitState: {
       ...defeatedUnit,
       health: 100,
@@ -30,6 +30,34 @@ export function markCommanderDefeated(
     },
   });
   return nextCommanders;
+}
+
+function getCommanderRespawnTurnsRemaining(
+  state: GameState,
+  commander: CommanderState,
+  defeatedUnit: UnitState,
+): number {
+  let maxRecoveryReductionPercent = 0;
+
+  for (const promotionId of new Set([
+    ...commander.promotions,
+    ...defeatedUnit.promotions,
+  ])) {
+    const promotion = state.config.commanderPromotions?.get(promotionId);
+    if (promotion?.aura.type !== 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT') continue;
+    const reductionPercent = promotion.aura.value;
+    if (!Number.isFinite(reductionPercent)) continue;
+    maxRecoveryReductionPercent = Math.max(maxRecoveryReductionPercent, reductionPercent);
+  }
+
+  const clampedReductionPercent = Math.min(
+    Math.max(maxRecoveryReductionPercent, 0),
+    100,
+  );
+  const reducedTurns = Math.ceil(
+    COMMANDER_RESPAWN_TURNS_STANDARD * (1 - clampedReductionPercent / 100),
+  );
+  return Math.min(Math.max(reducedTurns, 1), COMMANDER_RESPAWN_TURNS_STANDARD);
 }
 
 export function tickCommanderRespawns(state: GameState): GameState {

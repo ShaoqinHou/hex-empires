@@ -190,6 +190,53 @@ describe('combatSystem', () => {
     });
   });
 
+  it('shortens commander respawn when leadership_resilience is active', () => {
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 3,
+      unspentPromotionPicks: 1,
+      promotions: ['leadership_resilience'],
+      tree: 'leadership',
+      attachedUnits: ['guard1'],
+      packed: true,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['guard1', createTestUnit({
+        id: 'guard1',
+        owner: 'p2',
+        typeId: 'warrior',
+        position: { q: 5, r: 3 },
+        packedInCommanderId: 'cmd1',
+        movementLeft: 2,
+      })],
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p2',
+        typeId: 'captain',
+        position: { q: 4, r: 3 },
+        health: 1,
+        promotions: ['leadership_resilience'],
+      })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+    });
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'cmd1' });
+
+    const updatedCommander = next.commanders!.get('cmd1')!;
+    expect(updatedCommander.respawnTurnsRemaining).toBe(Math.ceil(COMMANDER_RESPAWN_TURNS_STANDARD * 0.5));
+  });
+
   it('routes packed snapshot units when their commander is defeated', () => {
     const guard1 = createTestUnit({
       id: 'guard1',
