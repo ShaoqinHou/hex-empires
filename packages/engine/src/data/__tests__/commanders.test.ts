@@ -250,6 +250,29 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     }
   });
 
+  it('matches the sourced Army Bastion promotion tree shape with Steadfast', () => {
+    const bastionSteadfast = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_steadfast');
+    expect(bastionSteadfast).toBeDefined();
+    expect(bastionSteadfast!.name).toBe('Steadfast');
+    expect(bastionSteadfast!.tree).toBe('bastion');
+    expect(bastionSteadfast!.tier).toBe(1);
+    expect(bastionSteadfast!.prerequisites).toEqual([]);
+    expect(bastionSteadfast!.aura.type).toBe('AURA_MODIFY_CS');
+    if (bastionSteadfast!.aura.type === 'AURA_MODIFY_CS') {
+      expect(bastionSteadfast!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(bastionSteadfast!.aura.value).toBe(2);
+      expect(bastionSteadfast!.aura.radius).toBe(1);
+      expect(bastionSteadfast!.aura.condition).toBe('defending');
+    }
+
+    const bastionRangedCover = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_ranged_cover');
+    expect(bastionRangedCover).toBeDefined();
+    expect(bastionRangedCover!.prerequisites).toEqual(['bastion_steadfast']);
+
+    const oldBastionNode = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_shield_wall');
+    expect(oldBastionNode).toBeUndefined();
+  });
+
   it('includes Assault Advancement as a First Strike ability grant', () => {
     const advancement = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'assault_advancement');
     expect(advancement).toBeDefined();

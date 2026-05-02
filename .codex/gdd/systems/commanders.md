@@ -117,7 +117,7 @@ Each promotion point unlocks one node from the 5 promotion trees. Points bank in
 
 | Tree | Theme | Notable Promotions |
 |---|---|---|
-| Bastion | Defense | Steadfast: +2 CS defending, adjacent land; Garrison: fortified districts +10 HP near commander |
+| Bastion | Defense | Steadfast: +2 CS defending for land units in command radius; Garrison: fortified districts +10 HP near commander |
 | Assault | Offense | Initiative: move+act on unpack; Rout: Infantry +2 CS attacking; Storm: Ranged +2 CS attacking; Shock Tactics: Cavalry +3 CS attacking; Enfilade: Siege +3 CS attacking; Advancement: Infantry/Cavalry First Strike |
 | Logistics | Sustain + capacity | Regiments: +2 unit slots; Quick Deployment: packed units +1 movement; Field Repairs: units +5 HP/turn in neutral/owned |
 | Maneuver | Mobility | Mobility: +1 movement + ignore terrain; Breakthrough: ignore ZoC |
@@ -194,7 +194,7 @@ COMMANDER_MOVEMENT_MOBILITY = 3
 
 COORDINATED_ASSAULT_BONUS = +2    // CS for units in radius
 ORDER_COMMENDATION_BONUS = +5     // CS, all land units in radius
-STEADFAST_PROMOTION_BONUS = +2    // CS when defending, adjacent
+STEADFAST_PROMOTION_BONUS = +2    // CS for land units in radius when defending
 ROUT_PROMOTION_BONUS = +2         // CS, Infantry in radius
 STORM_PROMOTION_BONUS = +2        // CS, Ranged in radius
 SHOCK_TACTICS_PROMOTION_BONUS = +3 // CS, Cavalry in radius

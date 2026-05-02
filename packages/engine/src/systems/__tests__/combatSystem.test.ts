@@ -1255,6 +1255,88 @@ describe('combatSystem — commander aura', () => {
     expect(nextWithRout.units.get('d1')!.health).toBe(nextBaseAura.units.get('d1')!.health);
   });
 
+  it('Steadfast promotion improves defender durability only while defending', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const stateBase = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const stateWithSteadfast = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_steadfast'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const nextBase = combatSystem(stateBase, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithSteadfast = combatSystem(stateWithSteadfast, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextWithSteadfast.units.get('d1')!.health).toBeGreaterThan(nextBase.units.get('d1')!.health);
+  });
+
+  it('Steadfast does not boost combat when a unit is attacking', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 2, r: 3 }, health: 100 })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const stateBase = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const stateWithSteadfast = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_steadfast'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const nextBase = combatSystem(stateBase, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithSteadfast = combatSystem(stateWithSteadfast, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextWithSteadfast.units.get('d1')!.health).toBe(nextBase.units.get('d1')!.health);
+  });
+
   it('commander aura does not apply when commander belongs to enemy', () => {
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1' })],

@@ -9,8 +9,8 @@
  * effects, no DOM, no Math.random().
  *
  * AURA_MODIFY_CS promotion stacking is resolved here with UnitCategory target
- * filtering and optional attack-only conditions. Other aura kinds are resolved
- * by their owning systems as they come online.
+ * filtering and optional attack/defense conditions. Other aura kinds are
+ * resolved by their owning systems as they come online.
  */
 
 import type { GameState, UnitState } from '../types/GameState';
@@ -58,6 +58,7 @@ export function getCommanderAuraCombatBonus(
       const promotion = state.config.commanderPromotions?.get(promotionId);
       if (promotion?.aura.type !== 'AURA_MODIFY_CS') continue;
       if (promotion.aura.condition === 'attacking' && context.isAttacking !== true) continue;
+      if (promotion.aura.condition === 'defending' && context.isAttacking !== false) continue;
       if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
       if (distance(commanderUnit.position, unit.position) <= promotion.aura.radius) {
         bonus += promotion.aura.value;

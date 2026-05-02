@@ -253,7 +253,7 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'bastion_shield_wall',
+      promotionId: 'bastion_steadfast',
     };
     const next = commanderPromotionSystem(state, action);
     expect(next).not.toBe(state);
@@ -262,7 +262,7 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
     expect(originalUnit.promotions).toEqual([]);
     expect(state.units.get('c1')!.promotions).toEqual([]);
     // New unit reflects the pick.
-    expect(next.units.get('c1')!.promotions).toEqual(['bastion_shield_wall']);
+    expect(next.units.get('c1')!.promotions).toEqual(['bastion_steadfast']);
   });
 });
 

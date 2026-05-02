@@ -74,10 +74,10 @@ export type AuraEffectDef =
   /** Flat combat-strength bonus to friendly units in range. */
   | {
       readonly type: 'AURA_MODIFY_CS';
-      readonly target: AuraTarget;
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
       readonly value: number;
       readonly radius: number;
-      readonly condition?: 'attacking';
+      readonly condition?: 'attacking' | 'defending';
     }
   /** Flat ranged-strength bonus to friendly units in range. */
   | {

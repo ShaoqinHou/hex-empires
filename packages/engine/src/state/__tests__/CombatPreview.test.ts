@@ -463,6 +463,63 @@ describe('calculateCombatPreview', () => {
     expect(defenderWithRout.defenderStrength).toBe(defenderBaseAura.defenderStrength);
   });
 
+  it('includes Bastion Steadfast in defender preview strength but not attacker strength', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+
+    const defendingUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const defenderBaseAura = calculateCombatPreview(createTestState({
+      units: defendingUnits,
+      players,
+      commanders: new Map([['cmd1', commander]]),
+    }), 'a1', 'd1');
+    const defenderWithSteadfast = calculateCombatPreview(createTestState({
+      units: new Map(defendingUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_steadfast'] }]]),
+    }), 'a1', 'd1');
+
+    expect(defenderBaseAura.canAttack).toBe(true);
+    expect(defenderWithSteadfast.canAttack).toBe(true);
+    expect(defenderWithSteadfast.defenderStrength).toBe(defenderBaseAura.defenderStrength + 2);
+
+    const attackingUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 2, r: 3 }, health: 100 })],
+    ]);
+    const attackerBaseAura = calculateCombatPreview(createTestState({
+      units: attackingUnits,
+      players: new Map(players),
+      commanders: new Map([['cmd1', commander]]),
+    }), 'a1', 'd1');
+    const attackerWithSteadfast = calculateCombatPreview(createTestState({
+      units: new Map(attackingUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_steadfast'] }]]),
+    }), 'a1', 'd1');
+
+    expect(attackerBaseAura.canAttack).toBe(true);
+    expect(attackerWithSteadfast.canAttack).toBe(true);
+    expect(attackerWithSteadfast.attackerStrength).toBe(attackerBaseAura.attackerStrength);
+  });
+
   it('calculates combat odds percentages', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],

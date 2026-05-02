@@ -177,17 +177,18 @@ const LOGISTICS_TIER3: CommanderPromotionDef = {
 // ── Bastion tree (defense) ──
 
 const BASTION_TIER1: CommanderPromotionDef = {
-  id: 'bastion_shield_wall',
-  name: 'Shield Wall',
-  description: '+4 fortification strength to friendly units in radius.',
+  id: 'bastion_steadfast',
+  name: 'Steadfast',
+  description: '+2 combat strength to friendly land units in radius when defending.',
   tree: 'bastion',
   tier: 1,
   prerequisites: [],
   aura: {
-    type: 'AURA_FORTIFY_BONUS',
-    target: 'all',
-    value: 4,
+    type: 'AURA_MODIFY_CS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: 2,
     radius: 1,
+    condition: 'defending',
   },
 } as const;
 
@@ -197,7 +198,7 @@ const BASTION_TIER2: CommanderPromotionDef = {
   description: '+4 ranged strength to friendly ranged units in radius.',
   tree: 'bastion',
   tier: 2,
-  prerequisites: ['bastion_shield_wall'],
+  prerequisites: ['bastion_steadfast'],
   aura: {
     type: 'AURA_MODIFY_RS',
     target: 'ranged',
