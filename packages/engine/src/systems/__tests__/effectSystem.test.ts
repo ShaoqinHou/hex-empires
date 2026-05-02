@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { effectSystem, getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from '../effectSystem';
+import {
+  effectSystem,
+  getActiveEffects,
+  getYieldBonus,
+  getYieldPercentBonus,
+  getCombatBonus,
+  getMovementBonus,
+  getProductionDiscount,
+  getProductionPercentBonus,
+  getDiplomaticActionPercentBonus,
+  getRelationshipDeltaPercentBonus,
+  getWarSupportBonus,
+} from '../effectSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { ActiveEffect } from '../../types/GameState';
 
@@ -74,6 +86,30 @@ describe('effectSystem', () => {
       const state = createTestState();
       const effects = getActiveEffects(state, 'nonexistent');
       expect(effects).toEqual([]);
+    });
+
+    it('includes structured active celebration effects', () => {
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({
+            id: 'p1',
+            activeCelebrationBonus: {
+              governmentId: 'classical_republic',
+              bonusId: 'classical-rep-culture',
+              turnsRemaining: 3,
+              effects: [
+                { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+              ],
+            },
+          })],
+        ]),
+      });
+
+      const effects = getActiveEffects(state, 'p1');
+      expect(effects).toContainEqual({
+        source: 'government-celebration:classical_republic:classical-rep-culture',
+        effect: { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+      });
     });
   });
 
@@ -161,6 +197,39 @@ describe('effectSystem', () => {
       // Egypt has DISCOUNT_PRODUCTION wonder 15%
       const discount = getProductionDiscount(state, 'p1', 'wonder');
       expect(discount).toBe(15);
+    });
+  });
+
+  describe('structured celebration helper effects', () => {
+    it('sums percent yield, production, diplomacy, relationship, and war-support modifiers', () => {
+      const state = createTestState({
+        players: new Map([
+          ['p1', createTestPlayer({
+            id: 'p1',
+            activeCelebrationBonus: {
+              governmentId: 'revolucion',
+              bonusId: 'mixed',
+              turnsRemaining: 4,
+              effects: [
+                { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 30 },
+                { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 40 },
+                { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'diplomatic_action', percent: 50 },
+                { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'endeavor', percent: 30 },
+                { type: 'MODIFY_WAR_SUPPORT', value: 6 },
+              ],
+            },
+          })],
+        ]),
+      });
+
+      expect(getYieldPercentBonus(state, 'p1', 'culture')).toBe(30);
+      expect(getProductionPercentBonus(state, 'p1', {
+        item: { type: 'unit', id: 'warrior' },
+        unitCategory: 'melee',
+      })).toBe(40);
+      expect(getDiplomaticActionPercentBonus(state, 'p1', 'endeavor')).toBe(50);
+      expect(getRelationshipDeltaPercentBonus(state, 'p1', 'endeavor')).toBe(30);
+      expect(getWarSupportBonus(state, 'p1')).toBe(6);
     });
   });
 });

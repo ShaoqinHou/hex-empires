@@ -1,5 +1,6 @@
 import type { GameState, GameAction } from '../types/GameState';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
+import { isStructuredActiveCelebrationBonus } from '../state/EffectUtils';
 import {
   calculateCityHappiness as _calculateCityHappiness,
   calculateSettlementCapPenalty as _calculateSettlementCapPenalty,
@@ -150,13 +151,27 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
 
     // --- Celebration mechanic (W3-03: globalHappiness accumulator + age-specific thresholds) ---
     let { celebrationCount, celebrationBonus, celebrationTurnsLeft } = player;
+    let activeCelebrationBonus = isStructuredActiveCelebrationBonus(player.activeCelebrationBonus)
+      ? player.activeCelebrationBonus
+      : null;
 
     // Decrement celebration timer first
-    if (celebrationTurnsLeft > 0) {
-      celebrationTurnsLeft -= 1;
-      if (celebrationTurnsLeft === 0) {
+    if (activeCelebrationBonus && activeCelebrationBonus.turnsRemaining <= 0) {
+      activeCelebrationBonus = null;
+      celebrationTurnsLeft = 0;
+      celebrationBonus = 0;
+    } else if (activeCelebrationBonus && activeCelebrationBonus.turnsRemaining > 0) {
+      const nextTurnsRemaining = Math.max(0, activeCelebrationBonus.turnsRemaining - 1);
+      celebrationTurnsLeft = nextTurnsRemaining;
+      activeCelebrationBonus = nextTurnsRemaining > 0
+        ? { ...activeCelebrationBonus, turnsRemaining: nextTurnsRemaining }
+        : null;
+      if (nextTurnsRemaining === 0) {
         celebrationBonus = 0;
       }
+    } else if (celebrationTurnsLeft > 0) {
+      celebrationTurnsLeft -= 1;
+      if (celebrationTurnsLeft === 0) celebrationBonus = 0;
     }
 
     // Accumulate global happiness (F-01): add this turn's excess to the running total.
@@ -200,6 +215,7 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
       celebrationCount,
       celebrationBonus,
       celebrationTurnsLeft,
+      activeCelebrationBonus,
       globalHappiness: newGlobalHappiness,
       pendingCelebrationChoice,
     });

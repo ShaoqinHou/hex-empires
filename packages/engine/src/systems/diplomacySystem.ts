@@ -1,5 +1,9 @@
 import type { GameState, GameAction, DiplomacyRelation, DiplomaticStatus, DiplomaticEndeavor, DiplomaticSanction, Age, PendingEndeavor, ActiveEffect, PeaceOffer, OpinionModifier } from '../types/GameState';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
+import {
+  getDiplomaticActionPercentBonus,
+  getRelationshipDeltaPercentBonus,
+} from '../state/EffectUtils';
 
 /** F-11: Max ledger entries per relationship pair (oldest discarded when exceeded). */
 const MAX_LEDGER_ENTRIES = 50;
@@ -51,6 +55,17 @@ function ageCostMultiplier(age: Age): number {
   if (age === 'exploration') return 2;
   if (age === 'modern') return 3;
   return 1;
+}
+
+function applyContributionPercentDiscount(cost: number, percent: number): number {
+  if (percent <= 0) return cost;
+  return Math.max(0, Math.ceil(cost * 100 / (100 + percent)));
+}
+
+function applyRelationshipDeltaPercent(delta: number, percent: number): number {
+  if (percent === 0 || delta === 0) return delta;
+  const scaled = Math.trunc(delta * (100 + percent) / 100);
+  return scaled === 0 ? Math.sign(delta) : scaled;
 }
 
 export function diplomacySystem(state: GameState, action: GameAction): GameState {
@@ -426,7 +441,11 @@ function handleEndeavor(state: GameState, sourceId: string, targetId: string, en
   const sourcePlayer = state.players.get(sourceId)!;
 
   // §11.3: base cost × Age multiplier (Antiquity ×1, Exploration ×2, Modern ×3).
-  const cost = ENDEAVOR_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+  const baseCost = ENDEAVOR_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+  const cost = applyContributionPercentDiscount(
+    baseCost,
+    getDiplomaticActionPercentBonus(state, sourceId, 'endeavor'),
+  );
 
   // Check influence cost
   if (sourcePlayer.influence < cost) {
@@ -513,12 +532,16 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
   if (response === 'reject') {
     // Rejection: negative relationship delta, no active endeavor created,
     // and source player (proposer) loses Influence for the failed initiative.
-    const newRelationship = clampRelationship(currentRelation.relationship + RELATIONSHIP_DELTA_REJECT);
+    const delta = applyRelationshipDeltaPercent(
+      RELATIONSHIP_DELTA_REJECT,
+      getRelationshipDeltaPercentBonus(state, endeavor.sourceId, 'endeavor'),
+    );
+    const newRelationship = clampRelationship(currentRelation.relationship + delta);
     const rejectedRelation = appendLedgerEntry(
       { ...currentRelation, relationship: newRelationship, status: getStatusFromRelationship(newRelationship) },
       {
         id: 'endeavor_rejected',
-        value: RELATIONSHIP_DELTA_REJECT,
+        value: delta,
         turnApplied: state.turn,
         turnExpires: state.turn + 15,
         reason: `Rejected our ${endeavor.endeavorType} endeavor`,
@@ -555,7 +578,11 @@ function handleRespondEndeavor(state: GameState, endeavorId: string, response: '
     };
   } else {
     // Accept or Support: activate the endeavor
-    const delta = response === 'support' ? RELATIONSHIP_DELTA_SUPPORT : RELATIONSHIP_DELTA_ACCEPT;
+    const rawDelta = response === 'support' ? RELATIONSHIP_DELTA_SUPPORT : RELATIONSHIP_DELTA_ACCEPT;
+    const delta = applyRelationshipDeltaPercent(
+      rawDelta,
+      getRelationshipDeltaPercentBonus(state, endeavor.sourceId, 'endeavor'),
+    );
     const newRelationship = clampRelationship(currentRelation.relationship + delta);
     const newEndeavor: DiplomaticEndeavor = { type: endeavor.endeavorType, turnsRemaining: ENDEAVOR_DURATION, sourceId: endeavor.sourceId };
 
@@ -631,7 +658,11 @@ function handleSanction(state: GameState, sourceId: string, targetId: string, sa
   const sourcePlayer = state.players.get(sourceId)!;
 
   // §11.3: base cost × Age multiplier (Antiquity ×1, Exploration ×2, Modern ×3).
-  const cost = SANCTION_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+  const baseCost = SANCTION_INFLUENCE_COST * ageCostMultiplier(state.age.currentAge);
+  const cost = applyContributionPercentDiscount(
+    baseCost,
+    getDiplomaticActionPercentBonus(state, sourceId, 'sanction'),
+  );
 
   // Check influence cost
   if (sourcePlayer.influence < cost) {

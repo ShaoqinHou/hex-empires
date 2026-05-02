@@ -12,9 +12,16 @@
 ## Engine files audited
 
 - `packages/engine/src/systems/governmentSystem.ts`
+- `packages/engine/src/state/EffectUtils.ts`
+- `packages/engine/src/state/YieldCalculator.ts`
+- `packages/engine/src/systems/productionSystem.ts`
+- `packages/engine/src/systems/diplomacySystem.ts`
+- `packages/engine/src/systems/combatSystem.ts`
 - `packages/engine/src/data/governments/governments.ts`
 - `packages/engine/src/types/Government.ts`
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
+- `packages/web/src/ui/panels/CelebrationBonusPanel.tsx`
+- `packages/web/src/App.tsx`
 
 ---
 
@@ -22,8 +29,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 3 |
-| CLOSE | 5 |
+| MATCH | 6 |
+| CLOSE | 2 |
 | DIVERGED | 0 |
 | MISSING | 0 |
 | EXTRA | 0 |
@@ -86,16 +93,16 @@
 
 ---
 
-### F-05: Government celebration bonuses missing from GovernmentDef data -- CLOSE
+### F-05: Government celebration bonuses missing from GovernmentDef data -- MATCH
 
-**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/systems/governmentSystem.ts`
+**Location:** `packages/engine/src/data/governments/governments.ts`, `packages/engine/src/types/GameState.ts`, `packages/engine/src/types/Government.ts`, `packages/engine/src/state/EffectUtils.ts`, `packages/engine/src/state/YieldCalculator.ts`, `packages/engine/src/systems/governmentSystem.ts`, `packages/engine/src/systems/resourceSystem.ts`, `packages/engine/src/systems/productionSystem.ts`, `packages/engine/src/systems/diplomacySystem.ts`, `packages/engine/src/systems/combatSystem.ts`, `packages/web/src/App.tsx`, `packages/web/src/ui/panels/CelebrationBonusPanel.tsx`
 **GDD reference:** `government-policies.md` § "Government Selection", celebration-bonus tables for all three ages
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Each government grants exactly **two celebration effects** (a 2-tuple) that activate for 10 turns each time the player triggers a celebration by crossing the happiness threshold. These are the primary strategic differentiator between governments — e.g. Classical Republic: +20% Culture / +15% Production toward Wonders; Despotism: +20% Science / +30% Production toward Infantry.
-**Engine does:** Every government in `ALL_GOVERNMENTS` now has a two-item `celebrationBonuses` tuple matching the local GDD names, and `governmentSystem` handles `PICK_CELEBRATION_BONUS`.
-**Gap:** Bonus entries are still text/id records, not canonical effect-bearing structures, and the data module still carries a local `GovernmentDef` shape instead of importing the canonical type.
-**Recommendation:** Promote government content to the canonical `types/Government.ts` shape and encode each celebration bonus as structured effects so `effectSystem` can apply them without string interpretation.
+**Engine does:** Every government in `ALL_GOVERNMENTS` now imports the canonical `GovernmentDef` shape and has exactly two `celebrationBonuses` with structured `EffectDef[]` payloads. `PICK_CELEBRATION_BONUS` snapshots the chosen bonus as `PlayerState.activeCelebrationBonus`, `resourceSystem` ticks the window down, `EffectUtils.getActiveEffects` exposes the effects, and yield, production, combat war-support, and diplomacy contribution/relationship consumers apply the structured modifiers. `App.tsx` auto-opens `CelebrationBonusPanel` for pending human choices, and the panel dispatches the chosen bonus.
+**Gap:** None for structured government celebration effects in currently modeled systems. Overbuilding remains inert until the building-placement model exposes an overbuild predicate, but the effect target is now represented explicitly.
+**Recommendation:** Keep celebration bonuses authored as structured effects and add new consumer helpers only when a target has a concrete engine model.
 
 ---
 
@@ -146,9 +153,8 @@ None. (The typed-slot categories in F-01 are technically extras but paired with 
 
 ## Missing items
 
-1. Celebration bonuses need canonical structured effects, not only id/name/description text (F-05).
-2. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
-3. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
+1. Crisis policy state should collapse to one coherent 2/3/4 forced-slot model (F-07).
+2. Policy swap windows need a complete confirm/turn-end lifecycle (F-08).
 
 ---
 
@@ -173,16 +179,15 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 - `packages/web/src/ui/panels/GovernmentPanel.tsx`
 - `packages/web/src/ui/panels/CrisisPanel.tsx`
 
-**Status:** 5 MATCH / 3 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
+**Status:** 6 MATCH / 2 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity active finding:** F-05 — celebration bonuses are data-present but not structured as canonical effects.
+**Highest-severity active finding:** F-07 — crisis policy state still has parallel legacy/per-crisis models.
 
 ---
 
 ## Open questions
 
-1. Should government celebration bonuses use a generic `EffectDef[]` tuple, or a dedicated `GovernmentCelebrationEffect` type with production-target categories?
-2. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
+1. Should a policy swap window allow multiple slot changes before explicit confirmation, or auto-close at end turn after any number of changes?
 
 ---
 
@@ -191,11 +196,11 @@ Paste into `.codex/gdd/systems/government-policies.md` § "Mapping to hex-empire
 | Bucket | Findings | Total effort |
 |---|---|---|
 | S (half-day) | F-08 | 0.5d |
-| M (1-3 days) | F-05, F-07 | ~3-5d |
+| M (1-3 days) | F-07 | ~1-3d |
 | L (week+) | — | — |
-| **Remaining active work** | 3 | **~3.5-5.5d** |
+| **Remaining active work** | 2 | **~1.5-3.5d** |
 
-Recommended order: F-05 (structured effects), F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
+Recommended order: F-07 (unified crisis policy model), F-08 (complete swap-window lifecycle).
 
 ---
 

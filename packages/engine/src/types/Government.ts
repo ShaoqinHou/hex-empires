@@ -19,7 +19,7 @@
  * expansion: .codex/workflow/design/rulebook-government-expansion.md.
  */
 
-import type { PlayerId, BuildingId, CityId } from './Ids';
+import type { PlayerId, BuildingId, CityId, CivilizationId } from './Ids';
 import type { EffectDef } from './GameState';
 import type { Age } from './GameState';
 import type { YieldSet } from './Yields';
@@ -120,6 +120,7 @@ export interface GovernmentDef {
   ];
   readonly legacyBonus: EffectDef | null;
   readonly description: string;
+  readonly civRequired?: CivilizationId;
   readonly crisisRequired?: GovernmentCrisisRequirement;
 }
 

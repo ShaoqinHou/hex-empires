@@ -25,6 +25,11 @@ import type { GameState, PlayerState } from '../../types/GameState';
 import { createTestState, createTestPlayer } from './helpers';
 import type { GovernmentDef } from '../../data/governments/governments';
 
+const EMPTY_CELEBRATION_BONUSES = [
+  { id: 'a', name: 'a', description: '', effects: [] },
+  { id: 'b', name: 'b', description: '', effects: [] },
+] as const;
+
 /** Augment a player with the minimal Government runtime fields. */
 function withGovFields(
   player: PlayerState,
@@ -87,10 +92,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 2 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     expect(effectivePolicySlotCount(mockGov, 'antiquity')).toBe(2);
   });
@@ -104,10 +106,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 3 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'food', value: 2 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     expect(effectivePolicySlotCount(mockGov, 'exploration')).toBe(4);
   });
@@ -121,10 +120,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 4 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 3 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     expect(effectivePolicySlotCount(mockGov, 'modern')).toBe(6);
   });
@@ -140,10 +136,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 5 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'gold', value: 1 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     expect(effectivePolicySlotCount(highSlotGov, 'antiquity')).toBe(5);
   });
@@ -157,10 +150,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 2 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     const player = createTestPlayer({
       id: 'p1',
@@ -178,10 +168,7 @@ describe('effectivePolicySlotCount', () => {
       policySlots: { total: 2 },
       legacyBonus: { type: 'MODIFY_YIELD', target: 'city', yield: 'culture', value: 1 },
       description: '',
-      celebrationBonuses: [
-        { id: 'a', name: 'a', description: '' },
-        { id: 'b', name: 'b', description: '' },
-      ],
+      celebrationBonuses: EMPTY_CELEBRATION_BONUSES,
     };
     const player = {
       ...createTestPlayer({

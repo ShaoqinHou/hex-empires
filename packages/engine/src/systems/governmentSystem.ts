@@ -349,7 +349,7 @@ function applySelectIdeology(
  *   triggered the celebration (stored in pendingCelebrationChoice.governmentId)
  *
  * On success:
- * - Sets activeCelebrationBonus = bonusId
+ * - Sets activeCelebrationBonus to a structured snapshot of the chosen bonus
  * - Sets celebrationTurnsLeft = CELEBRATION_DURATION['standard'] (10)
  * - Increments celebrationCount (F-01)
  * - Increments socialPolicySlots by 1 (F-04)
@@ -370,8 +370,8 @@ function applyPickCelebrationBonus(
   const gov = findGovernment(pending.governmentId, state.config);
   if (!gov) return state;
 
-  const validBonusIds = gov.celebrationBonuses.map(b => b.id);
-  if (!validBonusIds.includes(bonusId)) return state; // invalid choice — no-op
+  const selectedBonus = gov.celebrationBonuses.find(b => b.id === bonusId);
+  if (!selectedBonus) return state; // invalid choice — no-op
 
   const duration = CELEBRATION_DURATION['standard'] ?? 10;
 
@@ -399,10 +399,16 @@ function applyPickCelebrationBonus(
 
   const updated: PlayerState = {
     ...player,
-    activeCelebrationBonus: bonusId,
+    activeCelebrationBonus: {
+      governmentId: gov.id,
+      bonusId: selectedBonus.id,
+      turnsRemaining: duration,
+      effects: selectedBonus.effects,
+    },
     celebrationTurnsLeft: duration,
-    // celebrationBonus (old percent field) — keep backward compat but also set to 10
-    celebrationBonus: 10,
+    // Legacy scalar field kept for save compatibility. New celebration effects
+    // are carried by activeCelebrationBonus.
+    celebrationBonus: 0,
     celebrationCount: Math.min(MAX_CELEBRATION_COUNT, player.celebrationCount + 1),
     // F-04: increment social policy slots counter
     socialPolicySlots: nextSocialPolicySlots,

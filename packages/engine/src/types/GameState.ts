@@ -399,10 +399,11 @@ export interface PlayerState {
    */
   readonly pendingCelebrationChoice?: { readonly governmentId: string } | null;
   /**
-   * The bonus id chosen in the most-recent PICK_CELEBRATION_BONUS action.
-   * Null when no celebration is active. Used by effectSystem to apply the chosen bonus.
+   * The structured bonus chosen in the most-recent PICK_CELEBRATION_BONUS action.
+   * Null when no celebration is active. The effects are snapshotted at pick time
+   * so active celebrations do not drift if content data changes later.
    */
-  readonly activeCelebrationBonus?: string | null;
+  readonly activeCelebrationBonus?: PlayerActiveCelebrationBonus | null;
 
   // ── Civic Tree ──
   /** Civic tradition bonus ids adopted by this player */
@@ -835,12 +836,37 @@ export type EffectTarget = 'city' | 'empire' | 'unit' | 'tile';
 /** Y2.1: Type of policy slot granted by a GRANT_POLICY_SLOT effect. */
 export type PolicySlotType = 'military' | 'economic' | 'diplomatic' | 'wildcard';
 
+export type BuildingCategory =
+  | 'warehouse'
+  | 'science'
+  | 'culture'
+  | 'gold'
+  | 'happiness'
+  | 'military'
+  | 'food'
+  | 'wonder';
+
+export type ProductionModifierTarget =
+  | { readonly kind: 'itemType'; readonly itemType: ProductionItem['type'] }
+  | { readonly kind: 'unitCategory'; readonly category: UnitCategory }
+  | { readonly kind: 'unitIds'; readonly unitIds: ReadonlyArray<string> }
+  | { readonly kind: 'buildingCategory'; readonly category: BuildingCategory }
+  | { readonly kind: 'militaryUnit' }
+  | { readonly kind: 'overbuilding' };
+
+export type DiplomaticActionModifierTarget = 'endeavor' | 'sanction' | 'diplomatic_action';
+
 export type EffectDef =
   | { readonly type: 'MODIFY_YIELD'; readonly target: EffectTarget; readonly yield: YieldType; readonly value: number }
+  | { readonly type: 'MODIFY_YIELD_PERCENT'; readonly target: 'city' | 'empire'; readonly yield: YieldType; readonly percent: number }
   | { readonly type: 'MODIFY_COMBAT'; readonly target: UnitCategory | 'all'; readonly value: number }
   | { readonly type: 'GRANT_UNIT'; readonly unitId: string; readonly count: number }
   | { readonly type: 'UNLOCK_BUILDING'; readonly buildingId: BuildingId }
   | { readonly type: 'DISCOUNT_PRODUCTION'; readonly target: string; readonly percent: number }
+  | { readonly type: 'MODIFY_PRODUCTION_PERCENT'; readonly target: ProductionModifierTarget; readonly percent: number }
+  | { readonly type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT'; readonly target: DiplomaticActionModifierTarget; readonly percent: number }
+  | { readonly type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT'; readonly target: Exclude<DiplomaticActionModifierTarget, 'diplomatic_action'>; readonly percent: number }
+  | { readonly type: 'MODIFY_WAR_SUPPORT'; readonly value: number }
   | { readonly type: 'MODIFY_MOVEMENT'; readonly target: UnitCategory | 'all'; readonly value: number }
   | { readonly type: 'FREE_TECH'; readonly techId: TechnologyId }
   | { readonly type: 'CULTURE_BOMB'; readonly range: number }
@@ -849,6 +875,13 @@ export type EffectDef =
 export interface ActiveEffect {
   readonly source: string; // e.g., "civ:rome", "leader:augustus"
   readonly effect: EffectDef;
+}
+
+export interface PlayerActiveCelebrationBonus {
+  readonly governmentId: string;
+  readonly bonusId: string;
+  readonly turnsRemaining: number;
+  readonly effects: ReadonlyArray<EffectDef>;
 }
 
 // ── Victory ──

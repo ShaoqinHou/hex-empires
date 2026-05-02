@@ -68,10 +68,10 @@ describe('Government types — compile-time shape tests', () => {
       description: '+20% Culture for 10 turns.',
       effects: [
         {
-          type: 'MODIFY_YIELD',
+          type: 'MODIFY_YIELD_PERCENT',
           target: 'empire',
           yield: 'culture',
-          value: 20,
+          percent: 20,
         },
       ],
     };
@@ -95,10 +95,10 @@ describe('Government types — compile-time shape tests', () => {
           description: '+20% Culture',
           effects: [
             {
-              type: 'MODIFY_YIELD',
+              type: 'MODIFY_YIELD_PERCENT',
               target: 'empire',
               yield: 'culture',
-              value: 20,
+              percent: 20,
             },
           ],
         },
@@ -108,8 +108,8 @@ describe('Government types — compile-time shape tests', () => {
           description: '+15% Production toward Wonders',
           effects: [
             {
-              type: 'DISCOUNT_PRODUCTION',
-              target: 'wonder',
+              type: 'MODIFY_PRODUCTION_PERCENT',
+              target: { kind: 'itemType', itemType: 'wonder' },
               percent: 15,
             },
           ],
@@ -233,7 +233,7 @@ describe('Government types — compile-time shape tests', () => {
         bonusId: 'culture-boom',
         turnsRemaining: 7,
         effects: [
-          { type: 'MODIFY_YIELD', target: 'empire', yield: 'culture', value: 20 },
+          { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
         ],
       },
     };

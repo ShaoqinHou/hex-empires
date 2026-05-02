@@ -66,6 +66,15 @@ describe('ALL_GOVERNMENTS — celebrationBonuses (DD3.2)', () => {
     expect(new Set(allBonusIds).size).toBe(allBonusIds.length);
   });
 
+  it('every celebration bonus has at least one structured effect', () => {
+    for (const g of ALL_GOVERNMENTS) {
+      for (const bonus of g.celebrationBonuses) {
+        expect(Array.isArray(bonus.effects)).toBe(true);
+        expect(bonus.effects.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it('at least 8 governments have celebration bonuses (all 10 governments)', () => {
     const withBonuses = ALL_GOVERNMENTS.filter(
       (g) => g.celebrationBonuses && g.celebrationBonuses.length >= 2,
@@ -140,5 +149,53 @@ describe('ALL_GOVERNMENTS — celebrationBonuses (DD3.2)', () => {
         `${expectation.id} celebration names`,
       ).toEqual(expectation.bonuses);
     }
+  });
+
+  it('key celebration bonuses map to expected structured effects', () => {
+    const findBonus = (
+      governmentId: string,
+      bonusId: string,
+    ) => {
+      const government = ALL_GOVERNMENTS.find((gov) => gov.id === governmentId);
+      expect(government, `missing government ${governmentId}`).toBeDefined();
+      const bonus = government!.celebrationBonuses.find((b) => b.id === bonusId);
+      expect(bonus, `missing bonus ${bonusId}`).toBeDefined();
+      expect(bonus!.effects, `empty effects for ${bonusId}`).toBeTruthy();
+      return bonus!;
+    };
+
+    expect(findBonus('classical_republic', 'classical-rep-culture').effects).toEqual([
+      { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+    ]);
+
+    expect(findBonus('oligarchy', 'oligarchy-buildings').effects).toEqual([
+      { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'itemType', itemType: 'building' }, percent: 30 },
+    ]);
+
+    expect(findBonus('revolutionary_republic', 'revolutionary-republic-military-production').effects).toEqual([
+      { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 100 },
+    ]);
+    expect(findBonus('revolutionary_republic', 'revolutionary-republic-war-support').effects).toEqual([
+      { type: 'MODIFY_WAR_SUPPORT', value: 6 },
+    ]);
+
+    expect(findBonus('constitutional_monarchy', 'constitutional-monarchy-diplomatic').effects).toEqual([
+      { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'endeavor', percent: 100 },
+    ]);
+
+    expect(findBonus('bureaucratic_monarchy', 'bureaucratic-monarchy-diplomacy').effects).toEqual([
+      { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'endeavor', percent: 30 },
+      { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'sanction', percent: 30 },
+    ]);
+
+    expect(findBonus('revolucion', 'revolucion-culture-influence').effects).toEqual([
+      { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 30 },
+      { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'diplomatic_action', percent: 50 },
+    ]);
+
+    expect(findBonus('revolucion', 'revolucion-science-military').effects).toEqual([
+      { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'science', percent: 30 },
+      { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 40 },
+    ]);
   });
 });

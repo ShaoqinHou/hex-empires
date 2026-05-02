@@ -3,7 +3,7 @@ import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
 import { nextRandom } from '../state/SeededRng';
-import { getCombatBonus } from '../state/EffectUtils';
+import { getCombatBonus, getWarSupportBonus } from '../state/EffectUtils';
 import { computeEffectiveCS } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 import type { ActiveTreaty } from '../types/Treaty';
@@ -349,7 +349,7 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
       ? Math.max(0, -rel.warSupport)   // attacker: penalised when warSupport < 0
       : Math.max(0, rel.warSupport);   // defender: penalised when warSupport > 0
 
-    const penalty = Math.min(10, negativeSupport);
+    const penalty = Math.max(0, Math.min(10, negativeSupport) - getWarSupportBonus(state, playerId));
     if (penalty > maxPenalty) maxPenalty = penalty;
   }
   return maxPenalty;

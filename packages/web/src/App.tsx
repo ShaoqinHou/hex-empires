@@ -41,6 +41,7 @@ const CommanderPanel = lazy(() => import('./ui/panels/CommanderPanel').then(m =>
 const AudioSettingsPanel = lazy(() => import('./ui/panels/AudioSettingsPanel').then(m => ({ default: m.AudioSettingsPanel })));
 const VictoryPanel = lazy(() => import('./ui/panels/VictoryPanel').then(m => ({ default: m.VictoryPanel })));
 const CrisisPanel = lazy(() => import('./ui/panels/CrisisPanel').then(m => ({ default: m.CrisisPanel })));
+const CelebrationBonusPanel = lazy(() => import('./ui/panels/CelebrationBonusPanel').then(m => ({ default: m.CelebrationBonusPanel })));
 const TradeRoutesPanel = lazy(() => import('./ui/panels/TradeRoutesPanel').then(m => ({ default: m.TradeRoutesPanel })));
 const AchievementsPanel = lazy(() => import('./ui/panels/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
 const MementoPanel = lazy(() => import('./ui/panels/MementoPanel').then(m => ({ default: m.MementoPanel })));
@@ -92,6 +93,14 @@ function GameUI() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasActiveCrisisPhase]);
+
+  const hasPendingCelebrationChoice = (currentPlayer?.pendingCelebrationChoice ?? null) !== null;
+  useEffect(() => {
+    if (hasPendingCelebrationChoice) {
+      openPanel('celebrationBonus');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPendingCelebrationChoice]);
 
   // Auto-open the narrative event panel when a pending narrative event
   // is in the queue for the current player. The panel dispatches
@@ -249,6 +258,9 @@ onNoIdleUnits={() => setIdleUnitsTrigger(c => c + 1)}
           )}
           {activePanel === 'crisis' && (
             <CrisisPanel onClose={closePanel} />
+          )}
+          {activePanel === 'celebrationBonus' && (
+            <CelebrationBonusPanel onClose={closePanel} />
           )}
           {activePanel === 'tradeRoutes' && (
             <TradeRoutesPanel onClose={closePanel} />

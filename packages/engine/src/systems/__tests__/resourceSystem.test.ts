@@ -277,6 +277,55 @@ describe('resourceSystem — celebrations (W3-03: globalHappiness accumulator + 
     expect(next.players.get('p1')!.celebrationBonus).toBe(0);
   });
 
+  it('decrements and clears structured activeCelebrationBonus on END_TURN', () => {
+    const city = createTestCity({ population: 1 });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', createTestPlayer({
+        celebrationCount: 1,
+        celebrationBonus: 0,
+        celebrationTurnsLeft: 2,
+        activeCelebrationBonus: {
+          governmentId: 'classical_republic',
+          bonusId: 'classical-rep-culture',
+          turnsRemaining: 2,
+          effects: [
+            { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+          ],
+        },
+      })]]),
+    });
+
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.celebrationTurnsLeft).toBe(1);
+    expect(next.players.get('p1')!.activeCelebrationBonus?.turnsRemaining).toBe(1);
+
+    const finished = resourceSystem(next, { type: 'END_TURN' });
+    expect(finished.players.get('p1')!.celebrationTurnsLeft).toBe(0);
+    expect(finished.players.get('p1')!.activeCelebrationBonus).toBeNull();
+  });
+
+  it('treats legacy string activeCelebrationBonus as scalar save data and normalizes it away', () => {
+    const city = createTestCity({ population: 1 });
+    const legacyPlayer = {
+      ...createTestPlayer({
+        celebrationCount: 1,
+        celebrationBonus: 10,
+        celebrationTurnsLeft: 2,
+      }),
+      activeCelebrationBonus: 'classical-rep-culture',
+    } as unknown as ReturnType<typeof createTestPlayer>;
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+      players: new Map([['p1', legacyPlayer]]),
+    });
+
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.celebrationTurnsLeft).toBe(1);
+    expect(next.players.get('p1')!.celebrationBonus).toBe(10);
+    expect(next.players.get('p1')!.activeCelebrationBonus).toBeNull();
+  });
+
   it('uses second antiquity threshold 349 for celebrationCount=1', () => {
     // Player has 1 celebration done; globalHappiness 348 + ~10 = 358 >= 349
     const city = createTestCity({ population: 1 });

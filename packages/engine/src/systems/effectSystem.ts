@@ -1,7 +1,18 @@
 import type { GameState, GameAction } from '../types/GameState';
 
 // Re-export utility functions from state/EffectUtils so existing imports via effectSystem still work.
-export { getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from '../state/EffectUtils';
+export {
+  getActiveEffects,
+  getYieldBonus,
+  getYieldPercentBonus,
+  getCombatBonus,
+  getMovementBonus,
+  getProductionDiscount,
+  getProductionPercentBonus,
+  getDiplomaticActionPercentBonus,
+  getRelationshipDeltaPercentBonus,
+  getWarSupportBonus,
+} from '../state/EffectUtils';
 
 /**
  * EffectSystem is a pass-through in the pipeline (effects are computed on demand).

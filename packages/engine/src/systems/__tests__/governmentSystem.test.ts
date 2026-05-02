@@ -1059,7 +1059,15 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
       bonusId: 'classical-rep-culture',
     });
     const updated = next.players.get('p1')!;
-    expect((updated as typeof updated & { activeCelebrationBonus: string }).activeCelebrationBonus).toBe('classical-rep-culture');
+    expect(updated.activeCelebrationBonus).toEqual({
+      governmentId: 'classical_republic',
+      bonusId: 'classical-rep-culture',
+      turnsRemaining: 10,
+      effects: [
+        { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+      ],
+    });
+    expect(updated.celebrationBonus).toBe(0);
     expect((updated as typeof updated & { pendingCelebrationChoice: null }).pendingCelebrationChoice).toBeNull();
   });
 
@@ -1119,7 +1127,10 @@ describe('governmentSystem — PICK_CELEBRATION_BONUS (W3-03)', () => {
       bonusId: 'classical-rep-wonder',
     });
     const updatedB = nextB.players.get('p1')!;
-    expect((updatedB as typeof updatedB & { activeCelebrationBonus: string }).activeCelebrationBonus).toBe('classical-rep-wonder');
+    expect(updatedB.activeCelebrationBonus?.bonusId).toBe('classical-rep-wonder');
+    expect(updatedB.activeCelebrationBonus?.effects).toEqual([
+      { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'itemType', itemType: 'wonder' }, percent: 15 },
+    ]);
   });
 
   it('BB1.5: celebrationCount is capped at 7 — 10 celebrations still shows 7', () => {

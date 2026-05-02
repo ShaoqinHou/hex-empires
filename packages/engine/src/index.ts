@@ -153,7 +153,19 @@ export { buildingPlacementSystem } from './systems/buildingPlacementSystem';
 export { districtSystem } from './systems/districtSystem';
 export { generateAIActions } from './systems/aiSystem';
 export { victorySystem, CULTURAL_VICTORY_RELIC_COUNT } from './systems/victorySystem';
-export { effectSystem, getActiveEffects, getYieldBonus, getCombatBonus, getMovementBonus, getProductionDiscount } from './systems/effectSystem';
+export {
+  effectSystem,
+  getActiveEffects,
+  getYieldBonus,
+  getYieldPercentBonus,
+  getCombatBonus,
+  getMovementBonus,
+  getProductionDiscount,
+  getProductionPercentBonus,
+  getDiplomaticActionPercentBonus,
+  getRelationshipDeltaPercentBonus,
+  getWarSupportBonus,
+} from './systems/effectSystem';
 export { visibilitySystem } from './systems/visibilitySystem';
 export { crisisSystem } from './systems/crisisSystem';
 export { civicSystem } from './systems/civicSystem';

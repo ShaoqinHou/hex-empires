@@ -131,8 +131,9 @@ describe('ALL_GOVERNMENTS', () => {
     }
   });
 
-  it('every legacyBonus is a valid EffectDef', () => {
+  it('every non-null legacyBonus is a valid EffectDef', () => {
     for (const g of ALL_GOVERNMENTS) {
+      if (g.legacyBonus === null) continue;
       expect(
         isValidEffect(g.legacyBonus),
         `government ${g.id} has invalid legacyBonus ${JSON.stringify(g.legacyBonus)}`,

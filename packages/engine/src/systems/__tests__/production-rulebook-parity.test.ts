@@ -481,4 +481,47 @@ describe('R54: Production Bonuses — buildings add % bonuses to specific item c
     expect(bothPerTurn).toBeGreaterThan(barracksPerTurn);
     expect(bothPerTurn).toBeGreaterThan(celebPerTurn);
   });
+
+  it('applies structured celebration production bonus only to matching production targets', () => {
+    const state0 = createTestState();
+    const tileKeys = [...state0.map.tiles.keys()].slice(0, 30);
+    const player = createTestPlayer({
+      id: 'p1',
+      activeCelebrationBonus: {
+        governmentId: 'revolucion',
+        bonusId: 'revolucion-science-military',
+        turnsRemaining: 5,
+        effects: [
+          { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 40 },
+        ],
+      },
+    });
+
+    const militaryCity = createTestCity({
+      productionQueue: [{ type: 'unit', id: 'warrior' }],
+      productionProgress: -500,
+      territory: tileKeys,
+    });
+    const buildingCity = createTestCity({
+      productionQueue: [{ type: 'building', id: 'granary' }],
+      productionProgress: -500,
+      territory: tileKeys,
+    });
+
+    const militaryState = mapWithTerrain(createTestState({
+      cities: new Map([['c1', militaryCity]]),
+      players: new Map([['p1', player]]),
+    }), 'plains');
+    const buildingState = mapWithTerrain(createTestState({
+      cities: new Map([['c1', buildingCity]]),
+      players: new Map([['p1', player]]),
+    }), 'plains');
+
+    const militaryProgress = productionSystem(militaryState, { type: 'END_TURN' })
+      .cities.get('c1')!.productionProgress;
+    const buildingProgress = productionSystem(buildingState, { type: 'END_TURN' })
+      .cities.get('c1')!.productionProgress;
+
+    expect(militaryProgress).toBeGreaterThan(buildingProgress);
+  });
 });

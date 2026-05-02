@@ -48,6 +48,7 @@ function humanizeId(id: string): string {
 
 function describeLegacyBonus(g: GovernmentDef): string {
   const e = g.legacyBonus;
+  if (e === null) return g.description;
   switch (e.type) {
     case 'MODIFY_YIELD':
       return `+${e.value} ${e.yield} per ${e.target}`;

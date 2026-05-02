@@ -1,9 +1,10 @@
-import type { GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState } from '../types/GameState';
+import type { BuildingCategory, GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import { coordToKey } from '../hex/HexMath';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
+import { getProductionPercentBonus, isStructuredActiveCelebrationBonus } from '../state/EffectUtils';
 
 /** Generate deterministic unit ID from state */
 function nextUnitId(state: GameState, cityId: string): string {
@@ -397,9 +398,32 @@ function processProduction(state: GameState): GameState {
       productionPerTurn = Math.floor(productionPerTurn * 1.1);
     }
 
-    // Celebration bonus: +celebrationBonus% production toward everything
+    // Structured celebration production effects.
     const player = state.players.get(currentCity.owner);
-    if (player && player.celebrationBonus > 0) {
+    if (player) {
+      const unitCategory = currentItem.type === 'unit'
+        ? state.config.units.get(currentItem.id)?.category
+        : undefined;
+      const buildingDef = currentItem.type === 'building' || currentItem.type === 'wonder'
+        ? state.config.buildings.get(currentItem.id)
+        : undefined;
+      const buildingCategory = buildingDef?.isWonder
+        ? 'wonder'
+        : buildingDef?.category;
+      const celebrationProductionBonus = getProductionPercentBonus(state, currentCity.owner, {
+        item: currentItem,
+        unitCategory,
+        buildingCategory: buildingCategory as BuildingCategory | undefined,
+        isOverbuilding: false,
+      });
+      if (celebrationProductionBonus > 0) {
+        productionPerTurn = Math.floor(productionPerTurn * (100 + celebrationProductionBonus) / 100);
+      }
+    }
+
+    // Legacy save compatibility: old saves may still carry only the scalar
+    // celebrationBonus field. New picks store structured activeCelebrationBonus.
+    if (player && !isStructuredActiveCelebrationBonus(player.activeCelebrationBonus) && player.celebrationBonus > 0) {
       productionPerTurn = Math.floor(productionPerTurn * (100 + player.celebrationBonus) / 100);
     }
 

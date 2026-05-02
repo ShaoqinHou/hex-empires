@@ -2,7 +2,7 @@ import type { GameState, CityState, TownSpecialization } from '../types/GameStat
 import type { GameConfig } from '../types/GameConfig';
 import type { YieldSet } from '../types/Yields';
 import { addYields, EMPTY_YIELDS } from '../types/Yields';
-import { getYieldBonus } from './EffectUtils';
+import { getYieldBonus, getYieldPercentBonus } from './EffectUtils';
 import { neighbors, coordToKey } from '../hex/HexMath';
 import { effectivePolicySlotCount } from './PolicySlotUtils';
 
@@ -183,6 +183,18 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
     }
   }
 
+  const percentBonuses: YieldSet = {
+    food: getYieldPercentBonus(state, city.owner, 'food'),
+    production: getYieldPercentBonus(state, city.owner, 'production'),
+    gold: getYieldPercentBonus(state, city.owner, 'gold'),
+    science: getYieldPercentBonus(state, city.owner, 'science'),
+    culture: getYieldPercentBonus(state, city.owner, 'culture'),
+    faith: getYieldPercentBonus(state, city.owner, 'faith'),
+    influence: getYieldPercentBonus(state, city.owner, 'influence'),
+    happiness: getYieldPercentBonus(state, city.owner, 'happiness'),
+  };
+  total = applyYieldPercentBonuses(total, percentBonuses);
+
   // Y2.4: localHappiness penalty — each unit of negative happiness reduces
   // all yields by 2% (i.e. multiplier = 1 + localHappiness * 0.02, clamped to [0, 1]).
   // city.happiness holds the current local happiness value.
@@ -203,6 +215,24 @@ export function calculateCityYields(city: CityState, state: GameState): YieldSet
 
   // F-10 (W8): Apply per-yield cap as final clamp to prevent runaway values.
   return clampYields(total, YIELD_CAP_PER_CITY);
+}
+
+function applyYieldPercentBonuses(yields: YieldSet, percentBonuses: YieldSet): YieldSet {
+  return {
+    food: applyPercent(yields.food, percentBonuses.food),
+    production: applyPercent(yields.production, percentBonuses.production),
+    gold: applyPercent(yields.gold, percentBonuses.gold),
+    science: applyPercent(yields.science, percentBonuses.science),
+    culture: applyPercent(yields.culture, percentBonuses.culture),
+    faith: applyPercent(yields.faith, percentBonuses.faith),
+    influence: applyPercent(yields.influence, percentBonuses.influence),
+    happiness: applyPercent(yields.happiness, percentBonuses.happiness),
+  };
+}
+
+function applyPercent(value: number, percent: number): number {
+  if (percent === 0) return value;
+  return Math.floor(value * (100 + percent) / 100);
 }
 
 /**

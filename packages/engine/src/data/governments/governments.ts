@@ -1,63 +1,17 @@
 // Government definitions — first Government content (Cycle B).
 //
-// Types live here (locally) because the engine-level `types/Government.ts`
-// from M7 has not yet landed on this branch. We keep the shape aligned
-// with the design doc at `.codex/workflow/design/government-system.md`
-// §4.1–4.3 and `rulebook-government-expansion.md` §14.1 so the types can
-// be promoted to `types/Government.ts` in a later cycle without churning
-// data files.
+// Government types are now sourced from the canonical
+// `types/Government.ts` file and re-exported here for compatibility.
 
-import type { Age, EffectDef } from '../../types/GameState';
+import type { GovernmentDef } from '../../types/Government';
 
-// ── Shape ──
-
-export type PolicyCategory =
-  | 'military'
-  | 'economic'
-  | 'diplomatic'
-  | 'wildcard';
-
-/**
- * Slot count for a GovernmentDef. Per VII §14.2 all slots are wildcard;
- * `total` is the Government's base slot count. The old typed-category
- * struct `{ military, economic, diplomatic, wildcard }` was removed in
- * W2-03.
- */
-export interface PolicySlotCounts {
-  readonly total: number;
-}
-
-/**
- * One of the two Celebration bonus options for a Government (§4.5 / §14.4).
- * Player picks Option A or Option B when a celebration is triggered.
- */
-export interface GovernmentCelebrationBonus {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-}
-
-export interface GovernmentCrisisRequirement {
-  readonly crisisType: 'revolution';
-  readonly minStage: 1 | 2 | 3;
-}
-
-export interface GovernmentDef {
-  readonly id: string;
-  readonly name: string;
-  readonly age: Age;
-  /** CivicId (must exist in ALL_CIVICS) that gates access to this government. */
-  readonly unlockCivic: string;
-  readonly policySlots: PolicySlotCounts;
-  readonly legacyBonus: EffectDef;
-  readonly description: string;
-  /** Exactly two celebration bonus options. Player picks one when threshold is crossed. */
-  readonly celebrationBonuses: readonly [GovernmentCelebrationBonus, GovernmentCelebrationBonus];
-  /** If set, this government is only available to the specified civilization. Undefined = universal. */
-  readonly civRequired?: string;
-  /** If set, this government is only available through a matching crisis flow. */
-  readonly crisisRequired?: GovernmentCrisisRequirement;
-}
+export type {
+  GovernmentCelebrationBonus,
+  GovernmentCrisisRequirement,
+  GovernmentDef,
+  PolicyCategory,
+  PolicySlotCounts,
+} from '../../types/Government';
 
 // ── Antiquity ──
 
@@ -78,11 +32,13 @@ export const CLASSICAL_REPUBLIC: GovernmentDef = {
       id: 'classical-rep-culture',
       name: '+20% Culture for 10 turns',
       description: 'All empire culture output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 }],
     },
     {
       id: 'classical-rep-wonder',
       name: '+15% Production toward Wonders for 10 turns',
       description: 'Wonder production increased by 15% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'itemType', itemType: 'wonder' }, percent: 15 }],
     },
   ],
 };
@@ -101,11 +57,13 @@ export const DESPOTISM: GovernmentDef = {
       id: 'despotism-science',
       name: '+20% Science for 10 turns',
       description: 'Empire science output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'science', percent: 20 }],
     },
     {
       id: 'despotism-infantry',
       name: '+30% Production toward Infantry Units for 10 turns',
       description: 'Infantry unit production increased by 30% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'unitCategory', category: 'melee' }, percent: 30 }],
     },
   ],
 };
@@ -124,11 +82,13 @@ export const OLIGARCHY: GovernmentDef = {
       id: 'oligarchy-food',
       name: '+20% Food for 10 turns',
       description: 'Empire food output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'food', percent: 20 }],
     },
     {
       id: 'oligarchy-buildings',
       name: '+30% Production toward Buildings for 10 turns',
       description: 'Building production increased by 30% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'itemType', itemType: 'building' }, percent: 30 }],
     },
   ],
 };
@@ -149,11 +109,16 @@ export const FEUDAL_MONARCHY: GovernmentDef = {
       id: 'feudal-monarchy-food',
       name: '+20% Food for 10 turns',
       description: 'Empire food output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'food', percent: 20 }],
     },
     {
       id: 'feudal-monarchy-cavalry-naval',
       name: '+30% Production toward Cavalry and Naval Units for 10 turns',
       description: 'Cavalry and naval unit production increased by 30% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'unitCategory', category: 'cavalry' }, percent: 30 },
+        { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'unitCategory', category: 'naval' }, percent: 30 },
+      ],
     },
   ],
 };
@@ -172,11 +137,13 @@ export const PLUTOCRACY: GovernmentDef = {
       id: 'plutocracy-gold',
       name: '+20% Gold for 10 turns',
       description: 'Empire gold output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'gold', percent: 20 }],
     },
     {
       id: 'plutocracy-overbuilding',
       name: '+30% Production toward Overbuilding for 10 turns',
       description: 'Overbuilding production increased by 30% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'overbuilding' }, percent: 30 }],
     },
   ],
 };
@@ -195,11 +162,16 @@ export const THEOCRACY: GovernmentDef = {
       id: 'theocracy-culture',
       name: '+20% Culture for 10 turns',
       description: 'Empire culture output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 }],
     },
     {
       id: 'theocracy-units',
       name: '+40% Production toward Civilian and Support Units for 10 turns',
       description: 'Civilian and support unit production increased by 40% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'unitCategory', category: 'civilian' }, percent: 40 },
+        { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'unitCategory', category: 'support' }, percent: 40 },
+      ],
     },
   ],
 };
@@ -224,11 +196,13 @@ export const REVOLUTIONARY_REPUBLIC: GovernmentDef = {
       id: 'revolutionary-republic-military-production',
       name: '+100% Production toward Military Units for 10 turns',
       description: 'Military unit production increased by 100% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 100 }],
     },
     {
       id: 'revolutionary-republic-war-support',
       name: '+6 War Support for 10 turns',
       description: 'Empire war support increased by 6 for the celebration window.',
+      effects: [{ type: 'MODIFY_WAR_SUPPORT', value: 6 }],
     },
   ],
   crisisRequired: { crisisType: 'revolution', minStage: 3 },
@@ -248,11 +222,16 @@ export const REVOLUTIONARY_AUTHORITARIANISM: GovernmentDef = {
       id: 'revolutionary-authoritarianism-culture-science',
       name: '+20% Culture and Science for 10 turns',
       description: 'Empire culture and science output increased by 20% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 },
+        { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'science', percent: 20 },
+      ],
     },
     {
       id: 'revolutionary-authoritarianism-sanctions',
       name: '+100% Influence toward Sanctions',
       description: 'Influence toward Sanctions increased by 100% for the celebration window.',
+      effects: [{ type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'sanction', percent: 100 }],
     },
   ],
   crisisRequired: { crisisType: 'revolution', minStage: 3 },
@@ -272,11 +251,13 @@ export const CONSTITUTIONAL_MONARCHY: GovernmentDef = {
       id: 'constitutional-monarchy-gold',
       name: '+40% Gold for 10 turns',
       description: 'Empire gold output increased by 40% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'gold', percent: 40 }],
     },
     {
       id: 'constitutional-monarchy-diplomatic',
       name: '+100% Influence toward Diplomatic Endeavors',
       description: 'Influence toward Diplomatic Endeavors increased by 100% for the celebration window.',
+      effects: [{ type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'endeavor', percent: 100 }],
     },
   ],
   crisisRequired: { crisisType: 'revolution', minStage: 3 },
@@ -298,11 +279,13 @@ export const ELECTIVE_REPUBLIC: GovernmentDef = {
       id: 'elective-republic-culture',
       name: '+20% Culture for 10 turns',
       description: 'Empire culture output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 20 }],
     },
     {
       id: 'elective-republic-science',
       name: '+20% Science for 10 turns',
       description: 'Empire science output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'science', percent: 20 }],
     },
   ],
 };
@@ -323,11 +306,13 @@ export const AUTHORITARIANISM: GovernmentDef = {
       id: 'authoritarianism-military-production',
       name: '+30% Production toward Military Units for 10 turns',
       description: 'Military unit production increased by 30% for the celebration window.',
+      effects: [{ type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 30 }],
     },
     {
       id: 'authoritarianism-unit-strength',
       name: '+3 Combat Strength for all Units',
       description: 'All units gain +3 combat strength for the celebration window.',
+      effects: [{ type: 'MODIFY_COMBAT', target: 'all', value: 3 }],
     },
   ],
 };
@@ -346,11 +331,16 @@ export const BUREAUCRATIC_MONARCHY: GovernmentDef = {
       id: 'bureaucratic-monarchy-gold',
       name: '+20% Gold for 10 turns',
       description: 'Empire gold output increased by 20% for the celebration window.',
+      effects: [{ type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'gold', percent: 20 }],
     },
     {
       id: 'bureaucratic-monarchy-diplomacy',
       name: '+30% Relationship change from Endeavors and Sanctions for 10 turns',
       description: 'Relationship changes from Endeavors and Sanctions increased by 30% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'endeavor', percent: 30 },
+        { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'sanction', percent: 30 },
+      ],
     },
   ],
 };
@@ -369,11 +359,19 @@ export const REVOLUCION: GovernmentDef = {
       id: 'revolucion-culture-influence',
       name: '+30% Culture for 10 turns, +50% Influence toward Diplomatic Actions for 10 turns',
       description: 'Empire culture output increased by 30% and influence toward diplomatic actions increased by 50% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'culture', percent: 30 },
+        { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'diplomatic_action', percent: 50 },
+      ],
     },
     {
       id: 'revolucion-science-military',
       name: '+30% Science for 10 turns, +40% Production toward Military Units for 10 turns',
       description: 'Empire science output increased by 30% and military unit production increased by 40% for the celebration window.',
+      effects: [
+        { type: 'MODIFY_YIELD_PERCENT', target: 'empire', yield: 'science', percent: 30 },
+        { type: 'MODIFY_PRODUCTION_PERCENT', target: { kind: 'militaryUnit' }, percent: 40 },
+      ],
     },
   ],
   civRequired: 'mexico',

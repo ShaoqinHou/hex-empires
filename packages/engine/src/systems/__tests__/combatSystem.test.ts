@@ -751,6 +751,29 @@ describe('combatSystem — S6: war support CS penalty', () => {
     expect(defHP10).toBe(defHP20);
   });
 
+  it('structured war-support celebration bonus offsets disadvantage penalty', () => {
+    const stateNeutral = makeWarState(0);
+    const basePenalised = makeWarState(-6);
+    const player = basePenalised.players.get('p1')!;
+    const stateOffset = {
+      ...basePenalised,
+      players: new Map(basePenalised.players).set('p1', {
+        ...player,
+        activeCelebrationBonus: {
+          governmentId: 'revolutionary_republic',
+          bonusId: 'revolutionary-republic-war-support',
+          turnsRemaining: 5,
+          effects: [{ type: 'MODIFY_WAR_SUPPORT', value: 6 }],
+        },
+      }),
+    };
+
+    const nextNeutral = combatSystem(stateNeutral, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextOffset = combatSystem(stateOffset, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextOffset.units.get('d1')?.health).toBe(nextNeutral.units.get('d1')?.health);
+  });
+
   it('no war support penalty when no war relations exist', () => {
     // No diplomacy state → same as neutral (0 penalty)
     const units = new Map([

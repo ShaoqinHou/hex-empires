@@ -490,6 +490,34 @@ describe('PROPOSE_ENDEAVOR action', () => {
     expect(next.players.get('p1')!.influence).toBe(50); // 100 - 50 cost
   });
 
+  it('discounts endeavor cost with structured celebration diplomacy contribution effects', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          influence: 100,
+          activeCelebrationBonus: {
+            governmentId: 'constitutional_monarchy',
+            bonusId: 'constitutional-monarchy-diplomatic',
+            turnsRemaining: 5,
+            effects: [
+              { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'endeavor', percent: 100 },
+            ],
+          },
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      currentPlayerId: 'p1',
+    });
+    const next = diplomacySystem(state, {
+      type: 'PROPOSE_ENDEAVOR',
+      targetId: 'p2',
+      endeavorType: 'trade_mission',
+    });
+    expect(next.players.get('p1')!.influence).toBe(75);
+    expect((next.diplomacy.pendingEndeavors ?? [])[0].influenceCost).toBe(25);
+  });
+
   it('rejects endeavor when player has insufficient influence', () => {
     const state = twoPlayerStateWithInfluence(30);
     const next = diplomacySystem(state, {
@@ -561,6 +589,32 @@ describe('RESPOND_ENDEAVOR action', () => {
     expect(rel.relationship).toBe(5); // +5 for accept
     // Pending removed
     expect(next.diplomacy.pendingEndeavors ?? []).toHaveLength(0);
+  });
+
+  it('scales endeavor relationship delta with structured celebration relationship effects', () => {
+    const base = stateWithPendingEndeavor();
+    const source = base.players.get('p1')!;
+    const state = {
+      ...base,
+      players: new Map(base.players).set('p1', {
+        ...source,
+        activeCelebrationBonus: {
+          governmentId: 'bureaucratic_monarchy',
+          bonusId: 'bureaucratic-monarchy-diplomacy',
+          turnsRemaining: 5,
+          effects: [
+            { type: 'MODIFY_RELATIONSHIP_DELTA_PERCENT', target: 'endeavor', percent: 30 },
+          ],
+        },
+      }),
+    };
+
+    const next = diplomacySystem(state, {
+      type: 'RESPOND_ENDEAVOR',
+      endeavorId: 'endeavor_1',
+      response: 'accept',
+    });
+    expect(next.diplomacy.relations.get('p1:p2')!.relationship).toBe(6);
   });
 
   it('support: activates the endeavor with +10 relationship and both players gain benefit', () => {
@@ -701,6 +755,33 @@ describe('DIPLOMATIC_SANCTION action', () => {
       sanctionType: 'trade_ban',
     });
     expect(next.players.get('p1')!.influence).toBe(25); // 75 - 50 cost
+  });
+
+  it('discounts sanction cost with structured celebration diplomacy contribution effects', () => {
+    const state = createTestState({
+      players: new Map([
+        ['p1', createTestPlayer({
+          id: 'p1',
+          influence: 100,
+          activeCelebrationBonus: {
+            governmentId: 'revolutionary_authoritarianism',
+            bonusId: 'revolutionary-authoritarianism-sanctions',
+            turnsRemaining: 5,
+            effects: [
+              { type: 'MODIFY_DIPLOMATIC_ACTION_PERCENT', target: 'sanction', percent: 100 },
+            ],
+          },
+        })],
+        ['p2', createTestPlayer({ id: 'p2' })],
+      ]),
+      currentPlayerId: 'p1',
+    });
+    const next = diplomacySystem(state, {
+      type: 'DIPLOMATIC_SANCTION',
+      targetId: 'p2',
+      sanctionType: 'trade_ban',
+    });
+    expect(next.players.get('p1')!.influence).toBe(75);
   });
 
   it('rejects sanction when player has insufficient influence', () => {

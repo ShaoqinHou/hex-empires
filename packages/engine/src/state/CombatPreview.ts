@@ -4,7 +4,7 @@ import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from './PromotionUtils';
 import { nextRandom } from './SeededRng';
 import { computeEffectiveCS } from './CombatAnalytics';
-import { getCombatBonus } from './EffectUtils';
+import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
 import { getCommanderAuraCombatBonus } from './CommanderAura';
 
 /**
@@ -835,7 +835,7 @@ function calculateWarSupportPenalty(state: GameState, playerId: string): number 
       ? Math.max(0, -rel.warSupport)
       : Math.max(0, rel.warSupport);
 
-    const penalty = Math.min(10, negativeSupport);
+    const penalty = Math.max(0, Math.min(10, negativeSupport) - getWarSupportBonus(state, playerId));
     if (penalty > maxPenalty) maxPenalty = penalty;
   }
   return maxPenalty;
