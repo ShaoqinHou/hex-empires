@@ -1,4 +1,5 @@
 import type { GameState, GameAction, ActiveEffect, PlayerState, CodexState } from '../types/GameState';
+import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 
 /**
  * ResearchSystem handles technology research and tech mastery.
@@ -286,19 +287,21 @@ function processNormalResearch(state: GameState): GameState {
         ageProgress: player.ageProgress + FUTURE_TECH_AGE_PROGRESS,
       });
 
-      return {
+      const stateAfterFutureTech = {
         ...state,
         players: updatedPlayers,
         log: [...state.log, {
           turn: state.turn,
           playerId: player.id,
           message: `Completed Future Tech! (+${FUTURE_TECH_AGE_PROGRESS} age progress)`,
-          type: 'research',
+          type: 'research' as const,
           severity: 'warning' as const,
           category: 'research' as const,
           panelTarget: 'tech' as const,
         }],
       };
+
+      return enqueueFirstEligibleNarrativeEvent(stateAfterFutureTech, 'TECH_RESEARCHED');
     }
 
     // Normal tech complete! Carry overflow science to the next research.
@@ -331,7 +334,8 @@ function processNormalResearch(state: GameState): GameState {
     };
 
     // AA5.1: Generate codex if the player has a library or museum
-    return generateCodexForTech(stateAfterResearch, player.id, completedTechId);
+    const stateAfterCodex = generateCodexForTech(stateAfterResearch, player.id, completedTechId);
+    return enqueueFirstEligibleNarrativeEvent(stateAfterCodex, 'TECH_RESEARCHED');
   }
 
   // Accumulate progress

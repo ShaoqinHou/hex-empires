@@ -24,13 +24,34 @@ change. A workflow is not done just because unit tests pass.
 For UI or canvas changes:
 
 - Start `npm run dev:web` on port 5174 or the next free port.
-- Use Browser Use, Playwright, or the in-app browser.
+- Use Playwright as the required repeatable regression gate. It is the default
+  for worker clones and any workflow that multiple agents may run in parallel.
+- Use Browser Use or the in-app browser for lead-controlled visual inspection,
+  exploratory debugging, and screenshots that should reflect what the user can
+  see.
 - Capture at least one screenshot for visual changes.
 - Check console/page errors.
 - Exercise the interaction with real clicks/keys where possible.
 - Confirm text does not overlap at the tested viewport.
 - For build-smoke coverage, make `build:deploy` the final build command before
   the Playwright run.
+
+## Browser Tool Routing
+
+Playwright specs are authoritative for pass/fail E2E because they are
+deterministic, headless, cheap to rerun, and safe for isolated clone workers.
+Browser Use is supplemental: it is model-mediated, shares the visible in-app
+browser surface, and consumes more context through DOM snapshots and
+screenshots. Do not assign Browser Use flows to multiple parallel workers unless
+the lead explicitly gives each worker an isolated browser surface and accepts the
+extra coordination cost.
+
+Before choosing Browser Use, run the plugin preflight. In this Codex desktop
+setup, Browser Use depends on the `node_repl` MCP runtime and requires Node
+`>=22.22.0`. If `node_repl` resolves to an older system Node, record the blocker
+and fall back to Playwright for the required gate. The bundled Codex runtime may
+include a newer Node, but Browser Use is only available after the MCP runtime
+itself resolves to a compatible executable.
 
 ## Long-Run Gameplay E2E
 

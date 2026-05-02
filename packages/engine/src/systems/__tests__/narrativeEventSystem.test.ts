@@ -41,6 +41,20 @@ const DISCOVERY_EVENT: NarrativeEventDef = {
   ],
 };
 
+const TECH_RESEARCHED_EVENT: NarrativeEventDef = {
+  id: 'tech_researched_event',
+  title: 'Breakthrough',
+  vignette: 'A new technology changes courtly debates.',
+  category: 'misc',
+  requirements: { triggerType: 'TECH_RESEARCHED' },
+  choices: [
+    {
+      label: 'Invest (+10 science)',
+      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 10 }],
+    },
+  ],
+};
+
 function makeConfig(events: ReadonlyArray<NarrativeEventDef>): Partial<GameConfig> {
   const narrativeEvents = new Map<string, NarrativeEventDef>();
   for (const e of events) narrativeEvents.set(e.id, e);
@@ -123,6 +137,14 @@ describe('narrativeEventSystem', () => {
       });
       const next = narrativeEventSystem(state, { type: 'END_TURN' });
       expect(next.pendingNarrativeEvents ?? []).not.toContain('discovery_event');
+    });
+
+    it('does not fire TECH_RESEARCHED events on END_TURN evaluation', () => {
+      const state = createTestState({
+        config: { ...createTestState().config, ...makeConfig([TECH_RESEARCHED_EVENT]) },
+      });
+      const next = narrativeEventSystem(state, { type: 'END_TURN' });
+      expect(next.pendingNarrativeEvents ?? []).not.toContain('tech_researched_event');
     });
 
     it('is a no-op when narrativeEvents config is absent', () => {

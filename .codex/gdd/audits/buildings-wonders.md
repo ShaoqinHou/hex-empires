@@ -30,10 +30,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 8 |
+| MATCH | 9 |
 | CLOSE | 2 |
 | DIVERGED | 0 |
-| MISSING | 2 |
+| MISSING | 1 |
 | EXTRA | 0 |
 
 **Total findings:** 12
@@ -133,16 +133,16 @@
 
 ---
 
-### F-08: Rival-wonder race notification + mid-queue cancellation absent — MISSING
+### F-08: Rival-wonder race notification + mid-queue cancellation implemented — MATCH
 
-**Location:** `packages/engine/src/systems/productionSystem.ts`
+**Location:** `packages/engine/src/systems/productionSystem.ts`; `packages/engine/src/systems/__tests__/productionSystem.test.ts`
 **GDD reference:** `systems/buildings-wonders.md` § "Wonder competition"
 **Severity:** MED
 **Effort:** M
 **VII says:** (1) Notification when a rival starts building a wonder you're also building. (2) Mid-queue cancellation when a rival completes a wonder, with notification.
-**Engine does:** Engine enforces final lock but generates no notifications. After a rival completes, the item stays in queue and fails silently at end-of-turn, losing all accumulated production.
-**Gap:** Race UX entirely missing.
-**Recommendation:** After any wonder completes, iterate all other cities' `productionQueue`; remove the wonder + emit warning log entry.
+**Engine does:** `productionSystem` rejects already-built wonders at queue admission, emits a warning production log for rivals already building the same wonder when a new race starts, removes stale unavailable wonder entries from city production queues, clears active progress only when the removed wonder was the queue head, and emits warning production log entries when a rival completes the wonder or when stale work is discovered.
+**Gap:** None for local duplicate-wonder queue cancellation/notification behavior.
+**Recommendation:** Keep the queue-time admission check, end-turn stale cleanup, and completion-time rival cancellation aligned so wonder uniqueness cannot silently waste production.
 
 ---
 
@@ -207,8 +207,7 @@
 
 ## Missing items
 
-1. Rival-wonder race UX (F-08).
-2. `DEMOLISH_BUILDING` handler (F-11).
+1. `DEMOLISH_BUILDING` handler (F-11).
 
 ---
 
@@ -225,7 +224,7 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 - `packages/engine/src/types/Building.ts`
 - `packages/engine/src/types/DistrictOverhaul.ts` (V2 types)
 
-**Status:** 8 MATCH / 2 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
+**Status:** 9 MATCH / 2 CLOSE / 0 DIVERGED / 1 MISSING / 0 EXTRA
 
 **Highest-severity finding:** F-03 — wonder geography validation is enforced through the placement validator, but the system wrapper remains pass-through (CLOSE, HIGH).
 
@@ -244,11 +243,11 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 | Bucket | Findings | Total |
 |---|---|---|
 | S | F-03, F-12 | ~1d |
-| M | F-08, F-11 | ~3d |
+| M | F-11 | ~1d |
 | L | — | 0 |
-| **Total** | 4 active follow-up items | **~4d** |
+| **Total** | 3 active follow-up items | **~2d** |
 
-Recommended order: F-08 → F-11 → F-12 → F-03.
+Recommended order: F-11 → F-12 → F-03.
 
 ---
 

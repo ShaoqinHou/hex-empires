@@ -104,6 +104,73 @@ describe('productionSystem', () => {
       const updatedCity = next.cities.get('c1')!;
       expect(updatedCity.productionQueue[0]).toEqual({ type: 'building', id: 'granary' });
     });
+
+    it('rejects a wonder-typed queue item when the wonder is already built', () => {
+      const city = createTestCity();
+      const state = createTestState({
+        builtWonders: ['pyramids'],
+        cities: new Map([['c1', city]]),
+      });
+
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'pyramids',
+        itemType: 'wonder',
+      });
+
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'This wonder has already been built',
+        category: 'production',
+      });
+      expect(next.cities.get('c1')!.productionQueue).toEqual([]);
+    });
+
+    it('notifies rivals already building the same wonder when a race starts', () => {
+      const startingCity = createTestCity({
+        id: 'c1',
+        name: 'Rome',
+        owner: 'p1',
+      });
+      const rivalCity = createTestCity({
+        id: 'c2',
+        name: 'Memphis',
+        owner: 'p2',
+        position: { q: 6, r: 6 },
+        territory: [coordToKey({ q: 6, r: 6 })],
+        isCapital: false,
+        productionQueue: [{ type: 'wonder', id: 'pyramids' }],
+        productionProgress: 100,
+      });
+      const state = createTestState({
+        currentPlayerId: 'p1',
+        cities: new Map([['c1', startingCity], ['c2', rivalCity]]),
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', name: 'Player 1', researchedTechs: ['masonry'] })],
+          ['p2', createTestPlayer({ id: 'p2', name: 'Player 2', civilizationId: 'egypt', researchedTechs: ['masonry'] })],
+        ]),
+      });
+
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'pyramids',
+        itemType: 'wonder',
+      });
+
+      expect(next.cities.get('c1')!.productionQueue).toEqual([{ type: 'wonder', id: 'pyramids' }]);
+      const notification = next.log.find(e => e.playerId === 'p2' && e.message.includes('competing with Memphis'));
+      expect(notification).toMatchObject({
+        turn: 1,
+        playerId: 'p2',
+        message: 'Rome has started work on The Pyramids, competing with Memphis.',
+        type: 'production',
+        severity: 'warning',
+        category: 'production',
+        panelTarget: 'city',
+      });
+    });
   });
 
   describe('END_TURN production', () => {
@@ -183,6 +250,84 @@ describe('productionSystem', () => {
       const next = productionSystem(state, { type: 'END_TURN' });
       // Town production should be unchanged — skipped entirely
       expect(next.cities.get('c1')!.productionProgress).toBe(39);
+    });
+
+    it('cancels stale in-progress wonder construction when the wonder is already unavailable', () => {
+      const city = createTestCity({
+        productionQueue: [{ type: 'wonder', id: 'pyramids' }],
+        productionProgress: 250,
+      });
+      const state = createTestState({
+        builtWonders: ['pyramids'],
+        cities: new Map([['c1', city]]),
+      });
+
+      const next = productionSystem(state, { type: 'END_TURN' });
+      const updatedCity = next.cities.get('c1')!;
+      expect(updatedCity.productionQueue).toEqual([]);
+      expect(updatedCity.productionProgress).toBe(0);
+      expect(updatedCity.buildings).not.toContain('pyramids');
+
+      const cancellation = next.log.find(e => e.message.includes('stopped work on The Pyramids'));
+      expect(cancellation).toMatchObject({
+        turn: 1,
+        playerId: 'p1',
+        type: 'production',
+        severity: 'warning',
+        category: 'production',
+        panelTarget: 'city',
+      });
+      expect(cancellation!.message).toBe('Rome stopped work on The Pyramids because it has already been completed.');
+    });
+
+    it('cancels and notifies rival wonder queues when a player completes that wonder', () => {
+      const builderCity = createTestCity({
+        id: 'c1',
+        name: 'Rome',
+        owner: 'p1',
+        productionQueue: [{ type: 'wonder', id: 'pyramids' }],
+        productionProgress: 399,
+      });
+      const rivalCity = createTestCity({
+        id: 'c2',
+        name: 'Memphis',
+        owner: 'p2',
+        position: { q: 6, r: 6 },
+        territory: [coordToKey({ q: 6, r: 6 })],
+        isCapital: false,
+        productionQueue: [{ type: 'wonder', id: 'pyramids' }],
+        productionProgress: 200,
+      });
+      const state = createTestState({
+        currentPlayerId: 'p1',
+        cities: new Map([['c1', builderCity], ['c2', rivalCity]]),
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1', name: 'Player 1' })],
+          ['p2', createTestPlayer({ id: 'p2', name: 'Player 2', civilizationId: 'egypt' })],
+        ]),
+      });
+
+      const next = productionSystem(state, { type: 'END_TURN' });
+
+      expect(next.cities.get('c1')!.buildings).toContain('pyramids');
+      expect(next.builtWonders).toContain('pyramids');
+      expect(next.cities.get('c2')!.productionQueue).toEqual([]);
+      expect(next.cities.get('c2')!.productionProgress).toBe(0);
+      expect(next.cities.get('c2')!.buildings).not.toContain('pyramids');
+
+      const completion = next.log.find(e => e.playerId === 'p1' && e.message.includes('built pyramids'));
+      expect(completion).toBeDefined();
+
+      const cancellation = next.log.find(e => e.playerId === 'p2' && e.message.includes('stopped work on The Pyramids'));
+      expect(cancellation).toMatchObject({
+        turn: 1,
+        playerId: 'p2',
+        type: 'production',
+        severity: 'warning',
+        category: 'production',
+        panelTarget: 'city',
+      });
+      expect(cancellation!.message).toBe('Memphis stopped work on The Pyramids because a rival completed it.');
     });
   });
 

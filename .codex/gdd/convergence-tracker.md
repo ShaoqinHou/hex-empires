@@ -15,7 +15,7 @@
 | System | Audit file | Findings | Status tally |
 |---|---|---|---|
 | ages | `.codex/gdd/audits/ages.md` | 17 | 11M / 5C / 1D / 0X / 0E |
-| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 8M / 2C / 0D / 2X / 0E |
+| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 9M / 2C / 0D / 1X / 0E |
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
@@ -119,7 +119,7 @@
 | narrative-events | F-01 | `NarrativeEventDef` type and content database exist at start | ≈ CLOSE | L | `packages/engine/src/types/NarrativeEvent.ts:9`; `packages/engine/src/data/narra |
 | narrative-events | F-02 | `PlayerState.narrativeTags` exists and persists | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:385` |
 | narrative-events | F-03 | `GameState.firedNarrativeEvents` deduplication store exists | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:1116`; `packages/engine/src/state/GameIn |
-| narrative-events | F-04 | `narrativeEventSystem` exists, but trigger and effect depth  | ≈ CLOSE | M | `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/G |
+| narrative-events | F-04 | `narrativeEventSystem` exists, but trigger and effect depth  | ≈ CLOSE | M | `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/s |
 | narrative-events | F-05 | `RESOLVE_NARRATIVE_EVENT` action and pending queue exist | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:1117,1393`; `packages/engine/src/systems |
 | population-specialists | F-01 | Growth formula constants align with GDD quadratic constants | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts` |
 | population-specialists | F-02 | Specialist food and happiness costs are both represented | ✓ MATCH | M | `packages/engine/src/state/YieldCalculator.ts`, `packages/engine/src/state/Happi |
@@ -172,7 +172,7 @@
 | ages | F-12 | `civ-selection-pool-unfiltered` | ≈ CLOSE | M | `packages/web/src/ui/panels/AgeTransitionPanel.tsx:21` |
 | buildings-wonders | F-06 | Wonder adjacency bonus to neighbors implemented | ✓ MATCH | S | `packages/engine/src/state/DistrictAdjacency.ts:189-208`; `packages/engine/src/s |
 | buildings-wonders | F-07 | `requiredCivic` present; tech/civic/civ gates enforced at qu | ✓ MATCH | S | `packages/engine/src/types/Building.ts`, `packages/engine/src/systems/production |
-| buildings-wonders | F-08 | Rival-wonder race notification + mid-queue cancellation abse | ⊘ MISSING | M | `packages/engine/src/systems/productionSystem.ts` |
+| buildings-wonders | F-08 | Rival-wonder race notification + mid-queue cancellation impl | ✓ MATCH | M | `packages/engine/src/systems/productionSystem.ts`; `packages/engine/src/systems/ |
 | buildings-wonders | F-10 | growth/production consume the adjacency-aware yield calculat | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts:13,134`; `packages/engine/src/syste |
 | buildings-wonders | F-11 | `DEMOLISH_BUILDING` type-only; no system handles it | ⊘ MISSING | M | `packages/engine/src/types/DistrictOverhaul.ts:150-160` |
 | buildings-wonders | F-12 | Legacy one-slot placement system is retired from the pipelin | ≈ CLOSE | L | `buildingPlacementSystem.ts`, `urbanBuildingSystem.ts` |
@@ -350,10 +350,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 88 |
+| MATCH | 89 |
 | CLOSE | 75 |
 | DIVERGED | 48 |
-| MISSING | 63 |
+| MISSING | 62 |
 | EXTRA | 12 |
 | **Total findings** | **286** |
 

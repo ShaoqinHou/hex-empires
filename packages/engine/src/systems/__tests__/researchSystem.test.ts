@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { researchSystem } from '../researchSystem';
+import { narrativeEventSystem } from '../narrativeEventSystem';
 import { createTestState, createTestPlayer } from './helpers';
 import type { CityState } from '../../types/GameState';
+import type { GameConfig } from '../../types/GameConfig';
+import type { NarrativeEventDef } from '../../types/NarrativeEvent';
 import { coordToKey } from '../../hex/HexMath';
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
@@ -13,6 +16,27 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     specialization: null, specialists: 0, districts: [],
     ...overrides,
   };
+}
+
+const TECH_RESEARCHED_EVENT: NarrativeEventDef = {
+  id: 'tech_researched_event',
+  title: 'A Useful Breakthrough',
+  vignette: 'Scholars turn discovery into opportunity.',
+  category: 'misc',
+  requirements: { triggerType: 'TECH_RESEARCHED', excludesTags: ['tech-event-done'] },
+  choices: [
+    {
+      label: 'Fund the scholars (+25 gold)',
+      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'gold', value: 25 }],
+      tagOutput: ['tech-event-done'],
+    },
+  ],
+};
+
+function makeNarrativeConfig(events: ReadonlyArray<NarrativeEventDef>): Partial<GameConfig> {
+  const narrativeEvents = new Map<string, NarrativeEventDef>();
+  for (const event of events) narrativeEvents.set(event.id, event);
+  return { narrativeEvents };
 }
 
 describe('researchSystem', () => {
@@ -115,6 +139,68 @@ describe('researchSystem', () => {
       const next = researchSystem(state, { type: 'END_TURN' });
       expect(next.players.get('p1')!.researchedTechs).toContain('pottery');
       expect(next.players.get('p1')!.currentResearch).toBeNull();
+    });
+
+    it('enqueues a TECH_RESEARCHED narrative event when a tech completes', () => {
+      const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 24 });
+      const city = createTestCity({ population: 5 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        config: {
+          ...createTestState().config,
+          ...makeNarrativeConfig([TECH_RESEARCHED_EVENT]),
+        },
+      });
+
+      const next = researchSystem(state, { type: 'END_TURN' });
+
+      expect(next.players.get('p1')!.researchedTechs).toContain('pottery');
+      expect(next.pendingNarrativeEvents).toContain('tech_researched_event');
+      expect(next.firedNarrativeEvents).toContain('tech_researched_event');
+    });
+
+    it('does not enqueue a TECH_RESEARCHED narrative event before research completes', () => {
+      const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 0 });
+      const city = createTestCity({ population: 1 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        config: {
+          ...createTestState().config,
+          ...makeNarrativeConfig([TECH_RESEARCHED_EVENT]),
+        },
+      });
+
+      const next = researchSystem(state, { type: 'END_TURN' });
+
+      expect(next.players.get('p1')!.researchedTechs).not.toContain('pottery');
+      expect(next.pendingNarrativeEvents ?? []).not.toContain('tech_researched_event');
+      expect(next.firedNarrativeEvents ?? []).not.toContain('tech_researched_event');
+    });
+
+    it('resolves a TECH_RESEARCHED event through the narrative event pipeline', () => {
+      const player = createTestPlayer({ currentResearch: 'pottery', researchProgress: 24, gold: 100 });
+      const city = createTestCity({ population: 5 });
+      const state = createTestState({
+        players: new Map([['p1', player]]),
+        cities: new Map([['c1', city]]),
+        config: {
+          ...createTestState().config,
+          ...makeNarrativeConfig([TECH_RESEARCHED_EVENT]),
+        },
+      });
+
+      const afterResearch = researchSystem(state, { type: 'END_TURN' });
+      const afterResolution = narrativeEventSystem(afterResearch, {
+        type: 'RESOLVE_NARRATIVE_EVENT',
+        eventId: 'tech_researched_event',
+        choiceIndex: 0,
+      });
+
+      expect(afterResolution.pendingNarrativeEvents ?? []).not.toContain('tech_researched_event');
+      expect(afterResolution.players.get('p1')!.gold).toBe(125);
+      expect(afterResolution.players.get('p1')!.narrativeTags ?? []).toContain('tech-event-done');
     });
 
     it('does NOT grant age progress on tech completion (F-11: +5 ageProgress retired)', () => {

@@ -1,4 +1,4 @@
-import type { BuildingCategory, GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState } from '../types/GameState';
+import type { BuildingCategory, GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState, GameEvent } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import type { BuildingDef } from '../types/Building';
@@ -135,7 +135,7 @@ function handleSetProduction(
   if (city.settlementType === 'town') return createInvalidResult(state, 'Towns cannot produce - must purchase with gold', 'production');
 
   const buildingDef = itemType === 'wonder' || itemType === 'building' ? state.config.buildings.get(itemId) : undefined;
-  const isWonder = buildingDef?.isWonder === true;
+  const isWonder = itemType === 'wonder' || buildingDef?.isWonder === true;
 
   // Check duplicate ownership before prerequisites so validation reports the
   // actionable city/wonder conflict instead of a tech gate for an item already built.
@@ -193,7 +193,18 @@ function handleSetProduction(
     productionProgress: city.productionProgress,
   });
 
-  return { ...state, cities: updatedCities, lastValidation: null };
+  const raceNotifications = isWonder
+    ? createWonderRaceStartNotifications(state, city, itemId)
+    : [];
+
+  return {
+    ...state,
+    cities: updatedCities,
+    lastValidation: null,
+    ...(raceNotifications.length > 0
+      ? { log: [...state.log, ...raceNotifications] }
+      : {}),
+  };
 }
 
 /**
@@ -389,6 +400,103 @@ function applyAutoPlacement(
   tiles.set(tileKey, { ...existingTile, building: buildingId });
 }
 
+function isWonderItem(state: GameState, item: ProductionItem): boolean {
+  return item.type === 'wonder' || state.config.buildings.get(item.id)?.isWonder === true;
+}
+
+function getWonderDisplayName(state: GameState, itemId: string): string {
+  return state.config.buildings.get(itemId)?.name ?? itemId;
+}
+
+function getWonderCancellationReason(completedByPlayerId: string | undefined, cityOwner: string): string {
+  if (!completedByPlayerId) return 'it has already been completed';
+  if (completedByPlayerId === cityOwner) return 'your empire completed it';
+  return 'a rival completed it';
+}
+
+function createWonderRaceStartNotifications(
+  state: GameState,
+  startingCity: CityState,
+  wonderId: string,
+): GameEvent[] {
+  const notifications: GameEvent[] = [];
+  const wonderName = getWonderDisplayName(state, wonderId);
+
+  for (const rivalCity of state.cities.values()) {
+    if (rivalCity.id === startingCity.id) continue;
+    if (rivalCity.owner === startingCity.owner) continue;
+    const isAlsoBuilding = rivalCity.productionQueue.some(item =>
+      item.id === wonderId && isWonderItem(state, item),
+    );
+    if (!isAlsoBuilding) continue;
+
+    notifications.push({
+      turn: state.turn,
+      playerId: rivalCity.owner,
+      message: `${startingCity.name} has started work on ${wonderName}, competing with ${rivalCity.name}.`,
+      type: 'production',
+      severity: 'warning' as const,
+      category: 'production' as const,
+      panelTarget: 'city' as const,
+    });
+  }
+
+  return notifications;
+}
+
+function cancelUnavailableWonderQueues(
+  state: GameState,
+  cities: Map<string, CityState>,
+  builtWonders: ReadonlyArray<BuildingId>,
+  log: GameEvent[],
+  completedByPlayerId?: string,
+): boolean {
+  if (builtWonders.length === 0) return false;
+
+  const unavailableWonderIds = new Set<string>(builtWonders);
+  let changed = false;
+
+  for (const [cityId, city] of cities) {
+    if (city.productionQueue.length === 0) continue;
+
+    let removedHead = false;
+    const removedWonderIds = new Set<string>();
+    const nextQueue = city.productionQueue.filter((item, index) => {
+      if (!isWonderItem(state, item)) return true;
+      if (!unavailableWonderIds.has(item.id)) return true;
+
+      if (index === 0) removedHead = true;
+      removedWonderIds.add(item.id);
+      return false;
+    });
+
+    if (removedWonderIds.size === 0) continue;
+
+    cities.set(cityId, {
+      ...city,
+      productionQueue: nextQueue,
+      productionProgress: removedHead ? 0 : city.productionProgress,
+    });
+
+    const reason = getWonderCancellationReason(completedByPlayerId, city.owner);
+    for (const wonderId of removedWonderIds) {
+      log.push({
+        turn: state.turn,
+        playerId: city.owner,
+        message: `${city.name} stopped work on ${getWonderDisplayName(state, wonderId)} because ${reason}.`,
+        type: 'production',
+        severity: 'warning' as const,
+        category: 'production' as const,
+        panelTarget: 'city' as const,
+      });
+    }
+
+    changed = true;
+  }
+
+  return changed;
+}
+
 function processProduction(state: GameState): GameState {
   const updatedCities = new Map(state.cities);
   const updatedUnits = new Map(state.units);
@@ -400,13 +508,15 @@ function processProduction(state: GameState): GameState {
   // KK2 (F-09): Track player relic grants when religious wonders are built.
   let updatedPlayers: Map<string, PlayerState> | null = null;
 
-  for (const [cityId, city] of state.cities) {
-    if (city.owner !== state.currentPlayerId) continue;
-    if (city.settlementType === 'town') continue; // Towns cannot produce via queue
-    if (city.productionQueue.length === 0) continue;
+  changed = cancelUnavailableWonderQueues(state, updatedCities, state.builtWonders, newLog) || changed;
 
+  for (const [cityId, city] of state.cities) {
     // Read the freshest city snapshot (an earlier iteration may have updated it).
     const currentCity = updatedCities.get(cityId) ?? city;
+    if (currentCity.owner !== state.currentPlayerId) continue;
+    if (currentCity.settlementType === 'town') continue; // Towns cannot produce via queue
+    if (currentCity.productionQueue.length === 0) continue;
+
     const currentItem = currentCity.productionQueue[0];
     const yields = calculateCityYieldsWithAdjacency(currentCity, state);
     let productionPerTurn = yields.production;
@@ -562,6 +672,13 @@ function processProduction(state: GameState): GameState {
         // If it's a wonder, accumulate onto builtWonders (emitted at the end).
         if (isWonder) {
           updatedBuiltWonders = [...(updatedBuiltWonders ?? state.builtWonders), currentItem.id as BuildingId];
+          changed = cancelUnavailableWonderQueues(
+            state,
+            updatedCities,
+            updatedBuiltWonders,
+            newLog,
+            currentCity.owner,
+          ) || changed;
         }
 
         // KK2 (F-09): Religious wonders (those that generate prophet great-person

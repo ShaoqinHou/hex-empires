@@ -84,14 +84,14 @@
 
 ### F-04: `narrativeEventSystem` exists, but trigger and effect depth is partial -- CLOSE
 
-**Location:** `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/GameEngine.ts:117`
+**Location:** `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/systems/researchSystem.ts`; `packages/engine/src/state/narrativeEventUtils.ts`; `packages/engine/src/GameEngine.ts:117`
 **GDD reference:** `systems/narrative-events.md` sections "Triggers" and "Mechanics"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Narrative events evaluate on turn end and specific moments such as tech completion, battle wins, Golden Ages, religion choices, weather, war, and age transitions.
-**Engine does:** `narrativeEventSystem` is wired after `researchSystem`. It handles `END_TURN` candidate evaluation, queues one event, resolves choices, applies supported effects, writes tag output, and records fired ids.
-**Gap:** `TECH_RESEARCHED`, battle, religion, weather, war, and age-transition trigger moments are not yet hooked. Non-yield effect kinds are still limited or no-op.
-**Recommendation:** Add one-shot trigger hooks from the owning systems, starting with `TECH_RESEARCHED` from `researchSystem`; avoid log-sniffing or repeated state-count checks.
+**Engine does:** `narrativeEventSystem` is wired after `researchSystem`. It handles `END_TURN` candidate evaluation, queues one event, resolves choices, applies supported effects, writes tag output, and records fired ids. `researchSystem` now calls the shared narrative enqueue helper when normal or Future Tech research completes, so the first eligible `TECH_RESEARCHED` event uses the same pending/fired pipeline.
+**Gap:** Battle, religion, weather, war, and age-transition trigger moments are not yet hooked. Non-yield effect kinds are still limited or no-op, and `NarrativeRequirements` does not yet expose a tech-id-specific filter.
+**Recommendation:** Continue adding one-shot trigger hooks from the owning systems; next candidates are battle/war and age-transition triggers. Add specific requirement fields only when content needs them.
 
 ---
 
@@ -137,7 +137,7 @@
 ## Close follow-ups
 
 - F-01: grow the authored event registry after trigger/effect behavior stabilizes.
-- F-04: hook `TECH_RESEARCHED`, battle, religion, weather, war, and age-transition triggers one at a time.
+- F-04: hook battle, religion, weather, war, and age-transition triggers one at a time; add tech-id-specific filtering only when authored content needs it.
 - F-06: unify movement discovery consumption with event resolution.
 - F-07: add choice effect previews, discovery map markers, and systemic banners.
 
@@ -172,7 +172,7 @@ Paste into `.codex/gdd/systems/narrative-events.md` section "Mapping to hex-empi
 
 ## Open questions
 
-1. Should tech-triggered narrative events fire for any completed tech first, or require a `techId` requirement field before content uses them?
+1. Which content batch should justify adding a `techId` requirement field for `TECH_RESEARCHED` events?
 2. Should movement-triggered discoveries clear their tile before or after event resolution?
 3. Which effect kinds should narrative choices support before large content authoring starts?
 
@@ -182,12 +182,12 @@ Paste into `.codex/gdd/systems/narrative-events.md` section "Mapping to hex-empi
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-04 first trigger hook | ~1d |
+| S | F-04 next trigger hook | ~1d |
 | M | F-06, F-07 | ~4d |
 | L | F-01 content scale | 2w+ |
 | **Total** | 4 close follow-ups | **~3w** |
 
-Recommended order: F-04 `TECH_RESEARCHED` hook -> F-06 discovery resolution unification -> F-07 effect previews -> F-01 content growth.
+Recommended order: F-06 discovery resolution unification -> F-04 next trigger hook -> F-07 effect previews -> F-01 content growth.
 
 ---
 

@@ -1,6 +1,5 @@
 import type { GameState, GameAction, PlayerState, EffectDef } from '../types/GameState';
-import type { NarrativeRequirements } from '../types/NarrativeEvent';
-import { isAgeGateOpen, enqueueDiscoveryEvent } from '../state/narrativeEventUtils';
+import { enqueueDiscoveryEvent, enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 
 /**
  * NarrativeEventSystem handles Goody-Hut-replacement story moments.
@@ -34,67 +33,8 @@ export function narrativeEventSystem(state: GameState, action: GameAction): Game
 // ── Evaluation ──
 
 function evaluateAndEnqueue(state: GameState): GameState {
-  if (!state.config.narrativeEvents) return state;
-  const allEvents = [...state.config.narrativeEvents.values()];
-  const fired = state.firedNarrativeEvents ?? [];
-  const player = state.players.get(state.currentPlayerId);
-  if (!player) return state;
-
-  const candidates = allEvents.filter(e => {
-    if (fired.includes(e.id)) return false;
-    if ((e.requirements.triggerType ?? 'END_TURN') !== 'END_TURN') return false;
-    if (!isAgeGateOpen(e, state)) return false;
-    return matchesRequirements(e.requirements, player, state);
-  });
-
-  if (candidates.length === 0) return state;
-
   // Fire ONE per turn (first match wins; rest remain eligible next turn)
-  const picked = candidates[0];
-
-  return {
-    ...state,
-    pendingNarrativeEvents: [...(state.pendingNarrativeEvents ?? []), picked.id],
-    firedNarrativeEvents: [...fired, picked.id],
-    log: [...state.log, {
-      turn: state.turn,
-      playerId: state.currentPlayerId,
-      message: `Narrative event: ${picked.title}`,
-      type: 'crisis' as const, // reuse 'crisis' log type as the closest semantic fit
-      severity: 'warning' as const,
-      category: 'crisis' as const,
-      panelTarget: 'narrativeEvent' as const,
-    }],
-  };
-}
-
-// ── Requirements check ──
-
-function matchesRequirements(
-  req: NarrativeRequirements,
-  player: PlayerState,
-  state: GameState,
-): boolean {
-  const tags = player.narrativeTags ?? [];
-
-  if (req.requiresTags) {
-    for (const t of req.requiresTags) {
-      if (!tags.includes(t)) return false;
-    }
-  }
-
-  if (req.excludesTags) {
-    for (const t of req.excludesTags) {
-      if (tags.includes(t)) return false;
-    }
-  }
-
-  if (req.leaderId && player.leaderId !== req.leaderId) return false;
-  if (req.civId && player.civilizationId !== req.civId) return false;
-
-  // Age gate is on the def, not requirements — handled at call site (evaluateAndEnqueue)
-  // This function only validates the requirements struct.
-  return true;
+  return enqueueFirstEligibleNarrativeEvent(state, 'END_TURN');
 }
 
 // ── Resolution ──
