@@ -1,57 +1,54 @@
 import type { GameState, GameAction, UnitState } from '../types/GameState';
 import type { CommanderState } from '../types/Commander';
 import { COMMANDER_BASE_STACK_CAP } from '../types/Commander';
-import { distance, neighbors } from '../hex/HexMath';
+import { coordToKey, distance, neighbors } from '../hex/HexMath';
 
-/** Max units that can be packed via PACK_ARMY (X4.1 — remove-from-map semantics) */
+/** Max units that can be packed via PACK_ARMY (X4.1 — remove-from-map semantics). */
 const PACK_ARMY_CAP = 6 as const;
 
 /**
  * Commander Army Pack / Unpack system — W4-04.
  *
- * Handles two actions:
- *   ASSEMBLE_ARMY — commander gathers up to COMMANDER_BASE_STACK_CAP adjacent
- *                   same-owner units into a stack. Sets `packedInCommanderId`
- *                   on each unit and marks `commander.packed = true`.
- *   DEPLOY_ARMY   — commander disperses its army. Clears `packedInCommanderId`
- *                   on every attached unit and marks `commander.packed = false`.
+ * Handles four actions:
+ *   ASSEMBLE_ARMY / PACK_ARMY — pack adjacent same-owner units into snapshots
+ *                                on CommanderState.
+ *   DEPLOY_ARMY                 — unpack packed snapshots into adjacent tiles.
+ *   UNPACK_ARMY                 — same as DEPLOY_ARMY.
  *
- * Validation rules for ASSEMBLE_ARMY:
+ * Validation rules for both pack actions:
  *   1. Commander must exist in state.commanders AND state.units.
  *   2. Each unitId must exist in state.units.
  *   3. Each unit must be owned by the same player as the commander unit.
  *   4. Each unit must be adjacent (distance ≤ 1) to the commander's position.
- *   5. Total unitIds count must be ≤ COMMANDER_BASE_STACK_CAP (4).
+ *   5. Existing packed units plus new unitIds count must be ≤ cap
+ *      (ASSEMBLE=4, PACK=6).
  *   6. No unit may already be packed into a different commander.
  *
- * Age persistence (F-08):
- *   This system does NOT handle TRANSITION_AGE — ageSystem does not clear
- *   state.commanders, so commander state persists across age transitions by
- *   default. No special handling is needed here.
+ * Age persistence (F-08) is handled by ageSystem. This system only preserves
+ * commander pack state when unrelated actions pass through.
  */
-
-
 export function commanderArmySystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'ASSEMBLE_ARMY':
-      return handleAssemble(state, action.commanderId, action.unitIds);
+      return handlePack(state, action.commanderId, action.unitIds, COMMANDER_BASE_STACK_CAP);
     case 'DEPLOY_ARMY':
       return handleDeploy(state, action.commanderId);
     case 'PACK_ARMY':
-      return handlePackArmy(state, action.commanderId, action.unitsToPack);
+      return handlePack(state, action.commanderId, action.unitsToPack, PACK_ARMY_CAP);
     case 'UNPACK_ARMY':
-      return handleUnpackArmy(state, action.commanderId);
+      return handleDeploy(state, action.commanderId);
     default:
       return state;
   }
 }
 
-// ── ASSEMBLE_ARMY ──
+// ── Shared pack helper for ASSEMBLE_ARMY + PACK_ARMY ──
 
-function handleAssemble(
+function handlePack(
   state: GameState,
   commanderId: string,
   unitIds: ReadonlyArray<string>,
+  capacity: number,
 ): GameState {
   const commanders = state.commanders;
   if (!commanders) return state;
@@ -64,32 +61,45 @@ function handleAssemble(
 
   // Validate count
   if (unitIds.length === 0) return state;
-  if (unitIds.length > COMMANDER_BASE_STACK_CAP) return state;
+  if (unitIds.length > capacity) return state;
+
+  const existingPackedUnits = existingPackedUnitSnapshots(state, commanderId, commander);
+  if (!existingPackedUnits) return state;
+  if (existingPackedUnits.length + unitIds.length > capacity) return state;
+
+  const existingPackedUnitIds = new Set(existingPackedUnits.map((unit) => unit.id));
 
   // Validate each unit
   const resolvedUnits: UnitState[] = [];
+  const seenUnitIds = new Set<string>();
   for (const uid of unitIds) {
+    if (uid === commanderId) return state;
+    if (seenUnitIds.has(uid)) return state;
+    if (existingPackedUnitIds.has(uid)) return state;
+    seenUnitIds.add(uid);
+
     const unit = state.units.get(uid);
     if (!unit) return state;
-    // Must be same owner
     if (unit.owner !== commanderUnit.owner) return state;
-    // Must be adjacent (distance ≤ 1) to commander
     if (distance(unit.position, commanderUnit.position) > 1) return state;
-    // Must not already be packed in a *different* commander
     if (unit.packedInCommanderId != null && unit.packedInCommanderId !== commanderId) return state;
     resolvedUnits.push(unit);
   }
 
-  // Apply: set packedInCommanderId on each unit
+  // Apply: remove packed units and store snapshots on commander state.
   const nextUnits = new Map(state.units);
+  for (const unit of existingPackedUnits) {
+    nextUnits.delete(unit.id);
+  }
   for (const unit of resolvedUnits) {
-    nextUnits.set(unit.id, { ...unit, packedInCommanderId: commanderId });
+    nextUnits.delete(unit.id);
   }
 
-  // Update commander state: record attachedUnits and set packed=true
+  const attachedUnits = [...existingPackedUnitIds, ...unitIds];
   const updatedCommander: CommanderState = {
     ...commander,
-    attachedUnits: unitIds,
+    attachedUnits,
+    packedUnitStates: [...existingPackedUnits, ...resolvedUnits],
     packed: true,
   };
   const nextCommanders = new Map(commanders);
@@ -113,129 +123,68 @@ function handleDeploy(state: GameState, commanderId: string): GameState {
   if (!commanderUnit) return state;
   const deployWithMovement = commanderDeploysWithMovement(state, commanderUnit, commander);
 
-  // Determine adjacent tiles for placement
-  const adjacentTiles = neighbors(commanderUnit.position);
+  const packedUnits = commander.packedUnitStates;
+  if (packedUnits && packedUnits.length > 0) {
+    return handlePackedUnitRestore(
+      state,
+      commander,
+      commanderUnit,
+      packedUnits,
+      deployWithMovement,
+    );
+  }
 
-  // Clear packedInCommanderId on all attached units and reposition them
-  // to adjacent tiles around the commander's current position.
+  // Legacy fallback for old saved states that still keep units in state.units
+  // with packedInCommanderId set.
   const nextUnits = new Map(state.units);
   const unitIds = commander.attachedUnits;
-  for (let i = 0; i < unitIds.length; i++) {
-    const uid = unitIds[i];
-    const unit = nextUnits.get(uid);
-    if (unit && unit.packedInCommanderId === commanderId) {
-      const targetPos = adjacentTiles[i % adjacentTiles.length];
-      nextUnits.set(uid, {
-        ...unit,
-        packedInCommanderId: null,
-        position: targetPos,
-        movementLeft: deployWithMovement ? unit.movementLeft : 0,
-      });
-    }
+  const legacyUnits = unitIds.flatMap((uid) => {
+    const unit = state.units.get(uid);
+    return unit?.packedInCommanderId === commanderId ? [unit] : [];
+  });
+  const freeTiles = freeAdjacentMapTiles(
+    state,
+    commanderUnit,
+    new Set(legacyUnits.map((unit) => unit.id)),
+  );
+  if (freeTiles.length < legacyUnits.length) return state;
+
+  for (let i = 0; i < legacyUnits.length; i++) {
+    const unit = legacyUnits[i];
+    const targetPos = freeTiles[i];
+    nextUnits.set(unit.id, {
+      ...unit,
+      packedInCommanderId: null,
+      position: targetPos,
+      movementLeft: deployWithMovement ? unit.movementLeft : 0,
+    });
   }
 
-  // Update commander state: clear attachedUnits and set packed=false
-  const updatedCommander: CommanderState = {
+  const nextCommanders = new Map(commanders);
+  nextCommanders.set(commanderId, {
     ...commander,
     attachedUnits: [],
+    packedUnitStates: [],
     packed: false,
-  };
-  const nextCommanders = new Map(commanders);
-  nextCommanders.set(commanderId, updatedCommander);
-
-  return { ...state, units: nextUnits, commanders: nextCommanders };
-}
-
-// ── PACK_ARMY (X4.1) ──
-// Removes packed units entirely from state.units; stores full UnitState snapshots
-// in CommanderState.packedUnitStates so UNPACK_ARMY can restore them.
-
-function handlePackArmy(
-  state: GameState,
-  commanderId: string,
-  unitsToPack: ReadonlyArray<string>,
-): GameState {
-  const commanders = state.commanders;
-  if (!commanders) return state;
-
-  const commander = commanders.get(commanderId);
-  if (!commander) return state;
-
-  const commanderUnit = state.units.get(commanderId);
-  if (!commanderUnit) return state;
-
-  // Validate count (cap is 6 for PACK_ARMY)
-  if (unitsToPack.length === 0) return state;
-  if (unitsToPack.length > PACK_ARMY_CAP) return state;
-
-  // Validate each unit
-  const resolvedUnits: UnitState[] = [];
-  for (const uid of unitsToPack) {
-    const unit = state.units.get(uid);
-    if (!unit) return state;
-    // Must be same owner
-    if (unit.owner !== commanderUnit.owner) return state;
-    // Must be adjacent (distance ≤ 1) to commander
-    if (distance(unit.position, commanderUnit.position) > 1) return state;
-    // Must not already be packed in a different commander
-    if (unit.packedInCommanderId != null && unit.packedInCommanderId !== commanderId) return state;
-    resolvedUnits.push(unit);
-  }
-
-  // Apply: remove units from state.units, store snapshots in commander
-  const nextUnits = new Map(state.units);
-  for (const unit of resolvedUnits) {
-    nextUnits.delete(unit.id);
-  }
-
-  const updatedCommander: CommanderState = {
-    ...commander,
-    attachedUnits: unitsToPack,
-    packedUnitStates: resolvedUnits,
-    packed: true,
-  };
-  const nextCommanders = new Map(commanders);
-  nextCommanders.set(commanderId, updatedCommander);
-
-  return { ...state, units: nextUnits, commanders: nextCommanders };
-}
-
-// ── UNPACK_ARMY (X4.1) ──
-// Restores packed unit snapshots from CommanderState.packedUnitStates back into
-// state.units. Units are repositioned to adjacent tiles around the commander.
-// Fails if there is no room (all adjacent tiles are occupied).
-
-function handleUnpackArmy(state: GameState, commanderId: string): GameState {
-  const commanders = state.commanders;
-  if (!commanders) return state;
-
-  const commander = commanders.get(commanderId);
-  if (!commander) return state;
-  if (!commander.packed) return state;
-
-  const commanderUnit = state.units.get(commanderId);
-  if (!commanderUnit) return state;
-  const deployWithMovement = commanderDeploysWithMovement(state, commanderUnit, commander);
-
-  const packedUnits = commander.packedUnitStates ?? [];
-  if (packedUnits.length === 0) return state;
-
-  // Determine available placement tiles: adjacent to commander (not commander's own tile)
-  const adjacentTiles = neighbors(commanderUnit.position);
-  const occupiedKeys = new Set<string>();
-  for (const [, u] of state.units) {
-    occupiedKeys.add(`${u.position.q},${u.position.r}`);
-  }
-
-  const freeTiles = adjacentTiles.filter((tile) => {
-    const key = `${tile.q},${tile.r}`;
-    return !occupiedKeys.has(key);
   });
 
-  // Need enough room for all packed units
+  return { ...state, units: nextUnits, commanders: nextCommanders };
+}
+
+function handlePackedUnitRestore(
+  state: GameState,
+  commander: CommanderState,
+  commanderUnit: UnitState,
+  packedUnits: ReadonlyArray<UnitState>,
+  deployWithMovement: boolean,
+): GameState {
+  if (packedUnits.length === 0) return state;
+
+  const freeTiles = freeAdjacentMapTiles(state, commanderUnit);
+
+  // Need enough room for all packed units.
   if (freeTiles.length < packedUnits.length) return state;
 
-  // Apply: restore units to state.units at adjacent free positions
   const nextUnits = new Map(state.units);
   for (let i = 0; i < packedUnits.length; i++) {
     const unit = packedUnits[i];
@@ -248,16 +197,56 @@ function handleUnpackArmy(state: GameState, commanderId: string): GameState {
     });
   }
 
-  const updatedCommander: CommanderState = {
+  const nextCommanders = new Map(state.commanders!);
+  nextCommanders.set(commander.unitId, {
     ...commander,
     attachedUnits: [],
     packedUnitStates: [],
     packed: false,
-  };
-  const nextCommanders = new Map(commanders);
-  nextCommanders.set(commanderId, updatedCommander);
+  });
 
   return { ...state, units: nextUnits, commanders: nextCommanders };
+}
+
+function existingPackedUnitSnapshots(
+  state: GameState,
+  commanderId: string,
+  commander: CommanderState,
+): ReadonlyArray<UnitState> | null {
+  if (!commander.packed) return [];
+  const packedUnitStates = commander.packedUnitStates;
+  if (packedUnitStates && packedUnitStates.length > 0) return packedUnitStates;
+  if (commander.attachedUnits.length === 0) return [];
+
+  const legacyPackedUnits: UnitState[] = [];
+  const seenUnitIds = new Set<string>();
+  for (const unitId of commander.attachedUnits) {
+    if (seenUnitIds.has(unitId)) return null;
+    seenUnitIds.add(unitId);
+
+    const unit = state.units.get(unitId);
+    if (!unit || unit.packedInCommanderId !== commanderId) return null;
+    legacyPackedUnits.push(unit);
+  }
+
+  return legacyPackedUnits;
+}
+
+function freeAdjacentMapTiles(
+  state: GameState,
+  commanderUnit: UnitState,
+  ignoredUnitIds: ReadonlySet<string> = new Set(),
+) {
+  const occupiedKeys = new Set<string>();
+  for (const [, u] of state.units) {
+    if (ignoredUnitIds.has(u.id)) continue;
+    occupiedKeys.add(coordToKey(u.position));
+  }
+
+  return neighbors(commanderUnit.position).filter((tile) => {
+    const key = coordToKey(tile);
+    return state.map.tiles.has(key) && !occupiedKeys.has(key);
+  });
 }
 
 function commanderDeploysWithMovement(

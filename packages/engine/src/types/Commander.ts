@@ -171,8 +171,8 @@ export interface CommanderPromotionDef {
  * - `attachedUnits` enforces the pack cap (4 for ASSEMBLE_ARMY, 6 for PACK_ARMY).
  * - `packed` means the pack moves as one unit this turn.
  * - `packedUnitStates` stores full UnitState snapshots for units removed from
- *   state.units by PACK_ARMY. Optional: absent when using ASSEMBLE_ARMY which
- *   keeps units in state.units with packedInCommanderId set instead.
+ *   state.units by ASSEMBLE_ARMY/PACK_ARMY. Optional only for old saves that
+ *   still use live units marked with packedInCommanderId.
  * - `respawnTurnsRemaining` / `respawnUnitState` model VII commander recovery:
  *   the commander record persists while the map unit is temporarily absent.
  */
@@ -187,8 +187,9 @@ export interface CommanderState {
   readonly packed: boolean;
   /**
    * X4.1: Full unit snapshots for units physically removed from state.units
-   * by PACK_ARMY. Restored on UNPACK_ARMY. Absent when army was assembled via
-   * ASSEMBLE_ARMY (which leaves units in state.units).
+   * by ASSEMBLE_ARMY/PACK_ARMY. Restored on DEPLOY_ARMY/UNPACK_ARMY.
+   * Old saves may omit this and keep packed live units marked with
+   * packedInCommanderId instead.
    */
   readonly packedUnitStates?: ReadonlyArray<UnitState>;
   /** Turns remaining before a defeated commander can re-enter the map. */

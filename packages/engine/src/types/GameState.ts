@@ -91,9 +91,9 @@ export interface UnitState {
    */
   readonly facing?: 0 | 1 | 2 | 3 | 4 | 5;
   /**
-   * W4-04: When non-null, this unit has been packed into the named commander's
-   * army via ASSEMBLE_ARMY. Packed units move with the commander and cannot act
-   * independently until DEPLOY_ARMY is dispatched.
+   * W4-04 legacy compatibility: old packed-army saves may keep packed units in
+   * state.units with this marker. Current ASSEMBLE_ARMY/PACK_ARMY removes units
+   * from state.units and stores snapshots on CommanderState instead.
    */
   readonly packedInCommanderId?: string | null;
 
@@ -1447,30 +1447,29 @@ export type GameAction =
   | { readonly type: 'PLACE_CODEX'; readonly codexId: string; readonly buildingId: BuildingId; readonly cityId: CityId }
   // ── W4-04: Commander army pack/unpack ──
   /**
-   * Pack up to 6 units adjacent to the commander into the army stack.
+   * Pack up to 4 units adjacent to the commander into the army stack.
    * Validates: commander exists, all unitIds are adjacent, all are owned by
-   * the same player, and total ≤ 6. Sets packedInCommanderId on each unit.
+   * the same player, and total ≤ 4. Removes packed units from state.units and
+   * stores snapshots in CommanderState.packedUnitStates.
    */
   | { readonly type: 'ASSEMBLE_ARMY'; readonly commanderId: string; readonly unitIds: ReadonlyArray<string> }
   /**
    * Unpack the commander's army: place each packed unit on an adjacent tile.
-   * Clears packedInCommanderId on each unit.
+   * Restores packed snapshots and clears packedInCommanderId on restored units.
    */
   | { readonly type: 'DEPLOY_ARMY'; readonly commanderId: string }
   // ── X4.1: Commander PACK/UNPACK (remove-from-map semantics, cap 6) ──
   /**
    * Pack up to 6 units adjacent to the commander into the army stack.
-   * Unlike ASSEMBLE_ARMY (which marks units with packedInCommanderId),
-   * PACK_ARMY physically removes the units from state.units and stores
-   * their IDs in CommanderState.attachedUnits.
+   * Removes packed units from state.units and stores full snapshots in
+   * CommanderState.packedUnitStates.
    * Validates: commander exists, all unitIds adjacent, all owned by same player,
    * count ≤ 6, none already packed in a different commander.
    */
   | { readonly type: 'PACK_ARMY'; readonly commanderId: UnitId; readonly unitsToPack: ReadonlyArray<UnitId> }
   /**
-   * Unpack the commander's army: restore packed units from CommanderState.attachedUnits
-   * back into state.units at the commander's hex or adjacent tiles.
-   * Validates: commander exists, is packed, at least one adjacent or own hex has room.
+   * Unpack the commander's army using the same restore path as DEPLOY_ARMY.
+   * Validates: commander exists, is packed, and adjacent tiles have room.
    */
   | { readonly type: 'UNPACK_ARMY'; readonly commanderId: UnitId }
   // ── W5-01: Modern Victory Projects ──

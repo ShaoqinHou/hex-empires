@@ -25,12 +25,13 @@ function stateWithCommander(
   cmdState: CommanderState,
   extraUnits: Map<string, ReturnType<typeof createTestUnit>> = new Map(),
   extraCommanders: Map<string, CommanderState> = new Map(),
+  commanderPosition = { q: 0, r: 0 },
 ): GameState {
   const commanderUnit = createTestUnit({
     id: cmdState.unitId,
     typeId: 'captain',
     owner: 'p1',
-    position: { q: 0, r: 0 },
+    position: commanderPosition,
   });
   const units = new Map([
     [cmdState.unitId, commanderUnit],
@@ -89,7 +90,7 @@ describe('commanderArmySystem — identity / guards', () => {
 // ── ASSEMBLE_ARMY ──
 
 describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
-  it('packs adjacent units: sets packedInCommanderId on each', () => {
+  it('packs adjacent units: removes them from state.units and stores full snapshots', () => {
     const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 } });
     const u2 = createTestUnit({ id: 'u2', owner: 'p1', position: { q: 0, r: 1 } });
     const state = stateWithCommander(
@@ -103,11 +104,17 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
       unitIds: ['u1', 'u2'],
     });
 
-    expect(next.units.get('u1')!.packedInCommanderId).toBe('cmd1');
-    expect(next.units.get('u2')!.packedInCommanderId).toBe('cmd1');
+    expect(next.units.has('u1')).toBe(false);
+    expect(next.units.has('u2')).toBe(false);
+
+    const updatedCommander = next.commanders!.get('cmd1')!;
+    expect(updatedCommander.packed).toBe(true);
+    expect(updatedCommander.attachedUnits).toEqual(['u1', 'u2']);
+    expect(updatedCommander.packedUnitStates).toHaveLength(2);
+    expect(updatedCommander.packedUnitStates!.map((u) => u.id)).toEqual(['u1', 'u2']);
   });
 
-  it('sets commander.packed = true and records attachedUnits', () => {
+  it('sets commander.packed = true and records attachedUnits + packedUnitStates', () => {
     const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 } });
     const state = stateWithCommander(
       makeCommander({ unitId: 'cmd1' }),
@@ -123,6 +130,38 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     const updatedCommander = next.commanders!.get('cmd1')!;
     expect(updatedCommander.packed).toBe(true);
     expect(updatedCommander.attachedUnits).toEqual(['u1']);
+    expect(updatedCommander.packedUnitStates).toHaveLength(1);
+    expect(updatedCommander.packedUnitStates![0]!.id).toBe('u1');
+  });
+
+  it('appends new packed units to existing snapshots and deploys all of them', () => {
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 4, r: 3 } });
+    const u2 = createTestUnit({ id: 'u2', owner: 'p1', position: { q: 3, r: 4 } });
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1' }),
+      new Map([['u1', u1], ['u2', u2]]),
+      new Map(),
+      { q: 3, r: 3 },
+    );
+
+    const onePacked = commanderArmySystem(state, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds: ['u1'],
+    });
+    const twoPacked = commanderArmySystem(onePacked, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds: ['u2'],
+    });
+    const deployed = commanderArmySystem(twoPacked, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    expect(twoPacked.units.has('u1')).toBe(false);
+    expect(twoPacked.units.has('u2')).toBe(false);
+    expect(twoPacked.commanders!.get('cmd1')!.attachedUnits).toEqual(['u1', 'u2']);
+    expect(twoPacked.commanders!.get('cmd1')!.packedUnitStates!.map((unit) => unit.id)).toEqual(['u1', 'u2']);
+    expect(deployed.units.get('u1')!.position).toEqual({ q: 4, r: 3 });
+    expect(deployed.units.get('u2')!.position).toEqual({ q: 4, r: 2 });
   });
 
   it('packs exactly 4 units (at the cap)', () => {
@@ -146,9 +185,11 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     });
 
     expect(next.commanders!.get('cmd1')!.packed).toBe(true);
-    for (const uid of unitIds) {
-      expect(next.units.get(uid)!.packedInCommanderId).toBe('cmd1');
-    }
+    expect(next.units.has('u1')).toBe(false);
+    expect(next.units.has('u2')).toBe(false);
+    expect(next.units.has('u3')).toBe(false);
+    expect(next.units.has('u4')).toBe(false);
+    expect(next.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(4);
   });
 
   it('rejects when unitIds count exceeds COMMANDER_BASE_STACK_CAP (4)', () => {
@@ -227,6 +268,34 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     expect(result).toBe(state);
   });
 
+  it('rejects packing the commander unit itself', () => {
+    const state = stateWithCommander(makeCommander({ unitId: 'cmd1' }));
+
+    const result = commanderArmySystem(state, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds: ['cmd1'],
+    });
+
+    expect(result).toBe(state);
+  });
+
+  it('rejects duplicate unit ids in the pack request', () => {
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 } });
+    const state = stateWithCommander(
+      makeCommander({ unitId: 'cmd1' }),
+      new Map([['u1', u1]]),
+    );
+
+    const result = commanderArmySystem(state, {
+      type: 'ASSEMBLE_ARMY',
+      commanderId: 'cmd1',
+      unitIds: ['u1', 'u1'],
+    });
+
+    expect(result).toBe(state);
+  });
+
   it('rejects when a unit id does not exist', () => {
     const state = stateWithCommander(makeCommander({ unitId: 'cmd1' }));
     const result = commanderArmySystem(state, {
@@ -252,8 +321,7 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
 
     expect(next).not.toBe(state);
     expect(next.units).not.toBe(state.units);
-    // original unchanged
-    expect(state.units.get('u1')!.packedInCommanderId).toBeUndefined();
+    expect(state.units.has('u1')).toBe(true);
     expect(state.commanders!.get('cmd1')!.packed).toBe(false);
   });
 });
@@ -261,144 +329,129 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
 // ── DEPLOY_ARMY ──
 
 describe('commanderArmySystem — DEPLOY_ARMY', () => {
-  it('clears packedInCommanderId on all attached units and resets movement', () => {
-    const u1 = createTestUnit({
-      id: 'u1',
-      owner: 'p1',
-      position: { q: 1, r: 0 },
-      packedInCommanderId: 'cmd1',
-      movementLeft: 3,
-    });
-    const u2 = createTestUnit({
-      id: 'u2',
-      owner: 'p1',
-      position: { q: 0, r: 1 },
-      packedInCommanderId: 'cmd1',
-      movementLeft: 4,
-    });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1', 'u2'] });
-    const state = stateWithCommander(cmdState, new Map([['u1', u1], ['u2', u2]]));
-
-    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
-    expect(next.units.get('u2')!.packedInCommanderId).toBeNull();
-    expect(next.units.get('u1')!.movementLeft).toBe(0);
-    expect(next.units.get('u2')!.movementLeft).toBe(0);
-  });
-
-  it('keeps remaining movement when the commander has Initiative in CommanderState', () => {
-    const u1 = createTestUnit({
-      id: 'u1',
-      owner: 'p1',
-      position: { q: 1, r: 0 },
-      packedInCommanderId: 'cmd1',
-      movementLeft: 3,
-    });
-    const cmdState = makeCommander({
-      unitId: 'cmd1',
-      packed: true,
-      attachedUnits: ['u1'],
-      promotions: ['assault_initiative'],
-    });
-    const state = stateWithCommander(cmdState, new Map([['u1', u1]]));
-
-    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
-    expect(next.units.get('u1')!.movementLeft).toBe(3);
-  });
-
-  it('keeps remaining movement when Initiative is stored on the commander unit', () => {
-    const u1 = createTestUnit({
-      id: 'u1',
-      owner: 'p1',
-      position: { q: 1, r: 0 },
-      packedInCommanderId: 'cmd1',
-      movementLeft: 2,
-    });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1'] });
-    const base = stateWithCommander(cmdState, new Map([['u1', u1]]));
-    const units = new Map(base.units);
-    units.set('cmd1', {
-      ...units.get('cmd1')!,
-      promotions: ['assault_initiative'],
-    });
-
-    const next = commanderArmySystem({ ...base, units }, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
-    expect(next.units.get('u1')!.movementLeft).toBe(2);
-  });
-
-  it('sets commander.packed = false and clears attachedUnits', () => {
-    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, packedInCommanderId: 'cmd1' });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1'] });
-    const state = stateWithCommander(cmdState, new Map([['u1', u1]]));
-
-    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    const updatedCommander = next.commanders!.get('cmd1')!;
-    expect(updatedCommander.packed).toBe(false);
-    expect(updatedCommander.attachedUnits).toEqual([]);
-  });
-
-  it('does not alter units packed in a different commander', () => {
-    const u1 = createTestUnit({
-      id: 'u1',
-      owner: 'p1',
-      position: { q: 1, r: 0 },
-      packedInCommanderId: 'cmd2', // belongs to a different commander
-    });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1'] });
-    const state = stateWithCommander(cmdState, new Map([['u1', u1]]));
-
-    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    // u1 still packed in cmd2 — only units referencing cmd1 are cleared
-    expect(next.units.get('u1')!.packedInCommanderId).toBe('cmd2');
-  });
-
-  it('does not mutate original state', () => {
-    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, packedInCommanderId: 'cmd1' });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1'] });
-    const state = stateWithCommander(cmdState, new Map([['u1', u1]]));
-
-    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
-
-    expect(next).not.toBe(state);
-    expect(next.units).not.toBe(state.units);
-    expect(state.units.get('u1')!.packedInCommanderId).toBe('cmd1');
-    expect(state.commanders!.get('cmd1')!.packed).toBe(true);
-  });
-
-  it('repositions packed units onto adjacent tiles around the commander and resets movement', () => {
-    // Commander at q=0,r=0. Units are packed but stored at distant positions.
+  it('restores packedUnitStates onto adjacent free tiles and resets movement', () => {
     const u1 = createTestUnit({
       id: 'u1',
       owner: 'p1',
       position: { q: 99, r: 99 },
-      packedInCommanderId: 'cmd1',
       movementLeft: 3,
     });
     const u2 = createTestUnit({
       id: 'u2',
       owner: 'p1',
       position: { q: 50, r: 50 },
-      packedInCommanderId: 'cmd1',
       movementLeft: 4,
     });
-    const cmdState = makeCommander({ unitId: 'cmd1', packed: true, attachedUnits: ['u1', 'u2'] });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1', 'u2'],
+      packedUnitStates: [u1, u2],
+    });
+    const state = stateWithCommander(cmdState, new Map(), new Map(), { q: 3, r: 3 });
+
+    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    const deployed1 = next.units.get('u1')!;
+    const deployed2 = next.units.get('u2')!;
+    expect(deployed1.position).toEqual({ q: 4, r: 3 });
+    expect(deployed2.position).toEqual({ q: 4, r: 2 });
+    expect(deployed1.packedInCommanderId).toBeNull();
+    expect(deployed2.packedInCommanderId).toBeNull();
+    expect(deployed1.movementLeft).toBe(0);
+    expect(deployed2.movementLeft).toBe(0);
+
+    const updatedCommander = next.commanders!.get('cmd1')!;
+    expect(updatedCommander.packed).toBe(false);
+    expect(updatedCommander.attachedUnits).toEqual([]);
+    expect(updatedCommander.packedUnitStates).toEqual([]);
+  });
+
+  it('keeps remaining movement for unpacked units when commander has Initiative', () => {
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 20, r: 20 }, movementLeft: 3 });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1'],
+      packedUnitStates: [u1],
+      promotions: ['assault_initiative'],
+    });
+    const state = stateWithCommander(cmdState);
+
+    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    expect(next.units.get('u1')!.movementLeft).toBe(3);
+    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
+  });
+
+  it('keeps remaining movement when Initiative is stored on the commander unit', () => {
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 20, r: 20 }, movementLeft: 2 });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1'],
+      packedUnitStates: [u1],
+    });
+    const base = stateWithCommander(cmdState);
+    const units = new Map(base.units);
+    units.set('cmd1', {
+      ...units.get('cmd1')!,
+      promotions: ['assault_initiative'],
+    });
+    const state = { ...base, units };
+
+    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    expect(next.units.get('u1')!.movementLeft).toBe(2);
+    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
+  });
+
+  it('clears packedUnitStates and does not mutate original state', () => {
+    const u1 = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 50, r: 50 }, movementLeft: 3 });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1'],
+      packedUnitStates: [u1],
+    });
+    const state = stateWithCommander(cmdState, new Map());
+
+    const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
+
+    expect(next).not.toBe(state);
+    expect(next.units).not.toBe(state.units);
+    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(state.units.has('u1')).toBe(false);
+    expect(state.commanders!.get('cmd1')!.packed).toBe(true);
+    expect(state.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(1);
+  });
+
+  it('legacy fallback clears only units packed to this commander', () => {
+    const u1 = createTestUnit({
+      id: 'u1',
+      owner: 'p1',
+      position: { q: 1, r: 0 },
+      packedInCommanderId: 'cmd1',
+    });
+    const u2 = createTestUnit({
+      id: 'u2',
+      owner: 'p1',
+      position: { q: 0, r: 1 },
+      packedInCommanderId: 'cmd2',
+    });
+    const cmdState = makeCommander({
+      unitId: 'cmd1',
+      packed: true,
+      attachedUnits: ['u1', 'u2'],
+    });
     const state = stateWithCommander(cmdState, new Map([['u1', u1], ['u2', u2]]));
 
     const next = commanderArmySystem(state, { type: 'DEPLOY_ARMY', commanderId: 'cmd1' });
 
-    // neighbors of {q:0,r:0} are: E{1,0}, NE{1,-1}, NW{0,-1}, W{-1,0}, SW{-1,1}, SE{0,1}
-    // u1 (index 0) → E {q:1, r:0}, u2 (index 1) → NE {q:1, r:-1}
+    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
+    expect(next.units.get('u2')!.packedInCommanderId).toBe('cmd2');
     expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
-    expect(next.units.get('u2')!.position).toEqual({ q: 1, r: -1 });
-    expect(next.units.get('u1')!.movementLeft).toBe(0);
-    expect(next.units.get('u2')!.movementLeft).toBe(0);
+    expect(next.units.get('u2')!.position).toEqual({ q: 0, r: 1 }); // unchanged
   });
 
   it('returns unchanged state when commander unit is missing from units map', () => {

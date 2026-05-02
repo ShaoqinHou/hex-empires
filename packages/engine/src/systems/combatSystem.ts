@@ -483,7 +483,9 @@ function handleDefeatedCommander(
   updatedUnits: Map<string, UnitState>,
   currentCommanders: Map<string, CommanderState> | null,
 ): Map<string, CommanderState> | null {
-  if (!state.commanders?.has(defeatedUnit.id) && !currentCommanders?.has(defeatedUnit.id)) {
+  const commander = currentCommanders?.get(defeatedUnit.id)
+    ?? state.commanders?.get(defeatedUnit.id);
+  if (!commander) {
     return currentCommanders;
   }
 
@@ -495,8 +497,42 @@ function handleDefeatedCommander(
       movementLeft: 0,
     });
   }
+  routPackedUnitSnapshots(state, defeatedUnit, updatedUnits, commander.packedUnitStates ?? []);
 
   return markCommanderDefeated(state, defeatedUnit, currentCommanders);
+}
+
+function routPackedUnitSnapshots(
+  state: GameState,
+  defeatedUnit: UnitState,
+  updatedUnits: Map<string, UnitState>,
+  packedUnits: ReadonlyArray<UnitState>,
+): void {
+  if (packedUnits.length === 0) return;
+
+  const occupiedKeys = new Set<string>();
+  for (const unit of updatedUnits.values()) {
+    occupiedKeys.add(coordToKey(unit.position));
+  }
+
+  const freeTiles = neighbors(defeatedUnit.position).filter((tile) => {
+    const key = coordToKey(tile);
+    return state.map.tiles.has(key) && !occupiedKeys.has(key);
+  });
+
+  for (let i = 0; i < packedUnits.length && i < freeTiles.length; i++) {
+    const packedUnit = packedUnits[i];
+    if (updatedUnits.has(packedUnit.id)) continue;
+
+    const position = freeTiles[i];
+    occupiedKeys.add(coordToKey(position));
+    updatedUnits.set(packedUnit.id, {
+      ...packedUnit,
+      position,
+      packedInCommanderId: null,
+      movementLeft: 0,
+    });
+  }
 }
 
 /** Check if the attacker has a friendly unit adjacent to the defender */

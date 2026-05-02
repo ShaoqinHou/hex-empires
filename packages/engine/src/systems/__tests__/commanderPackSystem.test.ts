@@ -31,12 +31,13 @@ function makeCommander(overrides: Partial<CommanderState> = {}): CommanderState 
 function stateWithCommander(
   cmdState: CommanderState,
   extraUnits: Map<string, ReturnType<typeof createTestUnit>> = new Map(),
+  commanderPosition = { q: 0, r: 0 },
 ): GameState {
   const commanderUnit = createTestUnit({
     id: cmdState.unitId,
     typeId: 'captain',
     owner: 'p1',
-    position: { q: 0, r: 0 },
+    position: commanderPosition,
   });
   const units = new Map([
     [cmdState.unitId, commanderUnit],
@@ -178,7 +179,7 @@ describe('commanderArmySystem — UNPACK_ARMY (X4.1)', () => {
       packedUnitStates: [u1Snapshot, u2Snapshot, u3Snapshot],
     });
     // Only commander in units map (packed units are gone)
-    const state = stateWithCommander(cmdState);
+    const state = stateWithCommander(cmdState, new Map(), { q: 3, r: 3 });
 
     const next = commanderArmySystem(state, {
       type: 'UNPACK_ARMY',
@@ -189,9 +190,9 @@ describe('commanderArmySystem — UNPACK_ARMY (X4.1)', () => {
     expect(next.units.has('u1')).toBe(true);
     expect(next.units.has('u2')).toBe(true);
     expect(next.units.has('u3')).toBe(true);
-    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
-    expect(next.units.get('u2')!.position).toEqual({ q: 1, r: -1 });
-    expect(next.units.get('u3')!.position).toEqual({ q: 0, r: -1 });
+    expect(next.units.get('u1')!.position).toEqual({ q: 4, r: 3 });
+    expect(next.units.get('u2')!.position).toEqual({ q: 4, r: 2 });
+    expect(next.units.get('u3')!.position).toEqual({ q: 3, r: 2 });
     expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
     expect(next.units.get('u2')!.packedInCommanderId).toBeNull();
     expect(next.units.get('u3')!.packedInCommanderId).toBeNull();

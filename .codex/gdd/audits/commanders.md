@@ -42,9 +42,9 @@
 **Severity:** HIGH
 **Effort:** L (week+)
 **VII says:** The core commander mechanic: ASSEMBLE_ARMY packs up to 4 adjacent units into a single formation that moves with the commander; DEPLOY_ARMY unpacks them to adjacent tiles with zero remaining movement (unless Initiative promotion active).
-**Engine does:** `commanderArmySystem` handles `ASSEMBLE_ARMY`/`DEPLOY_ARMY` plus legacy `PACK_ARMY`/`UNPACK_ARMY`. Deploy/unpack clears packed flags, places units adjacent to the commander, and normally sets deployed unit `movementLeft: 0`. `AURA_DEPLOY_WITH_MOVEMENT` now preserves remaining movement for both pack models, and Assault `assault_initiative` provides that effect.
-**Gap:** There are still two parallel pack models (`packedInCommanderId` vs removed-unit snapshots), no Fleet Commander Weather Gage equivalent, no full formation-order UI, and `PACK_ARMY` snapshots do not refresh while removed from `state.units`.
-**Recommendation:** Consolidate onto one pack model, add Weather Gage after Fleet Commander promotion data is sourced, then expose action-bar UI.
+**Engine does:** `commanderArmySystem` now routes `ASSEMBLE_ARMY`/`PACK_ARMY` through one snapshot-based pack model: packed units are removed from `state.units`, stored as `CommanderState.packedUnitStates`, restored by `DEPLOY_ARMY`/`UNPACK_ARMY`, placed adjacent to the commander, and normally set to `movementLeft: 0`. `AURA_DEPLOY_WITH_MOVEMENT` preserves remaining movement, and Assault `assault_initiative` provides that effect. Legacy `packedInCommanderId` states still deploy through a compatibility fallback.
+**Gap:** The core pack model is consolidated, but the legacy marker remains for saved-state compatibility, there is no Fleet Commander Weather Gage equivalent, no full formation-order UI, and packed snapshots do not refresh while removed from `state.units`.
+**Recommendation:** Add Weather Gage after Fleet Commander promotion data is sourced, expose action-bar UI, and retire the legacy `packedInCommanderId` fallback after a save migration decision.
 
 ---
 
@@ -120,8 +120,8 @@
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Commanders cannot permanently die. On defeat: removed from map, 20-turn standard-speed recovery, then respawn with all promotions and XP retained. Source refresh 2026-05-03: Fandom Commander_(Civ7) says nearest Settlement after 20 turns; community/player reports and the local GDD say capital; official 2K update notes confirm commanders can be "respawning" and still receive tech abilities.
-**Engine does:** Combat now marks defeated commanders with `respawnTurnsRemaining = 20` and a sanitized `respawnUnitState` instead of losing the commander record. `commanderRespawnSystem` ticks on the owner `START_TURN`, restores the recovered commander at the owned capital (fallback: first owned settlement), and is wired after combat but before visibility so respawns participate in same-turn fog recalculation. Commander XP/level/promotions are retained; on-map assembled units are released when their commander is defeated.
-**Gap:** Base respawn exists, but exact location semantics remain sourced-conflicting (capital vs nearest settlement), game-speed/memento recovery modifiers are absent, the UI has no respawn counter, and removed-unit `PACK_ARMY` snapshot fate on commander defeat is still part of F-01 pack-model consolidation.
+**Engine does:** Combat now marks defeated commanders with `respawnTurnsRemaining = 20` and a sanitized `respawnUnitState` instead of losing the commander record. `commanderRespawnSystem` ticks on the owner `START_TURN`, restores the recovered commander at the owned capital (fallback: first owned settlement), and is wired after combat but before visibility so respawns participate in same-turn fog recalculation. Commander XP/level/promotions are retained; live legacy packed units are released, and snapshot-packed units rout onto adjacent free tiles when their commander is defeated.
+**Gap:** Base respawn exists, but exact location semantics remain sourced-conflicting (capital vs nearest settlement), game-speed/memento recovery modifiers are absent, the UI has no respawn counter, and routed packed units do not yet model HP loss or destruction when there is insufficient room.
 **Recommendation:** Add recovery-time modifiers once game-speed and memento state exist, expose the respawn counter in the Commander panel/action UI, and resolve packed snapshot deployment during F-01 pack-model consolidation.
 
 ---

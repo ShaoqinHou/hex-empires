@@ -4,7 +4,7 @@
 **Bucket:** `combat`
 **Status:** `draft`
 **Confidence:** `medium`
-**Last verified:** `2026-04-19`
+**Last verified:** `2026-05-03`
 **Authoring model:** `claude-sonnet-4-6`
 
 ---
@@ -12,6 +12,7 @@
 ## Sources
 
 - https://civilization.2k.com/civ-vii/game-guide/dev-diary/combat/ — Firaxis Dev Diary #5: Combat
+- https://civilization.fandom.com/wiki/Combat_(Civ7) — Fandom: Combat, commander respawn/deploy/rout notes, refreshed 2026-05-03
 - https://civilization.fandom.com/wiki/List_of_promotions_in_Civ7 — Fandom: List of Commander promotions, refreshed 2026-05-03
 - https://www.thegamer.com/civilization-7-army-commanders-guide/ — TheGamer: Guide to Army Commanders
 - https://game8.co/games/Civ-7/archives/495204 — Game8: Army Commanders Explained
@@ -266,7 +267,7 @@ XP thresholds per level: not published.
 
 - No commander when war starts: units fight without passive bonuses.
 - Regiments unlocked while at 4 packed: capacity expands to 6; next Assemble can absorb 2 more. `[INFERRED]`
-- Commander defeated with units packed inside: `[INFERRED]` packed units deploy onto adjacent tiles automatically. Needs verification.
+- Commander defeated with units packed inside: packed units rout/disperse onto adjacent tiles; units can be vulnerable or lost when space is unavailable. `[secondary-source refreshed 2026-05-03]`
 - Commander defeated in last ~20 turns of age: respawns in new age. `[INFERRED]`
 - Fleet Commander with packed naval units at Exploration → Modern: those units retained; unassigned lost.
 - Zeal (stackable): multiple commanders in same city each provide +5% yield additively.
@@ -283,7 +284,6 @@ XP thresholds per level: not published.
 
 - Exact XP thresholds per level (not published)
 - Fleet Commander unlock condition (age confirmed, trigger not)
-- Fate of packed units when commander defeated
 - Fate of packed units inside commander at age transition
 - Full 30-node promotion tree listings
 - Bulwark promotion tree location

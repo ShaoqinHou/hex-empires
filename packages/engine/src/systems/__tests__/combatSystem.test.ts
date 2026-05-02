@@ -190,6 +190,74 @@ describe('combatSystem', () => {
     });
   });
 
+  it('routes packed snapshot units when their commander is defeated', () => {
+    const guard1 = createTestUnit({
+      id: 'guard1',
+      owner: 'p2',
+      typeId: 'warrior',
+      position: { q: 8, r: 8 },
+      movementLeft: 2,
+    });
+    const guard2 = createTestUnit({
+      id: 'guard2',
+      owner: 'p2',
+      typeId: 'archer',
+      position: { q: 9, r: 8 },
+      movementLeft: 2,
+    });
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 20,
+      commanderLevel: 1,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: null,
+      attachedUnits: ['guard1', 'guard2'],
+      packed: true,
+      packedUnitStates: [guard1, guard2],
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p2',
+        typeId: 'captain',
+        position: { q: 4, r: 3 },
+        health: 1,
+      })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+    });
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'cmd1' });
+
+    expect(next.units.has('cmd1')).toBe(false);
+    expect(next.units.get('guard1')).toMatchObject({
+      position: { q: 5, r: 3 },
+      movementLeft: 0,
+      packedInCommanderId: null,
+    });
+    expect(next.units.get('guard2')).toMatchObject({
+      position: { q: 5, r: 2 },
+      movementLeft: 0,
+      packedInCommanderId: null,
+    });
+    expect(next.commanders!.get('cmd1')).toMatchObject({
+      packed: false,
+      attachedUnits: [],
+      packedUnitStates: [],
+      respawnTurnsRemaining: COMMANDER_RESPAWN_TURNS_STANDARD,
+    });
+  });
+
   it('queues a BATTLE_WON narrative event when the attacker destroys a unit and survives', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
