@@ -110,6 +110,64 @@ describe('Commander types — compile-time shape tests', () => {
     const deployMove: AuraEffectDef = {
       type: 'AURA_DEPLOY_WITH_MOVEMENT',
     };
+    const commanderMobility: AuraEffectDef = {
+      type: 'AURA_COMMANDER_MOBILITY',
+      value: 1,
+      terrainRestrictionScope: 'packed_land',
+    };
+    const flankingBonus: AuraEffectDef = {
+      type: 'AURA_FLANKING_BONUS',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      value: 2,
+      radius: 1,
+      appliesTo: 'friendly_attacking',
+    };
+    const amphibiousOps: AuraEffectDef = {
+      type: 'AURA_AMPHIBIOUS_OPERATIONS',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      radius: 1,
+      embarkDisembarkMovementCost: 1,
+      ignoresEmbarkedAttackPenalty: true,
+    };
+    const ignoreTerrainRestrictions: AuraEffectDef = {
+      type: 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      radius: 1,
+    };
+    const zoneOfControl: AuraEffectDef = {
+      type: 'AURA_ZONE_OF_CONTROL',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      radius: 1,
+      appliesTo: 'enemy',
+    };
+    const settlementYieldBonus: AuraEffectDef = {
+      type: 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED',
+      value: 5,
+      yieldScope: 'all',
+      requiresDistrict: true,
+      stackable: true,
+    };
+    const upgradeSupport: AuraEffectDef = {
+      type: 'AURA_UPGRADE_SUPPORT',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      radius: 1,
+      healOnUpgrade: 10,
+      allowsUpgradeOutsideFriendlyTerritory: true,
+    };
+    const commanderSelfCs: AuraEffectDef = {
+      type: 'AURA_COMMANDER_SELF_CS',
+      value: 10,
+      condition: 'defending',
+    };
+    const commanderRecoveryReduction: AuraEffectDef = {
+      type: 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT',
+      value: 50,
+    };
+    const commandActionCombatBonus: AuraEffectDef = {
+      type: 'AURA_COMMAND_ACTION_COMBAT_BONUS',
+      command: 'focus_fire',
+      value: 5,
+    };
     const goldPerPacked: AuraEffectDef = {
       type: 'AURA_GOLD_PER_PACKED_UNIT',
       value: 1,
@@ -160,9 +218,19 @@ describe('Commander types — compile-time shape tests', () => {
       fortifyTurn,
       districtHp,
       healAfterAttack,
+      commanderMobility,
+      flankingBonus,
+      amphibiousOps,
+      ignoreTerrainRestrictions,
+      zoneOfControl,
+      settlementYieldBonus,
+      upgradeSupport,
+      commanderSelfCs,
+      commanderRecoveryReduction,
+      commandActionCombatBonus,
     ];
     const kinds = new Set<AuraEffectDef['type']>(variants.map(v => v.type));
-    expect(kinds.size).toBe(15);
+    expect(kinds.size).toBe(25);
     // Discriminant narrowing works:
     if (heal.type === 'AURA_HEAL_PER_TURN') {
       expect(heal.amount).toBe(5);
@@ -194,6 +262,51 @@ describe('Commander types — compile-time shape tests', () => {
     if (modCsWithFilters.type === 'AURA_MODIFY_CS') {
       expect(modCsWithFilters.requiresDistrict).toBe(true);
       expect(modCsWithFilters.requiresFortified).toBe(true);
+    }
+    if (commanderMobility.type === 'AURA_COMMANDER_MOBILITY') {
+      expect(commanderMobility.value).toBe(1);
+      expect(commanderMobility.terrainRestrictionScope).toBe('packed_land');
+    }
+    if (flankingBonus.type === 'AURA_FLANKING_BONUS') {
+      expect(flankingBonus.appliesTo).toBe('friendly_attacking');
+      expect(flankingBonus.value).toBe(2);
+      expect(flankingBonus.radius).toBe(1);
+    }
+    if (amphibiousOps.type === 'AURA_AMPHIBIOUS_OPERATIONS') {
+      expect(amphibiousOps.ignoresEmbarkedAttackPenalty).toBe(true);
+      expect(amphibiousOps.embarkDisembarkMovementCost).toBe(1);
+      expect(amphibiousOps.radius).toBe(1);
+    }
+    if (ignoreTerrainRestrictions.type === 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS') {
+      expect(ignoreTerrainRestrictions.radius).toBe(1);
+      expect(ignoreTerrainRestrictions.target).toEqual([
+        'melee',
+        'ranged',
+        'cavalry',
+        'siege',
+      ]);
+    }
+    if (zoneOfControl.type === 'AURA_ZONE_OF_CONTROL') {
+      expect(zoneOfControl.appliesTo).toBe('enemy');
+      expect(zoneOfControl.radius).toBe(1);
+    }
+    if (settlementYieldBonus.type === 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED') {
+      expect(settlementYieldBonus.yieldScope).toBe('all');
+      expect(settlementYieldBonus.requiresDistrict).toBe(true);
+    }
+    if (upgradeSupport.type === 'AURA_UPGRADE_SUPPORT') {
+      expect(upgradeSupport.healOnUpgrade).toBe(10);
+      expect(upgradeSupport.allowsUpgradeOutsideFriendlyTerritory).toBe(true);
+    }
+    if (commanderSelfCs.type === 'AURA_COMMANDER_SELF_CS') {
+      expect(commanderSelfCs.condition).toBe('defending');
+    }
+    if (commanderRecoveryReduction.type === 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT') {
+      expect(commanderRecoveryReduction.value).toBe(50);
+    }
+    if (commandActionCombatBonus.type === 'AURA_COMMAND_ACTION_COMBAT_BONUS') {
+      expect(commandActionCombatBonus.command).toBe('focus_fire');
+      expect(commandActionCombatBonus.value).toBe(5);
     }
     if (districtHp.type === 'AURA_DISTRICT_HP_BONUS') {
       expect(districtHp.requiresCommanderOnCityCenter).toBe(true);

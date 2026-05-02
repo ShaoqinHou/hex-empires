@@ -247,7 +247,7 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
     expect(next.commanders!.get('cmd1')!.packedUnitStates).toHaveLength(5);
   });
 
-  it('does not expand unit slots for non-Regiments stack placeholder promotions', () => {
+  it('does not expand unit slots for non-Regiments promotions', () => {
     const positions = [
       { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
       { q: -1, r: 0 }, { q: 0, r: -1 },
@@ -259,7 +259,7 @@ describe('commanderArmySystem — ASSEMBLE_ARMY', () => {
       }),
     );
     const state = stateWithCommander(
-      makeCommander({ unitId: 'cmd1', promotions: ['leadership_grand_retinue'] }),
+      makeCommander({ unitId: 'cmd1', promotions: ['leadership_zeal'] }),
       extraUnits,
     );
 

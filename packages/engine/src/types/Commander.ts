@@ -177,6 +177,74 @@ export type AuraEffectDef =
   /** Lets units deploy from this commander without losing remaining movement. */
   | {
       readonly type: 'AURA_DEPLOY_WITH_MOVEMENT';
+    }
+  /** Movement and terrain exceptions for the commander unit while on land. */
+  | {
+      readonly type: 'AURA_COMMANDER_MOBILITY';
+      readonly value: number;
+      readonly terrainRestrictionScope: 'packed_land';
+    }
+  /** Flanking bonus/penalty applied during combat. */
+  | {
+      readonly type: 'AURA_FLANKING_BONUS';
+      readonly target: ReadonlyArray<AuraTarget>;
+      readonly value: number;
+      readonly radius: number;
+      readonly appliesTo: 'friendly_attacking' | 'enemy_attacking';
+    }
+  /** Amphibious combat and movement behavior while in command radius. */
+  | {
+      readonly type: 'AURA_AMPHIBIOUS_OPERATIONS';
+      readonly target: ReadonlyArray<AuraTarget>;
+      readonly radius: number;
+      readonly embarkDisembarkMovementCost: number;
+      readonly ignoresEmbarkedAttackPenalty: boolean;
+    }
+  /** Removes terrain movement restrictions for matching units in radius. */
+  | {
+      readonly type: 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS';
+      readonly target: ReadonlyArray<AuraTarget>;
+      readonly radius: number;
+    }
+  /** Zone of control effect from commander command radius. */
+  | {
+      readonly type: 'AURA_ZONE_OF_CONTROL';
+      readonly target: ReadonlyArray<AuraTarget>;
+      readonly radius: number;
+      readonly appliesTo: 'enemy';
+    }
+  /** Yield bonus while this commander is stationed in a district. */
+  | {
+      readonly type: 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED';
+      readonly value: number;
+      readonly yieldScope: 'all';
+      readonly requiresDistrict: true;
+      readonly stackable?: boolean;
+    }
+  /** Unit upgrades gain repair and friendly-territory exemption. */
+  | {
+      readonly type: 'AURA_UPGRADE_SUPPORT';
+      readonly target: ReadonlyArray<AuraTarget>;
+      readonly radius: number;
+      readonly healOnUpgrade: number;
+      readonly allowsUpgradeOutsideFriendlyTerritory: true;
+    }
+  /** Flat combat-strength modifier applied only to this commander. */
+  | {
+      readonly type: 'AURA_COMMANDER_SELF_CS';
+      readonly value: number;
+      readonly condition: 'defending';
+    }
+  /** Commander recovery-time reduction as a percent. */
+  | {
+      readonly type: 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT';
+      readonly value: number;
+    }
+  /** Bonus combat strength from command actions (Focus Fire / Coordinated Attack). */
+  | {
+      readonly type: 'AURA_COMMAND_ACTION_COMBAT_BONUS';
+      readonly command: 'focus_fire' | 'coordinated_attack';
+      readonly value: number;
     };
 
 // ── Promotion definitions ──

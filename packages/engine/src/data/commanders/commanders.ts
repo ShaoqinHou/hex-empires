@@ -153,10 +153,10 @@ export const AIR_GENERAL: CommanderUnitDef = {
 } as const;
 
 /**
- * Exploration-era irregular commander — leads partisans and guerilla
+ * Exploration-era irregular commander — leads partisan and irregular
  * ground forces. Lower combat than a line General but cheaper to
- * produce; pairs with the `maneuver` promotion tree (Guerilla Tactics)
- * for flanking and extra-movement auras.
+ * produce. The former custom Maneuver branch was retired; this archetype
+ * remains custom content outside VII-parity metrics.
  *
  * [CUSTOM-EXTENSION] — no VII source confirms partisan commander subtype (F-10).
  */

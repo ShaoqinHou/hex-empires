@@ -32,6 +32,16 @@ const VALID_AURA_TYPES: ReadonlyArray<AuraEffectDef['type']> = [
   'AURA_FORTIFY_ACTION_TURN_REDUCTION',
   'AURA_DISTRICT_HP_BONUS',
   'AURA_HEAL_AFTER_ATTACK',
+  'AURA_COMMANDER_MOBILITY',
+  'AURA_FLANKING_BONUS',
+  'AURA_AMPHIBIOUS_OPERATIONS',
+  'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS',
+  'AURA_ZONE_OF_CONTROL',
+  'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED',
+  'AURA_UPGRADE_SUPPORT',
+  'AURA_COMMANDER_SELF_CS',
+  'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT',
+  'AURA_COMMAND_ACTION_COMBAT_BONUS',
 ];
 
 const VALID_TREES: ReadonlyArray<CommanderTree> = [
@@ -103,10 +113,9 @@ describe('ALL_COMMANDERS catalogue', () => {
 
 describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
   it('contains at least one promotion per seeded tree', () => {
-    // We seed 4 trees in cycle B (assault, logistics, bastion, leadership);
-    // maneuver is reserved for a later cycle.
+    // Seeded trees are complete in this cycle.
     const trees = new Set(ALL_COMMANDER_PROMOTIONS.map(p => p.tree));
-    expect(trees.size).toBeGreaterThanOrEqual(2);
+    expect(trees.size).toBeGreaterThanOrEqual(5);
     for (const t of trees) {
       expect(VALID_TREES).toContain(t);
     }
@@ -172,11 +181,57 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
           expect(a.yieldBonusPercent).not.toBe(0);
           expect(a.hpBonusPercent).not.toBe(0);
           break;
+        case 'AURA_FLANKING_BONUS':
+          expect(a.radius).toBeGreaterThan(0);
+          expect(a.value).not.toBe(0);
+          break;
+        case 'AURA_AMPHIBIOUS_OPERATIONS':
+        case 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS':
+        case 'AURA_ZONE_OF_CONTROL':
+          expect(a.radius).toBeGreaterThan(0);
+          break;
+        case 'AURA_UPGRADE_SUPPORT':
+          expect(a.radius).toBeGreaterThan(0);
+          expect(a.healOnUpgrade).not.toBe(0);
+          expect(a.allowsUpgradeOutsideFriendlyTerritory).toBe(true);
+          break;
+        case 'AURA_COMMANDER_MOBILITY':
+          expect(a.value).not.toBe(0);
+          expect(a.terrainRestrictionScope).toBe('packed_land');
+          break;
+        case 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED':
+          expect(a.value).not.toBe(0);
+          expect(a.yieldScope).toBe('all');
+          expect(a.requiresDistrict).toBe(true);
+          break;
+        case 'AURA_COMMANDER_SELF_CS':
+          expect(a.value).not.toBe(0);
+          expect(a.condition).toBe('defending');
+          break;
+        case 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT':
+          expect(a.value).not.toBe(0);
+          break;
+        case 'AURA_COMMAND_ACTION_COMBAT_BONUS':
+          expect(a.value).not.toBe(0);
+          expect(['focus_fire', 'coordinated_attack']).toContain(a.command);
+          break;
         case 'AURA_GRANT_ABILITY':
           expect(a.abilityId.length).toBeGreaterThan(0);
           break;
         case 'AURA_DEPLOY_WITH_MOVEMENT':
           expect(a.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
+          break;
+        case 'AURA_FORTIFY_ACTION_TURN_REDUCTION':
+          expect(a.value).not.toBe(0);
+          expect(a.radius).toBeGreaterThan(0);
+          break;
+        case 'AURA_DISTRICT_HP_BONUS':
+          expect(a.value).not.toBe(0);
+          expect(a.requiresCommanderOnCityCenter).toBe(true);
+          break;
+        case 'AURA_HEAL_AFTER_ATTACK':
+          expect(a.amount).not.toBe(0);
+          expect(a.radius).toBeGreaterThan(0);
           break;
       }
     }
@@ -483,9 +538,9 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
   });
 });
 
-// ── Expansion: commanders + promotions added post-M10 ──
-// Guards the new Air General + Partisan Leader archetypes and the
-// Guerilla Tactics / Air Superiority branches.
+// ── Expansion: commanders + sourced promotions added post-M10 ──
+// Guards the new Air General + Partisan Leader archetypes and the sourced
+// Army Maneuver + Leadership commander trees.
 
 describe('Commander expansion content', () => {
   it('ships more than the M10 starter count in both catalogues', () => {
@@ -521,45 +576,211 @@ describe('Commander expansion content', () => {
     expect(roles.has('air')).toBe(true);
   });
 
-  it('seeds the maneuver tree with a full 3-tier Guerilla Tactics spine', () => {
+  it('matches sourced Army Maneuver promotion tree and prereqs from Civ VII', () => {
     const maneuver = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'maneuver');
-    expect(maneuver).toHaveLength(3);
-    const tiers = maneuver.map(p => p.tier).sort();
-    expect(tiers).toEqual([1, 2, 3]);
-    const ids = maneuver.map(p => p.id);
-    expect(ids).toContain('maneuver_ambush');
-    expect(ids).toContain('maneuver_hit_and_run');
-    expect(ids).toContain('maneuver_guerilla_war');
+    expect(maneuver).toHaveLength(6);
+    expect(maneuver.map(p => p.id)).toEqual([
+      'maneuver_mobility',
+      'maneuver_harassment',
+      'maneuver_redeploy',
+      'maneuver_amphibious',
+      'maneuver_pathfinder',
+      'maneuver_area_denial',
+    ]);
+    expect(maneuver.map(p => p.name)).toEqual([
+      'Mobility',
+      'Harassment',
+      'Redeploy',
+      'Amphibious',
+      'Pathfinder',
+      'Area Denial',
+    ]);
+    expect(maneuver.map(p => p.tier)).toEqual([1, 2, 2, 3, 3, 4]);
+
+    const mobility = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_mobility');
+    expect(mobility).toBeDefined();
+    expect(mobility!.tree).toBe('maneuver');
+    expect(mobility!.tier).toBe(1);
+    expect(mobility!.prerequisites).toEqual([]);
+    expect(mobility!.aura.type).toBe('AURA_COMMANDER_MOBILITY');
+    if (mobility!.aura.type === 'AURA_COMMANDER_MOBILITY') {
+      expect(mobility!.aura.value).toBe(1);
+      expect(mobility!.aura.terrainRestrictionScope).toBe('packed_land');
+    }
+
+    const harassment = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_harassment');
+    expect(harassment).toBeDefined();
+    expect(harassment!.tree).toBe('maneuver');
+    expect(harassment!.tier).toBe(2);
+    expect(harassment!.prerequisites).toEqual(['maneuver_mobility']);
+    expect(harassment!.aura.type).toBe('AURA_FLANKING_BONUS');
+    if (harassment!.aura.type === 'AURA_FLANKING_BONUS') {
+      expect(harassment!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(harassment!.aura.value).toBe(2);
+      expect(harassment!.aura.radius).toBe(1);
+      expect(harassment!.aura.appliesTo).toBe('friendly_attacking');
+    }
+
+    const redeploy = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_redeploy');
+    expect(redeploy).toBeDefined();
+    expect(redeploy!.tree).toBe('maneuver');
+    expect(redeploy!.tier).toBe(2);
+    expect(redeploy!.prerequisites).toEqual(['maneuver_mobility']);
+    expect(redeploy!.aura.type).toBe('AURA_FLANKING_BONUS');
+    if (redeploy!.aura.type === 'AURA_FLANKING_BONUS') {
+      expect(redeploy!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(redeploy!.aura.value).toBe(-2);
+      expect(redeploy!.aura.radius).toBe(1);
+      expect(redeploy!.aura.appliesTo).toBe('enemy_attacking');
+    }
+
+    const amphibious = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_amphibious');
+    expect(amphibious).toBeDefined();
+    expect(amphibious!.tree).toBe('maneuver');
+    expect(amphibious!.tier).toBe(3);
+    expect(amphibious!.prerequisites).toEqual(['maneuver_harassment']);
+    expect(amphibious!.aura.type).toBe('AURA_AMPHIBIOUS_OPERATIONS');
+    if (amphibious!.aura.type === 'AURA_AMPHIBIOUS_OPERATIONS') {
+      expect(amphibious!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(amphibious!.aura.radius).toBe(1);
+      expect(amphibious!.aura.embarkDisembarkMovementCost).toBe(1);
+      expect(amphibious!.aura.ignoresEmbarkedAttackPenalty).toBe(true);
+    }
+
+    const pathfinder = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_pathfinder');
+    expect(pathfinder).toBeDefined();
+    expect(pathfinder!.tree).toBe('maneuver');
+    expect(pathfinder!.tier).toBe(3);
+    expect(pathfinder!.prerequisites).toEqual(['maneuver_redeploy']);
+    expect(pathfinder!.aura.type).toBe('AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS');
+    if (pathfinder!.aura.type === 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS') {
+      expect(pathfinder!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(pathfinder!.aura.radius).toBe(1);
+    }
+
+    const areaDenial = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'maneuver_area_denial');
+    expect(areaDenial).toBeDefined();
+    expect(areaDenial!.tree).toBe('maneuver');
+    expect(areaDenial!.tier).toBe(4);
+    expect(areaDenial!.prerequisiteMode).toBe('any');
+    expect(areaDenial!.prerequisites).toEqual(
+      expect.arrayContaining(['maneuver_amphibious', 'maneuver_pathfinder']),
+    );
+    expect(areaDenial!.aura.type).toBe('AURA_ZONE_OF_CONTROL');
+    if (areaDenial!.aura.type === 'AURA_ZONE_OF_CONTROL') {
+      expect(areaDenial!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(areaDenial!.aura.radius).toBe(1);
+      expect(areaDenial!.aura.appliesTo).toBe('enemy');
+    }
   });
 
-  it('grows the leadership tree with an Air Superiority sub-branch', () => {
-    const airSup = ALL_COMMANDER_PROMOTIONS.find(
-      p => p.id === 'leadership_air_superiority',
+  it('matches sourced Army Leadership promotion tree and prereqs from Civ VII', () => {
+    const leadership = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'leadership');
+    expect(leadership).toHaveLength(6);
+    expect(leadership.map(p => p.id)).toEqual([
+      'leadership_zeal',
+      'leadership_field_commission',
+      'leadership_old_guard',
+      'leadership_resilience',
+      'leadership_barrage',
+      'leadership_onslaught',
+    ]);
+    expect(leadership.map(p => p.name)).toEqual([
+      'Zeal',
+      'Field Commission',
+      'Old Guard',
+      'Resilience',
+      'Barrage',
+      'Onslaught',
+    ]);
+    expect(leadership.map(p => p.tier)).toEqual([1, 2, 3, 3, 4, 4]);
+
+    const zeal = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'leadership_zeal');
+    expect(zeal).toBeDefined();
+    expect(zeal!.tree).toBe('leadership');
+    expect(zeal!.tier).toBe(1);
+    expect(zeal!.prerequisites).toEqual([]);
+    expect(zeal!.aura.type).toBe('AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED');
+    if (zeal!.aura.type === 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED') {
+      expect(zeal!.aura.value).toBe(5);
+      expect(zeal!.aura.yieldScope).toBe('all');
+      expect(zeal!.aura.requiresDistrict).toBe(true);
+      expect(zeal!.aura.stackable).toBe(true);
+    }
+
+    const fieldCommission = ALL_COMMANDER_PROMOTIONS.find(
+      p => p.id === 'leadership_field_commission',
     );
-    const longRange = ALL_COMMANDER_PROMOTIONS.find(
-      p => p.id === 'leadership_long_range',
-    );
-    expect(airSup).toBeDefined();
-    expect(longRange).toBeDefined();
-    expect(airSup!.tree).toBe('leadership');
-    expect(longRange!.tree).toBe('leadership');
-    expect(airSup!.tier).toBe(2);
-    expect(longRange!.tier).toBe(3);
-    expect(airSup!.prerequisites).toContain('leadership_commanding_presence');
-    expect(longRange!.prerequisites).toContain('leadership_air_superiority');
+    expect(fieldCommission).toBeDefined();
+    expect(fieldCommission!.tier).toBe(2);
+    expect(fieldCommission!.prerequisites).toEqual(['leadership_zeal']);
+    expect(fieldCommission!.aura.type).toBe('AURA_UPGRADE_SUPPORT');
+    if (fieldCommission!.aura.type === 'AURA_UPGRADE_SUPPORT') {
+      expect(fieldCommission!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(fieldCommission!.aura.radius).toBe(1);
+      expect(fieldCommission!.aura.healOnUpgrade).toBe(10);
+      expect(fieldCommission!.aura.allowsUpgradeOutsideFriendlyTerritory).toBe(true);
+    }
+
+    const oldGuard = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'leadership_old_guard');
+    expect(oldGuard).toBeDefined();
+    expect(oldGuard!.tier).toBe(3);
+    expect(oldGuard!.prerequisites).toEqual(['leadership_field_commission']);
+    expect(oldGuard!.aura.type).toBe('AURA_COMMANDER_SELF_CS');
+    if (oldGuard!.aura.type === 'AURA_COMMANDER_SELF_CS') {
+      expect(oldGuard!.aura.value).toBe(10);
+      expect(oldGuard!.aura.condition).toBe('defending');
+    }
+
+    const resilience = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'leadership_resilience');
+    expect(resilience).toBeDefined();
+    expect(resilience!.tier).toBe(3);
+    expect(resilience!.prerequisites).toEqual(['leadership_field_commission']);
+    expect(resilience!.aura.type).toBe('AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT');
+    if (resilience!.aura.type === 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT') {
+      expect(resilience!.aura.value).toBe(50);
+    }
+
+    const barrage = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'leadership_barrage');
+    expect(barrage).toBeDefined();
+    expect(barrage!.tier).toBe(4);
+    expect(barrage!.prerequisites).toEqual(['leadership_old_guard']);
+    expect(barrage!.aura.type).toBe('AURA_COMMAND_ACTION_COMBAT_BONUS');
+    if (barrage!.aura.type === 'AURA_COMMAND_ACTION_COMBAT_BONUS') {
+      expect(barrage!.aura.command).toBe('focus_fire');
+      expect(barrage!.aura.value).toBe(5);
+    }
+
+    const onslaught = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'leadership_onslaught');
+    expect(onslaught).toBeDefined();
+    expect(onslaught!.tier).toBe(4);
+    expect(onslaught!.prerequisites).toEqual(['leadership_resilience']);
+    expect(onslaught!.aura.type).toBe('AURA_COMMAND_ACTION_COMBAT_BONUS');
+    if (onslaught!.aura.type === 'AURA_COMMAND_ACTION_COMBAT_BONUS') {
+      expect(onslaught!.aura.command).toBe('coordinated_attack');
+      expect(onslaught!.aura.value).toBe(4);
+    }
   });
 
   it('keeps every expansion prereq internal to its own tree (no cross-tree leaks)', () => {
     const byId = new Map(ALL_COMMANDER_PROMOTIONS.map(p => [p.id, p] as const));
     const expansionIds = [
-      'maneuver_ambush',
-      'maneuver_hit_and_run',
-      'maneuver_guerilla_war',
-      'leadership_air_superiority',
-      'leadership_long_range',
+      'maneuver_mobility',
+      'maneuver_harassment',
+      'maneuver_redeploy',
+      'maneuver_amphibious',
+      'maneuver_pathfinder',
+      'maneuver_area_denial',
+      'leadership_zeal',
+      'leadership_field_commission',
+      'leadership_old_guard',
+      'leadership_resilience',
+      'leadership_barrage',
+      'leadership_onslaught',
     ];
     for (const id of expansionIds) {
       const p = byId.get(id)!;
+      expect(p).toBeDefined();
       for (const prereqId of p.prerequisites) {
         const pre = byId.get(prereqId)!;
         expect(pre.tree).toBe(p.tree);
@@ -569,11 +790,18 @@ describe('Commander expansion content', () => {
 
   it('keeps all expansion auras inside the known AuraEffectDef variant set', () => {
     const expansionIds = new Set([
-      'maneuver_ambush',
-      'maneuver_hit_and_run',
-      'maneuver_guerilla_war',
-      'leadership_air_superiority',
-      'leadership_long_range',
+      'maneuver_mobility',
+      'maneuver_harassment',
+      'maneuver_redeploy',
+      'maneuver_amphibious',
+      'maneuver_pathfinder',
+      'maneuver_area_denial',
+      'leadership_zeal',
+      'leadership_field_commission',
+      'leadership_old_guard',
+      'leadership_resilience',
+      'leadership_barrage',
+      'leadership_onslaught',
     ]);
     for (const p of ALL_COMMANDER_PROMOTIONS) {
       if (!expansionIds.has(p.id)) continue;

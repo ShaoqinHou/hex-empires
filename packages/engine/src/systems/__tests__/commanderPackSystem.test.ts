@@ -138,7 +138,7 @@ describe('commanderArmySystem — PACK_ARMY (X4.1)', () => {
     }
   });
 
-  it('does not expand PACK_ARMY capacity for non-Regiments stack placeholder promotions', () => {
+  it('does not expand PACK_ARMY capacity for non-Regiments promotions', () => {
     const positions = [
       { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
       { q: -1, r: 0 }, { q: 0, r: -1 },
@@ -150,7 +150,7 @@ describe('commanderArmySystem — PACK_ARMY (X4.1)', () => {
     }
 
     const state = stateWithCommander(
-      makeCommander({ unitId: 'cmd1', promotions: ['leadership_grand_retinue'] }),
+      makeCommander({ unitId: 'cmd1', promotions: ['leadership_zeal'] }),
       extraUnits,
     );
     const result = commanderArmySystem(state, {

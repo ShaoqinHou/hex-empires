@@ -353,7 +353,7 @@ Commanders are **the only units that gain experience and promotions** (a major d
 | Assault | Offensive power, damage bonuses |
 | Logistics | Healing, supply, movement |
 | Maneuver | Flanking, repositioning |
-| Leadership | Command radius, stacking, morale |
+| Leadership | Settlement support, upgrades, recovery, command actions |
 
 Commanders **persist across Ages**, retaining all promotions and experience. They are the only unit class that does this.
 

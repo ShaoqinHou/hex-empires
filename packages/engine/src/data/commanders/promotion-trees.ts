@@ -318,113 +318,194 @@ const BASTION_RESOLUTE: CommanderPromotionDef = {
   },
 } as const;
 
-// ── Leadership tree (radius / stack) ──
+// ── Leadership tree (command effectiveness) ──
 
-const LEADERSHIP_TIER1: CommanderPromotionDef = {
-  id: 'leadership_commanding_presence',
-  name: 'Commanding Presence',
-  description: "Expands this commander's aura radius by 1.",
+const LEADERSHIP_ZEAL: CommanderPromotionDef = {
+  id: 'leadership_zeal',
+  name: 'Zeal',
+  description:
+    '+5% yields in a Settlement while this commander is stationed on a District.',
   tree: 'leadership',
   tier: 1,
   prerequisites: [],
   aura: {
-    type: 'AURA_EXPAND_RADIUS',
-    delta: 1,
+    type: 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED',
+    value: 5,
+    yieldScope: 'all',
+    requiresDistrict: true,
+    stackable: true,
   },
 } as const;
 
-const LEADERSHIP_TIER2: CommanderPromotionDef = {
-  id: 'leadership_grand_retinue',
-  name: 'Grand Retinue',
-  description: "Raises this commander's pack capacity by 2 units.",
+const LEADERSHIP_FIELD_COMMISSION: CommanderPromotionDef = {
+  id: 'leadership_field_commission',
+  name: 'Field Commission',
+  description:
+    'Land Units within Command Radius can be upgraded as if in friendly territory and heal 10 HP when upgraded.',
   tree: 'leadership',
   tier: 2,
-  prerequisites: ['leadership_commanding_presence'],
+  prerequisites: ['leadership_zeal'],
   aura: {
-    type: 'AURA_EXPAND_STACK',
-    delta: 2,
-  },
-} as const;
-
-// ── Maneuver tree / Guerilla Tactics branch ──
-// Seeds the previously-reserved `maneuver` tree with a full three-tier
-// spine matching the Partisan Leader commander archetype.
-
-const MANEUVER_TIER1: CommanderPromotionDef = {
-  id: 'maneuver_ambush',
-  name: 'Ambush',
-  description: '+3 combat strength to friendly cavalry units in radius.',
-  tree: 'maneuver',
-  tier: 1,
-  prerequisites: [],
-  aura: {
-    type: 'AURA_MODIFY_CS',
-    target: 'cavalry',
-    value: 3,
+    type: 'AURA_UPGRADE_SUPPORT',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
     radius: 1,
+    healOnUpgrade: 10,
+    allowsUpgradeOutsideFriendlyTerritory: true,
   },
 } as const;
 
-const MANEUVER_TIER2: CommanderPromotionDef = {
-  id: 'maneuver_hit_and_run',
-  name: 'Hit and Run',
-  description: '+1 movement to all friendly units in radius.',
-  tree: 'maneuver',
-  tier: 2,
-  prerequisites: ['maneuver_ambush'],
-  aura: {
-    type: 'AURA_EXTRA_MOVEMENT',
-    target: 'all',
-    value: 1,
-    radius: 1,
-  },
-} as const;
-
-const MANEUVER_TIER3: CommanderPromotionDef = {
-  id: 'maneuver_guerilla_war',
-  name: 'Guerilla War',
-  description: '+6 combat strength to all friendly units in radius.',
-  tree: 'maneuver',
+const LEADERSHIP_OLD_GUARD: CommanderPromotionDef = {
+  id: 'leadership_old_guard',
+  name: 'Old Guard',
+  description: '+10 combat strength for this Commander while defending.',
+  tree: 'leadership',
   tier: 3,
-  prerequisites: ['maneuver_hit_and_run'],
+  prerequisites: ['leadership_field_commission'],
   aura: {
-    type: 'AURA_MODIFY_CS',
-    target: 'all',
-    value: 6,
-    radius: 1,
+    type: 'AURA_COMMANDER_SELF_CS',
+    value: 10,
+    condition: 'defending',
   },
 } as const;
 
-// ── Leadership tree / Air Superiority branch ──
-// Side branch off `leadership_commanding_presence`, aimed at the Air
-// General commander. Emphasises reach (AURA_EXPAND_RADIUS) and
-// interception firepower (AURA_MODIFY_RS on ranged units).
-
-const LEADERSHIP_AIR_SUPERIORITY: CommanderPromotionDef = {
-  id: 'leadership_air_superiority',
-  name: 'Air Superiority',
-  description: '+4 ranged strength to friendly ranged units in radius.',
+const LEADERSHIP_RESILIENCE: CommanderPromotionDef = {
+  id: 'leadership_resilience',
+  name: 'Resilience',
+  description: '+50% reduction in this Commander\'s Recovery Time.',
   tree: 'leadership',
-  tier: 2,
-  prerequisites: ['leadership_commanding_presence'],
+  tier: 3,
+  prerequisites: ['leadership_field_commission'],
   aura: {
-    type: 'AURA_MODIFY_RS',
-    target: 'ranged',
+    type: 'AURA_COMMANDER_RECOVERY_TIME_REDUCTION_PERCENT',
+    value: 50,
+  },
+} as const;
+
+const LEADERSHIP_BARRAGE: CommanderPromotionDef = {
+  id: 'leadership_barrage',
+  name: 'Barrage',
+  description:
+    '+5 combat strength for all units attacking using Focus Fire command.',
+  tree: 'leadership',
+  tier: 4,
+  prerequisites: ['leadership_old_guard'],
+  aura: {
+    type: 'AURA_COMMAND_ACTION_COMBAT_BONUS',
+    command: 'focus_fire',
+    value: 5,
+  },
+} as const;
+
+const LEADERSHIP_ONSLAUGHT: CommanderPromotionDef = {
+  id: 'leadership_onslaught',
+  name: 'Onslaught',
+  description:
+    '+4 combat strength for all units attacking using Coordinated Attack command.',
+  tree: 'leadership',
+  tier: 4,
+  prerequisites: ['leadership_resilience'],
+  aura: {
+    type: 'AURA_COMMAND_ACTION_COMBAT_BONUS',
+    command: 'coordinated_attack',
     value: 4,
+  },
+} as const;
+
+// ── Maneuver tree / terrain + positioning ──
+
+const MANEUVER_MOBILITY: CommanderPromotionDef = {
+  id: 'maneuver_mobility',
+  name: 'Mobility',
+  description:
+    'Commander has +1 Movement while on land and ignores Terrain movement restrictions when packed.',
+  tree: 'maneuver',
+  tier: 1,
+  prerequisites: [],
+  aura: {
+    type: 'AURA_COMMANDER_MOBILITY',
+    value: 1,
+    terrainRestrictionScope: 'packed_land',
+  },
+} as const;
+
+const MANEUVER_HARASSMENT: CommanderPromotionDef = {
+  id: 'maneuver_harassment',
+  name: 'Harassment',
+  description:
+    'Land Units within Command Radius have +2 flanking bonus when attacking.',
+  tree: 'maneuver',
+  tier: 2,
+  prerequisites: ['maneuver_mobility'],
+  aura: {
+    type: 'AURA_FLANKING_BONUS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: 2,
+    radius: 1,
+    appliesTo: 'friendly_attacking',
+  },
+} as const;
+
+const MANEUVER_REDEPLOY: CommanderPromotionDef = {
+  id: 'maneuver_redeploy',
+  name: 'Redeploy',
+  description:
+    'Opponents have -2 flanking bonuses when attacking Land Units within Command Radius.',
+  tree: 'maneuver',
+  tier: 2,
+  prerequisites: ['maneuver_mobility'],
+  aura: {
+    type: 'AURA_FLANKING_BONUS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: -2,
+    radius: 1,
+    appliesTo: 'enemy_attacking',
+  },
+} as const;
+
+const MANEUVER_AMPHIBIOUS: CommanderPromotionDef = {
+  id: 'maneuver_amphibious',
+  name: 'Amphibious',
+  description:
+    'Land Units within Command Radius suffer no combat penalties while embarked; embark/disembark costs 1 Movement.',
+  tree: 'maneuver',
+  tier: 3,
+  prerequisites: ['maneuver_harassment'],
+  aura: {
+    type: 'AURA_AMPHIBIOUS_OPERATIONS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    radius: 1,
+    embarkDisembarkMovementCost: 1,
+    ignoresEmbarkedAttackPenalty: true,
+  },
+} as const;
+
+const MANEUVER_PATHFINDER: CommanderPromotionDef = {
+  id: 'maneuver_pathfinder',
+  name: 'Pathfinder',
+  description: 'Land Units within Command Radius ignore Terrain movement restrictions.',
+  tree: 'maneuver',
+  tier: 3,
+  prerequisites: ['maneuver_redeploy'],
+  aura: {
+    type: 'AURA_IGNORE_TERRAIN_MOVEMENT_RESTRICTIONS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
     radius: 1,
   },
 } as const;
 
-const LEADERSHIP_LONG_RANGE: CommanderPromotionDef = {
-  id: 'leadership_long_range',
-  name: 'Long Range Patrols',
-  description: "Expands this commander's aura radius by a further 1.",
-  tree: 'leadership',
-  tier: 3,
-  prerequisites: ['leadership_air_superiority'],
+const MANEUVER_AREA_DENIAL: CommanderPromotionDef = {
+  id: 'maneuver_area_denial',
+  name: 'Area Denial',
+  description: 'Command Radius applies Zone of Control to enemy Land Units.',
+  tree: 'maneuver',
+  tier: 4,
+  prerequisites: ['maneuver_amphibious', 'maneuver_pathfinder'],
+  prerequisiteMode: 'any',
   aura: {
-    type: 'AURA_EXPAND_RADIUS',
-    delta: 1,
+    type: 'AURA_ZONE_OF_CONTROL',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    radius: 1,
+    appliesTo: 'enemy',
   },
 } as const;
 
@@ -454,11 +535,16 @@ export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
   BASTION_DEFILADE,
   BASTION_GARRISON,
   BASTION_RESOLUTE,
-  LEADERSHIP_TIER1,
-  LEADERSHIP_TIER2,
-  LEADERSHIP_AIR_SUPERIORITY,
-  LEADERSHIP_LONG_RANGE,
-  MANEUVER_TIER1,
-  MANEUVER_TIER2,
-  MANEUVER_TIER3,
+  LEADERSHIP_ZEAL,
+  LEADERSHIP_FIELD_COMMISSION,
+  LEADERSHIP_OLD_GUARD,
+  LEADERSHIP_RESILIENCE,
+  LEADERSHIP_BARRAGE,
+  LEADERSHIP_ONSLAUGHT,
+  MANEUVER_MOBILITY,
+  MANEUVER_HARASSMENT,
+  MANEUVER_REDEPLOY,
+  MANEUVER_AMPHIBIOUS,
+  MANEUVER_PATHFINDER,
+  MANEUVER_AREA_DENIAL,
 ] as const;
