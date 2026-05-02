@@ -74,7 +74,7 @@ case "$ARG" in
         const offL = Math.floor(((a.start - t0) / wall) * WIDTH);
         const barW = Math.max(1, Math.floor(((a.end - a.start) / wall) * WIDTH));
         const spaces = ' '.repeat(offL);
-        const bar = (a.class === 'HANG_SUSPECT' ? '!' : a.class === 'SLOW' ? '~' : '#').repeat(barW);
+        const bar = (a.class === 'HANG_SUSPECT' ? '!' : a.class === 'SLOW' ? '~' : a.class === 'METRICS_UNAVAILABLE' ? '?' : '#').repeat(barW);
         const startMM = Math.floor((a.start - t0) / 60);
         const endMM = Math.floor((a.end - t0) / 60);
         console.log(\`  \${String(startMM).padStart(3)}min  \${String(endMM).padStart(3)}min  \${String(Math.round(a.duration_s/60*10)/10).padStart(4)}m  \${(a.phase||'').padEnd(24).slice(0,24)}  \${spaces}\${bar}\`);
@@ -103,7 +103,7 @@ case "$ARG" in
       }
 
       console.log('');
-      console.log('legend:  # HEALTHY   ~ SLOW   ! HANG_SUSPECT');
+      console.log('legend:  # HEALTHY   ~ SLOW   ! HANG_SUSPECT   ? METRICS_UNAVAILABLE');
       console.log('');
       console.log(\`serial subagent-time : \${(serial/60).toFixed(1)}min  (sum of all subagent durations)\`);
       console.log(\`wall-clock          : \${(wall/60).toFixed(1)}min\`);

@@ -78,6 +78,8 @@ export type AuraEffectDef =
       readonly value: number;
       readonly radius: number;
       readonly condition?: 'attacking' | 'defending';
+      readonly requiresDistrict?: boolean;
+      readonly requiresFortified?: boolean;
     }
   /** Flat ranged-strength bonus to friendly units in range. */
   | {
@@ -103,6 +105,26 @@ export type AuraEffectDef =
   | {
       readonly type: 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED';
       readonly value: number;
+    }
+  /** Reduces Fortify action completion time for friendly units in range. */
+  | {
+      readonly type: 'AURA_FORTIFY_ACTION_TURN_REDUCTION';
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
+      readonly value: number;
+      readonly radius: number;
+    }
+  /** Adds HP to fortified districts when the commander meets a city condition. */
+  | {
+      readonly type: 'AURA_DISTRICT_HP_BONUS';
+      readonly value: number;
+      readonly requiresCommanderOnCityCenter: true;
+    }
+  /** Healing applied to matching units after they attack. */
+  | {
+      readonly type: 'AURA_HEAL_AFTER_ATTACK';
+      readonly target: AuraTarget | ReadonlyArray<AuraTarget>;
+      readonly amount: number;
+      readonly radius: number;
     }
   /** Extra movement points to friendly units in range. */
   | {

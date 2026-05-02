@@ -1337,6 +1337,200 @@ describe('combatSystem — commander aura', () => {
     expect(nextWithSteadfast.units.get('d1')!.health).toBe(nextBase.units.get('d1')!.health);
   });
 
+  it('Hold the Line improves land unit durability only when stationed on a district', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const unitsOnDistrict = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const districts = new Map([
+      ['district-1', {
+        id: 'district-1',
+        type: 'encampment',
+        position: { q: 4, r: 3 },
+        cityId: 'city-1',
+        level: 1,
+        buildings: [],
+        adjacencyBonus: 0,
+      } as const],
+    ]);
+    const baseDistrictState = createTestState({
+      units: unitsOnDistrict,
+      players,
+      districts,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const promotedDistrictState = createTestState({
+      units: new Map(unitsOnDistrict),
+      players: new Map(players),
+      districts: new Map(districts),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_hold_the_line'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const baseOnDistrict = combatSystem(baseDistrictState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promotedOnDistrict = combatSystem(promotedDistrictState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(baseOnDistrict.units.get('d1')!.health).toBe(68);
+    expect(promotedOnDistrict.units.get('d1')!.health).toBe(71);
+
+    const unitsOffDistrict = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseOffDistrictState = createTestState({
+      units: unitsOffDistrict,
+      players: new Map(players),
+      districts: new Map(),
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const promotedOffDistrictState = createTestState({
+      units: new Map(unitsOffDistrict),
+      players: new Map(players),
+      districts: new Map(),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_hold_the_line'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const baseOffDistrict = combatSystem(baseOffDistrictState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promotedOffDistrict = combatSystem(promotedOffDistrictState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(promotedOffDistrict.units.get('d1')!.health).toBe(baseOffDistrict.units.get('d1')!.health);
+  });
+
+  it('Hold the Line treats a city center as a district tile', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const city = createTestCity({
+      id: 'city-1',
+      owner: 'p2',
+      position: { q: 4, r: 3 },
+      districts: [],
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseState = createTestState({
+      units,
+      players,
+      cities: new Map([['city-1', city]]),
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const promotedState = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      cities: new Map([['city-1', city]]),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_hold_the_line'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const base = combatSystem(baseState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promoted = combatSystem(promotedState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(base.units.get('d1')!.health).toBe(68);
+    expect(promoted.units.get('d1')!.health).toBe(71);
+  });
+
+  it('Defilade improves land unit durability only when fortified', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 180,
+      commanderLevel: 3,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const fortifiedUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: true })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseFortifiedState = createTestState({
+      units: fortifiedUnits,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const promotedFortifiedState = createTestState({
+      units: new Map(fortifiedUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_defilade'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const baseFortified = combatSystem(baseFortifiedState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promotedFortified = combatSystem(promotedFortifiedState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(baseFortified.units.get('d1')!.health).toBe(74);
+    expect(promotedFortified.units.get('d1')!.health).toBe(77);
+
+    const unfortifiedUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: false })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseUnfortifiedState = createTestState({
+      units: unfortifiedUnits,
+      players: new Map(players),
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const promotedUnfortifiedState = createTestState({
+      units: new Map(unfortifiedUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['bastion_defilade'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const baseUnfortified = combatSystem(baseUnfortifiedState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promotedUnfortified = combatSystem(promotedUnfortifiedState, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    expect(promotedUnfortified.units.get('d1')!.health).toBe(baseUnfortified.units.get('d1')!.health);
+  });
+
   it('commander aura does not apply when commander belongs to enemy', () => {
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1' })],

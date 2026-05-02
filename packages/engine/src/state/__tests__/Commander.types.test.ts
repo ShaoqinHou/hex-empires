@@ -61,6 +61,14 @@ describe('Commander types — compile-time shape tests', () => {
       value: 3,
       radius: 1,
     };
+    const modCsWithFilters: AuraEffectDef = {
+      type: 'AURA_MODIFY_CS',
+      target: ['melee', 'ranged'],
+      value: 2,
+      radius: 1,
+      requiresDistrict: true,
+      requiresFortified: true,
+    };
     const modRs: AuraEffectDef = {
       type: 'AURA_MODIFY_RS',
       target: 'ranged',
@@ -117,9 +125,27 @@ describe('Commander types — compile-time shape tests', () => {
       yieldBonusPercent: 50,
       hpBonusPercent: 50,
     };
+    const fortifyTurn: AuraEffectDef = {
+      type: 'AURA_FORTIFY_ACTION_TURN_REDUCTION',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      value: 1,
+      radius: 1,
+    };
+    const districtHp: AuraEffectDef = {
+      type: 'AURA_DISTRICT_HP_BONUS',
+      value: 10,
+      requiresCommanderOnCityCenter: true,
+    };
+    const healAfterAttack: AuraEffectDef = {
+      type: 'AURA_HEAL_AFTER_ATTACK',
+      target: ['melee', 'ranged', 'cavalry', 'siege'],
+      amount: 5,
+      radius: 1,
+    };
 
     const variants: ReadonlyArray<AuraEffectDef> = [
       modCs,
+      modCsWithFilters,
       modRs,
       heal,
       mov,
@@ -131,9 +157,12 @@ describe('Commander types — compile-time shape tests', () => {
       goldPerPacked,
       productionBonus,
       pillage,
+      fortifyTurn,
+      districtHp,
+      healAfterAttack,
     ];
-    const kinds = new Set(variants.map((v) => v.type));
-    expect(kinds.size).toBe(12);
+    const kinds = new Set<AuraEffectDef['type']>(variants.map(v => v.type));
+    expect(kinds.size).toBe(15);
     // Discriminant narrowing works:
     if (heal.type === 'AURA_HEAL_PER_TURN') {
       expect(heal.amount).toBe(5);
@@ -157,6 +186,22 @@ describe('Commander types — compile-time shape tests', () => {
     }
     if (deployMove.type === 'AURA_DEPLOY_WITH_MOVEMENT') {
       expect(deployMove.type).toBe('AURA_DEPLOY_WITH_MOVEMENT');
+    }
+    if (modCs.type === 'AURA_MODIFY_CS') {
+      expect(modCs.requiresDistrict).toBeUndefined();
+      expect(modCs.requiresFortified).toBeUndefined();
+    }
+    if (modCsWithFilters.type === 'AURA_MODIFY_CS') {
+      expect(modCsWithFilters.requiresDistrict).toBe(true);
+      expect(modCsWithFilters.requiresFortified).toBe(true);
+    }
+    if (districtHp.type === 'AURA_DISTRICT_HP_BONUS') {
+      expect(districtHp.requiresCommanderOnCityCenter).toBe(true);
+      expect(districtHp.value).toBe(10);
+    }
+    if (healAfterAttack.type === 'AURA_HEAL_AFTER_ATTACK') {
+      expect(healAfterAttack.amount).toBe(5);
+      expect(healAfterAttack.radius).toBe(1);
     }
   });
 

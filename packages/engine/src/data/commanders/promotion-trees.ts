@@ -221,7 +221,7 @@ const LOGISTICS_SURVIVAL_TRAINING: CommanderPromotionDef = {
 
 // ── Bastion tree (defense) ──
 
-const BASTION_TIER1: CommanderPromotionDef = {
+const BASTION_STEADFAST: CommanderPromotionDef = {
   id: 'bastion_steadfast',
   name: 'Steadfast',
   description: '+2 combat strength to friendly land units in radius when defending.',
@@ -237,17 +237,83 @@ const BASTION_TIER1: CommanderPromotionDef = {
   },
 } as const;
 
-const BASTION_TIER2: CommanderPromotionDef = {
-  id: 'bastion_ranged_cover',
-  name: 'Ranged Cover',
-  description: '+4 ranged strength to friendly ranged units in radius.',
+const BASTION_BULWARK: CommanderPromotionDef = {
+  id: 'bastion_bulwark',
+  name: 'Bulwark',
+  description:
+    'Friendly land units complete Fortify 1 turn faster in radius.',
   tree: 'bastion',
   tier: 2,
   prerequisites: ['bastion_steadfast'],
   aura: {
-    type: 'AURA_MODIFY_RS',
-    target: 'ranged',
-    value: 4,
+    type: 'AURA_FORTIFY_ACTION_TURN_REDUCTION',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: 1,
+    radius: 1,
+  },
+} as const;
+
+const BASTION_HOLD_THE_LINE: CommanderPromotionDef = {
+  id: 'bastion_hold_the_line',
+  name: 'Hold the Line',
+  description:
+    'Friendly land units gain +2 combat strength in radius while stationed in a District or City Center.',
+  tree: 'bastion',
+  tier: 2,
+  prerequisites: ['bastion_steadfast'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: 2,
+    radius: 1,
+    requiresDistrict: true,
+  },
+} as const;
+
+const BASTION_DEFILADE: CommanderPromotionDef = {
+  id: 'bastion_defilade',
+  name: 'Defilade',
+  description:
+    'Friendly land units gain +3 combat strength in radius while fortified.',
+  tree: 'bastion',
+  tier: 3,
+  prerequisites: ['bastion_bulwark'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    value: 3,
+    radius: 1,
+    condition: 'defending',
+    requiresFortified: true,
+  },
+} as const;
+
+const BASTION_GARRISON: CommanderPromotionDef = {
+  id: 'bastion_garrison',
+  name: 'Garrison',
+  description: '+10 district HP while defending when this commander is in the city center.',
+  tree: 'bastion',
+  tier: 3,
+  prerequisites: ['bastion_hold_the_line'],
+  aura: {
+    type: 'AURA_DISTRICT_HP_BONUS',
+    value: 10,
+    requiresCommanderOnCityCenter: true,
+  },
+} as const;
+
+const BASTION_RESOLUTE: CommanderPromotionDef = {
+  id: 'bastion_resolute',
+  name: 'Resolute',
+  description: 'Friendly land units in radius heal 5 HP after attacking.',
+  tree: 'bastion',
+  tier: 4,
+  prerequisites: ['bastion_defilade', 'bastion_garrison'],
+  prerequisiteMode: 'any',
+  aura: {
+    type: 'AURA_HEAL_AFTER_ATTACK',
+    target: ['melee', 'ranged', 'cavalry', 'siege'],
+    amount: 5,
     radius: 1,
   },
 } as const;
@@ -362,26 +428,6 @@ const LEADERSHIP_LONG_RANGE: CommanderPromotionDef = {
   },
 } as const;
 
-// ── Bastion tree / Naval Engineering branch ──
-// Adds a tier-3 capstone to the existing bastion spine so naval
-// commanders (Admiral, Fleet Admiral) have a top-end fortification
-// pick. Descends from `bastion_ranged_cover` to respect the DAG.
-
-const BASTION_NAVAL_ENGINEERING: CommanderPromotionDef = {
-  id: 'bastion_naval_engineering',
-  name: 'Naval Engineering',
-  description: '+6 fortification strength to friendly naval units in radius.',
-  tree: 'bastion',
-  tier: 3,
-  prerequisites: ['bastion_ranged_cover'],
-  aura: {
-    type: 'AURA_FORTIFY_BONUS',
-    target: 'naval',
-    value: 6,
-    radius: 1,
-  },
-} as const;
-
 /**
  * All commander promotions, ordered by (tree, tier).
  *
@@ -402,9 +448,12 @@ export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
   LOGISTICS_FIELD_MEDIC,
   LOGISTICS_LOOTING,
   LOGISTICS_SURVIVAL_TRAINING,
-  BASTION_TIER1,
-  BASTION_TIER2,
-  BASTION_NAVAL_ENGINEERING,
+  BASTION_STEADFAST,
+  BASTION_BULWARK,
+  BASTION_HOLD_THE_LINE,
+  BASTION_DEFILADE,
+  BASTION_GARRISON,
+  BASTION_RESOLUTE,
   LEADERSHIP_TIER1,
   LEADERSHIP_TIER2,
   LEADERSHIP_AIR_SUPERIORITY,

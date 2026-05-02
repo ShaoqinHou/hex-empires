@@ -67,10 +67,10 @@
 **GDD reference:** `systems/commanders.md` § "Promotion System"
 **Severity:** MED
 **Effort:** M (1-3 days)
-**VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Bastion I Steadfast (+2 CS for land units in Command Radius when defending), Assault I Initiative -> II Rout/Storm -> III Shock Tactics/Enfilade -> IV Advancement, and Logistics I Quartermaster/Recruitment -> II Regiments -> III Field Medic/Looting -> IV Survival Training. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
-**Engine does:** Five trees are present. Army Assault now matches the refreshed source shape and `assault_advancement` grants First Strike to the local infantry proxy (`melee`) and cavalry. Bastion has canonical Steadfast implemented as +2 defending CS for local land military categories (`melee`, `ranged`, `cavalry`, `siege`) in Command Radius. Logistics now has the canonical six-node source shape. `logistics_regiments` is wired to the pack-cap path through `AURA_EXPAND_STACK`, so the engine allows 4 packed units by default and 6 only after Regiments. Metadata aura variants now describe Quartermaster, Recruitment, Field Medic, Looting, and Survival Training effects for later system hooks. The engine supports `AURA_DEPLOY_WITH_MOVEMENT`, attack/defense conditioned `AURA_MODIFY_CS`, `AURA_GRANT_ABILITY`, `AURA_EXPAND_STACK`, and OR-style promotion prerequisites. The AI commander picker also honors OR prerequisites.
-**Gap:** Army Assault, Logistics data, Logistics Regiments capacity, and Bastion Steadfast are now canonicalized, but four broader divergences remain: (1) Bastion's deeper nodes and the Maneuver and Leadership trees still include placeholder or custom-extension nodes; (2) Quartermaster, Recruitment, Field Medic, Looting, and Survival Training have data but not full runtime hooks; (3) legacy single-tree lock/action shapes are still present; (4) the commendation system is absent.
-**Recommendation:** Continue F-03 by canonicalizing Bastion, Maneuver, and Leadership nodes from the refreshed source list, then wire the remaining Logistics runtime hooks, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
+**VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Bastion I Steadfast -> II Bulwark/Hold the Line -> III Defilade/Garrison -> IV Resolute; Assault I Initiative -> II Rout/Storm -> III Shock Tactics/Enfilade -> IV Advancement; and Logistics I Quartermaster/Recruitment -> II Regiments -> III Field Medic/Looting -> IV Survival Training. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
+**Engine does:** Five trees are present. Army Assault, Logistics, and Bastion now match the refreshed source node shape. `assault_advancement` grants First Strike to the local infantry proxy (`melee`) and cavalry. Bastion Steadfast gives +2 defending CS to local land military categories (`melee`, `ranged`, `cavalry`, `siege`) in Command Radius. Bastion Hold the Line gives +2 CS to land units stationed on a District or city center (local City Center is treated as a district tile) in Command Radius, and Bastion Defilade gives +3 defending CS to fortified land units in Command Radius; both affect live combat and combat preview through `CommanderAura`. Bastion Bulwark, Garrison, and Resolute are represented as typed metadata aura variants for later hooks. `logistics_regiments` is wired to the pack-cap path through `AURA_EXPAND_STACK`, so the engine allows 4 packed units by default and 6 only after Regiments. Metadata aura variants describe Quartermaster, Recruitment, Field Medic, Looting, and Survival Training effects for later system hooks. The engine supports `AURA_DEPLOY_WITH_MOVEMENT`, attack/defense conditioned `AURA_MODIFY_CS`, district/fortified combat-aura filters, `AURA_GRANT_ABILITY`, `AURA_EXPAND_STACK`, and OR-style promotion prerequisites. The AI commander picker also honors OR prerequisites.
+**Gap:** Army Assault, Logistics data, Logistics Regiments capacity, Bastion data, and Bastion Hold the Line/Defilade combat hooks are now canonicalized, but four broader divergences remain: (1) Maneuver and Leadership still include placeholder or custom-extension nodes; (2) Bulwark, Garrison, Resolute, Quartermaster, Recruitment, Field Medic, Looting, and Survival Training have data but not full runtime hooks; (3) legacy single-tree lock/action shapes are still present; (4) the commendation system is absent.
+**Recommendation:** Continue F-03 by canonicalizing Maneuver and Leadership nodes from the refreshed source list, then wire the remaining Bastion and Logistics runtime hooks, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
 
 ---
 
@@ -175,7 +175,7 @@
 
 ## Missing items
 
-- Remaining commander promotion hooks (F-03) — Quartermaster economy, Recruitment production, Field Medic territory healing, Looting pillage yield/HP, Survival Training terrain/cliff behavior.
+- Remaining commander promotion hooks (F-03) — Bulwark fortify duration, Garrison fortified-district HP, Resolute after-attack healing, Quartermaster economy, Recruitment production, Field Medic territory healing, Looting pillage yield/HP, Survival Training terrain/cliff behavior.
 - Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
 - Commander pack-model consolidation and Fleet Commander Weather Gage deployment exception (F-01).
 - Commander age-transition follow-ups (F-08) — UI transition summary, exact Fleet Commander retained-unit placement behavior, and the generic unit retirement/upgrade pipeline.
@@ -219,7 +219,7 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 | L (week+) | none currently scoped | 0 |
 | **Total** | 10 | **~2w** |
 
-Recommended order: F-01 pack-model consolidation → F-08 explicit age-transition commander cleanup → F-03 promotion tree/commendations → F-09 action UI/config lookup → F-06/F-10 custom-extension tagging.
+Recommended order: F-01 pack-model consolidation → F-08 explicit age-transition commander cleanup → F-03 remaining promotion hooks/commendations → F-09 action UI/config lookup → F-06/F-10 custom-extension tagging.
 
 ---
 

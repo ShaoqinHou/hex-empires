@@ -29,6 +29,9 @@ const VALID_AURA_TYPES: ReadonlyArray<AuraEffectDef['type']> = [
   'AURA_FORTIFY_BONUS',
   'AURA_GRANT_ABILITY',
   'AURA_DEPLOY_WITH_MOVEMENT',
+  'AURA_FORTIFY_ACTION_TURN_REDUCTION',
+  'AURA_DISTRICT_HP_BONUS',
+  'AURA_HEAL_AFTER_ATTACK',
 ];
 
 const VALID_TREES: ReadonlyArray<CommanderTree> = [
@@ -266,8 +269,38 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     }
   });
 
-  it('matches the sourced Army Bastion promotion tree shape with Steadfast', () => {
+  it('matches the sourced Army Bastion promotion tree shape', () => {
     const bastionSteadfast = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_steadfast');
+    expect(bastionSteadfast).toBeDefined();
+    const bastionBulwark = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_bulwark');
+    const bastionHoldTheLine = ALL_COMMANDER_PROMOTIONS.find(
+      p => p.id === 'bastion_hold_the_line',
+    );
+    const bastionDefilade = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_defilade');
+    const bastionGarrison = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_garrison');
+    const bastionResolute = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_resolute');
+
+    const bastionTree = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'bastion').map(p => p.id);
+    expect(bastionTree).toEqual([
+      'bastion_steadfast',
+      'bastion_bulwark',
+      'bastion_hold_the_line',
+      'bastion_defilade',
+      'bastion_garrison',
+      'bastion_resolute',
+    ]);
+
+    const bastion = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'bastion');
+    expect(bastion.map(p => p.name)).toEqual([
+      'Steadfast',
+      'Bulwark',
+      'Hold the Line',
+      'Defilade',
+      'Garrison',
+      'Resolute',
+    ]);
+    expect(bastion.map(p => p.tier)).toEqual([1, 2, 2, 3, 3, 4]);
+
     expect(bastionSteadfast).toBeDefined();
     expect(bastionSteadfast!.name).toBe('Steadfast');
     expect(bastionSteadfast!.tree).toBe('bastion');
@@ -281,12 +314,60 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
       expect(bastionSteadfast!.aura.condition).toBe('defending');
     }
 
-    const bastionRangedCover = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_ranged_cover');
-    expect(bastionRangedCover).toBeDefined();
-    expect(bastionRangedCover!.prerequisites).toEqual(['bastion_steadfast']);
+    expect(bastionBulwark).toBeDefined();
+    expect(bastionBulwark!.prerequisites).toEqual(['bastion_steadfast']);
+    expect(bastionBulwark!.tier).toBe(2);
+    expect(bastionBulwark!.aura.type).toBe('AURA_FORTIFY_ACTION_TURN_REDUCTION');
+    if (bastionBulwark!.aura.type === 'AURA_FORTIFY_ACTION_TURN_REDUCTION') {
+      expect(bastionBulwark!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(bastionBulwark!.aura.value).toBe(1);
+      expect(bastionBulwark!.aura.radius).toBe(1);
+    }
 
-    const oldBastionNode = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'bastion_shield_wall');
-    expect(oldBastionNode).toBeUndefined();
+    expect(bastionHoldTheLine).toBeDefined();
+    expect(bastionHoldTheLine!.prerequisites).toEqual(['bastion_steadfast']);
+    expect(bastionHoldTheLine!.tier).toBe(2);
+    expect(bastionHoldTheLine!.aura.type).toBe('AURA_MODIFY_CS');
+    if (bastionHoldTheLine!.aura.type === 'AURA_MODIFY_CS') {
+      expect(bastionHoldTheLine!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(bastionHoldTheLine!.aura.value).toBe(2);
+      expect(bastionHoldTheLine!.aura.radius).toBe(1);
+      expect(bastionHoldTheLine!.aura.requiresDistrict).toBe(true);
+    }
+
+    expect(bastionDefilade).toBeDefined();
+    expect(bastionDefilade!.prerequisites).toEqual(['bastion_bulwark']);
+    expect(bastionDefilade!.tier).toBe(3);
+    expect(bastionDefilade!.aura.type).toBe('AURA_MODIFY_CS');
+    if (bastionDefilade!.aura.type === 'AURA_MODIFY_CS') {
+      expect(bastionDefilade!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(bastionDefilade!.aura.value).toBe(3);
+      expect(bastionDefilade!.aura.radius).toBe(1);
+      expect(bastionDefilade!.aura.condition).toBe('defending');
+      expect(bastionDefilade!.aura.requiresFortified).toBe(true);
+    }
+
+    expect(bastionGarrison).toBeDefined();
+    expect(bastionGarrison!.prerequisites).toEqual(['bastion_hold_the_line']);
+    expect(bastionGarrison!.tier).toBe(3);
+    expect(bastionGarrison!.aura.type).toBe('AURA_DISTRICT_HP_BONUS');
+    if (bastionGarrison!.aura.type === 'AURA_DISTRICT_HP_BONUS') {
+      expect(bastionGarrison!.aura.value).toBe(10);
+      expect(bastionGarrison!.aura.requiresCommanderOnCityCenter).toBe(true);
+    }
+
+    expect(bastionResolute).toBeDefined();
+    expect(bastionResolute!.prerequisites).toEqual(
+      expect.arrayContaining(['bastion_defilade', 'bastion_garrison']),
+    );
+    expect(bastionResolute!.prerequisiteMode).toBe('any');
+    expect(bastionResolute!.tier).toBe(4);
+    expect(bastionResolute!.aura.type).toBe('AURA_HEAL_AFTER_ATTACK');
+    if (bastionResolute!.aura.type === 'AURA_HEAL_AFTER_ATTACK') {
+      expect(bastionResolute!.aura.target).toEqual(['melee', 'ranged', 'cavalry', 'siege']);
+      expect(bastionResolute!.aura.amount).toBe(5);
+      expect(bastionResolute!.aura.radius).toBe(1);
+    }
   });
 
   it('includes Assault Advancement as a First Strike ability grant', () => {
@@ -404,7 +485,7 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
 
 // ── Expansion: commanders + promotions added post-M10 ──
 // Guards the new Air General + Partisan Leader archetypes and the
-// Guerilla Tactics / Air Superiority / Naval Engineering branches.
+// Guerilla Tactics / Air Superiority branches.
 
 describe('Commander expansion content', () => {
   it('ships more than the M10 starter count in both catalogues', () => {
@@ -468,21 +549,6 @@ describe('Commander expansion content', () => {
     expect(longRange!.prerequisites).toContain('leadership_air_superiority');
   });
 
-  it('caps the bastion tree with a Naval Engineering tier-3 pick', () => {
-    const navalEng = ALL_COMMANDER_PROMOTIONS.find(
-      p => p.id === 'bastion_naval_engineering',
-    );
-    expect(navalEng).toBeDefined();
-    expect(navalEng!.tree).toBe('bastion');
-    expect(navalEng!.tier).toBe(3);
-    expect(navalEng!.prerequisites).toContain('bastion_ranged_cover');
-    expect(navalEng!.aura.type).toBe('AURA_FORTIFY_BONUS');
-    if (navalEng!.aura.type === 'AURA_FORTIFY_BONUS') {
-      expect(navalEng!.aura.target).toBe('naval');
-      expect(navalEng!.aura.value).toBeGreaterThan(0);
-    }
-  });
-
   it('keeps every expansion prereq internal to its own tree (no cross-tree leaks)', () => {
     const byId = new Map(ALL_COMMANDER_PROMOTIONS.map(p => [p.id, p] as const));
     const expansionIds = [
@@ -491,7 +557,6 @@ describe('Commander expansion content', () => {
       'maneuver_guerilla_war',
       'leadership_air_superiority',
       'leadership_long_range',
-      'bastion_naval_engineering',
     ];
     for (const id of expansionIds) {
       const p = byId.get(id)!;
@@ -509,7 +574,6 @@ describe('Commander expansion content', () => {
       'maneuver_guerilla_war',
       'leadership_air_superiority',
       'leadership_long_range',
-      'bastion_naval_engineering',
     ]);
     for (const p of ALL_COMMANDER_PROMOTIONS) {
       if (!expansionIds.has(p.id)) continue;

@@ -103,6 +103,10 @@ best-effort spawn/complete rows and note that metrics are unavailable. The
 timing report is advisory, not a source of truth; the lead review gate remains
 mandatory.
 
+When token counts are unavailable, pass `-Tokens 0` / `--tokens 0`. The logger
+classifies that row as `METRICS_UNAVAILABLE`; do not treat it as a Spark trouble
+signal by itself.
+
 ## Lead Review Gate
 
 Every worker result gets a lead pass before staging:

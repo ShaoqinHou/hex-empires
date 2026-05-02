@@ -62,7 +62,9 @@ if ($DurationMs -gt 0) {
   $tokensPerMin = [int][Math]::Floor($Tokens * 60000 / $DurationMs)
 }
 
-if ($tokensPerMin -lt 1000 -and $DurationMs -gt 60000) {
+if ($Tokens -le 0) {
+  $class = "METRICS_UNAVAILABLE"
+} elseif ($tokensPerMin -lt 1000 -and $DurationMs -gt 60000) {
   $class = "HANG_SUSPECT"
 } elseif ($tokensPerMin -lt 5000 -and $DurationMs -gt 300000) {
   $class = "SLOW"

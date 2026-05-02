@@ -72,7 +72,9 @@ else
   TOKENS_PER_MIN=0
 fi
 
-if [ "$TOKENS_PER_MIN" -lt 1000 ] && [ "$DURATION_MS" -gt 60000 ]; then
+if [ "$TOKENS" -le 0 ]; then
+  CLASS="METRICS_UNAVAILABLE"
+elif [ "$TOKENS_PER_MIN" -lt 1000 ] && [ "$DURATION_MS" -gt 60000 ]; then
   CLASS="HANG_SUSPECT"
 elif [ "$TOKENS_PER_MIN" -lt 5000 ] && [ "$DURATION_MS" -gt 300000 ]; then
   CLASS="SLOW"

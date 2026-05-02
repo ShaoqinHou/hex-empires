@@ -115,10 +115,16 @@ Run-Step "agent-timing-powershell" {
     powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/workflow/scripts/log-agent-timing.ps1" `
       -Event complete -Phase "workflow-e2e" -AgentId "test-agent" -Subagent "tester" `
       -DurationMs 1000 -Tokens 100 -Status completed -Notes "e2e" -LogFile $tmpLog | Out-Null
+    powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/workflow/scripts/log-agent-timing.ps1" `
+      -Event complete -Phase "workflow-e2e-no-metrics" -AgentId "test-agent-2" -Subagent "tester" `
+      -DurationMs 150000 -Tokens 0 -Status completed -Notes "metrics unavailable" -LogFile $tmpLog | Out-Null
 
     $rows = Get-Content $tmpLog | ForEach-Object { $_ | ConvertFrom-Json }
-    if ($rows.Count -ne 2 -or $rows[0].kind -ne "spawn" -or $rows[1].kind -ne "complete") {
+    if ($rows.Count -ne 3 -or $rows[0].kind -ne "spawn" -or $rows[1].kind -ne "complete" -or $rows[2].kind -ne "complete") {
       throw "unexpected timing rows"
+    }
+    if ($rows[2].class -ne "METRICS_UNAVAILABLE") {
+      throw "token-unavailable timing row misclassified as $($rows[2].class)"
     }
   } finally {
     Remove-Item -LiteralPath $tmpDir -Recurse -Force -ErrorAction SilentlyContinue

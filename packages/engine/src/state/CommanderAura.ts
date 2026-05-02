@@ -17,7 +17,9 @@ import type { GameState, UnitState } from '../types/GameState';
 import type { AuraTarget, CommanderState } from '../types/Commander';
 import { distance } from '../hex/HexMath';
 
-type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'>;
+type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'> & {
+  readonly fortified?: boolean;
+};
 
 interface CommanderAuraCombatContext {
   readonly isAttacking?: boolean;
@@ -57,11 +59,14 @@ export function getCommanderAuraCombatBonus(
     for (const promotionId of promotionIds) {
       const promotion = state.config.commanderPromotions?.get(promotionId);
       if (promotion?.aura.type !== 'AURA_MODIFY_CS') continue;
-      if (promotion.aura.condition === 'attacking' && context.isAttacking !== true) continue;
-      if (promotion.aura.condition === 'defending' && context.isAttacking !== false) continue;
-      if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
-      if (distance(commanderUnit.position, unit.position) <= promotion.aura.radius) {
-        bonus += promotion.aura.value;
+      const aura = promotion.aura;
+      if (aura.condition === 'attacking' && context.isAttacking !== true) continue;
+      if (aura.condition === 'defending' && context.isAttacking !== false) continue;
+      if (aura.requiresDistrict === true && !unitIsStationedOnDistrict(state, unit)) continue;
+      if (aura.requiresFortified === true && unit.fortified !== true) continue;
+      if (!auraTargetMatches(state, unit, aura.target)) continue;
+      if (distance(commanderUnit.position, unit.position) <= aura.radius) {
+        bonus += aura.value;
       }
     }
   }
@@ -88,6 +93,22 @@ function auraTargetMatches(
 
   const category = state.config.units.get(unit.typeId)?.category;
   return category !== undefined && targets.includes(category);
+}
+
+function unitIsStationedOnDistrict(state: GameState, unit: AuraTargetUnit): boolean {
+  for (const district of state.districts.values()) {
+    if (sameHex(district.position, unit.position)) return true;
+  }
+
+  for (const city of state.cities.values()) {
+    if (sameHex(city.position, unit.position)) return true;
+  }
+
+  return false;
+}
+
+function sameHex(a: { readonly q: number; readonly r: number }, b: { readonly q: number; readonly r: number }): boolean {
+  return a.q === b.q && a.r === b.r;
 }
 
 export function hasCommanderGrantedAbility(

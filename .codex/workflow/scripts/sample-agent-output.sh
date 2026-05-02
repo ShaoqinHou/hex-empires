@@ -7,7 +7,7 @@
 #
 # Kept in the tree in case a future runtime changes this. For actual
 # hang detection today, rely on completion-row classification
-# (tokens_per_min < 1000 → HANG_SUSPECT) in log-agent-timing.sh and the
+# (tokens_per_min < 1000 with token metrics → HANG_SUSPECT) in log-agent-timing.sh and the
 # wall-clock/overlap timeline in agent-timing-report.sh.
 #
 # Original design below.

@@ -520,6 +520,137 @@ describe('calculateCombatPreview', () => {
     expect(attackerWithSteadfast.attackerStrength).toBe(attackerBaseAura.attackerStrength);
   });
 
+  it('includes Bastion Hold the Line in preview only when the unit is on a district', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const districts = new Map([
+      ['district-1', {
+        id: 'district-1',
+        type: 'encampment',
+        position: { q: 4, r: 3 },
+        cityId: 'city-1',
+        level: 1,
+        buildings: [],
+        adjacencyBonus: 0,
+      } as const],
+    ]);
+    const baseOnDistrict = calculateCombatPreview(createTestState({
+      units,
+      players,
+      districts,
+      commanders: new Map([['cmd1', commander]]),
+    }), 'a1', 'd1');
+    const holdOnDistrict = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      districts: new Map(districts),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_hold_the_line'] }]]),
+    }), 'a1', 'd1');
+
+    expect(holdOnDistrict.defenderStrength).toBe(baseOnDistrict.defenderStrength + 2);
+
+    const offDistrict = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_hold_the_line'] }]]),
+    }), 'a1', 'd1');
+    expect(offDistrict.defenderStrength).toBe(baseOnDistrict.defenderStrength);
+
+    const cityCenterOnly = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      cities: new Map([['city-1', {
+        id: 'city-1',
+        name: 'District City',
+        owner: 'p2',
+        position: { q: 4, r: 3 },
+        population: 3,
+        food: 0,
+        productionQueue: [],
+        productionProgress: 0,
+        buildings: [],
+        territory: [],
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: false,
+        defenseHP: 100,
+        specialization: null,
+        specialists: 0,
+        districts: [],
+      }]]),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_hold_the_line'] }]]),
+    }), 'a1', 'd1');
+    expect(cityCenterOnly.defenderStrength).toBe(baseOnDistrict.defenderStrength + 2);
+  });
+
+  it('includes Bastion Defilade in preview only when the defender is fortified', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 180,
+      commanderLevel: 3,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const fortifiedUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: true })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseFortified = calculateCombatPreview(createTestState({
+      units: fortifiedUnits,
+      players,
+      commanders: new Map([['cmd1', commander]]),
+    }), 'a1', 'd1');
+    const defiladeFortified = calculateCombatPreview(createTestState({
+      units: new Map(fortifiedUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_defilade'] }]]),
+    }), 'a1', 'd1');
+
+    expect(defiladeFortified.defenderStrength).toBe(baseFortified.defenderStrength + 3);
+
+    const unfortifiedUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, fortified: false })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const baseUnfortified = calculateCombatPreview(createTestState({
+      units: unfortifiedUnits,
+      players: new Map(players),
+      commanders: new Map([['cmd1', commander]]),
+    }), 'a1', 'd1');
+    const defiladeUnfortified = calculateCombatPreview(createTestState({
+      units: new Map(unfortifiedUnits),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_defilade'] }]]),
+    }), 'a1', 'd1');
+    expect(defiladeUnfortified.defenderStrength).toBe(baseUnfortified.defenderStrength);
+  });
+
   it('calculates combat odds percentages', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
