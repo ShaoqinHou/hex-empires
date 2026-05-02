@@ -8,17 +8,20 @@
  * This module is pure — reads state, returns a numeric bonus. No side
  * effects, no DOM, no Math.random().
  *
- * Full aura resolution (per-promotion stacking, target filtering by
- * UnitCategory, radius expansion from AURA_EXPAND_RADIUS picks) is
- * deferred to cycle D. This scaffold covers the base case only.
+ * AURA_MODIFY_CS promotion stacking is resolved here with UnitCategory target
+ * filtering and optional attack-only conditions. Other aura kinds are resolved
+ * by their owning systems as they come online.
  */
 
-import type { HexCoord } from '../types/HexCoord';
 import type { GameState, UnitState } from '../types/GameState';
 import type { AuraTarget, CommanderState } from '../types/Commander';
 import { distance } from '../hex/HexMath';
 
 type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'>;
+
+interface CommanderAuraCombatContext {
+  readonly isAttacking?: boolean;
+}
 
 /** Base aura radius in hex rings before any AURA_EXPAND_RADIUS picks. */
 const BASE_AURA_RADIUS = 2;
@@ -30,23 +33,35 @@ const BASE_COMBAT_BONUS = 3;
  * Returns the total commander aura combat bonus for a unit at the given
  * position owned by the given player.
  *
- * Sums +1 per friendly commander within 2 hexes. Returns 0 when no
- * commanders map exists or no commanders are in range.
+ * Sums the base combat aura plus active AURA_MODIFY_CS promotions projected by
+ * friendly commanders. Returns 0 when no commanders map exists or no
+ * commanders are in range.
  */
 export function getCommanderAuraCombatBonus(
   state: GameState,
-  unitPosition: HexCoord,
-  unitOwner: string,
+  unit: AuraTargetUnit,
+  context: CommanderAuraCombatContext = {},
 ): number {
   if (!state.commanders) return 0;
 
   let bonus = 0;
-  for (const [commanderId] of state.commanders) {
+  for (const [commanderId, commanderState] of state.commanders) {
     const commanderUnit = state.units.get(commanderId);
     if (!commanderUnit) continue;
-    if (commanderUnit.owner !== unitOwner) continue;
-    if (distance(commanderUnit.position, unitPosition) <= BASE_AURA_RADIUS) {
+    if (commanderUnit.owner !== unit.owner) continue;
+    if (distance(commanderUnit.position, unit.position) <= BASE_AURA_RADIUS) {
       bonus += BASE_COMBAT_BONUS;
+    }
+
+    const promotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_MODIFY_CS') continue;
+      if (promotion.aura.condition === 'attacking' && context.isAttacking !== true) continue;
+      if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
+      if (distance(commanderUnit.position, unit.position) <= promotion.aura.radius) {
+        bonus += promotion.aura.value;
+      }
     }
   }
   return bonus;

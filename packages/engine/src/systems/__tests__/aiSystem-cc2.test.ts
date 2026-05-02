@@ -51,7 +51,7 @@ describe('aiSystem — CC2.3 PROMOTE_COMMANDER', () => {
       owner: 'p1',
       movementLeft: 0,
       experience: 0,
-      promotions: ['assault_battle_cry'],
+      promotions: ['assault_initiative'],
     });
     const player = createTestPlayer({ id: 'p1', isHuman: false });
     const state = createTestState({
@@ -62,6 +62,31 @@ describe('aiSystem — CC2.3 PROMOTE_COMMANDER', () => {
 
     const actions = generateAIActions(state);
     expect(actions.find(a => a.type === 'PROMOTE_COMMANDER')).toBeUndefined();
+  });
+
+  it('AI prefers an eligible commander capstone over lower-tier alternatives', () => {
+    const commanderUnit = createTestUnit({
+      id: 'u_cmd',
+      typeId: 'general',
+      owner: 'p1',
+      movementLeft: 0,
+      experience: 500,
+      promotions: ['assault_initiative', 'assault_rout', 'assault_shock_tactics'],
+    });
+    const player = createTestPlayer({ id: 'p1', isHuman: false });
+    const state = createTestState({
+      currentPlayerId: 'p1',
+      players: new Map([['p1', player]]),
+      units: new Map([['u_cmd', commanderUnit]]),
+    });
+
+    const actions = generateAIActions(state);
+    const promote = actions.find(a => a.type === 'PROMOTE_COMMANDER') as
+      | Extract<GameAction, { type: 'PROMOTE_COMMANDER' }>
+      | undefined;
+
+    expect(promote).toBeDefined();
+    expect(promote!.promotionId).toBe('assault_advancement');
   });
 });
 

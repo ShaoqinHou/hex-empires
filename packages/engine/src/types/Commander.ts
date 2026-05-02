@@ -77,6 +77,7 @@ export type AuraEffectDef =
       readonly target: AuraTarget;
       readonly value: number;
       readonly radius: number;
+      readonly condition?: 'attacking';
     }
   /** Flat ranged-strength bonus to friendly units in range. */
   | {
@@ -151,6 +152,12 @@ export interface CommanderPromotionDef {
   readonly tree: CommanderTree;
   readonly tier: 1 | 2 | 3 | 4;
   readonly prerequisites: ReadonlyArray<CommanderPromotionId>;
+  /**
+   * Optional prereq mode:
+   * - `all` (default): every listed prerequisite is required.
+   * - `any`: at least one listed prerequisite is required.
+   */
+  readonly prerequisiteMode?: 'all' | 'any';
   readonly aura: AuraEffectDef;
 }
 

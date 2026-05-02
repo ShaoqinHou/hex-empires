@@ -63,14 +63,14 @@
 
 ### F-03: `promotion-trees-wrong-shape` — DIVERGED
 
-**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts:47-52`, `packages/engine/src/state/CommanderAura.ts`
+**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts`, `packages/engine/src/systems/commanderPromotionSystem.ts`, `packages/engine/src/state/CommanderAura.ts`
 **GDD reference:** `systems/commanders.md` § "Promotion System"
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Assault I Initiative, II Rout/Storm, III Shock Tactics/Enfilade, and IV Advancement, where Advancement grants First Strike to Infantry and Cavalry units in Command Radius. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order.
-**Engine does:** Five trees are present but still mostly placeholder-shaped. The engine now supports tier-4 commander promotions, `AURA_DEPLOY_WITH_MOVEMENT`, and `AURA_GRANT_ABILITY`; the current Assault data adds `assault_initiative` and `assault_advancement`, granting deploy-with-movement and First Strike respectively from either CommanderState or UnitState promotion storage. Generic aura names and many nodes remain non-canonical. Commander.ts still carries legacy tree-lock/action shapes; commendations remain absent.
-**Gap:** The critical Initiative and Advancement behaviors are implemented, but three broader divergences remain: (1) tree names/nodes still do not match the sourced promotion list; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
-**Recommendation:** Continue F-03 as a larger commander-promotion-tree rewrite: replace placeholder nodes with sourced names/effects, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
+**Engine does:** Five trees are present. The Army Assault tree now matches the refreshed source shape: Initiative -> Rout/Storm -> Shock Tactics/Enfilade -> Advancement. The engine supports `AURA_DEPLOY_WITH_MOVEMENT`, attack-only `AURA_MODIFY_CS`, `AURA_GRANT_ABILITY`, and OR-style promotion prerequisites for Advancement. `assault_advancement` grants First Strike to the local infantry proxy (`melee`) and cavalry from either CommanderState or UnitState promotion storage. The AI commander picker also honors OR prerequisites.
+**Gap:** Army Assault is now canonicalized, but three broader divergences remain: (1) Bastion, Logistics, Maneuver, and Leadership still include placeholder or custom-extension nodes; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
+**Recommendation:** Continue F-03 by canonicalizing the remaining Army Commander trees from the refreshed source list, then remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
 
 ---
 

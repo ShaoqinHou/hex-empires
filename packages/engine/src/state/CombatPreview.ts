@@ -811,7 +811,7 @@ function getEffectiveCombatStrength(
   // Empire resource combat strength modifiers — mirrors combatSystem
   const resourceBonus = calculateResourceCombatBonusPreview(state, unit.owner, category, defenderUnit);
   // Commander aura: +3 CS per friendly commander within 2 hexes — mirrors combatSystem
-  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit, { isAttacking });
   // F-07: Adjacent friendly support bonus — +2 CS per adjacent friendly unit (attack only here).
   const supportBonus = isAttacking ? calculateSupportBonus(unit, state) : 0;
 
@@ -846,7 +846,7 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   }
 
   // Commander aura: +3 CS per friendly commander within 2 hexes — mirrors combatSystem
-  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
+  const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit, { isAttacking: false });
   strength += commanderAuraBonus;
 
   return strength;

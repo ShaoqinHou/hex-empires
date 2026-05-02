@@ -1173,6 +1173,88 @@ describe('combatSystem — commander aura', () => {
     }
   });
 
+  it('Assault Rout grants extra combat strength only to melee attackers in command radius', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const stateBaseAura = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const stateWithRout = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['assault_rout'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const nextBaseAura = combatSystem(stateBaseAura, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithRout = combatSystem(stateWithRout, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextWithRout.units.get('d1')!.health).toBeLessThan(nextBaseAura.units.get('d1')!.health);
+  });
+
+  it('Assault Rout does not boost a melee unit while it is defending', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: { q: 4, r: 4 }, health: 100 })],
+    ]);
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 2,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'assault',
+      attachedUnits: [],
+      packed: false,
+    };
+    const stateBaseAura = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const stateWithRout = createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commanderState, promotions: ['assault_rout'] }]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const nextBaseAura = combatSystem(stateBaseAura, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const nextWithRout = combatSystem(stateWithRout, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(nextWithRout.units.get('d1')!.health).toBe(nextBaseAura.units.get('d1')!.health);
+  });
+
   it('commander aura does not apply when commander belongs to enemy', () => {
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1' })],

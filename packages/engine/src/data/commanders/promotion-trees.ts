@@ -47,58 +47,78 @@ const ASSAULT_INITIATIVE: CommanderPromotionDef = {
   },
 } as const;
 
-const ASSAULT_TIER1: CommanderPromotionDef = {
-  id: 'assault_battle_cry',
-  name: 'Battle Cry',
-  description: '+3 combat strength to all friendly units in radius.',
-  tree: 'assault',
-  tier: 1,
-  prerequisites: [],
-  aura: {
-    type: 'AURA_MODIFY_CS',
-    target: 'all',
-    value: 3,
-    radius: 1,
-  },
-} as const;
-
-const ASSAULT_TIER2: CommanderPromotionDef = {
-  id: 'assault_press_attack',
-  name: 'Press the Attack',
-  description: '+5 melee combat strength to friendly melee units.',
+const ASSAULT_ROUT: CommanderPromotionDef = {
+  id: 'assault_rout',
+  name: 'Rout',
+  description: '+2 combat strength to local Infantry (melee) units in radius.',
   tree: 'assault',
   tier: 2,
-  prerequisites: ['assault_battle_cry'],
+  prerequisites: ['assault_initiative'],
   aura: {
     type: 'AURA_MODIFY_CS',
     target: 'melee',
-    value: 5,
+    value: 2,
     radius: 1,
+    condition: 'attacking',
   },
 } as const;
 
-const ASSAULT_TIER3: CommanderPromotionDef = {
-  id: 'assault_overwhelming_force',
-  name: 'Overwhelming Force',
-  description: '+8 combat strength to all friendly units in radius.',
+const ASSAULT_STORM: CommanderPromotionDef = {
+  id: 'assault_storm',
+  name: 'Storm',
+  description: '+2 combat strength to friendly ranged units in radius.',
   tree: 'assault',
-  tier: 3,
-  prerequisites: ['assault_press_attack'],
+  tier: 2,
+  prerequisites: ['assault_initiative'],
   aura: {
     type: 'AURA_MODIFY_CS',
-    target: 'all',
-    value: 8,
+    target: 'ranged',
+    value: 2,
     radius: 1,
+    condition: 'attacking',
+  },
+} as const;
+
+const ASSAULT_SHOCK_TACTICS: CommanderPromotionDef = {
+  id: 'assault_shock_tactics',
+  name: 'Shock Tactics',
+  description: '+3 combat strength to friendly cavalry units in radius.',
+  tree: 'assault',
+  tier: 3,
+  prerequisites: ['assault_rout'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: 'cavalry',
+    value: 3,
+    radius: 1,
+    condition: 'attacking',
+  },
+} as const;
+
+const ASSAULT_ENFILADE: CommanderPromotionDef = {
+  id: 'assault_enfilade',
+  name: 'Enfilade',
+  description: '+3 combat strength to friendly siege units in radius.',
+  tree: 'assault',
+  tier: 3,
+  prerequisites: ['assault_storm'],
+  aura: {
+    type: 'AURA_MODIFY_CS',
+    target: 'siege',
+    value: 3,
+    radius: 1,
+    condition: 'attacking',
   },
 } as const;
 
 const ASSAULT_ADVANCEMENT: CommanderPromotionDef = {
   id: 'assault_advancement',
   name: 'Advancement',
-  description: 'Melee and cavalry units in radius gain First Strike at full HP.',
+  description: 'Local melee (Infantry proxy) and cavalry units in radius gain First Strike at full HP.',
   tree: 'assault',
   tier: 4,
-  prerequisites: ['assault_overwhelming_force'],
+  prerequisites: ['assault_shock_tactics', 'assault_enfilade'],
+  prerequisiteMode: 'any',
   aura: {
     type: 'AURA_GRANT_ABILITY',
     target: ['melee', 'cavalry'],
@@ -325,9 +345,10 @@ const BASTION_NAVAL_ENGINEERING: CommanderPromotionDef = {
  */
 export const ALL_COMMANDER_PROMOTIONS: ReadonlyArray<CommanderPromotionDef> = [
   ASSAULT_INITIATIVE,
-  ASSAULT_TIER1,
-  ASSAULT_TIER2,
-  ASSAULT_TIER3,
+  ASSAULT_ROUT,
+  ASSAULT_STORM,
+  ASSAULT_SHOCK_TACTICS,
+  ASSAULT_ENFILADE,
   ASSAULT_ADVANCEMENT,
   LOGISTICS_TIER1,
   LOGISTICS_TIER2,

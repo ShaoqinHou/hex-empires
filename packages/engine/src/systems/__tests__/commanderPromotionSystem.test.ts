@@ -111,10 +111,10 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'assault_battle_cry',
+      promotionId: 'assault_initiative',
     };
     const next = commanderPromotionSystem(state, action);
-    expect(next.units.get('c1')!.promotions).toEqual(['assault_battle_cry']);
+    expect(next.units.get('c1')!.promotions).toEqual(['assault_initiative']);
   });
 
   it('does nothing when the commander has no unspent pick', () => {
@@ -124,7 +124,7 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
         id: 'c1',
         typeId: 'captain',
         experience: 40,
-        promotions: ['assault_battle_cry'],
+        promotions: ['assault_initiative'],
       })],
     ]);
     const state = createTestState({ units });
@@ -158,7 +158,7 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'assault_press_attack', // needs assault_battle_cry
+      promotionId: 'assault_rout', // needs assault_initiative
     };
     expect(commanderPromotionSystem(state, action)).toBe(state);
   });
@@ -170,19 +170,19 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
         id: 'c1',
         typeId: 'captain',
         experience: 160,
-        promotions: ['assault_battle_cry'],
+        promotions: ['assault_initiative'],
       })],
     ]);
     const state = createTestState({ units });
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'assault_press_attack',
+      promotionId: 'assault_rout',
     };
     const next = commanderPromotionSystem(state, action);
     expect(next.units.get('c1')!.promotions).toEqual([
-      'assault_battle_cry',
-      'assault_press_attack',
+      'assault_initiative',
+      'assault_rout',
     ]);
   });
 
@@ -192,14 +192,51 @@ describe('commanderPromotionSystem — PROMOTE_COMMANDER', () => {
         id: 'c1',
         typeId: 'captain',
         experience: 160,
-        promotions: ['assault_battle_cry'],
+        promotions: ['assault_initiative'],
       })],
     ]);
     const state = createTestState({ units });
     const action: PromoteCommanderAction = {
       type: 'PROMOTE_COMMANDER',
       commanderId: 'c1',
-      promotionId: 'assault_battle_cry',
+      promotionId: 'assault_initiative',
+    };
+    expect(commanderPromotionSystem(state, action)).toBe(state);
+  });
+
+  it('allows advancement when one optional prerequisite branch is met', () => {
+    const units = new Map([
+      ['c1', createTestUnit({
+        id: 'c1',
+        typeId: 'captain',
+        experience: 600, // level 5, enough picks
+        promotions: ['assault_initiative', 'assault_rout', 'assault_shock_tactics'],
+      })],
+    ]);
+    const state = createTestState({ units });
+    const action: PromoteCommanderAction = {
+      type: 'PROMOTE_COMMANDER',
+      commanderId: 'c1',
+      promotionId: 'assault_advancement',
+    };
+    const next = commanderPromotionSystem(state, action);
+    expect(next.units.get('c1')!.promotions).toContain('assault_advancement');
+  });
+
+  it('blocks advancement when no optional prerequisite branch is met', () => {
+    const units = new Map([
+      ['c1', createTestUnit({
+        id: 'c1',
+        typeId: 'captain',
+        experience: 600,
+        promotions: ['assault_initiative', 'assault_rout'],
+      })],
+    ]);
+    const state = createTestState({ units });
+    const action: PromoteCommanderAction = {
+      type: 'PROMOTE_COMMANDER',
+      commanderId: 'c1',
+      promotionId: 'assault_advancement',
     };
     expect(commanderPromotionSystem(state, action)).toBe(state);
   });

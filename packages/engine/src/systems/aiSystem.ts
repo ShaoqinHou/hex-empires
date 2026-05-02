@@ -30,6 +30,20 @@ function aiCommanderLevelForXp(xp: number): number {
   return Math.min(level, 5);
 }
 
+function aiCommanderPromotionPrereqsMet(
+  unit: UnitState,
+  promotion: {
+    readonly prerequisites: ReadonlyArray<string>;
+    readonly prerequisiteMode?: 'all' | 'any';
+  },
+): boolean {
+  if (promotion.prerequisites.length === 0) return true;
+  if ((promotion.prerequisiteMode ?? 'all') === 'any') {
+    return promotion.prerequisites.some(p => unit.promotions.includes(p));
+  }
+  return promotion.prerequisites.every(p => unit.promotions.includes(p));
+}
+
 /**
  * True iff unit.typeId is a registered commander archetype.
  * Uses state.config.commanders when available; falls back to the well-known
@@ -527,19 +541,23 @@ export function generateAIActions(state: GameState): ReadonlyArray<GameAction> {
     const level = aiCommanderLevelForXp(unit.experience);
     const unspent = level - unit.promotions.length;
     if (unspent <= 0) continue;
-    // Pick first available promotion: tier 1 with no prerequisites, or any with met prereqs.
-    let chosenPromotion: string | null = null;
+    // Pick the highest-tier legal promotion so branch capstones are not skipped
+    // by lower-tier alternatives that happen to appear earlier in catalogue order.
+    let chosenPromotion: { readonly id: string; readonly tier: number } | null = null;
     if (state.config.commanderPromotions) {
       for (const [promoId, promo] of state.config.commanderPromotions) {
         if (unit.promotions.includes(promoId)) continue;
-        const prereqsMet = promo.prerequisites.every(p => unit.promotions.includes(p));
-        if (!prereqsMet) continue;
-        chosenPromotion = promoId;
-        break; // pick first eligible
+        if (!aiCommanderPromotionPrereqsMet(unit, promo)) continue;
+        if (
+          chosenPromotion === null ||
+          promo.tier > chosenPromotion.tier
+        ) {
+          chosenPromotion = { id: promoId, tier: promo.tier };
+        }
       }
     }
     if (chosenPromotion) {
-      actions.push({ type: 'PROMOTE_COMMANDER', commanderId: unit.id, promotionId: chosenPromotion });
+      actions.push({ type: 'PROMOTE_COMMANDER', commanderId: unit.id, promotionId: chosenPromotion.id });
     }
   }
 

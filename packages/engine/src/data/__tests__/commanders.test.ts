@@ -217,13 +217,49 @@ describe('ALL_COMMANDER_PROMOTIONS catalogue', () => {
     );
   });
 
+  it('matches the sourced Army Assault promotion tree shape', () => {
+    const assault = ALL_COMMANDER_PROMOTIONS.filter(p => p.tree === 'assault');
+    expect(assault.map(p => p.id)).toEqual([
+      'assault_initiative',
+      'assault_rout',
+      'assault_storm',
+      'assault_shock_tactics',
+      'assault_enfilade',
+      'assault_advancement',
+    ]);
+    expect(assault.map(p => p.name)).toEqual([
+      'Initiative',
+      'Rout',
+      'Storm',
+      'Shock Tactics',
+      'Enfilade',
+      'Advancement',
+    ]);
+    expect(assault.map(p => p.tier)).toEqual([1, 2, 2, 3, 3, 4]);
+    expect(assault[1]!.prerequisites).toEqual(['assault_initiative']);
+    expect(assault[2]!.prerequisites).toEqual(['assault_initiative']);
+    expect(assault[3]!.prerequisites).toEqual(['assault_rout']);
+    expect(assault[4]!.prerequisites).toEqual(['assault_storm']);
+    expect(assault[5]!.prerequisites).toEqual(['assault_shock_tactics', 'assault_enfilade']);
+    expect(assault[5]!.prerequisiteMode).toBe('any');
+    for (const promotion of assault.slice(1, 5)) {
+      expect(promotion.aura.type).toBe('AURA_MODIFY_CS');
+      if (promotion.aura.type === 'AURA_MODIFY_CS') {
+        expect(promotion.aura.condition).toBe('attacking');
+      }
+    }
+  });
+
   it('includes Assault Advancement as a First Strike ability grant', () => {
     const advancement = ALL_COMMANDER_PROMOTIONS.find(p => p.id === 'assault_advancement');
     expect(advancement).toBeDefined();
     expect(advancement!.name).toBe('Advancement');
     expect(advancement!.tree).toBe('assault');
     expect(advancement!.tier).toBe(4);
-    expect(advancement!.prerequisites).toContain('assault_overwhelming_force');
+    expect(advancement!.prerequisites).toEqual(
+      expect.arrayContaining(['assault_shock_tactics', 'assault_enfilade'],
+    ));
+    expect(advancement!.prerequisiteMode).toBe('any');
     expect(advancement!.aura.type).toBe('AURA_GRANT_ABILITY');
     if (advancement!.aura.type === 'AURA_GRANT_ABILITY') {
       expect(advancement!.aura.abilityId).toBe('first_strike');

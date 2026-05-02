@@ -156,10 +156,7 @@ function applyPromotion(
   // Already picked.
   if (unit.promotions.includes(promotionId)) return state;
 
-  // Prerequisite check — every listed prereq must already be in picks.
-  for (const prereq of promotion.prerequisites) {
-    if (!unit.promotions.includes(prereq)) return state;
-  }
+  if (!commanderPrerequisitesMet(unit, promotion)) return state;
 
   // Must have an unspent pick: level > picks-so-far.
   const level = commanderLevelForXp(unit.experience);
@@ -175,4 +172,19 @@ function applyPromotion(
   updatedUnits.set(unit.id, updatedUnit);
 
   return { ...state, units: updatedUnits };
+}
+
+function commanderPrerequisitesMet(
+  unit: UnitState,
+  promotion: {
+    readonly prerequisites: ReadonlyArray<CommanderPromotionId>;
+    readonly prerequisiteMode?: 'all' | 'any';
+  },
+): boolean {
+  if (promotion.prerequisites.length === 0) return true;
+  const mode = promotion.prerequisiteMode ?? 'all';
+  if (mode === 'any') {
+    return promotion.prerequisites.some(p => unit.promotions.includes(p));
+  }
+  return promotion.prerequisites.every(p => unit.promotions.includes(p));
 }
