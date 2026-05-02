@@ -63,7 +63,7 @@ Legend: 🔵 primary | 🟢 state util | 🟡 data | 🔴 UI panel
 
 | GDD system | Engine files |
 |---|---|
-| **narrative-events** | _(no engine file; audit should flag as MISSING entirely. Related: `ui/panels/EventLogPanel.tsx` as UI analog only.)_ |
+| **narrative-events** | 🔵 `systems/narrativeEventSystem.ts` · 🔵 `systems/discoverySystem.ts` · 🟢 `state/narrativeEventUtils.ts` · 🟡 `data/narrative-events/` · 🟡 `data/discoveries/` · 🔴 `ui/panels/NarrativeEventPanel.tsx` |
 | **victory-paths** | 🔵 `systems/victorySystem.ts` · 🔴 `ui/panels/VictoryPanel.tsx` · 🔴 `ui/panels/VictoryProgressPanel.tsx` |
 | **legends** | 🔵 `systems/achievementSystem.ts` _(legacy / related; VII Legends would supersede. Audit recommendation: retire achievementSystem OR refactor.)_ · 🔴 `ui/panels/AchievementsPanel.tsx` |
 
@@ -116,9 +116,9 @@ Based on file counts:
 
 | Bucket | System count | Typical audit size |
 |---|---|---|
-| Small (1–2 files) | mementos, celebrations, narrative-events, independent-powers | 100–200 lines — mostly MISSING findings |
+| Small (1–2 files) | mementos, celebrations, independent-powers | 100–200 lines — mostly MISSING findings |
 | Medium (2–4 files) | ages, crises, legacy-paths, trade-routes, commanders, diplomacy-influence, religion, tech-tree, civic-tree, victory-paths, legends, map-terrain, leaders, civilizations, yields-adjacency, resources, population-specialists | 300–500 lines |
-| Large (5+ files) | combat, buildings-wonders, settlements, tile-improvements | 500–800 lines |
+| Large (5+ files) | combat, buildings-wonders, settlements, narrative-events, tile-improvements | 500–800 lines |
 
 Total audit output: **~10,000 lines** across 26 files. Lives on disk; doesn't hit parent context with strict-brief discipline.
 

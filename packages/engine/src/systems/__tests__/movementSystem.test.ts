@@ -3,6 +3,27 @@ import { movementSystem, tilesShareRiverEdge } from '../movementSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
 import type { HexTile } from '../../types/GameState';
+import type { DiscoveryDef, NarrativeEventDef } from '../../types/NarrativeEvent';
+
+const TEST_DISCOVERY_EVENT: NarrativeEventDef = {
+  id: 'test_discovery_event',
+  title: 'Found Cache',
+  vignette: 'The scouts find a sealed cache.',
+  category: 'discovery',
+  requirements: { triggerType: 'DISCOVERY_EXPLORED' },
+  choices: [
+    {
+      label: 'Study it',
+      effects: [{ type: 'MODIFY_YIELD', target: 'empire', yield: 'science', value: 20 }],
+    },
+  ],
+};
+
+const TEST_DISCOVERY_DEF: DiscoveryDef = {
+  id: 'test_discovery',
+  narrativeEventId: TEST_DISCOVERY_EVENT.id,
+  label: 'Test Discovery',
+};
 
 describe('movementSystem', () => {
   it('moves unit to adjacent hex', () => {
@@ -31,6 +52,41 @@ describe('movementSystem', () => {
     });
     expect(next.units.get('u1')!.position).toEqual({ q: 2, r: 0 });
     expect(next.units.get('u1')!.movementLeft).toBe(1);
+  });
+
+  it('queues discovery narrative context without clearing the tile before resolution', () => {
+    const units = new Map([
+      ['u1', createTestUnit({ id: 'u1', position: { q: 0, r: 0 }, movementLeft: 2 })],
+    ]);
+    const base = createTestState({ units });
+    const tiles = new Map(base.map.tiles);
+    const tileKey = coordToKey({ q: 1, r: 0 });
+    const tile = tiles.get(tileKey)!;
+    tiles.set(tileKey, { ...tile, discoveryId: TEST_DISCOVERY_DEF.id });
+
+    const next = movementSystem({
+      ...base,
+      map: { ...base.map, tiles },
+      config: {
+        ...base.config,
+        discoveries: new Map([[TEST_DISCOVERY_DEF.id, TEST_DISCOVERY_DEF]]),
+        narrativeEvents: new Map([[TEST_DISCOVERY_EVENT.id, TEST_DISCOVERY_EVENT]]),
+      },
+    }, {
+      type: 'MOVE_UNIT',
+      unitId: 'u1',
+      path: [{ q: 1, r: 0 }],
+    });
+
+    expect(next.pendingNarrativeEvents).toContain(TEST_DISCOVERY_EVENT.id);
+    expect(next.pendingDiscoveryEvents).toContainEqual({
+      eventId: TEST_DISCOVERY_EVENT.id,
+      discoveryId: TEST_DISCOVERY_DEF.id,
+      unitId: 'u1',
+      tileQ: 1,
+      tileR: 0,
+    });
+    expect(next.map.tiles.get(tileKey)?.discoveryId).toBe(TEST_DISCOVERY_DEF.id);
   });
 
   it('rejects movement with insufficient movement points', () => {

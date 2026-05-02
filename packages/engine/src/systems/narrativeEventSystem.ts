@@ -1,5 +1,6 @@
 import type { GameState, GameAction, PlayerState, EffectDef } from '../types/GameState';
 import { enqueueDiscoveryEvent, enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
+import { coordToKey } from '../hex/HexMath';
 
 /**
  * NarrativeEventSystem handles Goody-Hut-replacement story moments.
@@ -69,10 +70,29 @@ function resolveNarrativeEvent(state: GameState, eventId: string, choiceIndex: n
 
   // Remove from pending queue
   const queue = (newState.pendingNarrativeEvents ?? []).filter(id => id !== eventId);
+  const discoveryContext = (newState.pendingDiscoveryEvents ?? []).find(context => context.eventId === eventId);
+  const discoveryQueue = (newState.pendingDiscoveryEvents ?? []).filter(context => context.eventId !== eventId);
+
+  if (discoveryContext) {
+    const tileKey = coordToKey({ q: discoveryContext.tileQ, r: discoveryContext.tileR });
+    const tile = newState.map.tiles.get(tileKey);
+    if (tile?.discoveryId === discoveryContext.discoveryId) {
+      const nextTiles = new Map(newState.map.tiles);
+      nextTiles.set(tileKey, { ...tile, discoveryId: null });
+      newState = {
+        ...newState,
+        map: {
+          ...newState.map,
+          tiles: nextTiles,
+        },
+      };
+    }
+  }
 
   return {
     ...newState,
     pendingNarrativeEvents: queue,
+    pendingDiscoveryEvents: discoveryQueue,
     log: [...newState.log, {
       turn: newState.turn,
       playerId: state.currentPlayerId,

@@ -197,6 +197,7 @@ export function createInitialState(config: GameSetupConfig, seed?: number, accou
     independentPowers: new Map(),
     firedNarrativeEvents: [],
     pendingNarrativeEvents: [],
+    pendingDiscoveryEvents: [],
     ageProgressMeter: 0,
     // W4-04: Commander state — empty Map at game start (commanders spawned
     // by production system or cheat commands register themselves here).

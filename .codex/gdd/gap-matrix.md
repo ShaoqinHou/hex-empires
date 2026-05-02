@@ -41,7 +41,7 @@
 | 20 | **religion** | `religionSystem.ts`, `data/religion/` | CLOSE | MED | Religion exists. Verify: Pantheon in Antiquity only (does NOT lead to religion); Religion founding in Exploration; belief slots; Reliquary Belief → Relic generation. |
 | 21 | **tech-tree** | `researchSystem.ts`, `data/technologies/` | CLOSE | MED | Research system exists. Verify: per-age trees (not cumulative); mastery mechanic; tree reset on age transition (mid-research lost); no Eureka boosts. |
 | 22 | **civic-tree** | `civicSystem.ts`, `data/civics/` | CLOSE | MED | Civics tree exists. Verify: per-age trees; civ-unique civic per civ; same mastery mechanic; Ideology civics in Modern gating Military victory. |
-| 23 | **narrative-events** | (no dedicated file) | MISSING | LOW | No narrative event system in engine. VII has 1000+ events with tag system. Low priority for core loop; could bolt on later. |
+| 23 | **narrative-events** | `narrativeEventSystem.ts`, `discoverySystem.ts`, `data/narrative-events/`, `data/discoveries/` | CLOSE | LOW | Narrative-event infrastructure exists at starter scale. Verify trigger coverage, discovery consumption/reward unification, effect depth, and content scale toward VII's 1000+ event database. |
 | 24 | **victory-paths** | `victorySystem.ts` | CLOSE | MED | Victory system exists. Verify: 4 paths × 3 ages × 3 milestones; Modern terminal conditions (World's Fair / World Bank / Operation Ivy / Space Race); Score Victory fallback at 100% age progress. |
 | 25 | **legends** | - | MISSING | LOW | No meta-progression layer in engine (deliberate legacy decision: "Achievements parked behind `experimentalAchievements` flag"). Low priority. |
 | 26 | **map-terrain** | `visibilitySystem.ts`, `data/terrains/` | CLOSE | MED | Terrain system exists. Verify: biome+modifier (not per-tile yields); navigable rivers as water tiles (or minor river edge); Homelands/Distant Lands partition (biggest gap — verify); binary movement (1 or deplete-all). |
@@ -68,7 +68,7 @@
 
 ### LOW — deferrable
 - **#6 mementos, #25 legends** — meta-progression is post-launch work; core loop doesn't need it.
-- **#23 narrative-events** — huge scope (1000+), bolt-on later.
+- **#23 narrative-events** — infrastructure exists, but authored scale/effect depth remain huge scope (1000+); grow after trigger and discovery semantics stabilize.
 - **Legacy system retirement** — `governorSystem`, worker units — clean up when those areas get touched.
 
 ## Process for applying a gap matrix row
@@ -89,5 +89,5 @@
 
 - **Content population** (Phase 2 deferred fact cards) can happen lazily per gap-row — when touching `combat.md` system work, backfill `content/units/<slug>.md` fact cards for units actually used.
 - **Numeric verification** is the biggest remaining research gap. Many GDD claims are `[INFERRED]` — in-game playtesting or datamined constants would convert these to high-confidence baselines.
-- **Hex-empires is closer to Civ VII than expected.** Of 26 systems, 2 are MATCH-ish, 18 are CLOSE, 1 is DIVERGED (tile-improvements/workers), 5 are MISSING (mementos, celebrations, independent-powers dedicated system, narrative-events, legends). The user's initial concern ("system might behave quite different, sometimes not from Civ 7 but from Civ 6") is validated for tile-improvements but most other systems are at the right architectural layer.
+- **Hex-empires is closer to Civ VII than expected.** Of 26 systems, 2 are MATCH-ish, 19 are CLOSE, 1 is DIVERGED (tile-improvements/workers), 4 are MISSING (mementos, celebrations, independent-powers dedicated system, legends). The user's initial concern ("system might behave quite different, sometimes not from Civ 7 but from Civ 6") is validated for tile-improvements but most other systems are at the right architectural layer.
 - **Single most impactful fix:** align tile-improvements with VII's no-worker + auto-placement-on-growth model. One refactor; unlocks the defining VII Economic Legacy feel (Silk Roads: assigned resources not worked tiles) and Enlightenment (Specialists on high-adjacency Quarters not worked rural).

@@ -62,6 +62,14 @@ export interface HexMap {
   readonly wrapX: boolean; // cylindrical wrapping
 }
 
+export interface PendingDiscoveryEventContext {
+  readonly eventId: string;
+  readonly discoveryId: string;
+  readonly unitId: UnitId;
+  readonly tileQ: number;
+  readonly tileR: number;
+}
+
 // ── Units ──
 
 export type UnitCategory = 'melee' | 'ranged' | 'siege' | 'cavalry' | 'naval' | 'civilian' | 'religious' | 'support';
@@ -1118,9 +1126,12 @@ export interface GameState {
    * Optional dedup store and queue for the narrative-events system.
    * `firedNarrativeEvents` prevents the same event firing twice.
    * `pendingNarrativeEvents` is the ordered queue waiting to surface to UI.
+   * `pendingDiscoveryEvents` keeps tile context so resolving a Discovery
+   * popup can consume its map marker after the player chooses a reward.
    */
   readonly firedNarrativeEvents?: ReadonlyArray<string>;
   readonly pendingNarrativeEvents?: ReadonlyArray<string>;
+  readonly pendingDiscoveryEvents?: ReadonlyArray<PendingDiscoveryEventContext>;
 
   /**
    * ── Global Age Progress Meter ──

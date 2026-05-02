@@ -115,9 +115,9 @@
 **Severity:** MED
 **Effort:** M
 **VII says:** Discoveries replace goody huts. Entering a discovery tile fires a narrative popup with choices, then consumes the tile.
-**Engine does:** `HexTile.discoveryId`, discovery data, movement-triggered narrative enqueue, and direct `EXPLORE_DISCOVERY` rewards exist. Tests cover both narrative discovery enqueue and direct reward clearing.
-**Gap:** Movement-triggered discovery events do not yet clear the tile through the same path as direct rewards, and reward-bearing discovery behavior remains split between narrative choices and `discoverySystem`.
-**Recommendation:** Consolidate discovery consumption and reward handling around pending narrative event resolution.
+**Engine does:** `HexTile.discoveryId`, discovery data, movement-triggered narrative enqueue, pending discovery context, and direct `EXPLORE_DISCOVERY` rewards exist. Movement-triggered discovery events now carry tile context and clear the map marker after successful narrative-event resolution. Tests cover movement context, narrative resolution clearing, and direct reward clearing.
+**Gap:** Reward-bearing discovery behavior remains split between narrative choices and `discoverySystem`, and repeated physical Discovery sites that share one narrative event id are still constrained by global `firedNarrativeEvents` deduplication.
+**Recommendation:** Consolidate discovery rewards around pending narrative event resolution, then decide whether discovery dedup should be per physical site or per authored event.
 
 ---
 
@@ -138,7 +138,7 @@
 
 - F-01: grow the authored event registry after trigger/effect behavior stabilizes.
 - F-04: hook battle, weather, war, and age-transition triggers one at a time; add tech-id-specific filtering only when authored content needs it.
-- F-06: unify movement discovery consumption with event resolution.
+- F-06: unify reward-bearing discovery behavior and decide per-site versus per-event deduplication.
 - F-07: add choice effect previews, discovery map markers, and systemic banners.
 
 ---

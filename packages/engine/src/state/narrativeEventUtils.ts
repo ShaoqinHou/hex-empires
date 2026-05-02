@@ -1,11 +1,13 @@
-import type { GameState } from '../types/GameState';
+import type { GameState, PendingDiscoveryEventContext } from '../types/GameState';
 import type { NarrativeEventDef, NarrativeRequirements } from '../types/NarrativeEvent';
 
 export type NarrativeTriggerType = NonNullable<NarrativeRequirements['triggerType']>;
+type DiscoveryContextInput = Omit<PendingDiscoveryEventContext, 'eventId'>;
 
 interface EnqueueNarrativeEventOptions {
   readonly playerId?: string;
   readonly messagePrefix?: string;
+  readonly discoveryContext?: DiscoveryContextInput;
 }
 
 /**
@@ -85,11 +87,18 @@ export function enqueueNarrativeEvent(
   if (!matchesNarrativeRequirements(def, state, playerId)) return state;
 
   const messagePrefix = options.messagePrefix ?? 'Narrative event';
+  const pendingDiscoveryEvents = options.discoveryContext
+    ? [
+      ...(state.pendingDiscoveryEvents ?? []).filter(context => context.eventId !== narrativeEventId),
+      { eventId: narrativeEventId, ...options.discoveryContext },
+    ]
+    : state.pendingDiscoveryEvents;
 
   return {
     ...state,
     pendingNarrativeEvents: [...(state.pendingNarrativeEvents ?? []), narrativeEventId],
     firedNarrativeEvents: [...fired, narrativeEventId],
+    pendingDiscoveryEvents,
     log: [...state.log, {
       turn: state.turn,
       playerId,
@@ -123,6 +132,13 @@ export function enqueueFirstEligibleNarrativeEvent(
  * Called by movementSystem when a unit steps on a discoveryId tile.
  * Respects the dedup guard and age gate; safe to call even if the event was already fired.
  */
-export function enqueueDiscoveryEvent(state: GameState, narrativeEventId: string): GameState {
-  return enqueueNarrativeEvent(state, narrativeEventId, { messagePrefix: 'Discovery' });
+export function enqueueDiscoveryEvent(
+  state: GameState,
+  narrativeEventId: string,
+  context?: DiscoveryContextInput,
+): GameState {
+  return enqueueNarrativeEvent(state, narrativeEventId, {
+    messagePrefix: 'Discovery',
+    discoveryContext: context,
+  });
 }

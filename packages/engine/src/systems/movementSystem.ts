@@ -316,15 +316,20 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     lastValidation: null, // Clear validation after successful action
   };
 
-  // F-06: Discovery tile trigger — if the destination tile has a discoveryId,
-  // look up the DiscoveryDef and enqueue its narrativeEventId.
-  // The tile's discoveryId is NOT cleared here (read-only map); the UI marks
-  // it explored via a separate mechanism. Discovery events dedup via firedNarrativeEvents.
-  const destTile = state.map.tiles.get(coordToKey(currentPos));
+  // F-06: Discovery tile trigger — entering a Discovery tile enqueues the
+  // associated narrative event with tile context. The marker is consumed after
+  // the player resolves the pending popup.
+  const destTileKey = coordToKey(currentPos);
+  const destTile = state.map.tiles.get(destTileKey);
   if (destTile?.discoveryId && nextState.config.discoveries) {
     const discoveryDef = nextState.config.discoveries.get(destTile.discoveryId);
     if (discoveryDef) {
-      nextState = enqueueDiscoveryEvent(nextState, discoveryDef.narrativeEventId);
+      nextState = enqueueDiscoveryEvent(nextState, discoveryDef.narrativeEventId, {
+        discoveryId: destTile.discoveryId,
+        unitId: unit.id,
+        tileQ: currentPos.q,
+        tileR: currentPos.r,
+      });
     }
   }
 

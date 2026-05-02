@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { narrativeEventSystem, enqueueDiscoveryEvent } from '../narrativeEventSystem';
 import { createTestState, createTestPlayer } from './helpers';
+import { coordToKey } from '../../hex/HexMath';
 import type { NarrativeEventDef } from '../../types/NarrativeEvent';
 import type { GameConfig } from '../../types/GameConfig';
 
@@ -218,6 +219,69 @@ describe('narrativeEventSystem', () => {
       expect(next.pendingNarrativeEvents ?? []).not.toContain('test_event');
     });
 
+    it('clears a discovery tile after resolving its pending discovery event', () => {
+      const base = createTestState();
+      const tileKey = coordToKey({ q: 1, r: 0 });
+      const tiles = new Map(base.map.tiles);
+      const tile = tiles.get(tileKey)!;
+      tiles.set(tileKey, { ...tile, discoveryId: 'test_discovery' });
+
+      const narrativeEvents = new Map([['discovery_event', DISCOVERY_EVENT]]);
+      const state = createTestState({
+        map: { ...base.map, tiles },
+        pendingNarrativeEvents: ['discovery_event'],
+        pendingDiscoveryEvents: [{
+          eventId: 'discovery_event',
+          discoveryId: 'test_discovery',
+          unitId: 'u1',
+          tileQ: 1,
+          tileR: 0,
+        }],
+        config: { ...base.config, narrativeEvents },
+      });
+
+      const next = narrativeEventSystem(state, {
+        type: 'RESOLVE_NARRATIVE_EVENT',
+        eventId: 'discovery_event',
+        choiceIndex: 0,
+      });
+
+      expect(next.map.tiles.get(tileKey)?.discoveryId).toBeNull();
+      expect(next.pendingDiscoveryEvents ?? []).toEqual([]);
+      expect(next.players.get('p1')!.science).toBe(20);
+    });
+
+    it('keeps a discovery tile when resolving the event with stale tile context', () => {
+      const base = createTestState();
+      const tileKey = coordToKey({ q: 1, r: 0 });
+      const tiles = new Map(base.map.tiles);
+      const tile = tiles.get(tileKey)!;
+      tiles.set(tileKey, { ...tile, discoveryId: 'different_discovery' });
+
+      const narrativeEvents = new Map([['discovery_event', DISCOVERY_EVENT]]);
+      const state = createTestState({
+        map: { ...base.map, tiles },
+        pendingNarrativeEvents: ['discovery_event'],
+        pendingDiscoveryEvents: [{
+          eventId: 'discovery_event',
+          discoveryId: 'test_discovery',
+          unitId: 'u1',
+          tileQ: 1,
+          tileR: 0,
+        }],
+        config: { ...base.config, narrativeEvents },
+      });
+
+      const next = narrativeEventSystem(state, {
+        type: 'RESOLVE_NARRATIVE_EVENT',
+        eventId: 'discovery_event',
+        choiceIndex: 0,
+      });
+
+      expect(next.map.tiles.get(tileKey)?.discoveryId).toBe('different_discovery');
+      expect(next.pendingDiscoveryEvents ?? []).toEqual([]);
+    });
+
     it('does not duplicate tags if already present', () => {
       const narrativeEvents = new Map([['test_event', SIMPLE_EVENT]]);
       const player = createTestPlayer({ id: 'p1', narrativeTags: ['test-done'] });
@@ -269,9 +333,21 @@ describe('narrativeEventSystem', () => {
       const state = createTestState({
         config: { ...createTestState().config, narrativeEvents },
       });
-      const next = enqueueDiscoveryEvent(state, 'discovery_event');
+      const next = enqueueDiscoveryEvent(state, 'discovery_event', {
+        discoveryId: 'test_discovery',
+        unitId: 'u1',
+        tileQ: 1,
+        tileR: 0,
+      });
       expect(next.pendingNarrativeEvents).toContain('discovery_event');
       expect(next.firedNarrativeEvents).toContain('discovery_event');
+      expect(next.pendingDiscoveryEvents).toContainEqual({
+        eventId: 'discovery_event',
+        discoveryId: 'test_discovery',
+        unitId: 'u1',
+        tileQ: 1,
+        tileR: 0,
+      });
     });
 
     it('is a no-op if discovery event already fired (dedup)', () => {
