@@ -26,11 +26,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 1 |
-| CLOSE | 3 |
-| DIVERGED | 4 |
-| MISSING | 4 |
-| EXTRA | 2 |
+| MATCH | 6 |
+| CLOSE | 5 |
+| DIVERGED | 2 |
+| MISSING | 1 |
+| EXTRA | 0 |
 
 **Total findings:** 14
 
@@ -38,29 +38,29 @@
 
 ## Detailed findings
 
-### F-01: Age transition does NOT wipe research state — DIVERGED
+### F-01: Age transition wipes active research state — MATCH
 
-**Location:** `ageSystem.ts:76-84`
+**Location:** `ageSystem.ts` `handleTransition`; `GameEngine.ts` transition pipeline guard
 **GDD reference:** `systems/tech-tree.md` § "Age transition: tech tree wipe"
 **Severity:** HIGH
 **Effort:** S
 **VII says:** On TRANSITION_AGE: `researchProgress` discarded, `researchQueue` cleared, `completedTechs` and `completedMasteries` cleared.
-**Engine does:** `handleTransition` spreads `...player` and only overrides civ/age/progress/legacy/gold/researchedTechs. Five fields persist: `currentResearch`, `researchProgress`, `masteredTechs`, `currentMastery`, `masteryProgress`.
-**Gap:** Player carries science + in-progress mastery into new age. `masteredTechs` from Antiquity blocks mastering again in Exploration.
-**Recommendation:** Add to player update: `currentResearch: null, researchProgress: 0, masteredTechs: [], currentMastery: null, masteryProgress: 0`.
+**Engine does:** Accepted `TRANSITION_AGE` clears `researchedTechs`, `currentResearch`, `researchProgress`, `masteredTechs`, `currentMastery`, `masteryProgress`, and `techProgressMap`. `GameEngine.applyTransitionAge` runs `ageSystem` first and blocks follow-on transition handlers if validation rejects the transition.
+**Gap:** None for the active tech tree reset. Codices and persistent legacy/attribute state intentionally live in separate fields.
+**Recommendation:** Keep transition reset ownership in `ageSystem`; preserve the rejected-transition integration regression.
 
 ---
 
-### F-02: Mastery bonus is generic `+1 science` for all techs — DIVERGED
+### F-02: Mastery bonuses are data-driven but content still approximate — CLOSE
 
-**Location:** `researchSystem.ts:202-213`
+**Location:** `researchSystem.ts` `processMasteryResearch`; `TechnologyDef.masteryEffect`; `TechnologyDef.masteryCodexCount`
 **GDD reference:** `systems/tech-tree.md` § "Mastery mechanic" → "Thematic bonuses"
 **Severity:** MED
 **Effort:** M
 **VII says:** Each mastery has thematic bonus. Writing→+1 Science + 1 Codex + Steal Technology. Navigation→+3 CS Naval + 1 Codex. Mathematics→2 Codices. NOT uniform.
-**Engine does:** `processMasteryResearch` hard-codes `MODIFY_YIELD empire science +1` for every mastery. `TechnologyDef` has no `masteryBonus` or `masteryCodexCount`.
-**Gap:** Strategic mastery-timing flattened to single reward. Codex awards (primary driver of science legacy path) never produced.
-**Recommendation:** Add `masteryBonus?: ReadonlyArray<EffectDef>` and `masteryCodexCount?: number` to `TechnologyDef`. Populate per-tech.
+**Engine does:** `processMasteryResearch` reads per-tech `masteryEffect` and `masteryCodexCount`, awards codices, and falls back to +1 Science only when a definition has no mastery effect.
+**Gap:** The architecture is no longer generic, but the data table is still an inferred parity scaffold rather than a verified one-to-one copy of published Civ VII mastery rewards.
+**Recommendation:** Re-verify each mastery payload against current in-game data/source tables.
 
 ---
 
@@ -90,29 +90,29 @@
 
 ---
 
-### F-05: Science formula limited to population + flat building yields — MISSING
+### F-05: Science formula covers codices/policies but still lacks full yield stack — CLOSE
 
 **Location:** `researchSystem.ts:247-263`
 **GDD reference:** `systems/tech-tree.md` § "Science accumulation"
 **Severity:** HIGH
 **Effort:** L
 **VII says:** Science = building base + adjacency + tile yields + specialists + codex bonuses + resources + policies (Scholars, Social Science) + Research Collaboration +50% + leader attributes.
-**Engine does:** `calculateSciencePerTurn` sums `city.population` + `buildingDef.yields.science`. No adjacency, specialists, codex, policies, collaboration, resources.
-**Gap:** ~20-40% of full science computation. Specialists are 70-80% of late-game science per GDD. Policies (Scholars, Social Science) defined but never applied.
-**Recommendation:** Incremental: (1) adjacency lookup, (2) specialist science, (3) `player.slottedPolicies` multipliers, (4) `diplomacyState` Research Collaboration +50%.
+**Engine does:** `calculateSciencePerTurn` sums population/building science, placed codices, and slotted science policy bonuses.
+**Gap:** Adjacency, tile yields, specialists, resources, Research Collaboration, and percent/leader attribute modifiers are still incomplete.
+**Recommendation:** Move research science input onto the shared yield-calculation path instead of adding more one-off branches.
 
 ---
 
-### F-06: Research progress wiped on tech switch, not preserved — CLOSE
+### F-06: Research progress preserved on tech switch — MATCH
 
 **Location:** `researchSystem.ts:52-60`
 **GDD reference:** `systems/tech-tree.md` § "Triggers" → "SELECT_TECH"
 **Severity:** MED
 **Effort:** S
 **VII says:** Switching research retains accumulated science on previous tech. Can switch back and resume.
-**Engine does:** `handleSetResearch` always sets `researchProgress: 0`. Previous science destroyed.
-**Gap:** Strategic partial-research + burst completion impossible.
-**Recommendation:** Add `techProgressMap: ReadonlyMap<TechnologyId, number>` to `PlayerState`. On switch, persist/restore. Clear on age transition.
+**Engine does:** `handleSetResearch` saves current partial progress into `techProgressMap` and restores saved progress when switching back. Accepted age transitions clear the map.
+**Gap:** None for switch preservation.
+**Recommendation:** Keep `techProgressMap` treated as active per-age state.
 
 ---
 
@@ -129,29 +129,29 @@
 
 ---
 
-### F-08: Codex system entirely absent — MISSING
+### F-08: Codex system implemented as a first pass — CLOSE
 
-**Location:** No `codexSystem.ts`. `PlayerState` has no codex fields. `TechnologyDef` has no `masteryCodexCount`. `BuildingDef` has no `codexSlots`.
+**Location:** `TechnologyDef.masteryCodexCount`, `PlayerState.ownedCodices`, `PlayerState.codexPlacements`, `BuildingDef.codexSlots`, `researchSystem.ts`
 **GDD reference:** `systems/tech-tree.md` § "Codex system"
 **Severity:** HIGH
 **Effort:** L (multi-sprint)
 **VII says:** Codices are Great Works earned via Tech Masteries. Must be slotted into buildings with Codex slots (Palace 1, Library 2, Academy 3, Nalanda 2) for science-per-turn. Antiquity science legacy: 10 displayed Codices at milestones 3/6/10.
-**Engine does:** `Government.ts` has `CodexId` type + `CodexPlacement` interface as dead scaffolding. `researchSystem` mastery awards no codices. `calculateSciencePerTurn` doesn't include codex yield. `LegacyPaths.ts` uses `hasBuildingInEveryCity(s, pid, 'library')` as proxy for 10-Codex milestone.
-**Gap:** Largest single gap. Type scaffolding exists in `Government.ts` but inert.
-**Recommendation:** Phase 1: `codexSlots: number` on `BuildingDef`. Phase 2: `ownedCodices` + `codexPlacements` on `PlayerState`. Phase 3: award in `processMasteryResearch`. Phase 4: include in `calculateSciencePerTurn`. Phase 5: replace `LegacyPaths` proxy.
+**Engine does:** Tech mastery awards codex IDs, buildings expose `codexSlots`, players can place codices into owned buildings, placed codices add science, and science legacy tests now target `codexPlacements`.
+**Gap:** This is still a functional scaffold: no dedicated Great Works UI, no pillage/disaster slot loss, and Codex content/slot counts need source verification.
+**Recommendation:** Keep the current model, then add UI and loss/overflow rules in a dedicated codex slice.
 
 ---
 
-### F-09: Science legacy milestones use techs-count proxy, not Codex count — DIVERGED
+### F-09: Science legacy milestones use displayed Codex count — MATCH
 
 **Location:** `ageSystem.ts:238`, `LegacyPaths.ts:119-136`
 **GDD reference:** `systems/tech-tree.md` § "Codex system" → milestones 3/6/10
 **Severity:** HIGH
 **Effort:** S (after F-08)
 **VII says:** Antiquity science legacy milestones at 3, 6, 10 **displayed Codices**. Tier-3 (10) grants "Great Library" carry-forward.
-**Engine does:** `ageSystem.checkLegacyMilestones` uses `Math.floor(researchedTechs.length / 5)`. `LegacyPaths.ts` Antiquity science milestones use "4 techs", "8 techs", "Library in every city" — all proxies. Two independent implementations with inconsistent thresholds.
-**Gap:** Dual proxies, both diverging from GDD. Codex carry-forward never applied.
-**Recommendation:** After F-08: replace both proxies with `player.codexPlacements.length >= N`. Consolidate implementations.
+**Engine does:** `LegacyPaths` and the score/victory tests now use displayed codices (`codexPlacements`) rather than researched-tech count or library proxies.
+**Gap:** Carry-forward Great Library/Academy effects still need source-verified implementation outside the raw milestone predicate.
+**Recommendation:** Keep milestone predicates codex-driven; implement carry-forward bonuses in the legacy reward slice.
 
 ---
 
@@ -168,42 +168,42 @@
 
 ---
 
-### F-11: Normal tech completion grants `+5 ageProgress` — EXTRA
+### F-11: Normal tech completion does not grant age progress — MATCH
 
 **Location:** `researchSystem.ts:163`
 **GDD reference:** `systems/tech-tree.md` (mechanic not in VII)
 **Severity:** MED
 **Effort:** S
 **VII says:** Age Progress advances via Future Tech completion (+10), legacy path milestones, natural per-turn tick. No per-tech-researched ageProgress bonus.
-**Engine does:** `processNormalResearch` applies `ageProgress + 5` on every normal tech completion. ~15 techs per age adds 75 Age Progress from research alone.
-**Gap:** Engine-original compounding mechanic. GDD decouples tech research from age progression except via Future Tech.
-**Recommendation:** Remove `ageProgress + 5`.
+**Engine does:** Normal tech completion no longer increments `ageProgress`; Future Tech remains the tech-tree age-progress source.
+**Gap:** None for this extra mechanic.
+**Recommendation:** Keep the integration regression that normal tech completion only advances the natural END_TURN age tick.
 
 ---
 
-### F-12: Dark-age random-tech-removal — EXTRA (no GDD basis)
+### F-12: Science dark age is a yield penalty, not random tech removal — MATCH
 
-**Location:** `ageSystem.ts:185-198`
+**Location:** `ageSystem.ts` `getGoldenDarkAgeEffects`
 **GDD reference:** `systems/tech-tree.md` — no tech-removal mechanic in VII dark ages
 **Severity:** MED
 **Effort:** S
 **VII says:** Science dark-age effects are yield penalties, not tech removal.
-**Engine does:** When `paths.science === 0`, `getGoldenDarkAgeEffects` picks random tech from `researchedTechs` to remove. `handleTransition` filters it out.
-**Gap:** Creates cascading data inconsistency — buildings/units unlocked by removed tech remain in game state, creating phantom-unlocked content.
-**Recommendation:** Replace with VII-style science dark-age yield penalty (e.g., `-2 science per city for next age`). Remove `lostTech` path.
+**Engine does:** Science dark age applies a science yield penalty effect. The prior `lostTech` path is gone.
+**Gap:** Penalty value still needs source verification.
+**Recommendation:** Keep dark-age effects as yield/effect records, never as destructive tech-tree mutation.
 
 ---
 
-### F-13: Exploration + Modern Future Tech have no prerequisite data — MISSING
+### F-13: Exploration + Modern Future Tech exist but prereqs are broad — DIVERGED
 
 **Location:** `data/technologies/exploration/index.ts`, `modern/index.ts`
 **GDD reference:** `systems/tech-tree.md` § "Future Tech"
 **Severity:** LOW
 **Effort:** S (after F-03)
 **VII says:** Every age has Future Tech with two confirmed end-tree prerequisites.
-**Engine does:** No Future Tech entry in any age's data. Magic constant bypasses registry. Exploration/Modern have no defined terminal tech.
-**Gap:** Future Tech architecturally separate from registry.
-**Recommendation:** Create `future_tech_antiquity/exploration/modern` entries. Infer Exploration prereqs as `['economics', 'military_science']`, Modern as `['rocketry', 'nuclear_fission']` — tag [INFERRED].
+**Engine does:** Each age has a `future_tech_*` registry entry and tests. Current prerequisite tests require all non-future techs in the age, not the two-terminal-tech model described by the GDD.
+**Gap:** Future Tech is no longer missing, but its gate is stricter than the VII model.
+**Recommendation:** Replace all-nonfuture prerequisites with source-verified terminal prerequisite pairs.
 
 ---
 
@@ -222,20 +222,17 @@
 
 ## Extras to retire
 
-- `researchSystem.ts:163` `+5 ageProgress` per tech (F-11) — no GDD basis.
-- `ageSystem.ts:185-198` dark-age random tech removal (F-12) — creates data inconsistency.
+- None currently tracked for this system; the prior normal-tech age-progress bonus and random tech-loss dark age were retired.
 
 ---
 
 ## Missing items
 
-1. Codex system (F-08) — largest gap; blocks F-09 fidelity.
-2. Science formula completeness (adjacency, specialists, policies, collaboration) (F-05).
-3. Per-tech mastery bonuses + codex counts (F-02).
-4. Research progress preservation on switch (F-06) — `techProgressMap`.
-5. Future Tech +1 Wildcard Attribute + next-age boost (F-04).
-6. Mastery UI entry point (F-10).
-7. Exploration + Modern Future Tech data (F-13).
+1. Mastery UI entry point (F-10).
+2. Full science formula completeness: adjacency, specialists, tile/resource yields, collaboration, and percent modifiers (F-05).
+3. Future Tech +1 Wildcard Attribute + next-age boost (F-04).
+4. Source-verified mastery payloads and Codex slot/loss polish (F-02, F-08).
+5. Future Tech terminal prerequisite pairs instead of all-nonfuture gates (F-13).
 
 ---
 
@@ -245,14 +242,14 @@ Paste into `.codex/gdd/systems/tech-tree.md` § "Mapping to hex-empires":
 
 **Engine files:**
 - `packages/engine/src/systems/researchSystem.ts`
-- `packages/engine/src/systems/ageSystem.ts` (missing tech reset — F-01)
+- `packages/engine/src/systems/ageSystem.ts` (accepted transition clears active tech tree state — F-01)
 - `packages/engine/src/data/technologies/{antiquity,exploration,modern}/index.ts`
 - `packages/engine/src/state/LegacyPaths.ts` (milestone proxy — F-09)
 - `packages/web/src/ui/panels/TechTreePanel.tsx` (missing mastery UI — F-10)
 
-**Status:** 1 MATCH / 3 CLOSE / 4 DIVERGED / 4 MISSING / 2 EXTRA
+**Status:** 6 MATCH / 5 CLOSE / 2 DIVERGED / 1 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-01 — age transition doesn't wipe research state (5-field persistence bug); F-08 — Codex system entirely absent (largest architectural gap).
+**Highest-severity finding:** F-05 — science input still bypasses the full shared yield stack; F-10 — mastery UI remains absent.
 
 ---
 
@@ -268,12 +265,12 @@ Paste into `.codex/gdd/systems/tech-tree.md` § "Mapping to hex-empires":
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-01, F-03, F-04, F-06, F-07, F-09, F-10, F-11, F-12, F-13 | 5d |
-| M | F-02 | 2d |
-| L | F-05, F-08 | 3w+ |
+| S | F-04, F-10, F-13 | 1.5d |
+| M | F-02, F-07, F-08 | 4d |
+| L | F-05 | 1w+ |
 | **Total** | 14 | **~4w** |
 
-Recommended order: F-01 (age transition wipe — 5-line fix), F-11 (remove +5 ageProgress), F-12 (remove tech-loss dark-age), F-06 (preserve switch progress), F-10 (mastery UI), F-03+F-13 (Future Tech as registry), F-04 (Future Tech effects), F-07 (content cleanup), F-02 (per-tech mastery bonuses), F-08 (codex system — XL), F-09 (legacy milestone — unblocked by F-08), F-05 (science formula completeness).
+Recommended order: F-10 (mastery UI), F-13 (Future Tech prereq pairs), F-04 (Future Tech effects), F-05 (science formula completeness), F-02/F-08 (source-verified mastery/Codex polish), F-07 (content cleanup).
 
 ---
 

@@ -441,7 +441,7 @@ describe('A10: previous age research is cleared on transition (§16.1 #9 — tre
 // ── A10b: civic/mastery/gov/policy/pantheon all wiped on transition (W1-B) ─
 
 describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_AGE (W1-B)', () => {
-  it('after Antiquity→Exploration: researchedCivics PRESERVED, masteredCivics/masteredTechs persist, governmentId/slottedPolicies/pantheonId cleared', () => {
+  it('after Antiquity→Exploration: active tech/civic trees reset, history/traditions/celebration slots persist, government/policies/pantheon clear', () => {
     // W2-03: slottedPolicies is now a flat ReadonlyArray<string | null>, not a Map.
     const slotted: ReadonlyArray<string | null> = ['professional_army'];
     const player = readyToTransitionPlayer({
@@ -451,40 +451,50 @@ describe('A10b: civic/tech-mastery/gov/policy/pantheon all reset on TRANSITION_A
       masteredCivics: ['code_of_laws'],
       currentCivicMastery: 'craftsmanship',
       civicMasteryProgress: 10,
+      completedCivics: ['code_of_laws', 'craftsmanship'],
+      traditions: ['roman_tradition'],
       currentResearch: 'pottery',
       researchProgress: 30,
+      researchedTechs: ['pottery'],
       masteredTechs: ['animal_husbandry'],
       currentMastery: 'mining',
       masteryProgress: 5,
       governmentId: 'classical_republic',
       slottedPolicies: slotted,
+      policySlotCounts: { military: 0, economic: 1, diplomatic: 0, wildcard: 0 },
+      policySwapWindowOpen: true,
       pantheonId: 'god_of_war',
+      socialPolicySlots: 2,
     });
     const state = readyToTransitionState(player);
     const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
     const p = next.players.get('p1')!;
 
-    // Civic tree: researchedCivics is a PERMANENT historical record -- persists across ages (X1.3).
-    // Only per-age progress fields reset.
-    expect(p.researchedCivics).toEqual(['code_of_laws', 'craftsmanship']);
+    // Active civic tree resets; separate history/tradition state persists.
+    expect(p.researchedCivics).toEqual([]);
     expect(p.currentCivic).toBeNull();
     expect(p.civicProgress).toBe(0);
-    // F-14: masteredCivics persist across age transitions (permanent knowledge)
-    expect(p.masteredCivics).toEqual(['code_of_laws']);
+    expect(p.masteredCivics).toEqual([]);
     expect(p.currentCivicMastery).toBeNull();
     expect(p.civicMasteryProgress).toBe(0);
+    expect(p.completedCivics).toEqual(['code_of_laws', 'craftsmanship']);
+    expect(p.traditions).toEqual(['roman_tradition']);
 
-    // Tech tree resets (research clears, but F-14: masteries persist)
+    // Active tech tree resets.
+    expect(p.researchedTechs).toEqual([]);
     expect(p.currentResearch).toBeNull();
     expect(p.researchProgress).toBe(0);
-    // F-14: masteredTechs persist across age transitions (permanent knowledge)
-    expect(p.masteredTechs).toEqual(['animal_husbandry']);
+    expect(p.masteredTechs).toEqual([]);
     expect(p.currentMastery).toBeNull();
     expect(p.masteryProgress).toBe(0);
+    expect(p.techProgressMap?.size).toBe(0);
 
     // Government resets
     expect(p.governmentId).toBeNull();
     expect(p.slottedPolicies!.length).toBe(0); // W2-03: flat array, not Map
+    expect(p.policySlotCounts).toBeUndefined();
+    expect(p.policySwapWindowOpen).toBe(false);
+    expect(p.socialPolicySlots).toBe(2);
 
     // Pantheon wipes on Antiquity→Exploration
     expect(p.pantheonId).toBeNull();

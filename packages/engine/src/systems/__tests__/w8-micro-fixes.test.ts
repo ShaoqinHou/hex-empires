@@ -2,7 +2,7 @@
  * W8 micro-fixes test suite.
  *
  * Covers all 5 items:
- * 1. trade F-01 — origin city earns food per turn
+ * 1. trade F-01 — origin receives copied resources; destination receives gold
  * 2. trade F-10 — PLUNDER_TRADE_ROUTE loot (50 + half destination yield)
  * 3. combat F-11 — unit retreat mechanic (melee only)
  * 4. buildings F-12 — REPAIR_BUILDING action
@@ -66,11 +66,11 @@ function tradeStateFixture(opts: { assignedResources?: ReadonlyArray<string> } =
   });
 }
 
-// ── 1. trade F-01 — origin city earns food ──
+// ── 1. trade F-01 — asymmetric resources/gold ──
 
-describe('trade F-01 — origin city earns food per END_TURN', () => {
-  it('origin home city food increments by 2 per active trade route per turn', () => {
-    const state = tradeStateFixture({ assignedResources: [] });
+describe('trade F-01 — asymmetric resources/gold per END_TURN', () => {
+  it('origin receives copied destination resources and home city food is unchanged', () => {
+    const state = tradeStateFixture({ assignedResources: ['wheat'] });
     const afterCreate = tradeSystem(state, {
       type: 'CREATE_TRADE_ROUTE', merchantId: 'm1', targetCityId: 'city2',
     });
@@ -79,16 +79,17 @@ describe('trade F-01 — origin city earns food per END_TURN', () => {
     const afterTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
 
     const originCity = afterTurn.cities.get('city1')!;
-    expect(originCity.food).toBe(1); // Y1.3: +1 food/resource slot (min 1 slot) from trade route
+    expect(originCity.food).toBe(0);
+    expect(afterTurn.players.get('p1')!.ownedResources).toContain('wheat');
   });
 
-  it('destination city owner still receives gold on same END_TURN', () => {
-    const state = tradeStateFixture({ assignedResources: [] });
+  it('destination city owner receives gold based on assigned resource slots', () => {
+    const state = tradeStateFixture({ assignedResources: ['wheat'] });
     const afterCreate = tradeSystem(state, {
       type: 'CREATE_TRADE_ROUTE', merchantId: 'm1', targetCityId: 'city2',
     });
     const afterTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
-    // p2 started at 50 gold; antiquity rate=2, 1 slot min = 2 gold to p2
+    // p2 started at 50 gold; antiquity rate=2, 1 assigned resource slot = 2 gold to p2
     expect(afterTurn.players.get('p2')!.gold).toBe(52);
   });
 });

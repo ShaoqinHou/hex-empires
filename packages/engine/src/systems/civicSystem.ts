@@ -10,6 +10,7 @@ import {
  * - SET_CIVIC: pick a civic to research
  * - SET_CIVIC_MASTERY: begin mastering an already-researched civic (costs 80% of original, grants +1 culture/turn)
  * - END_TURN: accumulate culture toward current civic/mastery, complete when done
+ * - TRANSITION_AGE: clears active per-age civic tree state
  */
 export function civicSystem(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -332,9 +333,9 @@ function processCivicMasteryResearch(state: GameState): GameState {
 }
 
 /**
- * On TRANSITION_AGE: reset in-progress civic research and mastery for the
- * transitioning player. Completed civics (researchedCivics) and mastered
- * civics (masteredCivics) are permanent records that persist across ages.
+ * On TRANSITION_AGE: reset active civic research and mastery for the
+ * transitioning player. The separate completedCivics history log and tradition
+ * pool persist, but researchedCivics/masteredCivics are age-local tree state.
  *
  * Note: ageSystem also resets these fields in its TRANSITION_AGE handler.
  * This handler exists as defense-in-depth — the same pattern as researchSystem
@@ -345,24 +346,28 @@ function clearCivicProgressOnTransition(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
 
-  // Nothing to reset if no civic research or mastery is in progress
-  const hasProgress = player.currentCivic !== null
+  const hasProgress = player.researchedCivics.length > 0
+    || player.currentCivic !== null
     || player.civicProgress > 0
+    || player.masteredCivics.length > 0
     || player.currentCivicMastery !== null
-    || player.civicMasteryProgress > 0;
+    || player.civicMasteryProgress > 0
+    || player.policySlotCounts !== undefined
+    || player.policySwapWindowOpen === true;
   if (!hasProgress) return state;
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
-    // Reset in-progress civic research
+    // Reset active civic tree state.
+    researchedCivics: [],
     currentCivic: null,
     civicProgress: 0,
-    // Reset in-progress civic mastery
+    masteredCivics: [],
     currentCivicMastery: null,
     civicMasteryProgress: 0,
-    // researchedCivics and masteredCivics are NOT reset — they persist as a
-    // permanent historical record across ages (X1.3 / F-14).
+    policySlotCounts: undefined,
+    policySwapWindowOpen: false,
   });
 
   return { ...state, players: updatedPlayers };

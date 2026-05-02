@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { GameEngine } from '../GameEngine';
 import { createTestState, createTestPlayer } from '../systems/__tests__/helpers';
-import type { CityState } from '../types/GameState';
+import type { CityState, TradeRoute } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
 
 /**
@@ -100,14 +100,50 @@ describe('integration-research-age: researching techs drives age-progress thresh
   });
 
   it('TRANSITION_AGE is rejected when ageProgress is below the threshold', () => {
+    const route: TradeRoute = {
+      id: 'route1',
+      from: 'c1',
+      to: 'c2',
+      owner: 'p1',
+      resources: ['wheat'],
+      isSea: false,
+      caravanUnitId: 'caravan1',
+    };
     const player = createTestPlayer({
       id: 'p1',
       civilizationId: 'rome',
       age: 'antiquity',
       ageProgress: 40, // below threshold of 50
+      researchedTechs: ['pottery'],
+      currentResearch: 'writing',
+      researchProgress: 12,
+      masteredTechs: ['pottery'],
+      currentMastery: 'mining',
+      masteryProgress: 8,
+      techProgressMap: new Map([['mining', 4]]),
+      researchedCivics: ['code_of_laws'],
+      currentCivic: 'craftsmanship',
+      civicProgress: 9,
+      masteredCivics: ['code_of_laws'],
+      currentCivicMastery: 'craftsmanship',
+      civicMasteryProgress: 6,
+      policySlotCounts: { military: 1, economic: 1, diplomatic: 0, wildcard: 0 },
+      policySwapWindowOpen: true,
     });
     const state = createTestState({
       players: new Map([['p1', player]]),
+      cities: new Map([
+        ['c1', createTestCity({ id: 'c1', isCapital: true, settlementType: 'city' })],
+        ['c2', createTestCity({ id: 'c2', isCapital: false, settlementType: 'city' })],
+        ['c3', createTestCity({
+          id: 'c3',
+          isCapital: false,
+          settlementType: 'town',
+          specialization: 'mining_town',
+          lockedTownSpecialization: 'mining_town',
+        })],
+      ]),
+      tradeRoutes: new Map([['route1', route]]),
       age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
     });
 
@@ -122,6 +158,25 @@ describe('integration-research-age: researching techs drives age-progress thresh
     expect(p1!.age).toBe('antiquity');
     expect(p1!.civilizationId).toBe('rome');
     expect(p1!.ageProgress).toBe(40);
+    expect(p1!.researchedTechs).toEqual(['pottery']);
+    expect(p1!.currentResearch).toBe('writing');
+    expect(p1!.researchProgress).toBe(12);
+    expect(p1!.masteredTechs).toEqual(['pottery']);
+    expect(p1!.currentMastery).toBe('mining');
+    expect(p1!.masteryProgress).toBe(8);
+    expect(p1!.techProgressMap?.get('mining')).toBe(4);
+    expect(p1!.researchedCivics).toEqual(['code_of_laws']);
+    expect(p1!.currentCivic).toBe('craftsmanship');
+    expect(p1!.civicProgress).toBe(9);
+    expect(p1!.masteredCivics).toEqual(['code_of_laws']);
+    expect(p1!.currentCivicMastery).toBe('craftsmanship');
+    expect(p1!.civicMasteryProgress).toBe(6);
+    expect(p1!.policySlotCounts).toEqual({ military: 1, economic: 1, diplomatic: 0, wildcard: 0 });
+    expect(p1!.policySwapWindowOpen).toBe(true);
+    expect(next.cities.get('c2')!.settlementType).toBe('city');
+    expect(next.cities.get('c3')!.specialization).toBe('mining_town');
+    expect(next.cities.get('c3')!.lockedTownSpecialization).toBe('mining_town');
+    expect(next.tradeRoutes.get('route1')).toEqual(route);
   });
 
   it('full pipeline sequence: research tech → cross threshold → transition age', () => {

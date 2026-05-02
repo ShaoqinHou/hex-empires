@@ -153,19 +153,20 @@ describe('civicSystem', () => {
       expect(nextPlayer.civicProgress).toBe(0);
     });
 
-    it('preserves researchedCivics and masteredCivics across TRANSITION_AGE', () => {
+    it('clears researchedCivics and masteredCivics across TRANSITION_AGE while preserving completedCivics', () => {
       const player = createTestPlayer({
         currentCivic: 'code_of_laws',
         civicProgress: 12,
         researchedCivics: ['craftsmanship', 'early_empire'],
         masteredCivics: ['craftsmanship'],
+        completedCivics: ['craftsmanship', 'early_empire'],
       });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
       const nextPlayer = next.players.get('p1')!;
-      expect(nextPlayer.researchedCivics).toContain('craftsmanship');
-      expect(nextPlayer.researchedCivics).toContain('early_empire');
-      expect(nextPlayer.masteredCivics).toContain('craftsmanship');
+      expect(nextPlayer.researchedCivics).toEqual([]);
+      expect(nextPlayer.masteredCivics).toEqual([]);
+      expect(nextPlayer.completedCivics).toEqual(['craftsmanship', 'early_empire']);
     });
 
     it('clears currentCivicMastery and civicMasteryProgress on TRANSITION_AGE', () => {
@@ -181,6 +182,19 @@ describe('civicSystem', () => {
       const nextPlayer = next.players.get('p1')!;
       expect(nextPlayer.currentCivicMastery).toBeNull();
       expect(nextPlayer.civicMasteryProgress).toBe(0);
+    });
+
+    it('clears civic-granted policy slot counts and policy swap window on TRANSITION_AGE', () => {
+      const player = createTestPlayer({
+        researchedCivics: ['code_of_laws'],
+        policySlotCounts: { military: 0, economic: 1, diplomatic: 0, wildcard: 0 },
+        policySwapWindowOpen: true,
+      });
+      const state = createTestState({ players: new Map([['p1', player]]) });
+      const next = civicSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+      const nextPlayer = next.players.get('p1')!;
+      expect(nextPlayer.policySlotCounts).toBeUndefined();
+      expect(nextPlayer.policySwapWindowOpen).toBe(false);
     });
 
     it('TRANSITION_AGE is a no-op when no civic research is in progress', () => {

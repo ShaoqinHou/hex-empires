@@ -551,7 +551,7 @@ describe('AA2.2 treaty effects', () => {
       owner: 'p2',
       position: { q: 2, r: 0 },
       isCapital: false,
-      assignedResources: [],
+      assignedResources: ['wheat'],
     };
 
     // Caravan unit for the route
@@ -565,7 +565,7 @@ describe('AA2.2 treaty effects', () => {
       tradeRoutes: new Map([['route1', { id: 'route1', from: 'city1', to: 'city2', owner: 'p1', isSea: false, caravanUnitId: 'c1', resources: [] }]]),
     };
 
-    // Without treaty: antiquity base gold = 2, 1 slot minimum = 2 gold to p2
+    // Without treaty: antiquity base gold = 2, 1 assigned resource slot = 2 gold to p2
     const noTreatyState = { ...tradeRouteState, diplomacy: { ...tradeRouteState.diplomacy, activeTreaties: [] as ActiveTreaty[] } };
     const afterNoTreaty = tradeSystem(noTreatyState, { type: 'END_TURN' });
     const goldNoTreaty = afterNoTreaty.players.get('p2')!.gold - 50;

@@ -24,11 +24,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 3 |
-| CLOSE | 2 |
-| DIVERGED | 3 |
-| MISSING | 4 |
-| EXTRA | 1 |
+| MATCH | 6 |
+| CLOSE | 7 |
+| DIVERGED | 0 |
+| MISSING | 0 |
+| EXTRA | 0 |
 
 **Total findings:** 13
 
@@ -49,133 +49,133 @@
 
 ---
 
-### F-02: Overflow progress discarded on civic completion — DIVERGED
+### F-02: Overflow progress carries on civic completion — MATCH
 
 **Location:** `civicSystem.ts:122-145`
 **GDD reference:** `systems/civic-tree.md` § "Culture Accumulation"
 **Severity:** MED
 **Effort:** S
 **VII says:** Overflow beyond completed civic cost rolls into the next civic.
-**Engine does:** On completion, `civicProgress: 0` unconditionally. Any excess culture is discarded.
-**Gap:** Every culture overshoot wasted.
-**Recommendation:** Replace `civicProgress: 0` with `civicProgress: newProgress - civicCost`.
+**Engine does:** On completion, `civicProgress` is set to `newProgress - civicCost`.
+**Gap:** None for overflow carry.
+**Recommendation:** Keep overflow behavior covered by civic-system tests.
 
 ---
 
-### F-03: TRANSITION_AGE does not reset civic state — DIVERGED
+### F-03: TRANSITION_AGE resets active civic state — MATCH
 
-**Location:** `ageSystem.ts:75-84`
+**Location:** `ageSystem.ts` `handleTransition`; `GameEngine.ts` transition pipeline guard
 **GDD reference:** `systems/civic-tree.md` § "Age Transition Reset"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** On transition: in-progress research lost, `researchedCivics` resets empty, all standard slotted policies expire, policy slots reset to new age baseline, government requires re-selection. Traditions persist.
-**Engine does:** `handleTransition` overwrites only `civilizationId`, `age`, `ageProgress`, `legacyBonuses`, `legacyPoints`, `gold`, `researchedTechs`. Does NOT touch `researchedCivics`, `currentCivic`, `civicProgress`, `masteredCivics`, `currentCivicMastery`, `civicMasteryProgress`, `governmentId`, `slottedPolicies`.
-**Gap:** Antiquity civics bleed into Exploration age as already-researched. New age's prerequisite chain appears broken. Slotted policies never expire.
-**Recommendation:** Add to player spread: `researchedCivics: []`, `currentCivic: null`, `civicProgress: 0`, `masteredCivics: []`, `currentCivicMastery: null`, `civicMasteryProgress: 0`, `governmentId: null`, `slottedPolicies: new Map()`. Do NOT reset traditions (F-06).
+**Engine does:** Accepted `TRANSITION_AGE` clears `researchedCivics`, current civic progress, civic mastery progress, civic-granted slot counts, government, slotted policies, and swap windows. `completedCivics`, traditions, and celebration-earned social slots persist separately. The engine runs `ageSystem` first and blocks subsystem transition side effects when validation rejects the transition.
+**Gap:** None for active civic tree reset.
+**Recommendation:** Keep transition reset ownership in `ageSystem`; do not reset `completedCivics` or `traditions`.
 
 ---
 
-### F-04: Policy slot model uses typed categories (Civ VI), not wildcard — DIVERGED
+### F-04: Policy slot placement is wildcard but slot-count sources remain typed — CLOSE
 
 **Location:** `governmentSystem.ts:148-158`, `GameState.ts:445-446`
 **GDD reference:** `systems/civic-tree.md` § "Social Policies and Policy Slots" (cross-cut `government-policies.md` F-01)
 **Severity:** MED
 **Effort:** M
 **VII says:** All policy slots are wildcard — no type-restricted categories.
-**Engine does:** `governmentSystem.canSlotPolicy` validates `policy.category === category`. `GovernmentDef.policySlots` has `military | economic | diplomatic | wildcard` keys. Three non-wildcard categories restrict placement.
-**Gap:** Players cannot slot military into diplomatic slot. VII has no such restriction.
-**Recommendation:** Simplify `GovernmentDef.policySlots` to `count: number`. Remove category discriminant from actions.
+**Engine does:** `canSlotPolicy` validates only total slot bounds; any policy can occupy any slot. `GovernmentDef.policySlots` and civic slot grants still preserve typed source buckets for counting.
+**Gap:** Runtime behavior is wildcard, but the data model still carries Civ VI-style category names that can confuse future work.
+**Recommendation:** Collapse slot-count storage to a single total after dependent UI/tests are simplified.
 
 ---
 
-### F-05: Civ-unique civic tab absent from CivicTreePanel — DIVERGED
+### F-05: Civ-unique civic tab present in CivicTreePanel — MATCH
 
 **Location:** `CivicTreePanel.tsx:14-15`
 **GDD reference:** `systems/civic-tree.md` § "Civ-Unique Civic Trees" + "UI requirements"
 **Severity:** MED
 **Effort:** M
 **VII says:** Civic Tree panel has tab control: shared age tree + civ-unique tree (3-4 nodes per civ).
-**Engine does:** Filters `c.age === player.age` and passes flat combined list to `<TreeView>`. No tab switch. Civ-unique civics appear mingled with shared.
-**Gap:** Civ-unique tab absent.
-**Recommendation:** Add tab state (`'shared' | 'unique'`). Split by `c.civId === undefined` vs `c.civId === player.civilizationId`. Render separate `<TreeView>` per tab.
+**Engine does:** `CivicTreePanel` splits shared and civ-unique civics and renders a tab control when the current civ has unique civics.
+**Gap:** None for the tab split. Node art/unique unlock iconography remains general UI polish.
+**Recommendation:** Keep tests around shared/unique filtering when panel coverage is broadened.
 
 ---
 
-### F-06: Traditions — `PlayerState.traditions` and `TraditionCard` type absent — MISSING
+### F-06: Traditions exist but are auto-active rather than slotted cards — CLOSE
 
-**Location:** `GameState.ts` (PlayerState), `Civic.ts`
+**Location:** `GameState.ts`, `Civic.ts`, `Tradition.ts`, `civicSystem.ts`, `EffectUtils.ts`
 **GDD reference:** `systems/civic-tree.md` § "Traditions" (cross-cut `ages.md` F-07)
 **Severity:** HIGH
 **Effort:** L
 **VII says:** Traditions are social policies earned via civ-unique civic trees (quill icon). Persist permanently across ages. Must be slotted; never expire; freely re-slottable. Core cross-age cultural identity mechanism.
-**Engine does:** `PlayerState` has no `traditions`. `CivicDef` has no `unlocksTradition`. Mastery pushes generic `MODIFY_YIELD culture +1` to `legacyBonuses` — not a tradition pool.
-**Gap:** Most distinctive VII civic mechanic entirely absent.
-**Recommendation:** Define `TraditionCard` type. Add `unlocksTradition?: TraditionCard` to `CivicDef`. Add `traditions: ReadonlyArray<TraditionCard>` to `PlayerState`. On civ-unique civic completion, append unlocksTradition. In F-03 reset: do NOT reset traditions.
+**Engine does:** `PlayerState.traditions`, `TraditionDef`, `CivicDef.unlocksTradition`, tradition data, unlock-on-civic-completion, and effect application through `EffectUtils` exist. Age transition preserves the pool.
+**Gap:** Traditions are applied as owned persistent effects, not as explicitly slotted policy cards in the policy UI.
+**Recommendation:** Add tradition cards to the policy-slot UI and require slotting for active effects.
 
 ---
 
-### F-07: Government lock per age absent — MISSING
+### F-07: Government lock per age implemented — MATCH
 
 **Location:** `governmentSystem.ts:194-216`, `ageSystem.ts:75-84`
 **GDD reference:** `systems/civic-tree.md` § "Government Selection"
 **Severity:** MED
 **Effort:** M
 **VII says:** Player selects one government per age; locked for remainder of age.
-**Engine does:** `canAdoptGovernment` checks existence, unlock civic, not-already-on. No per-age lock.
-**Gap:** Players can switch governments freely mid-age.
-**Recommendation:** Add `governmentLockedForAge?: boolean` to `PlayerState`. Set true on SET_GOVERNMENT success. Clear in F-03 transition.
+**Engine does:** `canAdoptGovernment` blocks changes when `governmentLockedForAge` is true, `SET_GOVERNMENT` sets the lock, and age transition clears it for the next age. Crisis-forced government choice is the documented exception path.
+**Gap:** None for the per-age lock.
+**Recommendation:** Preserve the crisis exception tests.
 
 ---
 
-### F-08: Ideology branch-lock absent — MISSING
+### F-08: Ideology branch-lock implemented; second-adopter bonus still pending — CLOSE
 
 **Location:** `civicSystem.ts`, `data/civics/modern/index.ts`
 **GDD reference:** `systems/civic-tree.md` § "Ideology Trees (Modern Age Only)"
 **Severity:** MED
 **Effort:** L
 **VII says:** Researching Political Theory presents 3 exclusive ideology choices (Democracy/Fascism/Communism). Choosing permanent; unlocks 3-civic branch; locks out others. Second adopter gains +1 policy slot.
-**Engine does:** No `SELECT_IDEOLOGY` action. No `ideology` on `PlayerState`. Modern civics barrel exports `IDEOLOGY`, `TOTALITARIANISM`, `SUFFRAGE`, `CLASS_STRUGGLE` — all researchable simultaneously.
-**Gap:** Ideology selection doesn't exist.
-**Recommendation:** Add `ideology?: 'democracy'|'fascism'|'communism'` to `PlayerState`. Add `SELECT_IDEOLOGY` action. On Political Theory completion, require selection. Filter available civics.
+**Engine does:** `SELECT_IDEOLOGY` sets a permanent player ideology, and `civicSystem` blocks civics whose `ideologyBranch` does not match the selected ideology.
+**Gap:** The documented second-civilization-to-adopt bonus policy slot is not represented.
+**Recommendation:** Add global ideology adoption tracking and grant the second-adopter slot.
 
 ---
 
-### F-09: Mastery reward hardcoded as +1 culture/turn, not per-tech — DIVERGED
+### F-09: Mastery rewards are data-driven but content still approximate — CLOSE
 
 **Location:** `civicSystem.ts:188-205`
 **GDD reference:** `systems/civic-tree.md` § "Mastery Mechanic"
 **Severity:** MED
 **Effort:** M
 **VII says:** Mastery unlocks are specific and varied per civic (Senatus Populusque Romanus → Colosseum + 1 policy slot; Khmer Chakravarti → +3 Codex slots).
-**Engine does:** `processCivicMasteryResearch` always awards `MODIFY_YIELD culture +1`.
-**Gap:** Every mastery gives same reward.
-**Recommendation:** Add `masteryUnlocks?: ReadonlyArray<EffectDef>` to `CivicDef`. Apply per-civic.
+**Engine does:** `processCivicMasteryResearch` applies per-civic `masteryUnlocks` when present and only falls back to generic culture when data is absent.
+**Gap:** Mastery payloads are still a partial source-verified scaffold rather than complete one-to-one Civ VII content.
+**Recommendation:** Verify and fill each civic mastery reward from current game/source data.
 
 ---
 
-### F-10: Per-age policy slot baseline not enforced — MISSING
+### F-10: Per-age policy slot baseline exists but values need verification — CLOSE
 
 **Location:** `ageSystem.ts:75-84`, `governmentSystem.ts`
 **GDD reference:** `systems/civic-tree.md` § "Social Policies and Policy Slots" (baseline table)
 **Severity:** MED
 **Effort:** S
 **VII says:** Policy slot baselines by age: Antiquity 1, Exploration 2, Modern 3.
-**Engine does:** No per-age baseline. Derived entirely from `GovernmentDef.policySlots`.
-**Gap:** Age-scaled slot baseline absent.
-**Recommendation:** Add helper `ageBasePolicySlots(age): number`. Include in slot count calc. Reset in F-03.
+**Engine does:** `AGE_POLICY_SLOT_BASELINE` and `effectivePolicySlotCount` enforce an age floor before social/civic/legacy slot additions.
+**Gap:** Current values are `2/4/6`, while this GDD audit records `1/2/3`; this needs in-game/source verification before claiming parity.
+**Recommendation:** Resolve the baseline source conflict, then adjust constants/tests.
 
 ---
 
-### F-11: governmentSystem not wired into GameEngine — CLOSE
+### F-11: governmentSystem wired into GameEngine — MATCH
 
 **Location:** `governmentSystem.ts:1-11` (comment)
 **GDD reference:** `systems/civic-tree.md` § "Government Selection" + "Triggers"
 **Severity:** MED
 **Effort:** M
 **VII says:** Government selection is a core player action.
-**Engine does:** `governmentSystem` well-implemented but comment: "This system is NOT yet wired into the GameEngine pipeline." `GovernmentAction` separate from main `GameAction` union.
-**Gap:** Government mechanics architecturally isolated.
-**Recommendation:** Merge `GovernmentAction` into `GameAction`. Wire system into engine pipeline. Prerequisite for F-03, F-04, F-07.
+**Engine does:** `GameEngine.DEFAULT_SYSTEMS` includes `adaptGovernment`, and government/ideology actions are part of the main action flow.
+**Gap:** None for engine wiring.
+**Recommendation:** Keep system-wiring tests covering government actions.
 
 ---
 
@@ -192,34 +192,32 @@
 
 ---
 
-### F-13: Hardcoded +5 ageProgress per civic completion — EXTRA
+### F-13: Standard civic completion does not grant age progress — MATCH
 
 **Location:** `civicSystem.ts:131`
 **GDD reference:** `systems/civic-tree.md` (mechanic not in GDD)
 **Severity:** LOW
 **Effort:** S
 **VII says:** Standard civic research does not grant age progress. Only Future Civic nodes grant +10.
-**Engine does:** Every civic completion awards `ageProgress + 5`.
-**Gap:** Not a VII mechanic.
-**Recommendation:** Remove `ageProgress + 5`. Add age-progress as typed unlock payload if Future Civics need it.
+**Engine does:** Standard civic completion no longer awards `ageProgress + 5`; civic age progress should be modeled only through Future Civic-style payloads once implemented.
+**Gap:** Future Civic-specific age-progress payloads are not yet modeled.
+**Recommendation:** Add explicit Future Civic entries/effects instead of implicit progress on all civics.
 
 ---
 
 ## Extras to retire
 
-- `civicSystem.ts:131` `+5 ageProgress` per civic (F-13).
-- Typed policy category model in `governmentSystem.ts` (F-04) — replace with wildcard pool.
+- None currently tracked as live extras. Typed slot-count buckets remain a simplification debt (F-04) but no longer restrict policy placement.
 
 ---
 
 ## Missing items
 
-1. `PlayerState.traditions` + `TraditionCard` type (F-06) — core mechanic.
-2. Civic tree reset in `ageSystem.handleTransition` (F-03).
-3. Per-age government lock (F-07).
-4. Ideology branch-lock (F-08).
-5. Per-age policy slot baseline (F-10).
-6. Per-civic mastery unlock payloads (F-09).
+1. Tradition slotting UI/effects (F-06) — traditions exist but should be active only when slotted.
+2. Second-adopter ideology bonus slot (F-08).
+3. Source-verified policy slot baseline values (F-10).
+4. Complete source-verified mastery unlock payloads (F-09).
+5. Shared culture/yield calculation for civic progress (F-01).
 
 ---
 
@@ -229,15 +227,15 @@ Paste into `.codex/gdd/systems/civic-tree.md` § "Mapping to hex-empires":
 
 **Engine files:**
 - `packages/engine/src/systems/civicSystem.ts`
-- `packages/engine/src/systems/ageSystem.ts` (missing civic reset — F-03)
-- `packages/engine/src/systems/governmentSystem.ts` (not yet wired)
+- `packages/engine/src/systems/ageSystem.ts` (accepted transition clears active civic tree state — F-03)
+- `packages/engine/src/systems/governmentSystem.ts`
 - `packages/engine/src/types/Civic.ts`
 - `packages/engine/src/data/civics/`
-- `packages/web/src/ui/panels/CivicTreePanel.tsx` (missing tab — F-05)
+- `packages/web/src/ui/panels/CivicTreePanel.tsx`
 
-**Status:** 3 MATCH / 2 CLOSE / 3 DIVERGED / 4 MISSING / 1 EXTRA
+**Status:** 6 MATCH / 7 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-03 — TRANSITION_AGE does not reset civic state; F-06 — traditions entirely absent.
+**Highest-severity finding:** F-06 — traditions are present but not yet slotted policy cards; F-10 — policy slot baseline values need verification.
 
 ---
 
@@ -253,12 +251,12 @@ Paste into `.codex/gdd/systems/civic-tree.md` § "Mapping to hex-empires":
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-02, F-10, F-13 | 1.5d |
-| M | F-01, F-03, F-04, F-05, F-07, F-09, F-11, F-12 | ~16d |
-| L | F-06, F-08 | ~3w |
-| **Total** | 13 | **~5w** |
+| S | F-08, F-10, F-13 | 1.5d |
+| M | F-01, F-04, F-06, F-09, F-12 | ~8d |
+| L | F-06 slotting UI/policy integration | ~1w |
+| **Total** | 13 | **~2.5w** |
 
-Recommended order: F-03 → F-11 → F-06 → F-02 → F-13 → F-04 → F-07 → F-08 → F-05/F-09/F-12.
+Recommended order: F-10 value verification → F-06 tradition slotting → F-08 second-adopter slot → F-09 mastery payload verification → F-01 shared culture yield path → F-04 slot-count data simplification.
 
 ---
 

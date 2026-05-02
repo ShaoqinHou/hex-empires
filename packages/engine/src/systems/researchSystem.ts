@@ -5,7 +5,7 @@ import type { GameState, GameAction, ActiveEffect, PlayerState, CodexState } fro
  * - SET_RESEARCH: pick a tech to research; preserves previous tech progress (F-06)
  * - SET_MASTERY: begin mastering an already-researched tech (costs 80% of original)
  * - END_TURN: accumulate science toward current research/mastery, complete when done
- * - TRANSITION_AGE: clears techProgressMap (new age, new tree)
+ * - TRANSITION_AGE: clears active per-age tech tree state (new age, new tree)
  * - PLACE_CODEX: assigns a codex to a building codex slot
  */
 export function researchSystem(state: GameState, action: GameAction): GameState {
@@ -115,15 +115,30 @@ function handleSetMastery(state: GameState, techId: string): GameState {
   return { ...state, players: updatedPlayers };
 }
 
-/** On TRANSITION_AGE: clear techProgressMap — new age, new tech tree */
+/** On TRANSITION_AGE: clear active tech tree state — new age, new tech tree */
 function clearTechProgressMap(state: GameState): GameState {
   const player = state.players.get(state.currentPlayerId);
   if (!player) return state;
-  if (!player.techProgressMap || player.techProgressMap.size === 0) return state;
+
+  const hasTechState =
+    player.researchedTechs.length > 0 ||
+    player.currentResearch !== null ||
+    player.researchProgress > 0 ||
+    player.masteredTechs.length > 0 ||
+    player.currentMastery !== null ||
+    player.masteryProgress > 0 ||
+    ((player.techProgressMap?.size ?? 0) > 0);
+  if (!hasTechState) return state;
 
   const updatedPlayers = new Map(state.players);
   updatedPlayers.set(player.id, {
     ...player,
+    researchedTechs: [],
+    currentResearch: null,
+    researchProgress: 0,
+    masteredTechs: [],
+    currentMastery: null,
+    masteryProgress: 0,
     techProgressMap: new Map<string, number>(),
   });
   return { ...state, players: updatedPlayers };

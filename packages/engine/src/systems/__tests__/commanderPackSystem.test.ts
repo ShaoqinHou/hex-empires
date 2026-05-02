@@ -148,9 +148,27 @@ describe('commanderArmySystem — PACK_ARMY (X4.1)', () => {
 
 describe('commanderArmySystem — UNPACK_ARMY (X4.1)', () => {
   it('unpacks 3 units: restores them to state.units at adjacent tiles', () => {
-    const u1Snapshot = createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 } });
-    const u2Snapshot = createTestUnit({ id: 'u2', owner: 'p1', position: { q: 0, r: 1 } });
-    const u3Snapshot = createTestUnit({ id: 'u3', owner: 'p1', position: { q: -1, r: 1 } });
+    const u1Snapshot = createTestUnit({
+      id: 'u1',
+      owner: 'p1',
+      position: { q: 1, r: 0 },
+      movementLeft: 3,
+      packedInCommanderId: null,
+    });
+    const u2Snapshot = createTestUnit({
+      id: 'u2',
+      owner: 'p1',
+      position: { q: 0, r: 1 },
+      movementLeft: 4,
+      packedInCommanderId: null,
+    });
+    const u3Snapshot = createTestUnit({
+      id: 'u3',
+      owner: 'p1',
+      position: { q: -1, r: 1 },
+      movementLeft: 5,
+      packedInCommanderId: null,
+    });
 
     // Commander in packed state with 3 unit snapshots
     const cmdState = makeCommander({
@@ -171,6 +189,15 @@ describe('commanderArmySystem — UNPACK_ARMY (X4.1)', () => {
     expect(next.units.has('u1')).toBe(true);
     expect(next.units.has('u2')).toBe(true);
     expect(next.units.has('u3')).toBe(true);
+    expect(next.units.get('u1')!.position).toEqual({ q: 1, r: 0 });
+    expect(next.units.get('u2')!.position).toEqual({ q: 1, r: -1 });
+    expect(next.units.get('u3')!.position).toEqual({ q: 0, r: -1 });
+    expect(next.units.get('u1')!.packedInCommanderId).toBeNull();
+    expect(next.units.get('u2')!.packedInCommanderId).toBeNull();
+    expect(next.units.get('u3')!.packedInCommanderId).toBeNull();
+    expect(next.units.get('u1')!.movementLeft).toBe(0);
+    expect(next.units.get('u2')!.movementLeft).toBe(0);
+    expect(next.units.get('u3')!.movementLeft).toBe(0);
 
     // Commander state reset
     const cmd = next.commanders!.get('cmd1')!;

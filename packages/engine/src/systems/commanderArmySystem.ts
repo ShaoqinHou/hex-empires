@@ -124,7 +124,12 @@ function handleDeploy(state: GameState, commanderId: string): GameState {
     const unit = nextUnits.get(uid);
     if (unit && unit.packedInCommanderId === commanderId) {
       const targetPos = adjacentTiles[i % adjacentTiles.length];
-      nextUnits.set(uid, { ...unit, packedInCommanderId: null, position: targetPos });
+      nextUnits.set(uid, {
+        ...unit,
+        packedInCommanderId: null,
+        position: targetPos,
+        movementLeft: 0,
+      });
     }
   }
 
@@ -233,7 +238,12 @@ function handleUnpackArmy(state: GameState, commanderId: string): GameState {
   for (let i = 0; i < packedUnits.length; i++) {
     const unit = packedUnits[i];
     const targetPos = freeTiles[i];
-    nextUnits.set(unit.id, { ...unit, position: targetPos, packedInCommanderId: null });
+    nextUnits.set(unit.id, {
+      ...unit,
+      position: targetPos,
+      packedInCommanderId: null,
+      movementLeft: 0,
+    });
   }
 
   const updatedCommander: CommanderState = {

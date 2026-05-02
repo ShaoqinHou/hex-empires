@@ -19,10 +19,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 0 |
-| CLOSE | 2 |
-| DIVERGED | 3 |
-| MISSING | 4 |
+| MATCH | 3 |
+| CLOSE | 3 |
+| DIVERGED | 1 |
+| MISSING | 2 |
 | EXTRA | 1 |
 
 **Total findings:** 10
@@ -31,94 +31,94 @@
 
 ## Detailed findings
 
-### F-01: Trade route yield is symmetric gold to both parties — DIVERGED
+### F-01: Trade route yield is asymmetric resources/gold — MATCH
 
-**Location:** `tradeSystem.ts:102-112`
+**Location:** `tradeSystem.ts` `handleEndTurn`
 **GDD reference:** `systems/trade-routes.md` § "Yields"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Asymmetric. Origin gets a **copy of destination's slotted resources**. Destination gets **gold per turn** at 2/3/4 Gold per resource slot per age. Sea routes: 2× gold to destination.
-**Engine does:** `handleEndTurn` pays flat `TRADE_GOLD_PER_TURN = 3` to BOTH origin and destination symmetrically. No resource-copy, no slot count, no age scaling, no sea/land distinction.
-**Gap:** Three compounding divergences.
-**Recommendation:** Add `resources: ResourceId[]` to `TradeRoute` (snapshot of destination slots). In handleEndTurn, copy to origin pool; pay destination `city.resourceSlots * goldRateForAge(age) * (route.isSea ? 2 : 1)`. Add `isSea: boolean` to `TradeRoute`.
+**Engine does:** `handleEndTurn` copies the destination route resources to the origin player's `ownedResources` and pays only the destination owner `assignedResources.length * ageRate * seaMultiplier` gold, with Improve Trade Relations currently modeled as a gold multiplier.
+**Gap:** None for baseline yield direction.
+**Recommendation:** Keep UI/engine terminology explicit: resources to origin, gold to destination.
 
 ---
 
-### F-02: Fixed 20-turn duration replaces permanent route model — DIVERGED
+### F-02: Route lifecycle is permanent with key cancellation hooks — CLOSE
 
-**Location:** `tradeSystem.ts:8-9, 114-117`
+**Location:** `tradeSystem.ts` `handleDeclareWar`, `handleTransitionAge`, `handlePlunderTradeRoute`
 **GDD reference:** `systems/trade-routes.md` § "Route Termination"
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Routes permanent until 5 triggers: war declaration, caravan destroyed, age transition, relationship→Hostile, destination captured. No turn-count expiry.
-**Engine does:** `TRADE_ROUTE_DURATION = 20` is sole lifecycle. No war cancellation, no age-transition handler, no plunder path.
-**Gap:** Wrong lifecycle model; routes die wrong AND survive wrong.
-**Recommendation:** Remove `turnsRemaining`. Add DECLARE_WAR handler. Add TRANSITION_AGE handler. Add PLUNDER_TRADE_ROUTE action.
+**Engine does:** Routes no longer have turn-count expiry. War declarations, age transition, and plunder remove the route and caravan unit.
+**Gap:** Relationship deterioration to Hostile and destination capture cancellation are still not implemented.
+**Recommendation:** Add route invalidation when destination ownership/relationship status changes.
 
 ---
 
-### F-03: Merchant consumed on arrival, not converted to Caravan/Trade Ship — DIVERGED
+### F-03: Merchant converts to Caravan/Trade Ship — MATCH
 
 **Location:** `tradeSystem.ts:77-78`
 **GDD reference:** `systems/trade-routes.md` § "Establishing a Trade Route"
 **Severity:** MED
 **Effort:** M
 **VII says:** Merchant converts to stationary Caravan/Trade Ship on arrival, remains on map as physical representation (plunder-targetable).
-**Engine does:** `updatedUnits.delete(merchantId)` — merchant removed. Route exists only as data record.
-**Gap:** PLUNDER has nothing to target; route has no spatial identity.
-**Recommendation:** Replace with `caravan` or `trade_ship` unit at arrival. Add stationary unit types with `tradeRouteId` link.
+**Engine does:** Route creation deletes the merchant and creates a stationary `caravan` or `trade_ship` unit at the destination, linked by `caravanUnitId`.
+**Gap:** None for physical route representation. Unit art/action polish remains UI work.
+**Recommendation:** Keep plunder tests tied to the route's caravan unit.
 
 ---
 
-### F-04: No distance/range check — MISSING
+### F-04: Age-scaled range check exists, terrain blockers pending — CLOSE
 
 **Location:** `tradeSystem.ts:37-53`
 **GDD reference:** `systems/trade-routes.md` § "Distance Rules and Range"
 **Severity:** HIGH
 **Effort:** S
 **VII says:** Land 10/15/20 tiles per Antiquity/Exploration/Modern. Sea 30/45/60. Mountains block; ocean requires Cartography.
-**Engine does:** Only `dist > 1` check between merchant and target. No city-to-city range check.
-**Gap:** Age-gated range absent.
-**Recommendation:** Compute `distance(homeCity.position, targetCity.position)` and check against `LAND_RANGE = {antiquity:10, exploration:15, modern:20}` table.
+**Engine does:** Route creation checks origin-to-destination distance against land/sea age range constants (`10/15/20` and `30/45/60`).
+**Gap:** Mountain/river/open-ocean prerequisites and true path validation are not implemented.
+**Recommendation:** Add path-aware validation once road/sea-route pathing exists.
 
 ---
 
-### F-05: No diplomatic relationship gate — MISSING
+### F-05: Diplomatic relationship gate exists for civ routes — CLOSE
 
 **Location:** `tradeSystem.ts:32-93`
 **GDD reference:** `systems/trade-routes.md` § "Diplomatic Requirements"
 **Severity:** HIGH
 **Effort:** S
 **VII says:** Minimum Unfriendly or better. Hostile cannot trade. Independent Powers need Suzerain.
-**Engine does:** No relationship check. Any foreign city is valid target, including at-war.
-**Gap:** Trade-diplomacy coupling absent.
-**Recommendation:** Check `getDiplomaticRelationship` before route creation.
+**Engine does:** Route creation blocks `hostile` and `war` relationships.
+**Gap:** Independent Power suzerain gating and active-route cancellation when relations later degrade are still missing.
+**Recommendation:** Add IP suzerain validation and relationship-change invalidation.
 
 ---
 
-### F-06: No per-civ-pair route capacity cap — MISSING
+### F-06: Route capacity cap is per origin city, not per civ pair — DIVERGED
 
 **Location:** `tradeSystem.ts:59-64`
 **GDD reference:** `systems/trade-routes.md` § "Route Capacity"
 **Severity:** MED
 **Effort:** S
 **VII says:** 1 active route per civ pair (default); raised per-pair by Improve Trade Relations treaty.
-**Engine does:** Dedup on `(owner, from-city, to-city)` triple. Effective cap = `origCities × destCities`.
-**Gap:** Wrong cap semantics.
-**Recommendation:** Count routes per `(owner, destinationCivId)` pair. Add `tradeRouteCapacity` Map.
+**Engine does:** Caps outbound routes per origin city at 2 and retains a same-city-pair duplicate guard. Improve Trade Relations currently increases destination gold yield rather than per-pair capacity.
+**Gap:** VII capacity is per civ pair and modified by Improve Trade Relations; current capacity semantics still diverge.
+**Recommendation:** Replace origin-city cap with `(owner, destinationCivId)` capacity and move Improve Trade Relations to capacity.
 
 ---
 
-### F-07: Panel displays gold/turn for origin player — CLOSE
+### F-07: Panel labels destination gold and copied resources — MATCH
 
 **Location:** `TradeRoutesPanel.tsx:56-58, 119-124`
 **GDD reference:** `systems/trade-routes.md` § "Yields"
 **Severity:** MED
 **Effort:** S
 **VII says:** Origin gets resources; destination gets gold.
-**Engine does:** Panel shows `goldPerTurn` with 💰 icon for owner — implies owner earns gold. Footer counts gold as player income.
-**Gap:** UI correctly models engine's (wrong) yield direction.
-**Recommendation:** After F-01: display `route.resourcesCopied` icons + secondary "→ X gold/turn (to destination)".
+**Engine does:** `TradeRoutesPanel` labels gold as paid to the destination civ and shows copied resources from the route snapshot.
+**Gap:** None for the F-01 UI correction.
+**Recommendation:** Keep panel tests asserting destination-gold wording and resource display.
 
 ---
 
@@ -163,22 +163,17 @@
 
 ## Extras to retire
 
-- `TRADE_ROUTE_DURATION = 20` + `turnsRemaining` — no turn-expiry in VII (F-02).
-- Symmetric gold payment to owner in handleEndTurn — origin earns resources (F-01).
-- City-pair dedup guard — replace with civ-pair cap (F-10).
+- Origin-city cap and city-pair dedup guard — replace with per-civ-pair capacity (F-06/F-10).
 
 ---
 
 ## Missing items
 
-1. Asymmetric yield model (F-01) — core loop change.
-2. Permanent route lifecycle + cancellation triggers (F-02).
-3. Physical Caravan/Trade Ship on establishment (F-03).
-4. Age-scaled distance/range check (F-04).
-5. Diplomatic relationship gate (F-05).
-6. Per-civ-pair route capacity cap (F-06).
-7. Modern-age travel-free route (F-08).
-8. Merchant road-building (F-09).
+1. Per-civ-pair route capacity cap and Improve Trade Relations capacity increase (F-06).
+2. Modern-age travel-free route activation (F-08).
+3. Merchant road-building / railroad side effect (F-09).
+4. Relationship-deterioration and destination-capture cancellation hooks (F-02/F-05).
+5. Terrain/path-aware range validation (F-04).
 
 ---
 
@@ -190,9 +185,9 @@ Paste into `.codex/gdd/systems/trade-routes.md` § "Mapping to hex-empires":
 - `packages/engine/src/systems/tradeSystem.ts`
 - `packages/web/src/ui/panels/TradeRoutesPanel.tsx`
 
-**Status:** 0 MATCH / 2 CLOSE / 3 DIVERGED / 4 MISSING / 1 EXTRA
+**Status:** 3 MATCH / 3 CLOSE / 1 DIVERGED / 2 MISSING / 1 EXTRA
 
-**Highest-severity finding:** F-01 — yield direction reversed (owner gets gold symmetrically; VII: origin gets resources, destination gets slot×age gold).
+**Highest-severity finding:** F-06 — capacity still uses origin-city semantics instead of per-civ-pair Improve Trade Relations capacity.
 
 ---
 
@@ -200,11 +195,11 @@ Paste into `.codex/gdd/systems/trade-routes.md` § "Mapping to hex-empires":
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-04, F-05, F-06, F-08, F-10 | 2.5d |
-| M | F-01, F-02, F-03, F-07, F-09 | ~10d |
+| S | F-06, F-08, F-10 | 1.5d |
+| M | F-02, F-04, F-05, F-09 | ~6d |
 | **Total** | 10 | **~2.5w** |
 
-Recommended order: F-01 → F-02 → F-03 → F-04 → F-05 → F-06 (VII-parity milestone). F-07 UI after F-01. F-08, F-09, F-10 as polish.
+Recommended order: F-06/F-10 capacity cleanup → F-08 Modern activation → F-02/F-05 invalidation hooks → F-04 path-aware range → F-09 road/rail side effect.
 
 ---
 

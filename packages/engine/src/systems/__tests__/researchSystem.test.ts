@@ -495,12 +495,26 @@ describe('researchSystem', () => {
       expect(p.techProgressMap?.get('mining')).toBe(10);
     });
 
-    it('clears techProgressMap on TRANSITION_AGE', () => {
+    it('clears active tech tree state on TRANSITION_AGE', () => {
       const techMap = new Map<string, number>([['pottery', 15], ['writing', 10]]);
-      const player = createTestPlayer({ techProgressMap: techMap });
+      const player = createTestPlayer({
+        researchedTechs: ['pottery'],
+        currentResearch: 'writing',
+        researchProgress: 10,
+        masteredTechs: ['pottery'],
+        currentMastery: 'mining',
+        masteryProgress: 5,
+        techProgressMap: techMap,
+      });
       const state = createTestState({ players: new Map([['p1', player]]) });
       const next = researchSystem(state, { type: 'TRANSITION_AGE', newCivId: 'rome' });
       const p = next.players.get('p1')!;
+      expect(p.researchedTechs).toEqual([]);
+      expect(p.currentResearch).toBeNull();
+      expect(p.researchProgress).toBe(0);
+      expect(p.masteredTechs).toEqual([]);
+      expect(p.currentMastery).toBeNull();
+      expect(p.masteryProgress).toBe(0);
       expect(p.techProgressMap?.size).toBe(0);
     });
 

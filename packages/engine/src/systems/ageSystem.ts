@@ -134,32 +134,39 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     killsThisAge: 0,
     goldenAgeChosen: null,
     // ── Tech tree reset (§16.1 #9) ──
-    researchedTechs: player.researchedTechs,
+    // Civ VII replaces the active tech tree on every age transition. Completed
+    // techs/masteries from the prior age retire; codices and attribute points
+    // are represented by their own persistent fields and are not touched here.
+    researchedTechs: [],
     currentResearch: null,
     researchProgress: 0,
-    // F-14: Mastered techs persist across age transitions — they represent
-    // permanent knowledge, not per-age progress. Only active mastery
-    // progress resets (the in-progress research, not the completed masteries).
-    masteredTechs: player.masteredTechs,
+    masteredTechs: [],
     currentMastery: null,
     masteryProgress: 0,
+    techProgressMap: new Map(),
     // ── Civic tree reset (§16.1 #9) ──
-    // X1.3: researchedCivics is PRESERVED as a permanent historical record across ages.
-    // Only per-age progress fields (currentCivic, civicProgress, mastery) are reset.
-    researchedCivics: player.researchedCivics,
+    // The active researched/mastered civic sets are age-local. The separate
+    // completedCivics history log and traditions pool persist via ...player.
+    researchedCivics: [],
     currentCivic: null,
     civicProgress: 0,
-    // F-14: Mastered civics persist across age transitions (same rationale as masteredTechs).
-    masteredCivics: player.masteredCivics,
+    masteredCivics: [],
     currentCivicMastery: null,
     civicMasteryProgress: 0,
     // ── Government reset — require re-selection in new age ──
     governmentId: null,
     slottedPolicies: [],
+    policySlotCounts: undefined,
+    policySwapWindowOpen: false,
     // Unlock government selection for the new age (W2-03 CT F-07)
     governmentLockedForAge: false,
+    pendingGovernmentChoice: null,
     // Clear ideology for new age
     ideology: null,
+    // Crisis policy state is per-age; the next age will seed and escalate its own crisis.
+    crisisPhase: 'none',
+    crisisPolicies: [],
+    crisisPolicySlots: 0,
     // ── Religion — pantheons are Antiquity-only and do not carry forward. ──
     pantheonId: shouldDropPantheon ? null : player.pantheonId,
     // ── Attribute points (W3-07) — award 1 point per age transition ──
@@ -390,6 +397,7 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     // F-01: clear tracking when all players have transitioned, otherwise mark pending
     transitionPhase: allReady ? 'none' as const : 'pending' as const,
     playersReadyToTransition: allReady ? [] : newReadyList,
+    ...(allReady ? { ageProgressMeter: 0 } : {}),
   };
 }
 

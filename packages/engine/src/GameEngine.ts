@@ -137,6 +137,41 @@ export class GameEngine {
 
   /** Apply an action through the entire system pipeline */
   applyAction(state: GameState, action: GameAction): GameState {
+    if (action.type === 'TRANSITION_AGE') {
+      return this.applyTransitionAge(state, action);
+    }
+
+    let next = state;
+    for (const system of this.systems) {
+      const before = next;
+      next = system(next, action);
+      if (isRejectedEndTurn(action, before, next)) {
+        return next;
+      }
+    }
+    return next;
+  }
+
+  private applyTransitionAge(state: GameState, action: GameAction): GameState {
+    const ageSystemIndex = this.systems.indexOf(ageSystem);
+    if (ageSystemIndex === -1) {
+      return this.applyPipeline(state, action);
+    }
+
+    const afterAgeSystem = this.systems[ageSystemIndex](state, action);
+    if (!isAcceptedAgeTransition(state, afterAgeSystem)) {
+      return afterAgeSystem;
+    }
+
+    let next = afterAgeSystem;
+    for (let i = 0; i < this.systems.length; i++) {
+      if (i === ageSystemIndex) continue;
+      next = this.systems[i](next, action);
+    }
+    return next;
+  }
+
+  private applyPipeline(state: GameState, action: GameAction): GameState {
     let next = state;
     for (const system of this.systems) {
       const before = next;
@@ -179,4 +214,12 @@ function isRejectedEndTurn(action: GameAction, before: GameState, after: GameSta
     && after.turn === before.turn
     && after.currentPlayerId === before.currentPlayerId
     && after.phase === before.phase;
+}
+
+function isAcceptedAgeTransition(before: GameState, after: GameState): boolean {
+  const beforePlayer = before.players.get(before.currentPlayerId);
+  const afterPlayer = after.players.get(before.currentPlayerId);
+  return beforePlayer !== undefined
+    && afterPlayer !== undefined
+    && beforePlayer.age !== afterPlayer.age;
 }

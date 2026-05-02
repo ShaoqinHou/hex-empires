@@ -113,10 +113,31 @@ describe('TradeRoutesPanel (PanelShell pattern)', () => {
     const route = makeRoute({ isSea: false, resources: ['wheat'] });
     mockRef.state = makeState({
       tradeRoutes: new Map([['route1', route]]),
+      cities: new Map([
+        ['city1', { id: 'city1', name: 'Rome', owner: 'p1', position: { q: 0, r: 0 } }],
+        ['city2', {
+          id: 'city2',
+          name: 'Athens',
+          owner: 'p2',
+          position: { q: 3, r: 0 },
+          assignedResources: ['wheat'],
+        }],
+      ]),
     });
     const { getByText } = render(<TradeRoutesPanel onClose={() => {}} />);
     // estimateGoldPerTurn: 2 (antiquity) × 1 (land) × 1 (slot) = 2
     expect(getByText('+2💰')).toBeTruthy();
+    expect(getByText('Resources: wheat')).toBeTruthy();
+  });
+
+  it('labels route gold as flowing to destination civs', () => {
+    const route = makeRoute({ isSea: false, resources: ['wheat'] });
+    mockRef.state = makeState({
+      tradeRoutes: new Map([['route1', route]]),
+    });
+    const { getByText } = render(<TradeRoutesPanel onClose={() => {}} />);
+    expect(getByText(/Gold to destination/i)).toBeTruthy();
+    expect(getByText('Gold is paid to destination civs')).toBeTruthy();
   });
 
   it('shows sea type indicator for sea routes', () => {

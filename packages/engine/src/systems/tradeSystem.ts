@@ -238,8 +238,7 @@ function handleEndTurn(state: GameState): GameState {
 
     // F-01 (asymmetric yields — Y1.3):
     //   - Destination city owner earns gold per resource slot × rate × sea multiplier
-    //   - Origin city gets +1 food per resource slot from destination (VII: origin gets
-    //     yield-equivalent of destination's resources, not flat food)
+    //   - Origin player gains destination resources only (ownedResources copy)
     const resourceSlots = targetCity.assignedResources
       ? targetCity.assignedResources.length
       : 0;
@@ -247,20 +246,8 @@ function handleEndTurn(state: GameState): GameState {
     const tradeMultiplier = hasActiveTreaty(route.owner, targetCity.owner, 'improve_trade_relations', state)
       ? IMPROVE_TRADE_GOLD_MULTIPLIER
       : 1;
-    // Guarantee at least 1 gold per turn even when no resources are slotted
-    const goldToDestination = Math.round(Math.max(1, resourceSlots) * goldRate * seaMultiplier * tradeMultiplier);
+    const goldToDestination = Math.round(resourceSlots * goldRate * seaMultiplier * tradeMultiplier);
     addGold(updatedPlayers, targetCity.owner, goldToDestination);
-
-    // F-01 origin yield: +1 food per resource slot (at minimum 1) — replaces flat +2 placeholder
-    const originCity = updatedCities.get(route.from);
-    if (originCity) {
-      const FOOD_PER_RESOURCE_SLOT = 1;
-      const foodYield = Math.max(1, resourceSlots) * FOOD_PER_RESOURCE_SLOT;
-      updatedCities.set(route.from, {
-        ...originCity,
-        food: originCity.food + foodYield,
-      });
-    }
 
     // Y1.2: railroadTycoonPoints — 1 per route per turn, +2 bonus for age-crossing routes
     // Age-crossing: origin player is Modern while destination city's owner is in an earlier age

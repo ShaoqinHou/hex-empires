@@ -138,23 +138,41 @@ describe('tradeSystem', () => {
 
   // ── F-01 Asymmetric yields ──
   describe('END_TURN — asymmetric yields (F-01)', () => {
-    it('destination city owner receives gold (no slotted resources → 1 slot minimum)', () => {
+    it('destination owner receives gold by slotted resources and age rate, while origin food stays unchanged', () => {
+      const state = stateWithMerchantAndCities({
+        assignedResources: ['iron', 'horses', 'wheat'],
+      });
+      const afterCreate = tradeSystem(state, {
+        type: 'CREATE_TRADE_ROUTE',
+        merchantId: 'm1',
+        targetCityId: 'city2',
+      });
+      const beforeCityFood = state.cities.get('city1')?.food ?? 0;
+
+      const afterEndTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
+
+      // 3 resources × 2 gold (antiquity) × land = 6 gold
+      expect(afterEndTurn.players.get('p2')!.gold).toBe(56);
+      expect(afterEndTurn.players.get('p1')!.gold).toBe(100);
+      expect(afterEndTurn.players.get('p2')!.totalGoldEarned).toBe(6);
+      expect(afterEndTurn.cities.get('city1')?.food).toBe(beforeCityFood);
+    });
+
+    it('destination owner does not receive extra gold when no destination resources are slotted', () => {
       const state = stateWithMerchantAndCities({ assignedResources: [] });
       const afterCreate = tradeSystem(state, {
         type: 'CREATE_TRADE_ROUTE',
         merchantId: 'm1',
         targetCityId: 'city2',
       });
-
       const afterEndTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
 
-      // p2 (destination owner) started at 50 gold; antiquity rate=2, 1 slot min
-      expect(afterEndTurn.players.get('p2')!.gold).toBe(52);
-      // p1 (origin owner) does NOT receive gold — only resources
+      expect(afterEndTurn.players.get('p2')!.gold).toBe(50);
       expect(afterEndTurn.players.get('p1')!.gold).toBe(100);
+      expect(afterEndTurn.players.get('p2')!.totalGoldEarned).toBe(0);
     });
 
-    it('destination owner receives gold per slot × age rate', () => {
+    it('origin owner receives destination resources in ownedResources, not food yield', () => {
       // 3 resources slotted → 3 slots × 2 gold (antiquity) = 6 gold to p2
       const state = stateWithMerchantAndCities({
         assignedResources: ['iron', 'horses', 'wheat'],
@@ -164,21 +182,12 @@ describe('tradeSystem', () => {
         merchantId: 'm1',
         targetCityId: 'city2',
       });
+
       const afterEndTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
+      const ownedResources = afterEndTurn.players.get('p1')?.ownedResources ?? [];
 
-      expect(afterEndTurn.players.get('p2')!.gold).toBe(56); // 50 + 6
-    });
-
-    it('also increments totalGoldEarned for destination owner', () => {
-      const state = stateWithMerchantAndCities({ assignedResources: [] });
-      const afterCreate = tradeSystem(state, {
-        type: 'CREATE_TRADE_ROUTE',
-        merchantId: 'm1',
-        targetCityId: 'city2',
-      });
-      const afterEndTurn = tradeSystem(afterCreate, { type: 'END_TURN' });
-
-      expect(afterEndTurn.players.get('p2')!.totalGoldEarned).toBe(2);
+      expect(ownedResources).toEqual(expect.arrayContaining(['iron', 'horses', 'wheat']));
+      expect(ownedResources.length).toBe(3);
     });
 
     it('route persists across multiple END_TURN ticks (permanent lifecycle)', () => {

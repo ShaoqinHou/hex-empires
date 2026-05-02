@@ -23,11 +23,11 @@
 
 | Status | Count |
 |---|---|
-| MATCH — code does what VII does | 2 |
-| CLOSE — right shape, wrong specifics | 2 |
+| MATCH — code does what VII does | 3 |
+| CLOSE — right shape, wrong specifics | 3 |
 | DIVERGED — fundamentally different | 1 |
-| MISSING — GDD describes, engine lacks | 4 |
-| EXTRA — engine has, VII/GDD does not | 1 |
+| MISSING — GDD describes, engine lacks | 1 |
+| EXTRA — engine has, VII/GDD does not | 2 |
 
 **Total findings:** 10
 
@@ -35,29 +35,29 @@
 
 ## Detailed findings
 
-### F-01: `pack-unpack-system-absent` — MISSING
+### F-01: `pack-unpack-system-present-with-duplicate-paths` — CLOSE
 
-**Location:** `packages/engine/src/types/Commander.ts:199-221`
+**Location:** `packages/engine/src/systems/commanderArmySystem.ts`; `packages/engine/src/types/GameState.ts`
 **GDD reference:** `systems/commanders.md` § "Pack / Unpack (Assemble and Deploy Army)"
 **Severity:** HIGH
 **Effort:** L (week+)
 **VII says:** The core commander mechanic: ASSEMBLE_ARMY packs up to 4 adjacent units into a single formation that moves with the commander; DEPLOY_ARMY unpacks them to adjacent tiles with zero remaining movement (unless Initiative promotion active).
-**Engine does:** CommanderAction defines PACK_COMMANDER and UNPACK_COMMANDER shapes as types only. Neither action is in GameAction, no system handler exists. commanderPromotionSystem.ts only handles XP gain and promotion picking — pack/unpack absent from the live engine pipeline.
-**Gap:** The central VII mechanic — army formation movement — is TypeScript types only. No system function implements it.
-**Recommendation:** Create commanderArmySystem.ts handling ASSEMBLE_ARMY / DEPLOY_ARMY. Add both to GameAction. Validate capacity against COMMANDER_BASE_STACK_CAP (4) and AURA_EXPAND_STACK promotion bonus. Deployed units get movementLeft: 0 unless Initiative promotion is present.
+**Engine does:** `commanderArmySystem` handles `ASSEMBLE_ARMY`/`DEPLOY_ARMY` plus legacy `PACK_ARMY`/`UNPACK_ARMY`. Deploy/unpack clears packed flags, places units adjacent to the commander, and sets deployed unit `movementLeft: 0`.
+**Gap:** There are still two parallel pack models (`packedInCommanderId` vs removed-unit snapshots), no Initiative/Weather Gage immediate-move exception, and no full formation-order UI.
+**Recommendation:** Consolidate onto one pack model, then add promotion exceptions and action-bar UI.
 
 ---
 
-### F-02: `commander-state-not-in-gamestate` — MISSING
+### F-02: `commander-state-wired-in-gamestate` — MATCH
 
 **Location:** `packages/engine/src/types/Commander.ts:163-172`, `packages/engine/src/types/GameState.ts:202-205`
 **GDD reference:** `systems/commanders.md` § "Entities" — CommanderState
 **Severity:** HIGH
 **Effort:** M (1-3 days)
 **VII says:** Commanders carry dedicated state: xp, level, promotionPoints, promotions, commendations, packedUnits, packedCivilian, commandRadius.
-**Engine does:** CommanderState fully defined in types/Commander.ts but NOT wired into GameState. GameState.ts line 202 notes XP and picks live on UnitState fields as a compat shim. GameState has no commanders: ReadonlyMap field.
-**Gap:** CommanderState exists but is disconnected. attachedUnits, packed, tree, and commendations are unrepresentable in live state.
-**Recommendation:** Add readonly commanders: ReadonlyMap<UnitId, CommanderState> to GameState. Migrate commanderPromotionSystem to read/write it. Prerequisite blocker for F-01, F-07, F-08.
+**Engine does:** `GameState.commanders` exists, the initializer seeds it, and commander army/combat tests exercise it as live state.
+**Gap:** Promotion XP still partly lives on `UnitState` for compatibility, so a final migration remains.
+**Recommendation:** Move commander XP/promotions fully into `CommanderState` in the promotion cleanup slice.
 
 ---
 
@@ -74,16 +74,16 @@
 
 ---
 
-### F-04: `xp-level-cap-off-by-one` — CLOSE
+### F-04: `xp-level-cap-off-by-one` — MATCH
 
 **Location:** `packages/engine/src/systems/commanderPromotionSystem.ts:58`
 **GDD reference:** `systems/commanders.md` § "XP Accrual"
 **Severity:** LOW
 **Effort:** S (half-day)
 **VII says:** XP thresholds increase progressively; max level is 5.
-**Engine does:** LEVEL_THRESHOLDS = [0, 50, 150, 300, 500, 800] — six thresholds allowing level 6. Comment says published cap is level 5 but commanderLevelForXp returns 6 at 800+ XP. No hard cap enforced.
-**Gap:** Level-6 threshold exists, contradicting the stated cap. A level-6 commander gains an extra pick with no defined promotion to spend it on.
-**Recommendation:** Shorten LEVEL_THRESHOLDS to [0, 50, 150, 300, 500]. Add Math.min(level, 5) clamp in commanderLevelForXp.
+**Engine does:** `LEVEL_THRESHOLDS = [0, 50, 150, 300, 500]` and `commanderLevelForXp` hard-caps at 5.
+**Gap:** None for the off-by-one cap.
+**Recommendation:** Keep threshold source verification as an open question, but do not reintroduce level 6.
 
 ---
 
@@ -126,29 +126,29 @@
 
 ---
 
-### F-08: `commander-age-persistence-absent` — MISSING
+### F-08: `commander-age-persistence-partial` — CLOSE
 
 **Location:** `packages/engine/src/systems/commanderPromotionSystem.ts`
 **GDD reference:** `systems/commanders.md` § "Age Transition Persistence"
 **Severity:** HIGH
 **Effort:** M (1-3 days)
 **VII says:** Commanders are the ONLY unit type that explicitly survives age transitions with all state intact. Packed units not preserved. Fleet Commanders retain assigned naval units; unassigned ships lost.
-**Engine does:** commanderPromotionSystem has no TRANSITION_AGE case. ageSystem has no commander-specific preservation. Without CommanderState in GameState, no persistent record survives an age boundary.
-**Gap:** Commanders follow normal unit-loss rules on age transition (likely destroyed). The veteran-general arc across three ages is absent.
-**Recommendation:** Add TRANSITION_AGE case preserving CommanderState records, clearing attachedUnits, applying Fleet Commander retention rule. Prerequisite: F-02.
+**Engine does:** `ageSystem` does not clear `state.commanders`, so commander records persist across age transitions by default.
+**Gap:** Age-transition-specific commander rules are incomplete: attached/packed unit handling and Fleet Commander naval-retention rules are not explicit.
+**Recommendation:** Add a commander age-transition cleanup that preserves commanders, clears invalid packed land units, and implements Fleet Commander retention.
 
 ---
 
-### F-09: `panel-not-wired-and-uses-all-global` — CLOSE
+### F-09: `panel-wired-but-read-only` — CLOSE
 
 **Location:** `packages/web/src/ui/panels/CommanderPanel.tsx:19,27-32`
 **GDD reference:** `systems/commanders.md` § "UI requirements"
 **Severity:** MED
 **Effort:** S (half-day)
 **VII says:** Commanders Panel must list all owned commanders with name, type, level, XP, location, packed count. Requires promotion tree screen, command radius HUD overlay, pack/unpack buttons, army composition indicator, reinforce button, respawn counter.
-**Engine does:** CommanderPanel renders a read-only roster but is explicitly NOT wired into App.tsx. Also imports ALL_COMMANDERS and ALL_COMMANDER_PROMOTIONS directly (ALL_X-import-in-ui trap) instead of using state.config.
-**Gap:** (1) Panel not in panelRegistry and cannot be opened; (2) ALL_X global imports violate the trap registry. Promotion tree graph, HUD overlay, action buttons, reinforce, respawn counter all absent.
-**Recommendation:** Register commanders in panelRegistry.ts and wire into App.tsx per /add-panel skill. Replace ALL_X imports with state.config lookups via useGameState(). Defer tree graph and action buttons to later cycle.
+**Engine does:** `CommanderPanel` is registered in `panelRegistry`, opened from `TopBar`, and lazy-wired in `App.tsx`. It remains a read-only roster and imports commander catalogues through the engine barrel.
+**Gap:** Promotion tree graph, command radius HUD, pack/unpack buttons, reinforce, respawn counter, and state.config-driven catalog lookups remain incomplete.
+**Recommendation:** Move display lookup to `state.config` and add action controls after pack-model consolidation.
 
 ---
 
@@ -175,11 +175,10 @@
 
 ## Missing items
 
-- Pack/unpack army system (F-01) — the central VII commander mechanic; highest-effort prerequisite.
-- CommanderState wired into GameState (F-02) — prerequisite blocker for F-01, F-07, F-08.
-- Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
 - Commander respawn on defeat (F-07) — 20-turn timer, respawn at capital with all state intact.
-- Commander age-transition persistence (F-08) — the only unit class that survives age transitions.
+- Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
+- Commander pack-model consolidation and Initiative/Weather Gage deployment exception (F-01).
+- Explicit commander age-transition cleanup, especially Fleet Commander retention rules (F-08).
 
 ---
 
@@ -189,13 +188,15 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 
 **Engine files:**
 - `packages/engine/src/systems/commanderPromotionSystem.ts`
+- `packages/engine/src/systems/commanderArmySystem.ts`
 - `packages/engine/src/types/Commander.ts`
+- `packages/engine/src/types/GameState.ts`
 - `packages/engine/src/data/commanders/`
 - `packages/web/src/ui/panels/CommanderPanel.tsx`
 
-**Status:** 2 MATCH / 2 CLOSE / 1 DIVERGED / 4 MISSING / 1 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
+**Status:** 3 MATCH / 3 CLOSE / 1 DIVERGED / 1 MISSING / 2 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
 
-**Highest-severity finding:** F-01 — Pack/unpack system absent (MISSING — the central VII army formation mechanic is TypeScript types only, no system implementation)
+**Highest-severity finding:** F-07 — commander respawn on defeat is still absent; F-01 remains a consolidation/polish gap, not an absent system.
 
 ---
 
@@ -213,12 +214,12 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
-| S (half-day) | F-04, F-05, F-06, F-09, F-10 | 2.5d |
-| M (1-3 days) | F-02, F-03, F-07, F-08 | ~8d |
-| L (week+) | F-01 | ~2w |
-| **Total** | 10 | **~3w** |
+| S (half-day) | F-05, F-06, F-09, F-10 | 2d |
+| M (1-3 days) | F-01, F-02 cleanup, F-03, F-07, F-08 | ~10d |
+| L (week+) | none currently scoped | 0 |
+| **Total** | 10 | **~2w** |
 
-Recommended order: F-02 (GameState wiring, prerequisite blocker), F-09 (panel wire-up + import fix), F-04 (level cap), F-01 (army system, largest), F-07 + F-08 in parallel once F-02 done, F-03 (commendations, last).
+Recommended order: F-01 pack-model consolidation → F-08 explicit age-transition commander cleanup → F-07 respawn → F-03 promotion tree/commendations → F-09 action UI/config lookup → F-06/F-10 custom-extension tagging.
 
 ---
 

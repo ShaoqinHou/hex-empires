@@ -25,13 +25,13 @@
 
 | Status | Count |
 |---|---|
-| MATCH — code does what VII does | 4 |
-| CLOSE — right shape, wrong specifics | 3 |
-| DIVERGED — fundamentally different | 4 |
-| MISSING — GDD describes, engine lacks | 4 |
-| EXTRA — engine has, VII/GDD doesn't | 1 |
+| MATCH — code does what VII does | 11 |
+| CLOSE — right shape, wrong specifics | 5 |
+| DIVERGED — fundamentally different | 1 |
+| MISSING — GDD describes, engine lacks | 0 |
+| EXTRA — engine has, VII/GDD doesn't | 0 |
 
-**Total findings:** 16
+**Total findings:** 17
 
 ## Detailed findings
 
@@ -52,7 +52,7 @@
 
 
 
-### F-02: `age-progress-turn-based-not-milestone-accelerated` — DIVERGED
+### F-02: `age-progress-milestone-accelerated-but-simplified` — CLOSE
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:255–258`
@@ -60,15 +60,15 @@
 **Severity:** HIGH
 **Effort:** M (1–3 days)
 **VII says:** `ageEndProgress = sum(legacyMilestonesComplete * milestoneWeight) + ageTurnCount / ageTurnTarget`. Completing milestones early accelerates age-end. Age ends at approximately turn 150–200 at standard speed.
-**Engine does:** `ageProgress` increments by exactly +1 per END_TURN call, unconditionally. Milestone completions award `legacyPoints` but do NOT add to `ageProgress`. Threshold is a single static number in `AgeState.ageThresholds`.
-**Gap:** Missing the milestone-acceleration component. Ages always run exactly `threshold` turns regardless of player performance.
-**Recommendation:** Remove the `legacyPoints`-to-random-yield mechanic (see F-11). Wire milestone completions to add a configurable `milestoneAgeBonus` to `ageProgress`.
+**Engine does:** `ageProgress` still increments naturally by +1, and newly completed legacy milestones add age progress and feed a global `ageProgressMeter` compression shortcut.
+**Gap:** The implementation is still a simplified threshold model rather than the full `ageTurnTarget + weighted milestone sum` formula by game speed.
+**Recommendation:** Keep the milestone acceleration path, then move thresholds/weights into game-speed config.
 
 ---
 
 
 
-### F-03: `no-crisis-gate-on-transition` — MISSING
+### F-03: `crisis-gate-on-transition` — MATCH
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:21–31`
@@ -76,15 +76,15 @@
 **Severity:** HIGH
 **Effort:** M (1–3 days)
 **VII says:** Crisis must resolve before transition can occur.
-**Engine does:** The `handleTransition` guard only checks `player.ageProgress >= threshold`. No crisis state is consulted. `RESOLVE_CRISIS` action exists in `GameState.ts:418` but is not checked in `ageSystem`.
-**Gap:** Players can transition mid-crisis, skipping the mandatory crisis-resolution gate.
-**Recommendation:** Add `crisisPhase` to `AgeState`; require `crisisPhase === 'resolved'` before `handleTransition` proceeds. Wire `crisisSystem` to set that flag.
+**Engine does:** `handleTransition` rejects transition while `player.crisisPhase` is set to an unresolved phase; resolved/no-crisis states can proceed.
+**Gap:** None for the transition gate.
+**Recommendation:** Keep crisis-state regression tests around transition acceptance.
 
 ---
 
 
 
-### F-04: `legacy-bonus-selection-missing` — MISSING
+### F-04: `legacy-bonus-selection-partial-ui` — CLOSE
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:33–53`; `packages/web/src/ui/panels/AgeTransitionPanel.tsx`
@@ -92,62 +92,62 @@
 **Severity:** HIGH
 **Effort:** M (1–3 days)
 **VII says:** On transition, player chooses which earned legacy bonuses to activate (typically pick 2 of 4). Unchosen bonuses are discarded.
-**Engine does:** ALL earned bonuses from `getCivLegacyBonus()` AND all `legacyPoints`-converted effects are automatically applied. No choice UI. No cap.
-**Gap:** No player agency over which legacy bonuses carry forward. Unlimited bonuses accumulate with no selection cap.
-**Recommendation:** Add a `pendingLegacyBonuses` array to the `TRANSITION_AGE` action. Surface a selection UI in `AgeTransitionPanel` before dispatching. Enforce a per-age cap (VII uses pick 2 of N).
+**Engine does:** `handleTransition` creates `pendingLegacyBonuses`, `CHOOSE_LEGACY_BONUSES` applies up to two picks, and `AgeTransitionPanel` renders a pick-2 section when pending bonuses exist.
+**Gap:** The panel currently dispatches `TRANSITION_AGE` and resolves immediately, so the pick-2 UX needs an end-to-end flow check to ensure the player sees pending choices at the correct point.
+**Recommendation:** Rework the age-transition modal into explicit phases: civ choice, legacy bonus choice, confirmation.
 ---
 
 
 
-### F-05: `no-tech-tree-reset-on-transition` — MISSING
+### F-05: `no-tech-tree-reset-on-transition` — MATCH
 
 
-**Location:** `packages/engine/src/systems/ageSystem.ts:75–84`
+**Location:** `packages/engine/src/systems/ageSystem.ts`
 **GDD reference:** `systems/ages.md` § "Per-age state rebuild" → Resets
 **Severity:** HIGH
 **Effort:** M (1–3 days)
 **VII says:** Tech tree is replaced with the new age tree on transition. Mid-research progress is lost.
-**Engine does:** `handleTransition` does NOT clear `researchedTechs`, `currentResearch`, or `researchProgress` on transition.
-**Gap:** Full tech persistence across ages instead of reset. The tech-tree-reset is fundamental to VII fresh-start-each-age design.
-**Recommendation:** Add `currentResearch: null, researchProgress: 0` to `updatedPlayers.set()` in `handleTransition`. Age-gating techs by `TechnologyDef.age` already exists in the data layer.
+**Engine does:** `handleTransition` clears `researchedTechs`, `currentResearch`, `researchProgress`, `masteredTechs`, `currentMastery`, `masteryProgress`, and `techProgressMap` for the transitioning player. `researchSystem` also clears the active tech tree state on `TRANSITION_AGE` when tested in isolation.
+**Gap:** None for active tech-tree reset. Persistent non-tree state such as codices, attribute points, and future tech boost scaffolding remains outside the reset list.
+**Recommendation:** Keep active tree fields age-local. Do not reintroduce researched/mastered tech persistence; model cross-age benefits through explicit carry-forward fields.
 
 ---
 
 
 
-### F-06: `no-civic-tree-reset-on-transition` — MISSING
+### F-06: `no-civic-tree-reset-on-transition` — MATCH
 
 
-**Location:** `packages/engine/src/systems/ageSystem.ts:75–84`
+**Location:** `packages/engine/src/systems/ageSystem.ts`
 **GDD reference:** `systems/ages.md` § "Per-age state rebuild" → Resets
 **Severity:** HIGH
 **Effort:** S (half-day)
 **VII says:** Civic tree is replaced with the new age tree on transition.
-**Engine does:** `handleTransition` does NOT clear `researchedCivics` or any current civic research.
-**Gap:** All civics from previous ages persist, granting ongoing effects from old-age civic bonuses into the new age.
-**Recommendation:** Clear `researchedCivics` (or at minimum the non-tradition ones) in `handleTransition`. VII keeps traditions as a separate mechanic — these should persist while the civic tree resets (see F-07).
+**Engine does:** `handleTransition` clears `researchedCivics`, `currentCivic`, `civicProgress`, `masteredCivics`, `currentCivicMastery`, `civicMasteryProgress`, civic-granted `policySlotCounts`, and the policy swap window. `civicSystem` mirrors the active civic-tree reset for isolated-system coverage. `completedCivics`, `traditions`, and celebration-earned `socialPolicySlots` persist separately.
+**Gap:** None for active civic-tree reset. Full tradition content remains tracked under F-07.
+**Recommendation:** Keep researched/mastered civics age-local; preserve cross-age cultural carry-forward only through `traditions` and non-mechanical history.
 
 ---
 
 
 
-### F-07: `traditions-not-implemented` — MISSING
+### F-07: `traditions-present-but-not-slotted` — CLOSE
 
 
-**Location:** N/A (no engine file)
+**Location:** `packages/engine/src/types/GameState.ts`; `packages/engine/src/types/Tradition.ts`; `packages/engine/src/systems/civicSystem.ts`; `packages/engine/src/state/EffectUtils.ts`
 **GDD reference:** `systems/ages.md` § "Entities" → `PlayerState.traditions`; § "Per-age state rebuild" → Persists
 **Severity:** MED
 **Effort:** M (1–3 days)
 **VII says:** Traditions — social policies adopted in past ages — persist as selectable options across future ages.
-**Engine does:** No `traditions` field on `PlayerState`. The `governmentSystem` tracks `slottedPolicies` but there is no mechanism for marking old policies as traditions that survive the tree reset.
-**Gap:** The traditions carry-forward mechanic is absent entirely. Combined with F-06 (no civic reset), there is nothing to preserve across what would be a reset.
-**Recommendation:** Add `traditions: ReadonlyArray<PolicyId>` to `PlayerState`. On transition, copy the current age slotted policies into `traditions`. After the civic tree resets, traditions become re-selectable without requiring re-research.
+**Engine does:** Players have a persistent `traditions` pool; civics can unlock traditions; `EffectUtils` applies tradition effects; age transition preserves the pool.
+**Gap:** Traditions are auto-active once owned rather than explicitly slotted as policy cards.
+**Recommendation:** Add tradition cards to policy slotting and apply effects only while slotted.
 
 ---
 
 
 
-### F-08: `pantheon-not-cleared-on-antiquity-exploration-transition` — DIVERGED
+### F-08: `pantheon-cleared-on-antiquity-exploration-transition` — MATCH
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:21–112`
@@ -155,14 +155,14 @@
 **Severity:** MED
 **Effort:** S (half-day)
 **VII says:** Pantheon does NOT carry to Exploration. This is an explicit VII departure from VI. Religion is a fresh system starting in Exploration.
-**Engine does:** `handleTransition` does NOT clear `player.pantheonId`. The pantheon bonus persists indefinitely into Exploration and Modern.
-**Gap:** Pantheon effects carry across ages, contradicting the explicit VII design.
-**Recommendation:** Add `pantheonId: null` to `updatedPlayers.set()` in `handleTransition` when transitioning from antiquity to exploration. Also clear any active pantheon effects from `legacyBonuses` at that point.
+**Engine does:** `handleTransition` clears `pantheonId` when leaving Antiquity and drops the pantheon claims slot from religion state.
+**Gap:** None for pantheon clearing.
+**Recommendation:** Keep pantheon persistence tests split from founded religion persistence.
 ---
 
 
 
-### F-09: `no-ageless-building-flag` — DIVERGED
+### F-09: `ageless-building-flag-and-obsolescence` — MATCH
 
 
 **Location:** `packages/engine/src/types/Building.ts:3–21`
@@ -170,15 +170,15 @@
 **Severity:** MED
 **Effort:** S (half-day)
 **VII says:** Ageless buildings (Warehouses, Unique Buildings, Wonders) persist across transitions. Non-ageless buildings become obsolete (lose effects, keep base yields).
-**Engine does:** `BuildingDef` has no `isAgeless` boolean field. All buildings persist unchanged through transition. (`DistrictOverhaul.ts:88` has `age: Age | ageless` on `QuarterV2` but this does not propagate to `BuildingDef`.)
-**Gap:** No mechanism to distinguish ageless from age-specific buildings. All buildings effectively persist forever, trivializing transition economics.
-**Recommendation:** Add `readonly isAgeless?: boolean` to `BuildingDef`. Flag Warehouses, Wonders, and civ-unique buildings as `true`. On transition, iterate `city.buildings` and remove non-ageless buildings whose `age !== nextAge`.
+**Engine does:** `BuildingDef.isAgeless` exists and `ageSystem` removes older-age non-ageless buildings while preserving ageless/wonder-style entries.
+**Gap:** Building data still needs source verification to ensure every Warehouse, Wonder, and unique building is flagged correctly.
+**Recommendation:** Continue data audits by building category.
 
 ---
 
 
 
-### F-10: `dark-age-bonuses-inverted` — CLOSE
+### F-10: `dark-age-penalties-only` — MATCH
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:140–220`
@@ -186,15 +186,15 @@
 **Severity:** MED
 **Effort:** S (half-day)
 **VII says:** Completing ALL milestones → Golden Age (bonus). Completing ZERO → Dark Age (penalty only). No silver-lining bonuses on dark ages.
-**Engine does:** Golden Age at paths.X === 3; Dark Age at paths.X === 0 — thresholds are correct. However every dark-age branch also grants a positive bonus: military +3 combat, science +5 science, culture +4 culture, economic +2 production.
-**Gap:** Dark ages should be pure penalties. The bonus components are custom hex-empires additions that soften the downside.
-**Recommendation:** Remove the bonus MODIFY effects from all four dark-age branches. Keep only penalties: military = food penalty, economic = gold loss, science = tech loss, culture = food/culture penalty.
+**Engine does:** Dark-age branches apply penalty effects only (for example combat/yield penalties and economic gold loss) with no compensating positive bonuses.
+**Gap:** Exact penalty values remain a source-verification task.
+**Recommendation:** Keep dark-age effects penalty-only; verify values against current game data.
 
 ---
 
 
 
-### F-11: `legacy-points-converted-to-random-yields` — EXTRA
+### F-11: `legacy-points-not-random-yields` — MATCH
 
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:39–49`
@@ -202,9 +202,9 @@
 **Severity:** MED
 **Effort:** S (half-day)
 **VII says:** Legacy points tally completed milestones; at transition the player chooses which legacy bonuses to activate. No random yield conversion.
-**Engine does:** On transition, each accumulated `legacyPoint` converts to a random +1 yield (randomized over 5 yield types using the seeded RNG). This is purely a hex-empires invention.
-**Gap:** Random yield spray is not a VII mechanic. Introduces non-strategic luck at the most important game moment.
-**Recommendation:** Remove the `for (let i = 0; i < player.legacyPoints; i++)` loop at lines 41–49. Replace with VII explicit legacy-bonus selection (F-04). The `legacyPoints` field can be repurposed as a score display metric.
+**Engine does:** The random legacy-points-to-yields loop is gone. Legacy points are reset/spent through explicit transition bonus selection.
+**Gap:** None for retiring the random yield extra.
+**Recommendation:** Keep seeded RNG out of legacy-bonus selection except for documented random effects.
 
 ---
 
@@ -305,21 +305,17 @@
 
 ## Extras to retire
 
-- `ageSystem.ts:39–49` — random `legacyPoints`-to-yield conversion loop. VII has no equivalent; retire in favor of the bonus-selection mechanic (F-04 / F-11).
-- Dark-age silver-lining bonuses (military `+3 combat`, science `+5 science`, culture `+4 culture`, economic `+2 production`) — VII dark ages are penalties only. Remove or quarantine as a non-canonical house rule.
+- None currently tracked as live extras. The prior random legacy yield conversion and dark-age silver-lining bonuses were retired.
 
 ---
 
 ## Missing items (not yet implemented)
 
 - **Simultaneous global transition** (F-01) — required for VII multi-player clone; single-player acceptable workaround only.
-- **Crisis gate on transition** (F-03) — crisisSystem exists, wiring to ageSystem gate is deferred.
-- **Legacy bonus selection UI** (F-04) — no pick-N UI; all bonuses auto-apply.
-- **Tech + civic tree reset** (F-05, F-06) — fundamental to the three fresh starts design; currently players carry all prior-age knowledge.
-- **Traditions** (F-07) — no `PlayerState.traditions` field; the mechanic that would survive the civic reset is absent.
-- **Pantheon clear on transition** (F-08) — small scope but violates the explicit VII pantheon-is-Antiquity-only rule.
-- **Ageless building flag** (F-09) — `BuildingDef` has no `isAgeless` field; buildings never go obsolete.
-- **Historical path + leader unlock filtering** (F-12) — civ selection is a flat unfiltered pool.
+- **Legacy bonus selection UX** (F-04) — engine pieces exist, but the modal flow needs a full phase-based UX pass.
+- **Tradition slotting** (F-07) — tradition pool exists, but traditions are not yet slotted cards.
+- **Historical path + leader unlock filtering** (F-12) — civ selection is sorted by historical pair but not fully filtered/locked.
+- **Age-progress formula/game-speed config** (F-02) — milestone acceleration exists but remains simplified.
 
 ---
 
@@ -336,9 +332,9 @@ Paste this back into `.codex/gdd/systems/ages.md` § "Mapping to hex-empires":
 - `packages/engine/src/state/MilestoneTracker.ts`
 - `packages/web/src/ui/panels/AgeTransitionPanel.tsx`
 
-**Status:** 4 MATCH / 3 CLOSE / 4 DIVERGED / 4 MISSING / 1 EXTRA (see `.codex/gdd/audits/ages.md` for details)
+**Status:** 11 MATCH / 5 CLOSE / 1 DIVERGED / 0 MISSING / 0 EXTRA (see `.codex/gdd/audits/ages.md` for details)
 
-**Highest-severity finding:** F-01 — transition-not-simultaneous (HIGH, L); F-02 — age-progress-not-milestone-accelerated (HIGH, M); F-03 — no-crisis-gate (HIGH, M)
+**Highest-severity finding:** F-01 — transition-not-simultaneous (HIGH, L); F-04 — legacy-bonus selection UX is only partially integrated (HIGH, M)
 ```
 
 ---
@@ -356,12 +352,12 @@ Paste this back into `.codex/gdd/systems/ages.md` § "Mapping to hex-empires":
 
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
-| S (half-day) | F-06, F-08, F-09, F-10, F-11, F-13 | 3d |
-| M (1–3 days) | F-02, F-03, F-04, F-05, F-07, F-12 | 9–18d |
+| S (half-day) | F-12, F-13 | 1d |
+| M (1–3 days) | F-02, F-04, F-07 | 4–9d |
 | L (week+) | F-01 | 1w+ |
-| **Total** | | **~3–4 weeks** |
+| **Total** | | **~2–3 weeks** |
 
-Recommended sequencing (highest severity + lowest effort first): `F-05, F-06` (tech+civic reset, HIGH), `F-08` (pantheon clear, S), `F-09` (ageless flag, S), `F-11` (remove random yield loop, S), `F-13` (fix tooltip, S), `F-03` (crisis gate, M, HIGH), `F-02` (milestone acceleration, M, HIGH), `F-04` (bonus selection, M, HIGH), `F-07` (traditions, M, MED), `F-12` (civ filtering, M, MED), `F-01` (simultaneous transition, L — defer until multiplayer scope confirmed).
+Recommended sequencing: `F-04` (phase-based legacy bonus UX), `F-13` (age-progress tooltip copy), `F-07` (tradition slotting), `F-02` (game-speed/weight config), `F-12` (civ filtering), `F-01` (true global simultaneous transition; defer until multiplayer scope confirmed).
 
 ---
 
