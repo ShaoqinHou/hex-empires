@@ -15,11 +15,11 @@
 | System | Audit file | Findings | Status tally |
 |---|---|---|---|
 | ages | `.codex/gdd/audits/ages.md` | 17 | 11M / 5C / 1D / 0X / 0E |
-| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 0M / 0C / 4D / 6X / 2E |
+| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 2M / 0C / 3D / 5X / 2E |
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
-| combat | `.codex/gdd/audits/combat.md` | 14 | 4M / 2C / 5D / 2X / 1E |
+| combat | `.codex/gdd/audits/combat.md` | 14 | 5M / 1C / 5D / 2X / 1E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
@@ -57,7 +57,7 @@
 | ages | F-04 | `legacy-bonus-selection-partial-ui` | ≈ CLOSE | M | `packages/engine/src/systems/ageSystem.ts:33–53`; `packages/web/src/ui/panels/Ag |
 | ages | F-05 | `no-tech-tree-reset-on-transition` | ✓ MATCH | M | `packages/engine/src/systems/ageSystem.ts` |
 | ages | F-06 | `no-civic-tree-reset-on-transition` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts` |
-| buildings-wonders | F-01 | `isAgeless`, `isCivUnique`, `civId` fields absent from `Buil | ⊘ MISSING | S | `packages/engine/src/types/Building.ts` |
+| buildings-wonders | F-01 | `isAgeless`, `isCivUnique`, `civId` fields present on `Build | ✓ MATCH | S | `packages/engine/src/types/Building.ts` |
 | buildings-wonders | F-02 | `ageSystem` performs zero building obsolescence on TRANSITIO | ⊘ MISSING | M | `packages/engine/src/systems/ageSystem.ts` |
 | buildings-wonders | F-03 | `wonderPlacementSystem` is a one-line no-op; not wired | ✗ EXTRA | M | `packages/engine/src/systems/wonderPlacementSystem.ts` |
 | buildings-wonders | F-04 | Quarter formation ignores ageless-pair; `unique_quarter` kin | ⚠ DIVERGED | M | `packages/engine/src/systems/urbanBuildingSystem.ts:61-88`, `packages/engine/src |
@@ -171,7 +171,7 @@
 | ages | F-11 | `legacy-points-not-random-yields` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts:39–49` |
 | ages | F-12 | `civ-selection-pool-unfiltered` | ≈ CLOSE | M | `packages/web/src/ui/panels/AgeTransitionPanel.tsx:21` |
 | buildings-wonders | F-06 | Wonder adjacency bonus to neighbors unimplemented | ⊘ MISSING | S | `packages/engine/src/state/DistrictAdjacency.ts` |
-| buildings-wonders | F-07 | `requiredCivic` absent; `requiredTech` not enforced at queue | ⚠ DIVERGED | S | `packages/engine/src/types/Building.ts`, `packages/engine/src/systems/production |
+| buildings-wonders | F-07 | `requiredCivic` present; tech/civic/civ gates enforced at qu | ✓ MATCH | S | `packages/engine/src/types/Building.ts`, `packages/engine/src/systems/production |
 | buildings-wonders | F-08 | Rival-wonder race notification + mid-queue cancellation abse | ⊘ MISSING | M | `packages/engine/src/systems/productionSystem.ts` |
 | buildings-wonders | F-10 | growth/production use base yield calculator (no adjacency) | ⚠ DIVERGED | S | `packages/engine/src/systems/growthSystem.ts:69`, `productionSystem.ts:328` |
 | buildings-wonders | F-11 | `DEMOLISH_BUILDING` type-only; no system handles it | ⊘ MISSING | M | `packages/engine/src/types/DistrictOverhaul.ts:150-160` |
@@ -193,7 +193,7 @@
 | civilizations | F-05 | Unique unit | ≈ CLOSE | M | packages/engine/src/data/civilizations/types.ts:13, all civ data files |
 | civilizations | F-11 | GameInitializer uses Date.now() as seed | ✗ EXTRA | S | packages/engine/src/state/GameInitializer.ts:19 |
 | combat | F-04 | zoc-ranged-units-project-zoc - | ⚠ DIVERGED | UNK | packages/engine/src/systems/movementSystem.ts:234-256 |
-| combat | F-07 | support-bonus-missing-standalone - | ≈ CLOSE | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
+| combat | F-07 | support-bonus-standalone - | ✓ MATCH | UNK | packages/engine/src/systems/combatSystem.ts:326-337 |
 | combat | F-11 | civilian-capture-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts (entire file) |
 | combat | F-14 | first-strike-bonus-extra - | ✗ EXTRA | UNK | packages/engine/src/systems/combatSystem.ts:187-191 |
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
@@ -350,10 +350,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 73 |
-| CLOSE | 65 |
-| DIVERGED | 53 |
-| MISSING | 81 |
+| MATCH | 76 |
+| CLOSE | 64 |
+| DIVERGED | 52 |
+| MISSING | 80 |
 | EXTRA | 14 |
 | **Total findings** | **286** |
 

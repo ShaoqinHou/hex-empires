@@ -314,8 +314,8 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const resourceBonus = calculateResourceCombatBonus(state, unit.owner, category, defenderUnit);
   // Commander aura: +3 CS per friendly commander within 2 hexes (F-04 base + promotion stacks)
   const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
-  // Y5.3 (F-05): Adjacent friendly support units grant +2 CS (one bonus regardless of count)
-  const supportBonus = isAttacking ? calculateSupportAdjacencyBonus(unit, state) : 0;
+  // Y5.3 (F-05): Adjacent friendly support bonus — +2 CS per adjacent friendly unit.
+  const supportBonus = isAttacking ? calculateSupportBonus(unit, state) : 0;
   const baseTotal = effectiveBase + flankingBonus + effectBonus + resourceBonus + commanderAuraBonus + supportBonus - warSupportPenalty;
   // Apply river-crossing penalty as multiplicative -25%
   return crossingRiver ? Math.floor(baseTotal * 0.75) : baseTotal;
@@ -376,6 +376,10 @@ function getEffectiveDefenseStrength(state: GameState, unit: UnitState, tile: He
   if (unit.fortified) {
     strength += 5;
   }
+
+  // F-07: Adjacent friendly units provide +2 CS each (defensive support).
+  const supportBonus = calculateSupportBonus(unit, state);
+  strength += supportBonus;
 
   // Commander aura: +3 CS per friendly commander within 2 hexes
   const commanderAuraBonus = getCommanderAuraCombatBonus(state, unit.position, unit.owner);
@@ -940,20 +944,22 @@ function isRiverEdgeBetween(
 }
 
 /**
- * Y5.3 (F-05): Returns +2 CS if any adjacent friendly unit has category 'support'.
- * Only one bonus regardless of how many support units are adjacent.
+ * F-07: Adjacent friendly support bonus.
+ *
+ * Every adjacent friendly unit contributes +2 CS. The attacker/defender both use
+ * this same additive bonus when counting units adjacent to their own tile.
  */
-function calculateSupportAdjacencyBonus(attacker: UnitState, state: GameState): number {
+function calculateSupportBonus(attacker: UnitState, state: GameState): number {
+  let supportCount = 0;
   const adjHexes = neighbors(attacker.position);
   for (const [, u] of state.units) {
     if (u.id === attacker.id) continue;
+    if (u.health <= 0) continue;
     if (u.owner !== attacker.owner) continue;
-    const uDef = state.config.units.get(u.typeId);
-    if (uDef?.category !== 'support') continue;
     const isAdj = adjHexes.some(n => n.q === u.position.q && n.r === u.position.r);
-    if (isAdj) return 2;
+    if (isAdj) supportCount++;
   }
-  return 0;
+  return supportCount * 2;
 }
 
 /**

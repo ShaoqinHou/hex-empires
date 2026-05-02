@@ -3,6 +3,12 @@ import { combatSystem } from '../combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, createTestCity, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
 
+function simulateDamageToDefender(state: ReturnType<typeof createTestState>): number {
+  const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+  const defender = next.units.get('d1');
+  return defender ? 100 - defender.health : 100;
+}
+
 describe('combatSystem', () => {
   it('deals damage to defender on melee attack', () => {
     const units = new Map([
@@ -1220,5 +1226,82 @@ describe('combatSystem — BB1.3: river-crossing penalty (Y5.2)', () => {
 
     // No penalty applied — damage is identical to baseline
     expect(defHPDefRiver).toBe(defHPNoRiver);
+  });
+});
+
+describe('combatSystem — support bonus', () => {
+  it('adds +2 attacker strength per adjacent friendly unit (exactly)', () => {
+    const baseUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+
+    const baseState = createTestState({ units: baseUnits, players, currentPlayerId: 'p1' });
+    const withOneFriendly = createTestState({
+      units: new Map([
+        ...baseUnits,
+        ['s1', createTestUnit({ id: 's1', owner: 'p1', typeId: 'scout', position: { q: 3, r: 2 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+    const withTwoFriendlies = createTestState({
+      units: new Map([
+        ...baseUnits,
+        ['s1', createTestUnit({ id: 's1', owner: 'p1', typeId: 'scout', position: { q: 3, r: 2 }, health: 100 })],
+        ['s2', createTestUnit({ id: 's2', owner: 'p1', typeId: 'scout', position: { q: 2, r: 3 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+
+    const noSupport = simulateDamageToDefender(baseState);
+    const oneSupport = simulateDamageToDefender(withOneFriendly);
+    const twoSupport = simulateDamageToDefender(withTwoFriendlies);
+
+    // 100->98 at base, +2 strength with one friendly gives more damage, +4 with two gives more again.
+    expect(oneSupport).toBeGreaterThan(noSupport);
+    expect(twoSupport).toBeGreaterThan(oneSupport);
+  });
+
+  it('applies defender support independently, reducing damage to a wounded defender with +2 per adjacent friendly', () => {
+    const baseUnits = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+
+    const withDefenderSupportOne = createTestState({
+      units: new Map([
+        ...baseUnits,
+        ['s1', createTestUnit({ id: 's1', owner: 'p2', typeId: 'scout', position: { q: 4, r: 2 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+    const withDefenderSupportTwo = createTestState({
+      units: new Map([
+        ...baseUnits,
+        ['s1', createTestUnit({ id: 's1', owner: 'p2', typeId: 'scout', position: { q: 4, r: 2 }, health: 100 })],
+        ['s2', createTestUnit({ id: 's2', owner: 'p2', typeId: 'scout', position: { q: 5, r: 3 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+
+    const one = simulateDamageToDefender(withDefenderSupportOne);
+    const two = simulateDamageToDefender(withDefenderSupportTwo);
+
+    // More defender support => higher defender CS => less damage.
+    expect(two).toBeLessThan(one);
   });
 });

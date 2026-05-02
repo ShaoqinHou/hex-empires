@@ -53,7 +53,10 @@ describe('productionSystem', () => {
       // Building-placement rework Cycle 4: SET_PRODUCTION with tile stores
       // lockedTile on the queued item so Cycle 1 auto-places on completion.
       const city = createTestCity();
-      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const state = createTestState({
+        cities: new Map([['c1', city]]),
+        players: new Map([['p1', createTestPlayer({ researchedTechs: ['pottery'] })]]),
+      });
       const tile = { q: 4, r: 3 };
       const next = productionSystem(state, {
         type: 'SET_PRODUCTION',
@@ -88,7 +91,10 @@ describe('productionSystem', () => {
 
     it('building without tile still works (legacy path)', () => {
       const city = createTestCity();
-      const state = createTestState({ cities: new Map([['c1', city]]) });
+      const state = createTestState({
+        cities: new Map([['c1', city]]),
+        players: new Map([['p1', createTestPlayer({ researchedTechs: ['pottery'] })]]),
+      });
       const next = productionSystem(state, {
         type: 'SET_PRODUCTION',
         cityId: 'c1',
@@ -224,7 +230,7 @@ describe('productionSystem', () => {
       const town = createTestCity({ settlementType: 'town', happiness: 5, isCapital: false });
       const state = createTestState({
         cities: new Map([['c1', town]]),
-        players: new Map([['p1', createTestPlayer({ gold: 300 })]]),
+        players: new Map([['p1', createTestPlayer({ gold: 300, researchedTechs: ['pottery'] })]]),
       });
       const next = productionSystem(state, {
         type: 'PURCHASE_ITEM',
@@ -322,6 +328,149 @@ describe('productionSystem', () => {
         itemType: 'unit',
       });
       expect(next.cities.get('c1')!.productionQueue).toEqual([{ type: 'unit', id: 'warrior' }]);
+    });
+  });
+
+  describe('SET_PRODUCTION / PURCHASE_ITEM admission gates', () => {
+    it('rejects SET_PRODUCTION for a building with unmet tech requirement', () => {
+      const city = createTestCity({ settlementType: 'city' });
+      const state = createTestState({
+        cities: new Map([['c1', city]]),
+        // Default player has no researchedTechs
+        players: new Map([['p1', createTestPlayer()]]),
+      });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'library',
+        itemType: 'building',
+      });
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires tech: writing',
+        category: 'production',
+      });
+      expect(next.cities.get('c1')!.productionQueue).toEqual([]);
+    });
+
+    it('allows SET_PRODUCTION for a building after required tech is researched', () => {
+      const city = createTestCity({ settlementType: 'city' });
+      const state = createTestState({
+        cities: new Map([['c1', city]]),
+        players: new Map([
+          ['p1', createTestPlayer({ researchedTechs: ['writing'] })],
+        ]),
+      });
+      const next = productionSystem(state, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'library',
+        itemType: 'building',
+      });
+      expect(next.cities.get('c1')!.productionQueue).toEqual([{ type: 'building', id: 'library' }]);
+      expect(next.lastValidation).toBeNull();
+    });
+
+    it('rejects SET_PRODUCTION and PURCHASE_ITEM for civic-gated building before civic research', () => {
+      const city = createTestCity();
+      const cityForPurchase = createTestCity({
+        settlementType: 'town',
+        happiness: 5,
+        isCapital: false,
+      });
+      const baseState = createTestState({
+        cities: new Map([['c1', city], ['c2', cityForPurchase]]),
+        players: new Map([['p1', createTestPlayer({ researchedTechs: [], researchedCivics: [], gold: 5000 })]]),
+      });
+
+      const queued = productionSystem(baseState, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'worlds_fair',
+        itemType: 'building',
+      });
+      expect(queued.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires civic: natural_history',
+        category: 'production',
+      });
+      expect(queued.cities.get('c1')!.productionQueue).toEqual([]);
+
+      const purchased = productionSystem(baseState, {
+        type: 'PURCHASE_ITEM',
+        cityId: 'c2',
+        itemId: 'worlds_fair',
+        itemType: 'building',
+      });
+      expect(purchased.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires civic: natural_history',
+        category: 'production',
+      });
+      expect(purchased.cities.get('c2')!.buildings).toEqual([]);
+    });
+
+    it('restricts civ-unique buildings to owning civilization for SET_PRODUCTION and PURCHASE_ITEM', () => {
+      const city = createTestCity({ settlementType: 'city' });
+      const cityForPurchase = createTestCity({
+        settlementType: 'town',
+        happiness: 5,
+        isCapital: false,
+      });
+      const mismatch = createTestState({
+        cities: new Map([['c1', city], ['c2', cityForPurchase]]),
+        players: new Map([
+          ['p1', createTestPlayer({ researchedTechs: ['bronze_working'], civilizationId: 'rome', gold: 5000 })],
+        ]),
+      });
+
+      const queuedMismatch = productionSystem(mismatch, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'acropolis',
+        itemType: 'building',
+      });
+      expect(queuedMismatch.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires civilization: greece',
+        category: 'production',
+      });
+
+      const purchasedMismatch = productionSystem(mismatch, {
+        type: 'PURCHASE_ITEM',
+        cityId: 'c2',
+        itemId: 'acropolis',
+        itemType: 'building',
+      });
+      expect(purchasedMismatch.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires civilization: greece',
+        category: 'production',
+      });
+
+      const match = createTestState({
+        cities: new Map([['c1', city], ['c2', cityForPurchase]]),
+        players: new Map([
+          ['p1', createTestPlayer({ researchedTechs: ['bronze_working'], civilizationId: 'greece', gold: 5000 })],
+        ]),
+      });
+      const queuedMatch = productionSystem(match, {
+        type: 'SET_PRODUCTION',
+        cityId: 'c1',
+        itemId: 'acropolis',
+        itemType: 'building',
+      });
+      expect(queuedMatch.lastValidation).toBeNull();
+      expect(queuedMatch.cities.get('c1')!.productionQueue).toEqual([{ type: 'building', id: 'acropolis' }]);
+
+      const purchasedMatch = productionSystem(match, {
+        type: 'PURCHASE_ITEM',
+        cityId: 'c2',
+        itemId: 'acropolis',
+        itemType: 'building',
+      });
+      expect(purchasedMatch.lastValidation).toBeNull();
+      expect(purchasedMatch.cities.get('c2')!.buildings).toContain('acropolis');
     });
   });
 });

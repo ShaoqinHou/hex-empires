@@ -201,7 +201,7 @@ describe('R53: Rush Buy — ≈4× production cost in gold', () => {
     const city = createTestCity({ settlementType: 'town', happiness: 5, isCapital: false });
     const state = createTestState({
       cities: new Map([['c1', city]]),
-      players: new Map([['p1', createTestPlayer({ gold: 500 })]]),
+      players: new Map([['p1', createTestPlayer({ gold: 500, researchedTechs: ['pottery'] })]]),
     });
     const next = productionSystem(state, {
       type: 'PURCHASE_ITEM',
@@ -223,7 +223,7 @@ describe('R53: Rush Buy — ≈4× production cost in gold', () => {
     const city = createTestCity();
     const state = createTestState({
       cities: new Map([['c1', city]]),
-      players: new Map([['p1', createTestPlayer({ gold: 5000 })]]),
+      players: new Map([['p1', createTestPlayer({ gold: 5000, researchedTechs: ['masonry'] })]]),
     });
     const next = productionSystem(state, {
       type: 'PURCHASE_ITEM',
@@ -262,7 +262,7 @@ describe('R53: Rush Buy — ≈4× production cost in gold', () => {
     const city = createTestCity({ productionProgress: 0, productionQueue: [] });
     const state = createTestState({
       cities: new Map([['c1', city]]),
-      players: new Map([['p1', createTestPlayer({ gold: 500 })]]),
+      players: new Map([['p1', createTestPlayer({ gold: 500, researchedTechs: ['pottery'] })]]),
     });
     const next = productionSystem(state, {
       type: 'PURCHASE_ITEM',

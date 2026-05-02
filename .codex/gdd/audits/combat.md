@@ -24,10 +24,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 4 |
-| CLOSE | 2 |
-| DIVERGED | 4 |
-| MISSING | 3 |
+| MATCH | 5 |
+| CLOSE | 1 |
+| DIVERGED | 5 |
+| MISSING | 2 |
 | EXTRA | 1 |
 
 **Total findings:** 14
@@ -108,15 +108,15 @@
 
 ---
 
-### F-07: support-bonus-missing-standalone --- CLOSE
+### F-07: support-bonus-standalone --- MATCH
 
 **Location:** packages/engine/src/systems/combatSystem.ts:326-337
 **GDD reference:** systems/combat.md section Support Bonus
 **Severity:** MED  **Effort:** S
 **VII says:** +2 CS per adjacent friendly unit. Any adjacent friendly provides it; no minimum count.
-**Engine does:** checkAdjacentAlly returns a boolean. The flanking count bonus (+2 per flanker, min 2) conflates flanking with support. No standalone flat +2 per adjacent friendly is applied in base strength.
-**Gap:** GDD distinguishes flanking (directional, tech-gated) from support (unit-count, always available). Engine merges them with a min-2 threshold more resembling flanking than support.
-**Recommendation:** Implement support as separate calculateSupportBonus: count all adjacent friendlies, multiply by 2, no minimum. Apply to both attacker and defender independently.
+**Engine does:** `combatSystem` and `CombatPreview` now apply a standalone support bonus of +2 CS per adjacent friendly unit, independently for attacker and defender. The bonus is not limited to a `support` unit category and has no minimum count.
+**Gap:** None for standalone support. Directional battlefront flanking remains separate F-02 work.
+**Recommendation:** Keep preview and live resolution helpers aligned whenever flanking/support math changes.
 
 ---
 

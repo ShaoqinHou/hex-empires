@@ -18,6 +18,7 @@ import {
   ALL_UNITS,
   getReachable,
   getMovementCost,
+  visibilitySystem,
   evaluateLegends,
   applyAccountDelta,
   createDefaultAccountState,
@@ -276,7 +277,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     accountRef.current = loadedAccount;
     setAccount(loadedAccount);
     const newState = createInitialState(config, Number.isFinite(seed) ? seed : undefined, loadedAccount);
-    setState(newState);
+    const visibleState = visibilitySystem(newState, { type: 'START_TURN' });
+    setState(visibleState);
     setSelectedUnitId(null);
     setSelectedCityId(null);
     setSelectedHex(null);

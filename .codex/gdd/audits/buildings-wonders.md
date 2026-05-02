@@ -25,10 +25,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 0 |
+| MATCH | 2 |
 | CLOSE | 0 |
-| DIVERGED | 4 |
-| MISSING | 6 |
+| DIVERGED | 3 |
+| MISSING | 5 |
 | EXTRA | 2 |
 
 **Total findings:** 12
@@ -37,16 +37,16 @@
 
 ## Detailed findings
 
-### F-01: `isAgeless`, `isCivUnique`, `civId` fields absent from `BuildingDef` — MISSING
+### F-01: `isAgeless`, `isCivUnique`, `civId` fields present on `BuildingDef` — MATCH
 
 **Location:** `packages/engine/src/types/Building.ts`
 **GDD reference:** `systems/buildings-wonders.md` § "Ageless buildings" + "Civ-unique buildings"
 **Severity:** HIGH
 **Effort:** S
 **VII says:** Three ageless building classes (Warehouse, Unique, Wonder) carry full yields across age transitions. Civ-unique buildings are constructable only by one civ.
-**Engine does:** `BuildingDef` has no `isAgeless`, `isCivUnique`, or `civId` field. `category: 'warehouse'` exists in the union but no system reads it to grant ageless treatment.
-**Gap:** Without `isAgeless`, the ageSystem cannot distinguish which buildings survive transition. Without `isCivUnique`/`civId`, the production queue cannot gate construction.
-**Recommendation:** Add `readonly isAgeless?: boolean` and `readonly civId?: string` to `BuildingDef`. Update warehouse buildings (Granary, Gristmill, Sawmill, Stonecutter, Wharf) to `isAgeless: true`. Add to every wonder.
+**Engine does:** `BuildingDef` now includes `isAgeless`, `isCivUnique`, `civId`, and `requiredCivic`. Data marks ageless infrastructure/wonders and civ-unique buildings with owning civilization ids.
+**Gap:** None for the type/model fields. Age-transition obsolescence and quarter semantics remain tracked separately in F-02/F-04.
+**Recommendation:** Keep these fields as the single source for age persistence, civ-unique gating, and quarter detection.
 
 ---
 
@@ -115,16 +115,16 @@
 
 ---
 
-### F-07: `requiredCivic` absent; `requiredTech` not enforced at queue — DIVERGED
+### F-07: `requiredCivic` present; tech/civic/civ gates enforced at queue and purchase — MATCH
 
 **Location:** `packages/engine/src/types/Building.ts`, `packages/engine/src/systems/productionSystem.ts` `handleSetProduction`
 **GDD reference:** `systems/buildings-wonders.md` § "Building prerequisites"
 **Severity:** MED
 **Effort:** S
 **VII says:** Buildings can be gated on tech OR civic. Queue admission checks prereqs at queue-time.
-**Engine does:** `BuildingDef` has `requiredTech` but no `requiredCivic`. `handleSetProduction` checks wonder-already-built but NOT `requiredTech`. A player can queue `library` before researching `writing`.
-**Gap:** Tech data exists but never evaluated at queue-admission.
-**Recommendation:** Add `readonly requiredCivic?: string` to `BuildingDef`. In `handleSetProduction`, reject if `requiredTech` not in `player.researchedTechs`. Mirror for `requiredCivic`.
+**Engine does:** `BuildingDef` has both `requiredTech` and `requiredCivic`. `productionSystem` now rejects queue and purchase attempts for unmet tech/civic prerequisites and mismatched civ-unique buildings.
+**Gap:** None for queue/purchase admission. Wonder race cancellation and placement-system consolidation remain separate findings.
+**Recommendation:** Keep future production entry points routed through the same admission gate so purchase, queue, and any UI preview stay aligned.
 
 ---
 
@@ -202,15 +202,13 @@
 
 ## Missing items
 
-1. `BuildingDef.isAgeless`/`isCivUnique`/`civId` (F-01) — prerequisite for most other fixes.
-2. `ageSystem` obsolescence handler (F-02).
-3. Quarter kinds `unique_quarter` + `ageless_pair` (F-04).
-4. Specialist adjacency amplification (F-05).
-5. Wonder adjacency to neighbors (F-06).
-6. `requiredCivic` + queue-admission check (F-07).
-7. Rival-wonder race UX (F-08).
-8. `urbanBuildingSystem` wired into `GameEngine.SYSTEMS` (F-09) — root blocker.
-9. `DEMOLISH_BUILDING` handler (F-11).
+1. `ageSystem` obsolescence handler (F-02).
+2. Quarter kinds `unique_quarter` + `ageless_pair` (F-04).
+3. Specialist adjacency amplification (F-05).
+4. Wonder adjacency to neighbors (F-06).
+5. Rival-wonder race UX (F-08).
+6. `urbanBuildingSystem` wired into `GameEngine.SYSTEMS` (F-09) — root blocker.
+7. `DEMOLISH_BUILDING` handler (F-11).
 
 ---
 

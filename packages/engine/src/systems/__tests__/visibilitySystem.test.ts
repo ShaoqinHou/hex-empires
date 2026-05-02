@@ -3,6 +3,7 @@ import { visibilitySystem } from '../visibilitySystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
 import type { CityState } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
+import { GameEngine } from '../../GameEngine';
 
 // Minimal CityState factory
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
@@ -86,6 +87,49 @@ describe('visibilitySystem', () => {
       expect(player.visibility.has(oldExclusiveTile)).toBe(false);
       expect(player.explored.has(oldExclusiveTile)).toBe(true);
       expect(player.visibility.has(newVisibleTile)).toBe(true);
+    });
+
+    it('GameEngine MOVE_UNIT updates visibility immediately on later human turns', () => {
+      const engine = new GameEngine();
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', name: 'Player 1', isHuman: true })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 3, r: 3 }, typeId: 'scout', movementLeft: 3 })],
+      ]);
+      const baseConfig = createTestState().config;
+      const unitsConfig = new Map(baseConfig.units);
+      unitsConfig.set('scout', {
+        ...unitsConfig.get('warrior')!,
+        id: 'scout',
+        movement: 3,
+        sightRange: 2,
+      });
+      const config = { ...baseConfig, units: unitsConfig };
+
+      let state = createTestState({ players, units, config, currentPlayerId: 'p1', phase: 'actions' });
+      state = engine.applyAction(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 4, r: 3 }],
+      });
+      expect(state.players.get('p1')!.visibility.has(coordToKey({ q: 6, r: 3 }))).toBe(true);
+
+      state = engine.applyAction(state, { type: 'END_TURN' });
+      state = engine.applyAction(state, { type: 'START_TURN' });
+      expect(state.turn).toBe(2);
+      expect(state.phase).toBe('actions');
+
+      state = engine.applyAction(state, {
+        type: 'MOVE_UNIT',
+        unitId: 'u1',
+        path: [{ q: 5, r: 3 }],
+      });
+
+      const player = state.players.get('p1')!;
+      expect(state.units.get('u1')!.position).toEqual({ q: 5, r: 3 });
+      expect(player.visibility.has(coordToKey({ q: 7, r: 3 }))).toBe(true);
+      expect(player.explored.has(coordToKey({ q: 7, r: 3 }))).toBe(true);
     });
   });
 

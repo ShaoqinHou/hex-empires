@@ -3,6 +3,7 @@ import { calculateCombatPreview, calculateCityCombatPreview, getAttackableUnits,
 import { computeEffectiveCS } from '../CombatAnalytics';
 import { combatSystem } from '../../systems/combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
+import { nextRandom } from '../SeededRng';
 
 describe('calculateCombatPreview', () => {
   it('returns cannot-attack preview when attacker not found', () => {
@@ -154,6 +155,127 @@ describe('calculateCombatPreview', () => {
 
     expect(preview.canAttack).toBe(true);
     expect(preview.modifiers.flankingBonus).toBe(4); // 2 flankers * 2
+  });
+
+  it('adds +2 support per adjacent friendly to attacker and +4 with two', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+
+    const base = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const withOne = new Map([
+      ...base,
+      ['s1', createTestUnit({ id: 's1', owner: 'p1', typeId: 'scout', position: { q: 3, r: 2 }, health: 100 })],
+    ]);
+    const withTwo = new Map([
+      ...base,
+      ['s1', createTestUnit({ id: 's1', owner: 'p1', typeId: 'scout', position: { q: 3, r: 2 }, health: 100 })],
+      ['s2', createTestUnit({ id: 's2', owner: 'p1', typeId: 'scout', position: { q: 2, r: 3 }, health: 100 })],
+    ]);
+
+    const state = createTestState({ units: base, players });
+    const stateOne = createTestState({ units: withOne, players });
+    const stateTwo = createTestState({ units: withTwo, players });
+
+    const basePreview = calculateCombatPreview(state, 'a1', 'd1');
+    const onePreview = calculateCombatPreview(stateOne, 'a1', 'd1');
+    const twoPreview = calculateCombatPreview(stateTwo, 'a1', 'd1');
+
+    expect(basePreview.canAttack).toBe(true);
+    expect(onePreview.canAttack).toBe(true);
+    expect(twoPreview.canAttack).toBe(true);
+
+    const baseWarrior = state.config.units.get('warrior')?.combat ?? 20;
+    const baseEffective = computeEffectiveCS(baseWarrior, 100);
+
+    // No leader modifiers in this test (Cleopatra), no terrain/wall/ranged effects.
+    expect(basePreview.attackerStrength).toBe(baseEffective);
+    expect(onePreview.attackerStrength).toBe(baseEffective + 2);
+    expect(twoPreview.attackerStrength).toBe(baseEffective + 4);
+  });
+
+  it('adds +2 support per adjacent friendly to defender, reducing expected damage', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+
+    const withDefenderSupportOne = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+        ['s1', createTestUnit({ id: 's1', owner: 'p2', typeId: 'scout', position: { q: 4, r: 2 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+    const withDefenderSupportTwo = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+        ['s1', createTestUnit({ id: 's1', owner: 'p2', typeId: 'scout', position: { q: 4, r: 2 }, health: 100 })],
+        ['s2', createTestUnit({ id: 's2', owner: 'p2', typeId: 'scout', position: { q: 5, r: 3 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    });
+
+    const base = calculateCombatPreview(createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+    }), 'a1', 'd1');
+    const one = calculateCombatPreview(withDefenderSupportOne, 'a1', 'd1');
+    const two = calculateCombatPreview(withDefenderSupportTwo, 'a1', 'd1');
+
+    expect(base.canAttack).toBe(true);
+    expect(one.canAttack).toBe(true);
+    expect(two.canAttack).toBe(true);
+
+    expect(base.defenderStrength).toBe(20);
+    expect(one.defenderStrength).toBe(22);
+    expect(two.defenderStrength).toBe(24);
+  });
+
+  it('preview and live combat both use the same support-adjusted strength formula', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+
+    const state = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+        ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+        ['s1', createTestUnit({ id: 's1', owner: 'p1', typeId: 'scout', position: { q: 3, r: 2 }, health: 100 })],
+        ['s2', createTestUnit({ id: 's2', owner: 'p2', typeId: 'scout', position: { q: 4, r: 2 }, health: 100 })],
+      ]),
+      players,
+      currentPlayerId: 'p1',
+      rng: { seed: 21, counter: 0 },
+    });
+
+    const preview = calculateCombatPreview(state, 'a1', 'd1');
+    expect(preview.canAttack).toBe(true);
+    expect(preview.attackerStrength).toBe(22); // base 20 + one adjacent friendly
+    expect(preview.defenderStrength).toBe(22); // base 20 + one adjacent friendly on defender
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const actualDamage = 100 - next.units.get('d1')!.health;
+
+    const strengthDiff = preview.attackerStrength - preview.defenderStrength;
+    const { value: randomFactor } = nextRandom(state.rng);
+    const expectedModifier = 0.75 + randomFactor * 0.5;
+    const expectedDamage = Math.round(30 * Math.exp(strengthDiff / 25) * expectedModifier);
+
+    expect(actualDamage).toBe(expectedDamage);
   });
 
   it('includes terrain defense bonus in modifiers', () => {

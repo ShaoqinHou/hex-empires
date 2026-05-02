@@ -405,15 +405,15 @@ describe('R66: Walls — +100 HP to district, walls must be destroyed before cap
 
 // ── §6.7 Flanking ──
 
-describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', () => {
+describe('R67: Flanking — +3 CS per adjacent friendly unit (capped at +9)', () => {
   function buildFlankedScenario(flankers: number, seed: number): GameState {
     // Attacker at (3,3), defender at (4,3). Neighbors of (4,3) include (5,3), (4,4), (5,2), (3,4), (4,2), (3,3 itself=attacker).
     const flankerCoords = [
       { q: 5, r: 3 },
-      { q: 4, r: 4 },
       { q: 5, r: 2 },
-      { q: 3, r: 4 },
       { q: 4, r: 2 },
+      { q: 4, r: 4 },
+      { q: 3, r: 4 },
     ].slice(0, flankers);
 
     const units = new Map<string, UnitState>();
@@ -442,7 +442,7 @@ describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', ()
     expect(dmg2).toBeGreaterThan(dmg0);
   });
 
-  it('4 flankers deal same damage as 3 flankers (cap at +6)', () => {
+  it('4 flankers deal same damage as 3 when the extra flanker adds no support adjacency', () => {
     let dmg3 = 0, dmg4 = 0;
     for (let seed = 1; seed <= 50; seed++) {
       const r3 = combatSystem(buildFlankedScenario(3, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
@@ -455,7 +455,7 @@ describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', ()
 
   it('R67a: flanking bonus magnitude ≈ +4 CS at the 2-flanker threshold', () => {
     // Baseline: no flankers. Warrior vs warrior, avg damage ≈ 30.
-    // With 2 flankers (minimum per §6.7): +4 CS, avg ≈ 30 × e^(4/25) ≈ 35.2.
+    // With 2 flankers (minimum per §6.7): +6 CS, avg ≈ 30 × e^(6/25) ≈ 38.1.
     let total = 0, totalFl = 0;
     for (let seed = 1; seed <= 200; seed++) {
       const base = combatSystem(buildFlankedScenario(0, seed), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
@@ -466,7 +466,7 @@ describe('R67: Flanking — +2 CS per adjacent friendly unit (capped at +6)', ()
     const avg = total / 200;
     const avgFl = totalFl / 200;
     const delta = avgFl - avg;
-    // Expected delta: ≈ 35.2 - 30 = 5.2. Allow a generous margin.
+    // Expected delta: ≈ 38.1 - 30 = 8.1. Allow a generous margin.
     expect(delta).toBeGreaterThan(1);
     expect(delta).toBeLessThan(10);
   });

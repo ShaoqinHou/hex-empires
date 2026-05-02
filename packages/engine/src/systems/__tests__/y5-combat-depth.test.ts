@@ -69,7 +69,7 @@ describe('Y5.1: flanking bonus — +3 CS per ally, cap +9', () => {
   const FLANK_A = { q: 5, r: 3 }; // adjacent to defender (4,3)
   const FLANK_B = { q: 5, r: 2 };
   const FLANK_C = { q: 4, r: 2 };
-  const FLANK_D = { q: 3, r: 4 };
+  const FLANK_E = { q: 4, r: 4 };
 
   it('1 flanking ally → +3 CS (base case; requires military_training & 1+ adjacent ally above 2-ally floor)', () => {
     // Per rulebook the minimum is 2 allies for legacy flanking. But the directional
@@ -104,7 +104,7 @@ describe('Y5.1: flanking bonus — +3 CS per ally, cap +9', () => {
     expect(with1).toBe(baseline);
   });
 
-  it('4 flanking allies → same damage as 3 (cap at +9 = 3 allies)', () => {
+  it('4 flanking allies → same damage as 3 when the extra ally adds no support adjacency', () => {
     const units3 = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 99 })],
       ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
@@ -114,11 +114,11 @@ describe('Y5.1: flanking bonus — +3 CS per ally, cap +9', () => {
     ]);
     const units4 = new Map([
       ...units3,
-      ['f4', createTestUnit({ id: 'f4', owner: 'p1', typeId: 'warrior', position: FLANK_D, health: 100 })],
+      ['f4', createTestUnit({ id: 'f4', owner: 'p1', typeId: 'warrior', position: FLANK_E, health: 100 })],
     ]);
     const with3 = damageTo(buildScenario({ seed: 13, units: units3 }));
     const with4 = damageTo(buildScenario({ seed: 13, units: units4 }));
-    // Both capped at +9 (3 effective allies) → identical damage.
+    // Both capped at +9 (3 effective allies), with the same separate support count.
     expect(with4).toBe(with3);
   });
 });

@@ -16,8 +16,8 @@ import type { GameState, UnitState } from '../../types/GameState';
  *   - Ironclad has +50% from Flanking.
  *
  * Current engine implementation (combatSystem.calculateFlankingBonus):
- *   "+2 strength per friendly unit adjacent to the defender, capped at +6",
- *   excluding the attacker, counting ALL friendly units of any category.
+ *   "+3 strength per qualifying friendly unit adjacent to the defender,
+ *   capped at +9", excluding the attacker and non-combat units.
  *
  * Each test asserts ONE specific §6.7 rule against live combatSystem behaviour.
  * Tests using `it.fails(...)` document a known mismatch (bug) that a follow-up
@@ -164,8 +164,8 @@ describe('F2: a single friendly flanker grants NO bonus (rulebook requires 2+ ad
   it('one flanker alone should grant zero bonus', () => {
     // Rulebook §6.7: "Requires 2+ friendly units adjacent to the target."
     // With only one friendly adjacent, flanking should NOT apply at all.
-    // BUG: calculateFlankingBonus gives `flankingCount * 2`, so a single
-    // flanker yields +2 CS, causing noticeably more damage than baseline.
+    // The chosen position is not adjacent to the attacker, so the separate
+    // support-adjacency rule does not affect this assertion.
     const baseline = damageTo(buildFlankingScenario({ seed: 9 }));
     const withOne = damageTo(buildFlankingScenario({
       seed: 9,
@@ -177,10 +177,11 @@ describe('F2: a single friendly flanker grants NO bonus (rulebook requires 2+ ad
 
 // ── F3: Cap on total flanking bonus ─────────────────────────────────────────
 
-describe('F3: flanking bonus is capped (engine cap: +6 CS, i.e. 3 flankers) (§6.7)', () => {
-  it('5 flankers produce the same damage as 3 flankers (bonus capped)', () => {
-    // Engine caps at +6 CS (Math.min(count * 2, 6)). Beyond 3 flankers we
-    // should observe identical damage at the same RNG seed.
+describe('F3: flanking bonus is capped (engine cap: +9 CS, i.e. 3 flankers) (§6.7)', () => {
+  it('a fourth non-supporting flanker produces the same damage as 3 flankers (bonus capped)', () => {
+    // Flanking itself is capped at 3 effective allies. Use FLANK_POS_E as the
+    // fourth unit because it is adjacent to the defender but not the attacker,
+    // so this isolates flanking from the separate support-adjacency rule.
     const withThree = damageTo(buildFlankingScenario({
       seed: 13,
       flankers: [
@@ -189,17 +190,16 @@ describe('F3: flanking bonus is capped (engine cap: +6 CS, i.e. 3 flankers) (§6
         { id: 'f3', position: FLANK_POS_C },
       ],
     }));
-    const withFive = damageTo(buildFlankingScenario({
+    const withFour = damageTo(buildFlankingScenario({
       seed: 13,
       flankers: [
         { id: 'f1', position: FLANK_POS_A },
         { id: 'f2', position: FLANK_POS_B },
         { id: 'f3', position: FLANK_POS_C },
-        { id: 'f4', position: FLANK_POS_D },
-        { id: 'f5', position: FLANK_POS_E },
+        { id: 'f4', position: FLANK_POS_E },
       ],
     }));
-    expect(withFive).toBe(withThree);
+    expect(withFour).toBe(withThree);
   });
 });
 
@@ -231,8 +231,6 @@ describe('F5: civilian units do NOT contribute flanking bonus (§6.7 — only co
     // Rulebook §6.7 speaks of combat units forming a Battlefront; civilians
     // cannot participate in the flank. A settler/civilian beside the
     // defender should NOT boost the attacker's CS.
-    // BUG: calculateFlankingBonus iterates over ALL state.units with no
-    // category filter, so a settler contributes +2 CS just like a warrior.
     const baseline = damageTo(buildFlankingScenario({ seed: 17 }));
     const withCivilian = damageTo(buildFlankingScenario({
       seed: 17,
@@ -257,7 +255,8 @@ describe('F6: enemy units adjacent to defender do NOT grant attacker flanking (�
         { id: 'e2', owner: 'p2', position: FLANK_POS_A },
       ],
     }));
-    expect(withEnemyAlly).toBe(baseline);
+    // It does not flank for the attacker, but it is now defensive support for d1.
+    expect(withEnemyAlly).toBeLessThan(baseline);
   });
 
   it('third-party (p3) unit adjacent to defender does not grant p1 a flanking bonus', () => {
@@ -337,8 +336,6 @@ describe('F9: flanking is gated behind Military Training tech (§6.7 bullet 1)',
     // Rulebook §6.7: "Unlocked after researching Military Training." Before
     // the attacker's owner has researched that tech, no flanking bonus
     // should apply.
-    // BUG: calculateFlankingBonus has no tech-gate check — it applies from
-    // turn 1 regardless of research state.
     const baseline = damageTo(buildFlankingScenario({
       seed: 53,
       attackerHasMilitaryTraining: false,
@@ -374,13 +371,13 @@ describe('F10: only friendlies DIRECTLY adjacent to the defender flank (distance
 
   it('two friendlies at distance 2 from defender do NOT combine into a flanking bonus', () => {
     // Two faraway friendlies should not be treated as if they were both
-    // adjacent. Confirms the adjacency check is per-unit, not aggregated.
+    // adjacent. They are also not adjacent to the attacker, avoiding support.
     const baseline = damageTo(buildFlankingScenario({ seed: 61 }));
     const withTwoFar = damageTo(buildFlankingScenario({
       seed: 61,
       flankers: [
         { id: 'f1', position: { q: 6, r: 3 } },
-        { id: 'f2', position: { q: 2, r: 3 } }, // distance 2 from (4,3)
+        { id: 'f2', position: { q: 6, r: 2 } }, // distance 2 from (4,3)
       ],
     }));
     expect(withTwoFar).toBe(baseline);

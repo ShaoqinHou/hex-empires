@@ -1,6 +1,7 @@
 import type { BuildingCategory, GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
+import type { BuildingDef } from '../types/Building';
 import { coordToKey } from '../hex/HexMath';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
@@ -9,6 +10,27 @@ import { getProductionPercentBonus, isStructuredActiveCelebrationBonus } from '.
 /** Generate deterministic unit ID from state */
 function nextUnitId(state: GameState, cityId: string): string {
   return `unit_${state.units.size + 1}_${cityId}_t${state.turn}`;
+}
+
+function getBuildingAdmissionFailure(
+  player: PlayerState | undefined,
+  buildingDef: Pick<BuildingDef, 'requiredTech' | 'requiredCivic' | 'isCivUnique' | 'civId'> | undefined,
+): string | null {
+  if (!player || !buildingDef) return null;
+
+  if (buildingDef.requiredTech && !player.researchedTechs.includes(buildingDef.requiredTech)) {
+    return `Requires tech: ${buildingDef.requiredTech}`;
+  }
+
+  if (buildingDef.requiredCivic && !player.researchedCivics.includes(buildingDef.requiredCivic)) {
+    return `Requires civic: ${buildingDef.requiredCivic}`;
+  }
+
+  if (buildingDef.isCivUnique === true && buildingDef.civId !== player.civilizationId) {
+    return `Requires civilization: ${buildingDef.civId}`;
+  }
+
+  return null;
 }
 
 /**
@@ -112,11 +134,23 @@ function handleSetProduction(
   // Towns cannot use production queue — they must purchase with gold
   if (city.settlementType === 'town') return createInvalidResult(state, 'Towns cannot produce - must purchase with gold', 'production');
 
-  // Check if wonder is already built globally (for SET_PRODUCTION)
   const buildingDef = itemType === 'wonder' || itemType === 'building' ? state.config.buildings.get(itemId) : undefined;
   const isWonder = buildingDef?.isWonder === true;
+
+  // Check duplicate ownership before prerequisites so validation reports the
+  // actionable city/wonder conflict instead of a tech gate for an item already built.
+  if (itemType === 'building' && city.buildings.includes(itemId)) {
+    return createInvalidResult(state, 'Building already constructed', 'production');
+  }
+
   if (isWonder && state.builtWonders.includes(itemId)) {
     return createInvalidResult(state, 'This wonder has already been built', 'production');
+  }
+
+  if (buildingDef) {
+    const player = state.players.get(state.currentPlayerId);
+    const admissionFailure = getBuildingAdmissionFailure(player, buildingDef);
+    if (admissionFailure) return createInvalidResult(state, admissionFailure, 'production');
   }
 
   // If producing a unit that requires a strategic resource, verify the player
@@ -127,16 +161,6 @@ function handleSetProduction(
       const hasResource = playerHasResource(state, state.currentPlayerId, unitDef.requiredResource);
       if (!hasResource) return createInvalidResult(state, `Requires resource: ${unitDef.requiredResource}`, 'production');
     }
-  }
-
-  // Check if building is already built
-  if (itemType === 'building' && city.buildings.includes(itemId)) {
-    return createInvalidResult(state, 'Building already constructed', 'production');
-  }
-
-  // Check if wonder is unique and already built globally
-  if (itemType === 'wonder' && state.builtWonders.includes(itemId)) {
-    return createInvalidResult(state, 'This wonder has already been built', 'production');
   }
 
   // Check if district is already built by this city
@@ -257,6 +281,11 @@ function handlePurchaseItem(
     goldCost = Math.floor(goldCost * 0.9);
   }
   const player = state.players.get(state.currentPlayerId);
+  if (itemType === 'building') {
+    const buildingDef = state.config.buildings.get(itemId);
+    const admissionFailure = getBuildingAdmissionFailure(player, buildingDef);
+    if (admissionFailure) return createInvalidResult(state, admissionFailure, 'production');
+  }
   if (!player || player.gold < goldCost) return createInvalidResult(state, `Not enough gold (need ${goldCost})`, 'production');
 
   const updatedPlayers = new Map(state.players);

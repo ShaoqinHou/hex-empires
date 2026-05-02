@@ -338,7 +338,7 @@ The following mechanics are new or significantly changed from Civ VI:
 ---
 ## Mapping to hex-empires
 
-**Status tally:** 4 MATCH / 2 CLOSE / 5 DIVERGED / 2 MISSING / 1 EXTRA
+**Status tally:** 5 MATCH / 1 CLOSE / 5 DIVERGED / 2 MISSING / 1 EXTRA
 **Audit:** [.codex/gdd/audits/combat.md](../audits/combat.md)
 **Highest-severity finding:** F-01 — fortify-bonus-comment-wrong - (DIVERGED, HIGH)
 **Convergence status:** Divergent — 5 finding(s) require(s) architectural refactor
