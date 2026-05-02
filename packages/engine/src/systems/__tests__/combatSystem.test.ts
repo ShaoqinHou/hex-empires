@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { combatSystem } from '../combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, createTestCity, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
+import { COMMANDER_RESPAWN_TURNS_STANDARD } from '../../state/CommanderRespawn';
+import type { CommanderState } from '../../types/Commander';
 import type { NarrativeEventDef } from '../../types/NarrativeEvent';
 
 const BATTLE_WON_EVENT: NarrativeEventDef = {
@@ -119,6 +121,73 @@ describe('combatSystem', () => {
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     expect(next.units.has('d1')).toBe(false);
+  });
+
+  it('marks defeated commanders for respawn and preserves commander progress', () => {
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 120,
+      commanderLevel: 3,
+      unspentPromotionPicks: 1,
+      promotions: ['assault_initiative'],
+      tree: 'assault',
+      attachedUnits: ['guard1'],
+      packed: true,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['guard1', createTestUnit({
+        id: 'guard1',
+        owner: 'p2',
+        typeId: 'warrior',
+        position: { q: 5, r: 3 },
+        packedInCommanderId: 'cmd1',
+        movementLeft: 2,
+      })],
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p2',
+        typeId: 'captain',
+        position: { q: 4, r: 3 },
+        health: 1,
+        promotions: ['unit_side_marker'],
+      })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+    });
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'cmd1' });
+
+    expect(next.units.has('cmd1')).toBe(false);
+    const updatedCommander = next.commanders!.get('cmd1')!;
+    expect(updatedCommander.xp).toBe(120);
+    expect(updatedCommander.commanderLevel).toBe(3);
+    expect(updatedCommander.promotions).toEqual(['assault_initiative']);
+    expect(updatedCommander.packed).toBe(false);
+    expect(updatedCommander.attachedUnits).toEqual([]);
+    expect(updatedCommander.packedUnitStates).toEqual([]);
+    expect(updatedCommander.respawnTurnsRemaining).toBe(COMMANDER_RESPAWN_TURNS_STANDARD);
+    expect(next.units.get('guard1')).toMatchObject({
+      packedInCommanderId: null,
+      movementLeft: 0,
+    });
+    expect(updatedCommander.respawnUnitState).toMatchObject({
+      id: 'cmd1',
+      owner: 'p2',
+      typeId: 'captain',
+      health: 100,
+      movementLeft: 0,
+      promotions: ['unit_side_marker'],
+      packedInCommanderId: null,
+    });
   });
 
   it('queues a BATTLE_WON narrative event when the attacker destroys a unit and survives', () => {

@@ -196,6 +196,8 @@ export { urbanBuildingSystem } from './systems/urbanBuildingSystem';
 export { resourceAssignmentSystem, getResourceSlotCapacity } from './systems/resourceAssignmentSystem';
 export { commanderPromotionSystem, commanderLevelForXp, isCommander, LEVEL_THRESHOLDS } from './systems/commanderPromotionSystem';
 export { commanderArmySystem } from './systems/commanderArmySystem';
+export { commanderRespawnSystem } from './systems/commanderRespawnSystem';
+export { COMMANDER_RESPAWN_TURNS_STANDARD } from './state/CommanderRespawn';
 
 // Governor data
 export { ALL_GOVERNORS } from './data/governors';

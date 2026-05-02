@@ -17,6 +17,7 @@ import { urbanBuildingSystem } from './systems/urbanBuildingSystem';
 import { resourceAssignmentSystem } from './systems/resourceAssignmentSystem';
 import { commanderPromotionSystem } from './systems/commanderPromotionSystem';
 import { commanderArmySystem } from './systems/commanderArmySystem';
+import { commanderRespawnSystem } from './systems/commanderRespawnSystem';
 import { promotionSystem } from './systems/promotionSystem';
 import { fortifySystem } from './systems/fortifySystem';
 import { improvementSystem } from './systems/improvementSystem';
@@ -48,14 +49,14 @@ import { discoverySystem } from './systems/discoverySystem';
  * Default engine pipeline. Ordered to match the documented system
  * sequence in the Codex workflow docs.
  *
- * M12 Integration wired four standalone systems into this pipeline
+ * M12 Integration wired standalone systems into this pipeline
  * AFTER `combatSystem` and BEFORE `resourceSystem`:
  *   - religionSystem            — pantheon adoption
  *   - governmentSystem          — government + policy slotting
  *   - urbanBuildingSystem       — V2 spatial building placement
  *   - commanderPromotionSystem  — commander XP + promotions
  *
- * The four systems adapt narrower action unions to the widened
+ * These systems adapt narrower action unions to the widened
  * `GameAction` via the `Extended*Action` types they export; at the
  * pipeline seam we coerce through a thin `adapt*` wrapper so the
  * pipeline remains strictly typed as `System`.
@@ -78,6 +79,9 @@ function adaptCommanderPromotion(state: GameState, action: GameAction): GameStat
 function adaptCommanderArmy(state: GameState, action: GameAction): GameState {
   return commanderArmySystem(state, action);
 }
+function adaptCommanderRespawn(state: GameState, action: GameAction): GameState {
+  return commanderRespawnSystem(state, action);
+}
 
 export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   turnSystem,
@@ -85,6 +89,7 @@ export const DEFAULT_SYSTEMS: ReadonlyArray<System> = [
   movementSystem,
   citySystem,
   combatSystem,
+  adaptCommanderRespawn,
   visibilitySystem,
   // M12: insert after combat, before resource
   adaptReligion,

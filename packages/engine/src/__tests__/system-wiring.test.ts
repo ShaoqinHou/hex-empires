@@ -64,6 +64,12 @@ function withAssignedResources(
 const engine = new GameEngine();
 
 describe('system-wiring — visibilitySystem order', () => {
+  it('runs commander respawn before visibility on START_TURN', () => {
+    const systemNames = DEFAULT_SYSTEMS.map((system) => system.name);
+    expect(systemNames.indexOf('combatSystem')).toBeLessThan(systemNames.indexOf('adaptCommanderRespawn'));
+    expect(systemNames.indexOf('adaptCommanderRespawn')).toBeLessThan(systemNames.indexOf('visibilitySystem'));
+  });
+
   it('reveals fog immediately around the moved unit position', () => {
     const player = createTestPlayer({
       id: 'p1',

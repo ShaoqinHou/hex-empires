@@ -20,7 +20,7 @@
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
 | combat | `.codex/gdd/audits/combat.md` | 14 | 11M / 3C / 0D / 0X / 0E |
-| commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
+| commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 4C / 1D / 0X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
 | government-policies | `.codex/gdd/audits/government-policies.md` | 8 | 6M / 2C / 0D / 0X / 0E |
@@ -197,7 +197,7 @@
 | combat | F-11 | civilian-capture-missing - | ✓ MATCH | UNK | packages/engine/src/systems/movementSystem.ts:362-431; packages/engine/src/syste |
 | combat | F-14 | first-strike-ability-support - | ≈ CLOSE | UNK | packages/engine/src/state/CombatAnalytics.ts:20-46; packages/engine/src/state/Co |
 | commanders | F-03 | `promotion-trees-wrong-shape` | ⚠ DIVERGED | M | `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/t |
-| commanders | F-07 | `commander-respawn-absent` | ⊘ MISSING | M | `packages/engine/src/types/Commander.ts`, all systems |
+| commanders | F-07 | `commander-respawn-base-present` | ≈ CLOSE | M | `packages/engine/src/types/Commander.ts`, `packages/engine/src/state/CommanderRe |
 | commanders | F-09 | `panel-wired-but-read-only` | ≈ CLOSE | S | `packages/web/src/ui/panels/CommanderPanel.tsx:19,27-32` |
 | crises | F-05 | `ALL_CRISES` direct import | ⚠ DIVERGED | S | `crisisSystem.ts:3` |
 | crises | F-06 | CrisisPanel is a one-shot DramaModal, not persistent policy  | ⚠ DIVERGED | M | `CrisisPanel.tsx:49-60` |
@@ -351,9 +351,9 @@
 | Status | Count |
 |---|---|
 | MATCH | 95 |
-| CLOSE | 77 |
+| CLOSE | 78 |
 | DIVERGED | 43 |
-| MISSING | 60 |
+| MISSING | 59 |
 | EXTRA | 11 |
 | **Total findings** | **286** |
 

@@ -1,4 +1,5 @@
 import type { GameState, GameAction, UnitState, HexTile, CityState, DiplomacyRelation } from '../types/GameState';
+import type { CommanderState } from '../types/Commander';
 import type { HexCoord } from '../types/HexCoord';
 import { coordToKey, neighbors, distance } from '../hex/HexMath';
 import { getPromotionCombatBonus, getPromotionDefenseBonus, getPromotionRangeBonus } from '../state/PromotionUtils';
@@ -18,6 +19,7 @@ import {
   getCityCenterDistrictKey,
   hasStandingOuterDistricts,
 } from '../state/DistrictSiege';
+import { markCommanderDefeated } from '../state/CommanderRespawn';
 import type { ActiveTreaty } from '../types/Treaty';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
@@ -126,12 +128,14 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   const newAttackerHealth = Math.max(0, attacker.health - defenderDamage);
 
   const updatedUnits = new Map(state.units);
+  let updatedCommanders: Map<string, CommanderState> | null = null;
   const logEntries = [...state.log];
   let defenderRetreated = false;
 
   // Update attacker
   if (newAttackerHealth <= 0) {
     updatedUnits.delete(attacker.id);
+    updatedCommanders = handleDefeatedCommander(state, attacker, updatedUnits, updatedCommanders);
     // If the attacker was the current player's own unit, this is a critical event
     const attackerIsOwnUnit = attacker.owner === state.currentPlayerId;
     logEntries.push({
@@ -157,6 +161,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   // Update defender
   if (newDefenderHealth <= 0) {
     updatedUnits.delete(defender.id);
+    updatedCommanders = handleDefeatedCommander(state, defender, updatedUnits, updatedCommanders);
     // If the defender was the current player's own unit (rare, but possible via multi-player), mark critical
     const defenderIsOwnUnit = defender.owner === state.currentPlayerId;
     logEntries.push({
@@ -248,6 +253,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   const nextState: GameState = {
     ...state,
     units: updatedUnits,
+    ...(updatedCommanders ? { commanders: updatedCommanders } : {}),
     players: updatedPlayers,
     log: logEntries,
     rng: currentRng,
@@ -471,6 +477,28 @@ function lockBattlefront(units: Map<string, UnitState>, attackerId: string, defe
   units.set(defender.id, { ...defender, facing: defenderFacing as NonNullable<UnitState['facing']> });
 }
 
+function handleDefeatedCommander(
+  state: GameState,
+  defeatedUnit: UnitState,
+  updatedUnits: Map<string, UnitState>,
+  currentCommanders: Map<string, CommanderState> | null,
+): Map<string, CommanderState> | null {
+  if (!state.commanders?.has(defeatedUnit.id) && !currentCommanders?.has(defeatedUnit.id)) {
+    return currentCommanders;
+  }
+
+  for (const [unitId, unit] of updatedUnits) {
+    if (unit.packedInCommanderId !== defeatedUnit.id) continue;
+    updatedUnits.set(unitId, {
+      ...unit,
+      packedInCommanderId: null,
+      movementLeft: 0,
+    });
+  }
+
+  return markCommanderDefeated(state, defeatedUnit, currentCommanders);
+}
+
 /** Check if the attacker has a friendly unit adjacent to the defender */
 function checkAdjacentAlly(attacker: UnitState, defender: UnitState, state: GameState): boolean {
   const defNeighbors = neighbors(defender.position);
@@ -564,6 +592,7 @@ function handleAttackCity(
   const newAttackerHealth = Math.max(0, attacker.health - damageToAttacker);
 
   const updatedUnits = new Map(state.units);
+  let updatedCommanders: Map<string, CommanderState> | null = null;
   const updatedCities = new Map(state.cities);
   const updatedPlayers = new Map(state.players);
   const updatedRoutes = new Map(state.tradeRoutes);
@@ -573,6 +602,7 @@ function handleAttackCity(
   // Update attacker
   if (newAttackerHealth <= 0) {
     updatedUnits.delete(attacker.id);
+    updatedCommanders = handleDefeatedCommander(state, attacker, updatedUnits, updatedCommanders);
     const attackerIsOwnUnit = attacker.owner === state.currentPlayerId;
     logEntries.push({
       turn: state.turn,
@@ -676,6 +706,7 @@ function handleAttackCity(
   return {
     ...state,
     units: updatedUnits,
+    ...(updatedCommanders ? { commanders: updatedCommanders } : {}),
     cities: updatedCities,
     players: updatedPlayers,
     tradeRoutes: updatedRoutes,
@@ -770,12 +801,14 @@ function handleAttackDistrict(
   const newAttackerHealth = Math.max(0, attacker.health - damageToAttacker);
 
   const updatedUnits = new Map(state.units);
+  let updatedCommanders: Map<string, CommanderState> | null = null;
   const updatedCities = new Map(state.cities);
   const logEntries = [...state.log];
 
   // Update attacker
   if (newAttackerHealth <= 0) {
     updatedUnits.delete(attacker.id);
+    updatedCommanders = handleDefeatedCommander(state, attacker, updatedUnits, updatedCommanders);
     logEntries.push({
       turn: state.turn,
       playerId: state.currentPlayerId,
@@ -821,6 +854,7 @@ function handleAttackDistrict(
   return {
     ...state,
     units: updatedUnits,
+    ...(updatedCommanders ? { commanders: updatedCommanders } : {}),
     cities: updatedCities,
     log: logEntries,
     rng: rng2,

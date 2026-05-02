@@ -24,9 +24,9 @@
 | Status | Count |
 |---|---|
 | MATCH — code does what VII does | 3 |
-| CLOSE — right shape, wrong specifics | 3 |
+| CLOSE — right shape, wrong specifics | 4 |
 | DIVERGED — fundamentally different | 1 |
-| MISSING — GDD describes, engine lacks | 1 |
+| MISSING — GDD describes, engine lacks | 0 |
 | EXTRA — engine has, VII/GDD does not | 2 |
 
 **Total findings:** 10
@@ -113,16 +113,16 @@
 
 ---
 
-### F-07: `commander-respawn-absent` — MISSING
+### F-07: `commander-respawn-base-present` — CLOSE
 
-**Location:** `packages/engine/src/types/Commander.ts`, all systems
+**Location:** `packages/engine/src/types/Commander.ts`, `packages/engine/src/state/CommanderRespawn.ts`, `packages/engine/src/systems/commanderRespawnSystem.ts`, `packages/engine/src/systems/combatSystem.ts`, `packages/engine/src/GameEngine.ts`
 **GDD reference:** `systems/commanders.md` § "Respawn on Defeat"
 **Severity:** MED
 **Effort:** M (1-3 days)
-**VII says:** Commanders cannot permanently die. On defeat: removed from map, 20-turn respawn timer, respawn at capital with all promotions and XP retained.
-**Engine does:** No respawnTurnsRemaining field in CommanderState. No defeat handler in any commander system. A defeated commander follows normal unit-destruction path and is permanently lost.
-**Gap:** Respawn-on-defeat rule entirely unimplemented. Veterans accumulated over multiple wars permanently lost on defeat.
-**Recommendation:** Add respawnTurnsRemaining: number | null to CommanderState. Add defeat handler setting respawnTurnsRemaining = 20 and removing from map. Add END_TURN decrement and capital-respawn trigger. Prerequisite: F-02.
+**VII says:** Commanders cannot permanently die. On defeat: removed from map, 20-turn standard-speed recovery, then respawn with all promotions and XP retained. Source refresh 2026-05-03: Fandom Commander_(Civ7) says nearest Settlement after 20 turns; community/player reports and the local GDD say capital; official 2K update notes confirm commanders can be "respawning" and still receive tech abilities.
+**Engine does:** Combat now marks defeated commanders with `respawnTurnsRemaining = 20` and a sanitized `respawnUnitState` instead of losing the commander record. `commanderRespawnSystem` ticks on the owner `START_TURN`, restores the recovered commander at the owned capital (fallback: first owned settlement), and is wired after combat but before visibility so respawns participate in same-turn fog recalculation. Commander XP/level/promotions are retained; on-map assembled units are released when their commander is defeated.
+**Gap:** Base respawn exists, but exact location semantics remain sourced-conflicting (capital vs nearest settlement), game-speed/memento recovery modifiers are absent, the UI has no respawn counter, and removed-unit `PACK_ARMY` snapshot fate on commander defeat is still part of F-01 pack-model consolidation.
+**Recommendation:** Add recovery-time modifiers once game-speed and memento state exist, expose the respawn counter in the Commander panel/action UI, and resolve packed snapshot deployment during F-01 pack-model consolidation.
 
 ---
 
@@ -175,9 +175,8 @@
 
 ## Missing items
 
-- Commander respawn on defeat (F-07) — 20-turn timer, respawn at capital with all state intact.
 - Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
-- Commander pack-model consolidation and Initiative/Weather Gage deployment exception (F-01).
+- Commander pack-model consolidation and Fleet Commander Weather Gage deployment exception (F-01).
 - Explicit commander age-transition cleanup, especially Fleet Commander retention rules (F-08).
 
 ---
@@ -194,9 +193,9 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 - `packages/engine/src/data/commanders/`
 - `packages/web/src/ui/panels/CommanderPanel.tsx`
 
-**Status:** 3 MATCH / 3 CLOSE / 1 DIVERGED / 1 MISSING / 2 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
+**Status:** 3 MATCH / 4 CLOSE / 1 DIVERGED / 0 MISSING / 2 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
 
-**Highest-severity finding:** F-07 — commander respawn on defeat is still absent; F-01 remains a consolidation/polish gap, not an absent system.
+**Highest-severity finding:** F-01 — pack/unpack is present but still has duplicate state models and unresolved removed-unit snapshot behavior.
 
 ---
 
@@ -215,11 +214,11 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 | Bucket | Findings | Estimated total effort |
 |---|---|---|
 | S (half-day) | F-05, F-06, F-09, F-10 | 2d |
-| M (1-3 days) | F-01, F-02 cleanup, F-03, F-07, F-08 | ~10d |
+| M (1-3 days) | F-01, F-02 cleanup, F-03, F-08 | ~8d |
 | L (week+) | none currently scoped | 0 |
 | **Total** | 10 | **~2w** |
 
-Recommended order: F-01 pack-model consolidation → F-08 explicit age-transition commander cleanup → F-07 respawn → F-03 promotion tree/commendations → F-09 action UI/config lookup → F-06/F-10 custom-extension tagging.
+Recommended order: F-01 pack-model consolidation → F-08 explicit age-transition commander cleanup → F-03 promotion tree/commendations → F-09 action UI/config lookup → F-06/F-10 custom-extension tagging.
 
 ---
 

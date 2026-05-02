@@ -297,7 +297,7 @@ XP thresholds per level: not published.
 
 ## Mapping to hex-empires
 
-**Status tally:** 3 MATCH / 3 CLOSE / 1 DIVERGED / 1 MISSING / 2 EXTRA
+**Status tally:** 3 MATCH / 4 CLOSE / 1 DIVERGED / 0 MISSING / 2 EXTRA
 **Audit:** [.codex/gdd/audits/commanders.md](../audits/commanders.md)
 **Highest-severity finding:** F-01 — `pack-unpack-system-present-with-duplicate-paths` (CLOSE, HIGH)
 **Convergence status:** Divergent — 1 finding(s) require(s) architectural refactor

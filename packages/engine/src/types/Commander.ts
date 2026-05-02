@@ -173,6 +173,8 @@ export interface CommanderPromotionDef {
  * - `packedUnitStates` stores full UnitState snapshots for units removed from
  *   state.units by PACK_ARMY. Optional: absent when using ASSEMBLE_ARMY which
  *   keeps units in state.units with packedInCommanderId set instead.
+ * - `respawnTurnsRemaining` / `respawnUnitState` model VII commander recovery:
+ *   the commander record persists while the map unit is temporarily absent.
  */
 export interface CommanderState {
   readonly unitId: UnitId;
@@ -189,6 +191,10 @@ export interface CommanderState {
    * ASSEMBLE_ARMY (which leaves units in state.units).
    */
   readonly packedUnitStates?: ReadonlyArray<UnitState>;
+  /** Turns remaining before a defeated commander can re-enter the map. */
+  readonly respawnTurnsRemaining?: number | null;
+  /** Snapshot used to restore the defeated commander unit after recovery. */
+  readonly respawnUnitState?: UnitState;
 }
 
 // ── Aura evaluation output ──
