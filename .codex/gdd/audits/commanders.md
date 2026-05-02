@@ -128,14 +128,14 @@
 
 ### F-08: `commander-age-persistence-partial` — CLOSE
 
-**Location:** `packages/engine/src/systems/commanderPromotionSystem.ts`
+**Location:** `packages/engine/src/systems/ageSystem.ts`; `packages/engine/src/systems/__tests__/ageSystem-commander-transition.test.ts`
 **GDD reference:** `systems/commanders.md` § "Age Transition Persistence"
 **Severity:** HIGH
 **Effort:** M (1-3 days)
 **VII says:** Commanders are the ONLY unit type that explicitly survives age transitions with all state intact. Packed units not preserved. Fleet Commanders retain assigned naval units; unassigned ships lost.
-**Engine does:** `ageSystem` does not clear `state.commanders`, so commander records persist across age transitions by default.
-**Gap:** Age-transition-specific commander rules are incomplete: attached/packed unit handling and Fleet Commander naval-retention rules are not explicit.
-**Recommendation:** Add a commander age-transition cleanup that preserves commanders, clears invalid packed land units, and implements Fleet Commander retention.
+**Engine does:** `ageSystem` preserves commander records and now applies commander-specific transition cleanup for the transitioning player. Ground/non-fleet commanders keep XP, level, promotions, respawn state, and commander units, but enter the next age unpacked with packed ordinary units cleared. Exploration → Modern Fleet Commanders retain only assigned naval packed units as snapshots, drop non-naval packed entries, and unassigned owned naval units are removed while enemy naval units are untouched.
+**Gap:** The commander-specific age rule is now explicit, but the broader generic unit obsolescence/upgrade pipeline is still incomplete, fleet retention is snapshot-only with no UI summary, and exact VII distribution/placement behavior after transition remains a future refinement.
+**Recommendation:** Add a UI age-transition summary for carried commanders/fleet slots, then address generic unit obsolescence/upgrades in the age-system unit-retirement slice.
 
 ---
 
@@ -177,7 +177,7 @@
 
 - Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
 - Commander pack-model consolidation and Fleet Commander Weather Gage deployment exception (F-01).
-- Explicit commander age-transition cleanup, especially Fleet Commander retention rules (F-08).
+- Commander age-transition follow-ups (F-08) — UI transition summary, exact Fleet Commander retained-unit placement behavior, and the generic unit retirement/upgrade pipeline.
 
 ---
 

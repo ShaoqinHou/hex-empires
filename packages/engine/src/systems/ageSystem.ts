@@ -1,6 +1,7 @@
-import type { GameState, GameAction, ActiveEffect, EffectDef, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
+import type { GameState, GameAction, ActiveEffect, EffectDef, LegacyPaths, GameEvent, IndependentPowerState, UnitState } from '../types/GameState';
 import type { BuildingId } from '../types/Ids';
 import type { QuarterV2, UrbanTileV2 } from '../types/DistrictOverhaul';
+import type { CommanderState } from '../types/Commander';
 import { coordToKey } from '../hex/HexMath';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
@@ -428,9 +429,14 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     }
   }
 
-  // W4-04 (F-08): state.commanders is intentionally NOT reset here.
-  // Commander state (XP, promotions, packed army) persists across age transitions.
-  // The spread `...state` below preserves the commanders map unchanged.
+  // W4-04 (F-08): commander records persist, but packed ordinary units do not.
+  // Fleet Commanders retain assigned naval units when moving into Modern.
+  const commanderCleanup = cleanupCommanderStateForAgeTransition(
+    state,
+    player.id,
+    player.age,
+    nextAge,
+  );
 
   // F-01: Simultaneous global transition — track which players have transitioned
   const newReadyList = [...readyList, player.id];
@@ -446,6 +452,8 @@ function handleTransition(state: GameState, newCivId: string): GameState {
     rng: rngAfterCrisisSeed,
     log: [...state.log, ...logEntries],
     ...(updatedReligionSlot !== state.religion ? { religion: updatedReligionSlot } : {}),
+    ...(commanderCleanup.units !== undefined ? { units: commanderCleanup.units } : {}),
+    ...(commanderCleanup.commanders !== undefined ? { commanders: commanderCleanup.commanders } : {}),
     ...(updatedIPMap !== undefined ? { independentPowers: updatedIPMap } : {}),
     // F-01: clear tracking when all players have transitioned, otherwise mark pending
     transitionPhase: allReady ? 'none' as const : 'pending' as const,
@@ -799,6 +807,164 @@ function handleChooseGoldenAgeAxis(
       type: 'age' as const,
     }],
   };
+}
+
+/**
+ * F-08: Age-transition commander cleanup.
+ *
+ * - Antiquity → Exploration: clear packed state for every transitioning commander.
+ * - Exploration → Modern:
+ *   - Ground/air commanders: clear packed state.
+ *   - Naval commanders: keep only naval packed units.
+ */
+function cleanupCommanderStateForAgeTransition(
+  state: GameState,
+  transitioningPlayerId: string,
+  currentAge: 'antiquity' | 'exploration' | 'modern',
+  nextAge: 'exploration' | 'modern',
+): { commanders?: ReadonlyMap<string, CommanderState>; units?: ReadonlyMap<string, UnitState> } {
+  const commanders = state.commanders ?? new Map<string, CommanderState>();
+  const isExplorationToModern = currentAge === 'exploration' && nextAge === 'modern';
+  const retainedFleetPackedUnitIds = new Set<string>();
+  const transitioningCommanderUnitIds = new Set<string>();
+  let nextCommanders: Map<string, CommanderState> | undefined;
+  let nextUnits: Map<string, UnitState> | undefined;
+  const touchUnits = (): Map<string, UnitState> => {
+    if (!nextUnits) {
+      nextUnits = new Map(state.units);
+    }
+    return nextUnits;
+  };
+  const touchCommanders = (): Map<string, CommanderState> => {
+    if (!nextCommanders) {
+      nextCommanders = new Map(commanders);
+    }
+    return nextCommanders;
+  };
+
+  for (const [commanderId, commander] of commanders) {
+    const commanderOwner = getCommanderOwner(state, commanderId, commander);
+    if (commanderOwner !== transitioningPlayerId) continue;
+
+    const commanderUnit = state.units.get(commanderId);
+    if (commanderUnit) {
+      transitioningCommanderUnitIds.add(commanderId);
+    }
+
+    const commanderTypeId = commanderUnit?.typeId ?? commander.respawnUnitState?.typeId;
+    const isFleet = commanderUnit
+      ? isFleetCommander(state, commanderUnit)
+      : commanderTypeId != null && state.config.commanders?.get(commanderTypeId)?.role === 'naval';
+
+    const packedUnits = collectPackedUnitsForAgeTransition(state, commanderId, commander);
+
+    if (isFleet && isExplorationToModern) {
+      const retainedUnits = packedUnits.filter((unit) => isNavalUnit(state, unit));
+      const retainedUnitIds = new Set(retainedUnits.map(unit => unit.id));
+      for (const unit of retainedUnits) {
+        retainedFleetPackedUnitIds.add(unit.id);
+      }
+
+      const units = touchUnits();
+      for (const unit of packedUnits) {
+        if (retainedUnitIds.has(unit.id)) {
+          units.delete(unit.id);
+        } else if (unit.packedInCommanderId === commanderId) {
+          units.delete(unit.id);
+        }
+      }
+
+      const commandersMap = touchCommanders();
+      commandersMap.set(commanderId, {
+        ...commander,
+        attachedUnits: retainedUnits.map(unit => unit.id),
+        packedUnitStates: retainedUnits,
+        packed: retainedUnits.length > 0,
+      });
+      continue;
+    }
+
+    if (packedUnits.length > 0) {
+      const units = touchUnits();
+      for (const unit of packedUnits) {
+        if (unit.packedInCommanderId === commanderId) {
+          units.delete(unit.id);
+        }
+      }
+    }
+
+    const commandersMap = touchCommanders();
+    commandersMap.set(commanderId, {
+      ...commander,
+      attachedUnits: [],
+      packedUnitStates: [],
+      packed: false,
+    });
+  }
+
+  if (!isExplorationToModern) {
+    return {
+      ...(nextCommanders ? { commanders: nextCommanders } : {}),
+      ...(nextUnits ? { units: nextUnits } : {}),
+    };
+  }
+
+  const units = touchUnits();
+  for (const [unitId, unit] of units) {
+    if (unit.owner !== transitioningPlayerId) continue;
+    if (!isNavalUnit(state, unit)) continue;
+    if (transitioningCommanderUnitIds.has(unitId)) continue;
+    if (retainedFleetPackedUnitIds.has(unitId)) continue;
+    units.delete(unitId);
+  }
+
+  return {
+    ...(nextCommanders ? { commanders: nextCommanders } : {}),
+    ...(nextUnits ? { units: nextUnits } : {}),
+  };
+}
+
+function getCommanderOwner(
+  state: GameState,
+  commanderId: string,
+  commander: CommanderState,
+): string | null {
+  const commanderUnit = state.units.get(commanderId);
+  if (commanderUnit) return commanderUnit.owner;
+  return commander.respawnUnitState?.owner ?? null;
+}
+
+function isFleetCommander(state: GameState, commanderUnit: UnitState): boolean {
+  return state.config.commanders?.get(commanderUnit.typeId)?.role === 'naval';
+}
+
+function isNavalUnit(state: GameState, unit: UnitState): boolean {
+  return state.config.units.get(unit.typeId)?.category === 'naval';
+}
+
+function collectPackedUnitsForAgeTransition(
+  state: GameState,
+  commanderId: string,
+  commander: CommanderState,
+): ReadonlyArray<UnitState> {
+  if (!commander.packed) return [];
+  const packedUnitStates = commander.packedUnitStates;
+  if (packedUnitStates && packedUnitStates.length > 0) {
+    return packedUnitStates;
+  }
+  if (commander.attachedUnits.length === 0) return [];
+
+  const packedUnits: UnitState[] = [];
+  const seenUnitIds = new Set<string>();
+  for (const unitId of commander.attachedUnits) {
+    if (seenUnitIds.has(unitId)) return [];
+    seenUnitIds.add(unitId);
+
+    const unit = state.units.get(unitId);
+    if (!unit || unit.packedInCommanderId !== commanderId) return [];
+    packedUnits.push(unit);
+  }
+  return packedUnits;
 }
 
 function getNextAge(current: string): 'exploration' | 'modern' | null {

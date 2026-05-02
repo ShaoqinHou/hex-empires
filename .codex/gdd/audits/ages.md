@@ -341,7 +341,7 @@ Paste this back into `.codex/gdd/systems/ages.md` § "Mapping to hex-empires":
 
 ## Open questions for the audit
 
-- **Commander persistence:** GDD confirms commanders persist (VII exception). `handleTransition` never clears any units, so commanders DO persist — but only because ALL units persist. Whether non-commander units should be cleared on transition is unaudited (GDD flags this as `[INFERRED]`). Follow-up: audit `unitSystem`.
+- **Commander persistence:** GDD confirms commanders persist (VII exception). `handleTransition` now has a commander-specific cleanup: commander records persist, non-fleet packed ordinary units are cleared, Exploration→Modern Fleet Commanders retain assigned naval snapshots, and unassigned owned naval units are removed. Broader non-commander unit transition policy is still source-conflicting and unaudited outside the commander/fleet rule. Follow-up: audit `unitSystem`.
 - **Exact ageTurnTarget per speed:** `AgeState.ageThresholds` uses static numbers. The game-speed multiplier table from the GDD (Quick=100, Standard=180, Epic=280) is not implemented. Scope: game-speed system audit.
 - **Distant Lands reveal:** GDD says the map expands on Antiquity→Exploration. `handleTransition` makes no map calls. Cross-system gap (ageSystem + mapSystem); out of scope for this audit.
 - **LegacyPaths.ts vs ageSystem.ts schema divergence:** `LegacyPaths.ts` uses predicate-based milestone checks; `ageSystem.ts` uses integer count fields on `PlayerState.legacyPaths`. These two schemas are not currently wired together. A future sync will be needed.

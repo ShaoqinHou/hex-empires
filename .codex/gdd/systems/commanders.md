@@ -167,7 +167,7 @@ Late-age edge case: commander defeated within ~20 turns of age end may not respa
 
 Commanders are the **only unit type explicitly confirmed to survive age transitions**. All state persists (xp, level, promotions, commendations).
 
-**Packed units at transition:** `[INFERRED]` treated as ordinary non-commander units (likely lost since non-commanders generally don't persist). Commander enters new age unpacked, then rebuild army around veteran.
+**Packed units at transition:** Treated as ordinary non-commander units. In the current engine implementation, non-fleet commanders enter the new age unpacked and rebuild armies around the veteran commander. Broader non-commander unit retirement remains source-conflicting in `systems/ages.md`.
 
 **Fleet Commander special rule (confirmed):** At Exploration → Modern, naval units **only** retained if assigned to Fleet Commander slots. Excess ships lost. Strong incentive to maintain Fleet Commanders with packed units before age end.
 
@@ -269,7 +269,8 @@ XP thresholds per level: not published.
 - Regiments unlocked while at 4 packed: capacity expands to 6; next Assemble can absorb 2 more. `[INFERRED]`
 - Commander defeated with units packed inside: packed units rout/disperse onto adjacent tiles; units can be vulnerable or lost when space is unavailable. `[secondary-source refreshed 2026-05-03]`
 - Commander defeated in last ~20 turns of age: respawns in new age. `[INFERRED]`
-- Fleet Commander with packed naval units at Exploration → Modern: those units retained; unassigned lost.
+- Non-fleet commander with packed units at age transition: commander persists unpacked; packed units are cleared.
+- Fleet Commander with packed naval units at Exploration → Modern: assigned naval units retained in the Fleet Commander; unassigned ships lost.
 - Zeal (stackable): multiple commanders in same city each provide +5% yield additively.
 - Two commanders in radius of same fight: XP equally shared. May disincentivize clustering.
 - Merit XP bug: expanded radius does NOT expand XP eligibility.
@@ -284,7 +285,7 @@ XP thresholds per level: not published.
 
 - Exact XP thresholds per level (not published)
 - Fleet Commander unlock condition (age confirmed, trigger not)
-- Fate of packed units inside commander at age transition
+- Exact placement/distribution of Fleet Commander retained naval units after age transition
 - Full 30-node promotion tree listings
 - Bulwark promotion tree location
 - Service commendation exact beneficiary (commander vs units)

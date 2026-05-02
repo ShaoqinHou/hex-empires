@@ -121,7 +121,7 @@ The transition is a **partial reset** — the core of Civ VII's design. The exac
 - **Tech tree** — replaced with the new age's tree. Mid-research progress is lost.
 - **Civic tree** — replaced with the new age's tree.
 - **Non-ageless buildings** — flagged obsolete; stop producing yields; may be demolished/replaced. Some may grant retroactive bonuses on demolition.
-- **Most units** — non-commander units do not reliably persist. (Sources disagree slightly here; some say units persist but are weak against new-age tech; others say units obsolete entirely. Tag `[INFERRED]`: likely units persist but become obsolete combat-wise. Re-verify.)
+- **Most units** — non-commander units do not reliably persist. Sources disagree slightly here; some say units persist but are weak against new-age tech, others say units obsolete entirely. Current engine work only implements the commander/fleet exception: non-fleet packed units are cleared, and assigned Fleet Commander naval units can persist as packed snapshots at Exploration→Modern. Broader ordinary-unit transition behavior remains `[INFERRED]` and needs re-verification before a full unit-retirement pass.
 - **Resource layer (partial)** — some previous resources removed; new age resources seed in.
 - **Religion** — Antiquity→Exploration: Pantheon does NOT carry; Exploration→Modern: Religion persists but with different mechanics (less emphasis).
 - **Crisis state** — clears to `none`.

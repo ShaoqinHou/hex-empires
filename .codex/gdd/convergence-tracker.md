@@ -82,7 +82,7 @@
 | combat | F-13 | combat-preview-formula-divergence - | ✓ MATCH | UNK | packages/engine/src/state/CombatPreview.ts:705-743; packages/engine/src/systems/ |
 | commanders | F-01 | `pack-unpack-system-present-with-duplicate-paths` | ≈ CLOSE | L | `packages/engine/src/systems/commanderArmySystem.ts`; `packages/engine/src/types |
 | commanders | F-02 | `commander-state-wired-in-gamestate` | ✓ MATCH | M | `packages/engine/src/types/Commander.ts:163-172`, `packages/engine/src/types/Gam |
-| commanders | F-08 | `commander-age-persistence-partial` | ≈ CLOSE | M | `packages/engine/src/systems/commanderPromotionSystem.ts` |
+| commanders | F-08 | `commander-age-persistence-partial` | ≈ CLOSE | M | `packages/engine/src/systems/ageSystem.ts`; `packages/engine/src/systems/__tests |
 | crises | F-01 | Crisis is a one-shot narrative event, not persistent age-pha | ⚠ DIVERGED | L | `crisisSystem.ts:13-22`, `data/crises/all-crises.ts` |
 | crises | F-02 | `ageProgress`-based stage triggers absent | ⊘ MISSING | M | `crisisSystem.ts:58-116` |
 | crises | F-03 | No crisis policy slots or END_TURN gating | ⊘ MISSING | M | `types/GameState.ts` (PlayerState), `crisisSystem.ts` |
