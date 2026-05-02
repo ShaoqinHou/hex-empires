@@ -272,14 +272,14 @@ describe('narrativeEventSystem', () => {
   });
 
   describe('content validation — ALL_NARRATIVE_EVENTS', () => {
-    it('all 10 events have unique ids', async () => {
+    it('all registered events have unique ids', async () => {
       const { ALL_NARRATIVE_EVENTS } = await import('../../data/narrative-events');
       const ids = ALL_NARRATIVE_EVENTS.map(e => e.id);
       const unique = new Set(ids);
       expect(unique.size).toBe(ids.length);
     });
 
-    it('all 10 events have at least one choice', async () => {
+    it('all registered events have at least one choice', async () => {
       const { ALL_NARRATIVE_EVENTS } = await import('../../data/narrative-events');
       for (const e of ALL_NARRATIVE_EVENTS) {
         expect(e.choices.length).toBeGreaterThan(0);
@@ -294,7 +294,7 @@ describe('narrativeEventSystem', () => {
       }
     });
 
-    it('all 5 discoveries reference existing narrative event ids', async () => {
+    it('all registered discoveries reference existing narrative event ids', async () => {
       const { ALL_NARRATIVE_EVENTS } = await import('../../data/narrative-events');
       const { ALL_DISCOVERIES } = await import('../../data/discoveries');
       const eventIds = new Set(ALL_NARRATIVE_EVENTS.map(e => e.id));

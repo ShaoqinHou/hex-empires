@@ -1,20 +1,29 @@
-# Narrative Events — hex-empires Audit
+# Narrative Events - hex-empires Audit
 
 **System slug:** `narrative-events`
 **GDD doc:** [systems/narrative-events.md](../systems/narrative-events.md)
-**Audit date:** `2026-04-19`
-**Auditor:** `claude-sonnet-4.6`
+**Audit date:** `2026-05-02`
+**Auditor:** `codex`
 **Version target:** Firaxis patch 1.3.0
 
 ---
 
 ## Engine files audited
 
-- Grep across `packages/engine/src/` for `narrative`, `NarrativeEvent`, `narrativeTags`, `eventHistory`, `Discovery` — **0 hits** (all absent)
-- `packages/engine/src/types/GameState.ts` — PlayerState (no narrativeTags, no eventHistory); GameState (no narrativeEvents queue); GameAction (no RESOLVE_NARRATIVE_EVENT, no EXPLORE_DISCOVERY)
-- `packages/engine/src/systems/` — 30 system files; no narrativeEventSystem.ts, no discoverySystem.ts
-- `packages/engine/src/data/` — 17 content directories; no narrative-events/ or discoveries/
-- `packages/web/src/ui/panels/EventLogPanel.tsx` — mechanical audit log; not narrative event UI
+- `packages/engine/src/types/NarrativeEvent.ts`
+- `packages/engine/src/types/GameState.ts`
+- `packages/engine/src/data/narrative-events/index.ts`
+- `packages/engine/src/data/discoveries/index.ts`
+- `packages/engine/src/state/GameConfigFactory.ts`
+- `packages/engine/src/state/narrativeEventUtils.ts`
+- `packages/engine/src/systems/narrativeEventSystem.ts`
+- `packages/engine/src/systems/discoverySystem.ts`
+- `packages/engine/src/systems/movementSystem.ts`
+- `packages/engine/src/systems/researchSystem.ts`
+- `packages/engine/src/GameEngine.ts`
+- `packages/web/src/App.tsx`
+- `packages/web/src/ui/panels/NarrativeEventPanel.tsx`
+- `packages/web/src/ui/panels/panelRegistry.ts`
 
 ---
 
@@ -22,147 +31,150 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 0 |
-| CLOSE | 0 |
+| MATCH | 3 |
+| CLOSE | 4 |
 | DIVERGED | 0 |
-| MISSING | 7 |
+| MISSING | 0 |
 | EXTRA | 0 |
 
-**Total findings:** 7 — entire system absent
+**Total findings:** 7
 
 ---
 
 ## Detailed findings
 
-### F-01: `NarrativeEventDef` type and content database absent — MISSING
+### F-01: `NarrativeEventDef` type and content database exist at starter scale -- CLOSE
 
-**Location:** no file
-**GDD reference:** `systems/narrative-events.md` § "Content flowing through this system"
+**Location:** `packages/engine/src/types/NarrativeEvent.ts:9`; `packages/engine/src/data/narrative-events/index.ts:46`
+**GDD reference:** `systems/narrative-events.md` section "Content flowing through this system"
 **Severity:** HIGH
 **Effort:** L
-**VII says:** 1,000+ authored events at launch. Each: requirements set (leader/civ/tag/age/state), vignette prose, 2-3 labeled choices with `EffectDef[]`, optional tag output.
-**Engine does:** No `NarrativeEventDef` type. No `data/narrative-events/` directory. `data/crises/` is closest structural analog but crisis-only.
-**Gap:** Fundamental content type absent.
-**Recommendation:** Define `NarrativeEventDef` in `types/NarrativeEvent.ts`: `id, title, vignette, choices (label + effects + tagOutput), requirements, ageGate, category`.
+**VII says:** 1,000+ authored events at launch. Each event has requirements, vignette prose, 2-3 choices, effects, and optional tag output.
+**Engine does:** `NarrativeEventDef`, `NarrativeChoice`, `NarrativeRequirements`, and a narrative-event registry exist. The registry currently contains 20 authored events.
+**Gap:** Content scale is a small starter set, not Civ VII launch scale. Several effect and trigger variants are represented in types but not fully implemented.
+**Recommendation:** Keep the type stable while adding authored batches only after trigger/effect behavior is proven.
 
 ---
 
-### F-02: `PlayerState.narrativeTags` absent — MISSING
+### F-02: `PlayerState.narrativeTags` exists and persists -- MATCH
 
-**Location:** `types/GameState.ts:147-210`
-**GDD reference:** `systems/narrative-events.md` § "The tag system"
+**Location:** `packages/engine/src/types/GameState.ts:385`
+**GDD reference:** `systems/narrative-events.md` section "The tag system"
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Persistent set of string tags written when event choices made, read as requirements by future events. Tags survive age transitions (do NOT reset). Primary cross-age narrative mechanism.
-**Engine does:** `PlayerState` (30+ fields) has no `narrativeTags`. `legacyBonuses` is closest cousin but different semantics.
-**Gap:** Cross-age narrative callbacks architecturally impossible.
-**Recommendation:** Add `readonly narrativeTags?: ReadonlyArray<string>` to `PlayerState`. Age-transition invariants: tags are NO-RESET on TRANSITION_AGE.
+**VII says:** Persistent tags record narrative choices and can be read by later cross-age events.
+**Engine does:** `PlayerState.narrativeTags` exists and is not reset by age transition.
+**Gap:** None for the local storage primitive.
+**Recommendation:** Keep narrative tags separate from visible logs and legacy bonuses.
 
 ---
 
-### F-03: `GameState.firedNarrativeEvents` deduplication store absent — MISSING
+### F-03: `GameState.firedNarrativeEvents` deduplication store exists -- MATCH
 
-**Location:** `types/GameState.ts:355-393`
-**GDD reference:** `systems/narrative-events.md` § "Event pool management"
+**Location:** `packages/engine/src/types/GameState.ts:1116`; `packages/engine/src/state/GameInitializer.ts:198`
+**GDD reference:** `systems/narrative-events.md` section "Event pool management"
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Per-campaign record of fired event IDs prevents re-triggering. Without it, 40-turn-eligible event fires every turn.
-**Engine does:** `GameState.log` is player-visible mechanical audit log. No dedup store.
-**Gap:** No per-campaign dedup.
-**Recommendation:** Add `readonly firedNarrativeEvents?: ReadonlyArray<string>` to `GameState`. Keep separate from `log` (log is player-visible; dedup is internal).
+**VII says:** Fired event ids are tracked so eligible events do not repeat every turn.
+**Engine does:** `GameState.firedNarrativeEvents` exists, is initialized, and is checked by `narrativeEventSystem`.
+**Gap:** None for the local dedup store.
+**Recommendation:** Keep it internal and separate from the player-visible event log.
 
 ---
 
-### F-04: `narrativeEventSystem.ts` absent — MISSING
+### F-04: `narrativeEventSystem` exists, but trigger and effect depth is partial -- CLOSE
 
-**Location:** no file in `systems/`
-**GDD reference:** `systems/narrative-events.md` § "Triggers", "Mechanics"
+**Location:** `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/GameEngine.ts:117`
+**GDD reference:** `systems/narrative-events.md` sections "Triggers" and "Mechanics"
 **Severity:** HIGH
 **Effort:** M
-**VII says:** On END_TURN + specific trigger moments (battle, tech completion, Golden Age, religion belief, weather, war, age transition), evaluates pool, selects candidates, fires one per turn, enqueues in `pendingNarrativeEvents`. On RESOLVE: applies effect via `effectSystem`, writes `narrativeTags`, records in `firedNarrativeEvents`.
-**Engine does:** `crisisSystem.ts` closest analog (player picks from options, effects applied) but crisis-only.
-**Gap:** No evaluation loop, selection, dispatch, or tag writing.
-**Recommendation:** Add `narrativeEventSystem.ts`. Handle END_TURN (eligibility → enqueue) + RESOLVE_NARRATIVE_EVENT (effect + tag write + dedup record). Wire into `GameEngine` pipeline after `crisisSystem`.
+**VII says:** Narrative events evaluate on turn end and specific moments such as tech completion, battle wins, Golden Ages, religion choices, weather, war, and age transitions.
+**Engine does:** `narrativeEventSystem` is wired after `researchSystem`. It handles `END_TURN` candidate evaluation, queues one event, resolves choices, applies supported effects, writes tag output, and records fired ids.
+**Gap:** `TECH_RESEARCHED`, battle, religion, weather, war, and age-transition trigger moments are not yet hooked. Non-yield effect kinds are still limited or no-op.
+**Recommendation:** Add one-shot trigger hooks from the owning systems, starting with `TECH_RESEARCHED` from `researchSystem`; avoid log-sniffing or repeated state-count checks.
 
 ---
 
-### F-05: `RESOLVE_NARRATIVE_EVENT` action + `pendingNarrativeEvents` queue absent — MISSING
+### F-05: `RESOLVE_NARRATIVE_EVENT` action and pending queue exist -- MATCH
 
-**Location:** `types/GameState.ts:404-455` (GameAction union)
-**GDD reference:** `systems/narrative-events.md` § "Event presentation"
+**Location:** `packages/engine/src/types/GameState.ts:1117,1393`; `packages/engine/src/systems/narrativeEventSystem.ts:23`
+**GDD reference:** `systems/narrative-events.md` section "Event presentation"
 **Severity:** HIGH
 **Effort:** S
-**VII says:** Player resolves event by picking one of 2-3 options. Needs pending-event queue + RESOLVE action.
-**Engine does:** `GameAction` union (45 variants) — no `RESOLVE_NARRATIVE_EVENT`. No `pendingNarrativeEvents` on `GameState`. `RESOLVE_CRISIS` is closest analog.
-**Gap:** Resolution path absent.
-**Recommendation:** Add `| { type: 'RESOLVE_NARRATIVE_EVENT'; eventId; choiceIndex }` to `GameAction`. Add `pendingNarrativeEvents?: ReadonlyArray<string>` to `GameState`.
+**VII says:** A player resolves a pending event by choosing one option from the event prompt.
+**Engine does:** `pendingNarrativeEvents` and `RESOLVE_NARRATIVE_EVENT` exist. Resolution removes the pending id, applies choice effects where supported, writes tags, and dedups the event.
+**Gap:** None for the local queue/action surface.
+**Recommendation:** Keep UI and discovery flows routed through this same pending-event path where possible.
 
 ---
 
-### F-06: Discovery tile mechanic absent — MISSING
+### F-06: Discovery tile mechanic exists, but reward/consumption paths are split -- CLOSE
 
-**Location:** no file; `HexTile` has no `discoveryId`
-**GDD reference:** `systems/narrative-events.md` § "Discoveries subsystem"
+**Location:** `packages/engine/src/types/GameState.ts:40,1579`; `packages/engine/src/data/discoveries/index.ts:3`; `packages/engine/src/state/narrativeEventUtils.ts:18`; `packages/engine/src/systems/movementSystem.ts:319`; `packages/engine/src/systems/discoverySystem.ts:19`
+**GDD reference:** `systems/narrative-events.md` section "Discoveries subsystem"
 **Severity:** MED
 **Effort:** M
-**VII says:** Discoveries replace Goody Huts. Appear as map objects on unexplored tiles. Unit moving onto one fires narrative popup with 2+ choices. Tile consumed on visit. Converts luck → player agency.
-**Engine does:** `HexTile` 9 fields — no `discoveryId`. `GameAction` no `EXPLORE_DISCOVERY`. `movementSystem.ts` doesn't check.
-**Gap:** No discovery flag, movement hook, trigger, or reward.
-**Recommendation:** Add `discoveryId?: string` to `HexTile`. Define `DiscoveryDef`. Add `EXPLORE_DISCOVERY` action. Hook into `movementSystem`.
+**VII says:** Discoveries replace goody huts. Entering a discovery tile fires a narrative popup with choices, then consumes the tile.
+**Engine does:** `HexTile.discoveryId`, discovery data, movement-triggered narrative enqueue, and direct `EXPLORE_DISCOVERY` rewards exist. Tests cover both narrative discovery enqueue and direct reward clearing.
+**Gap:** Movement-triggered discovery events do not yet clear the tile through the same path as direct rewards, and reward-bearing discovery behavior remains split between narrative choices and `discoverySystem`.
+**Recommendation:** Consolidate discovery consumption and reward handling around pending narrative event resolution.
 
 ---
 
-### F-07: Narrative-event UI (vignette popup + choices) absent — MISSING
+### F-07: Narrative event UI exists, with presentation polish still partial -- CLOSE
 
-**Location:** no `NarrativeEventPanel.tsx`
-**GDD reference:** `systems/narrative-events.md` § "UI requirements"
+**Location:** `packages/web/src/ui/panels/NarrativeEventPanel.tsx:30`; `packages/web/src/ui/panels/panelRegistry.ts:91`; `packages/web/src/App.tsx:105,275`
+**GDD reference:** `systems/narrative-events.md` section "UI requirements"
 **Severity:** MED
 **Effort:** M
-**VII says:** (1) event popup (vignette + 2-3 choice buttons with reward labels); (2) confirmation; (3) Discovery map marker; (4) systemic-event banner.
-**Engine does:** `EventLogPanel` is mechanical log. `CrisisPanel` closest UI analog. No vignette popup, choice cards, or Discovery marker. `PanelId` union no `'narrativeEvent'`.
-**Gap:** Zero UI surface.
-**Recommendation:** Implement `NarrativeEventPanel` with `PanelShell priority: 'modal'`. Register in `panelRegistry.ts`. Invoke `/add-panel`.
+**VII says:** The UI presents vignette prose, 2-3 choice buttons with reward labels, confirmation, discovery markers, and systemic event banners.
+**Engine does:** `NarrativeEventPanel` renders the first pending event, shows choices, dispatches `RESOLVE_NARRATIVE_EVENT`, is registered as a modal, and auto-opens when the queue is non-empty.
+**Gap:** Choice buttons do not yet present full effect/reward previews, and discovery map marker/systemic banner polish remains incomplete.
+**Recommendation:** Add effect-preview copy and marker/banner polish after trigger/effect semantics are stable.
 
 ---
 
-## Extras to retire
+## Close follow-ups
 
-None.
+- F-01: grow the authored event registry after trigger/effect behavior stabilizes.
+- F-04: hook `TECH_RESEARCHED`, battle, religion, weather, war, and age-transition triggers one at a time.
+- F-06: unify movement discovery consumption with event resolution.
+- F-07: add choice effect previews, discovery map markers, and systemic banners.
 
 ---
 
 ## Missing items
 
-1. `NarrativeEventDef` + `data/narrative-events/` content database (F-01) — largest content item.
-2. `PlayerState.narrativeTags` (F-02).
-3. `GameState.firedNarrativeEvents` dedup (F-03).
-4. `RESOLVE_NARRATIVE_EVENT` + `pendingNarrativeEvents` queue (F-05).
-5. `narrativeEventSystem.ts` (F-04).
-6. Discoveries (F-06).
-7. `NarrativeEventPanel.tsx` (F-07).
+None as total absences. Remaining work is partial-implementation depth.
 
 ---
 
 ## Mapping recommendation for GDD system doc
 
-Paste into `.codex/gdd/systems/narrative-events.md` § "Mapping to hex-empires":
+Paste into `.codex/gdd/systems/narrative-events.md` section "Mapping to hex-empires":
 
 **Engine files:**
-- Currently: no dedicated narrative-event files.
-- Closest analog: `crisisSystem.ts` / `CrisisPanel.tsx` (same structural pattern).
-- To add: `types/NarrativeEvent.ts`, `data/narrative-events/`, `systems/narrativeEventSystem.ts`, `web/src/ui/panels/NarrativeEventPanel.tsx`.
+- `packages/engine/src/types/NarrativeEvent.ts`
+- `packages/engine/src/types/GameState.ts`
+- `packages/engine/src/data/narrative-events/index.ts`
+- `packages/engine/src/data/discoveries/index.ts`
+- `packages/engine/src/state/narrativeEventUtils.ts`
+- `packages/engine/src/systems/narrativeEventSystem.ts`
+- `packages/engine/src/systems/discoverySystem.ts`
+- `packages/engine/src/systems/movementSystem.ts`
+- `packages/web/src/ui/panels/NarrativeEventPanel.tsx`
 
-**Status:** 0 MATCH / 0 CLOSE / 0 DIVERGED / 7 MISSING / 0 EXTRA — **entire system absent**.
+**Status:** 3 MATCH / 4 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-02 — `PlayerState.narrativeTags` (cross-age callback primitive); F-01 — NarrativeEventDef + content database (blocks everything).
+**Highest-severity finding:** F-04 - `narrativeEventSystem` exists, but trigger and effect depth is partial.
 
 ---
 
 ## Open questions
 
-1. Is narrative-events Phase 1 or deferred? Large content effort (1,000+ events).
-2. Discovery reward types — scale to existing `EffectDef` union, or new discovery-only effects?
-3. Weather / war-damage triggers — do these engines exist yet?
+1. Should tech-triggered narrative events fire for any completed tech first, or require a `techId` requirement field before content uses them?
+2. Should movement-triggered discoveries clear their tile before or after event resolution?
+3. Which effect kinds should narrative choices support before large content authoring starts?
 
 ---
 
@@ -170,12 +182,12 @@ Paste into `.codex/gdd/systems/narrative-events.md` § "Mapping to hex-empires":
 
 | Bucket | Findings | Total |
 |---|---|---|
-| S | F-02, F-03, F-05 | 1.5d |
-| M | F-04, F-06, F-07 | 6-9d |
-| L | F-01 (content authoring) | 2w+ |
-| **Total** | 7 | **~3 weeks** |
+| S | F-04 first trigger hook | ~1d |
+| M | F-06, F-07 | ~4d |
+| L | F-01 content scale | 2w+ |
+| **Total** | 4 close follow-ups | **~3w** |
 
-Recommended order: F-02 + F-03 + F-05 (state fields, same PR) → F-04 (`narrativeEventSystem.ts`) → F-07 (UI) → F-06 (Discoveries) → F-01 (ongoing content authoring).
+Recommended order: F-04 `TECH_RESEARCHED` hook -> F-06 discovery resolution unification -> F-07 effect previews -> F-01 content growth.
 
 ---
 

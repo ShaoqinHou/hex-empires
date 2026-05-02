@@ -87,6 +87,41 @@ Run-Step "agent-routing-check" {
   powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/scripts/check-agent-routing.ps1"
 }
 
+Run-Step "shell-script-eol" {
+  $bad = @()
+  Get-ChildItem ".codex" -Recurse -Filter "*.sh" | ForEach-Object {
+    $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+    if ([Array]::IndexOf($bytes, [byte]13) -ge 0) {
+      $bad += $_.FullName
+    }
+  }
+  if ($bad.Count -gt 0) {
+    throw "shell scripts must use LF endings: $($bad -join ', ')"
+  }
+  Write-Output "shell scripts use LF endings"
+}
+
+Run-Step "agent-timing-powershell" {
+  $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("hex-empires-agent-timing-" + [Guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+  $tmpLog = Join-Path $tmpDir "agent-timing.jsonl"
+  try {
+    powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/workflow/scripts/log-agent-timing.ps1" `
+      -Event spawn -Phase "workflow-e2e" -AgentId "test-agent" -Subagent "tester" -LogFile $tmpLog | Out-Null
+    powershell -NoProfile -ExecutionPolicy Bypass -File ".codex/workflow/scripts/log-agent-timing.ps1" `
+      -Event complete -Phase "workflow-e2e" -AgentId "test-agent" -Subagent "tester" `
+      -DurationMs 1000 -Tokens 100 -Status completed -Notes "e2e" -LogFile $tmpLog | Out-Null
+
+    $rows = Get-Content $tmpLog | ForEach-Object { $_ | ConvertFrom-Json }
+    if ($rows.Count -ne 2 -or $rows[0].kind -ne "spawn" -or $rows[1].kind -ne "complete") {
+      throw "unexpected timing rows"
+    }
+  } finally {
+    Remove-Item -LiteralPath $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  Write-Output "agent timing PowerShell logger works"
+}
+
 Run-Step "spawn-worktree-safety-doc" {
   $skill = Get-Content -Raw ".codex/skills/spawn-worktree/SKILL.md"
   if ($skill -match 'WORKTREE_DIR="\s*\.codex/worktrees/' -or $skill -match "WORKTREE_DIR='\s*\.codex/worktrees/") {

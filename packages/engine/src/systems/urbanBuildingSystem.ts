@@ -58,7 +58,7 @@ function isTileInTerritory(city: CityState, tile: HexCoord): boolean {
   return distance(city.position, tile) <= DEFAULT_WORK_RANGE;
 }
 
-function computeQuarter(
+export function computeQuarter(
   cityId: CityId,
   coord: HexCoord,
   buildings: ReadonlyArray<BuildingId>,

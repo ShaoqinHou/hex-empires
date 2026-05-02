@@ -116,16 +116,16 @@
 
 ---
 
-### F-07: DiplomacyPanel has an Independent Powers tab, with panel-priority drift -- CLOSE
+### F-07: DiplomacyPanel has an Independent Powers tab, with partial depth -- CLOSE
 
-**Location:** `packages/web/src/ui/panels/DiplomacyPanel.tsx:11,48-52,337-467`; `packages/web/src/ui/panels/panelRegistry.ts:77`
+**Location:** `packages/web/src/ui/panels/DiplomacyPanel.tsx:39,337-467`; `packages/web/src/ui/panels/panelRegistry.ts:77`
 **GDD reference:** `systems/independent-powers.md` section "UI requirements"
 **Severity:** MED
 **Effort:** S frame, M full
 **VII says:** The main leader/diplomacy surface lists discovered Independents and City-States, attitude, befriend progress, and Influence actions.
-**Engine does:** `DiplomacyPanel` has an `Ind. Powers` tab that reads `state.independentPowers`, displays non-incorporated entries, and dispatches IP actions such as befriending and suzerain bonus selection. `panelRegistry` classifies diplomacy as `overlay`.
-**Gap:** `DiplomacyPanel` still passes `priority="info"` to `PanelShell`, drifting from the registry. Discovery filtering, detailed costs, and full bonus-selection UX remain thin.
-**Recommendation:** Align the component priority with the registry, then deepen the tab once bonus effects and raid units exist.
+**Engine does:** `DiplomacyPanel` has an `Ind. Powers` tab that reads `state.independentPowers`, displays non-incorporated entries, dispatches IP actions such as befriending and suzerain bonus selection, and now passes `priority="overlay"` to match `panelRegistry`.
+**Gap:** Discovery filtering, detailed costs, and full bonus-selection UX remain thin.
+**Recommendation:** Deepen the tab once bonus effects and raid units exist.
 
 ---
 
@@ -148,7 +148,7 @@
 - F-04: apply selected suzerain bonus effects and build a proper choice surface.
 - F-05: create explicit raid state plus spawned hostile units.
 - F-06: expand roster after map placement and bonus effects are stable.
-- F-07: align DiplomacyPanel priority with panelRegistry and add discovery filtering.
+- F-07: add discovery filtering and fuller IP action/bonus UX.
 - F-08: implement dynamic Pericles suzerain-count culture scaling.
 
 ---

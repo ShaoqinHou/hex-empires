@@ -1,9 +1,13 @@
 import type { GameState, GameAction, ActiveEffect, EffectDef, LegacyPaths, GameEvent, IndependentPowerState } from '../types/GameState';
+import type { BuildingId } from '../types/Ids';
+import type { QuarterV2, UrbanTileV2 } from '../types/DistrictOverhaul';
+import { coordToKey } from '../hex/HexMath';
 import type { CrisisType } from '../data/crises/types';
 import { nextRandom } from '../state/SeededRng';
 import { scoreLegacyPaths } from '../state/LegacyPaths';
 import { createDefaultIPState } from '../state/IPStateFactory';
 import { clearTownSpecializationState } from '../state/TownSpecializationUtils';
+import { computeQuarter } from './urbanBuildingSystem';
 
 /**
  * AgeSystem handles age transitions and legacy milestone tracking.
@@ -309,23 +313,73 @@ function handleTransition(state: GameState, newCivId: string): GameState {
   // defined age is older than the next age AND whose isAgeless flag is not true.
   // Example: an antiquity-age granary is removed when transitioning to exploration.
   // Wonders (isAgeless: true) and buildings without an age field are preserved.
+  // V2 urban-tile slots are scrubbed alongside the legacy flat list so obsolete
+  // buildings cannot continue contributing adjacency or stale Quarter metadata.
   {
     const ageOrder: Record<string, number> = { antiquity: 0, exploration: 1, modern: 2 };
     const nextAgeRank = ageOrder[nextAge] ?? 0;
+    const keepBuildingForAge = (bid: BuildingId): boolean => {
+      const def = state.config.buildings.get(bid);
+      if (!def) return true; // unknown building: keep
+      if (def.isAgeless) return true; // wonders and ageless buildings always persist
+      const bAgeRank = ageOrder[def.age] ?? 0;
+      return bAgeRank >= nextAgeRank; // keep if same or newer age
+    };
     const nextCities = new Map(updatedCities);
     let buildingsRemoved = false;
     for (const [cityId, city] of updatedCities) {
       if (city.owner !== player.id) continue;
-      const keptBuildings = city.buildings.filter((bid) => {
-        const def = state.config.buildings.get(bid);
-        if (!def) return true; // unknown building: keep
-        if (def.isAgeless) return true; // wonders and ageless buildings always persist
-        const bAgeRank = ageOrder[def.age] ?? 0;
-        return bAgeRank >= nextAgeRank; // keep if same or newer age
-      });
+      let nextCity = city;
+      let cityChanged = false;
+
+      const keptBuildings = city.buildings.filter(keepBuildingForAge);
       if (keptBuildings.length !== city.buildings.length) {
-        nextCities.set(cityId, { ...city, buildings: keptBuildings });
+        nextCity = { ...nextCity, buildings: keptBuildings };
+        cityChanged = true;
         buildingsRemoved = true;
+      }
+
+      if (city.urbanTiles !== undefined && city.urbanTiles.size > 0) {
+        const nextUrbanTiles = new Map<string, UrbanTileV2>(city.urbanTiles);
+        const changedTileKeys = new Set<string>();
+
+        for (const [tileKey, urbanTile] of city.urbanTiles) {
+          const keptUrbanBuildings = urbanTile.buildings.filter(keepBuildingForAge);
+          if (keptUrbanBuildings.length === urbanTile.buildings.length) continue;
+
+          nextUrbanTiles.set(tileKey, {
+            ...urbanTile,
+            buildings: keptUrbanBuildings,
+            walled: keptUrbanBuildings.includes('walls' as BuildingId),
+          });
+          changedTileKeys.add(tileKey);
+        }
+
+        if (changedTileKeys.size > 0) {
+          const nextQuarters: QuarterV2[] = (city.quarters ?? []).filter(
+            (quarter) => !changedTileKeys.has(coordToKey(quarter.coord)),
+          );
+          for (const tileKey of changedTileKeys) {
+            const urbanTile = nextUrbanTiles.get(tileKey);
+            if (!urbanTile) continue;
+            const recomputedQuarter = computeQuarter(cityId, urbanTile.coord, urbanTile.buildings, state, city.owner);
+            if (recomputedQuarter !== null) {
+              nextQuarters.push(recomputedQuarter);
+            }
+          }
+
+          nextCity = {
+            ...nextCity,
+            urbanTiles: nextUrbanTiles,
+            quarters: nextQuarters,
+          };
+          cityChanged = true;
+          buildingsRemoved = true;
+        }
+      }
+
+      if (cityChanged) {
+        nextCities.set(cityId, nextCity);
       }
     }
     if (buildingsRemoved) {

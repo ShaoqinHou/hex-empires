@@ -30,8 +30,8 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 7 |
-| CLOSE | 3 |
+| MATCH | 8 |
+| CLOSE | 2 |
 | DIVERGED | 0 |
 | MISSING | 2 |
 | EXTRA | 0 |
@@ -55,16 +55,16 @@
 
 ---
 
-### F-02: `ageSystem` removes older non-ageless city buildings, but V2 urban-tile records are not scrubbed — CLOSE
+### F-02: `ageSystem` removes older non-ageless city and V2 urban-tile buildings — MATCH
 
 **Location:** `packages/engine/src/systems/ageSystem.ts:307-341`; `packages/engine/src/systems/__tests__/ageSystem.test.ts:1449-1523`
 **GDD reference:** `systems/buildings-wonders.md` § "Age transition" (cross-cut `ages.md` F-09)
 **Severity:** HIGH
 **Effort:** M
 **VII says:** Non-ageless buildings lose all effect yields and adjacency on age transition.
-**Engine does:** `ageSystem` filters older non-ageless building ids out of each transitioning player's `CityState.buildings`, keeps ageless buildings/wonders and same-or-newer-age buildings, and has focused tests for ageless persistence and older-age removal.
-**Gap:** V2 spatial placement stores building ids in `CityState.urbanTiles`; the transition path does not yet remove or mark obsolete older non-ageless entries there, so adjacency derived from urban-tile neighbors can remain stale.
-**Recommendation:** Extend the age-transition obsolescence pass to scrub or mark obsolete non-ageless buildings in `city.urbanTiles` and recompute quarters when a two-slot tile changes.
+**Engine does:** `ageSystem` filters older non-ageless building ids out of each transitioning player's `CityState.buildings` and `CityState.urbanTiles`, keeps ageless buildings/wonders and same-or-newer-age buildings, preserves tile specialist state, updates the wall flag from remaining buildings, and recomputes or clears V2 quarter metadata through the shared `computeQuarter` helper.
+**Gap:** None for the local age-transition obsolescence model.
+**Recommendation:** Keep V2 urban-tile and flat city-building obsolescence in the same age-transition pass so adjacency cannot retain obsolete buildings.
 
 ---
 
@@ -200,7 +200,6 @@
 
 ## Close follow-ups
 
-- F-02: scrub or mark obsolete V2 `urbanTiles` entries on age transition.
 - F-03: decide whether `wonderPlacementSystem` should own behavior or be retired in favor of the validator helper.
 - F-12: finish retiring legacy `PLACE_BUILDING`/`buildingPlacementSystem` compatibility surface.
 
@@ -226,9 +225,9 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 - `packages/engine/src/types/Building.ts`
 - `packages/engine/src/types/DistrictOverhaul.ts` (V2 types)
 
-**Status:** 7 MATCH / 3 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
+**Status:** 8 MATCH / 2 CLOSE / 0 DIVERGED / 2 MISSING / 0 EXTRA
 
-**Highest-severity finding:** F-02 — V2 urban-tile building obsolescence not yet scrubbed on age transition (CLOSE, HIGH).
+**Highest-severity finding:** F-03 — wonder geography validation is enforced through the placement validator, but the system wrapper remains pass-through (CLOSE, HIGH).
 
 ---
 
@@ -245,11 +244,11 @@ Paste into `.codex/gdd/systems/buildings-wonders.md` § "Mapping to hex-empires"
 | Bucket | Findings | Total |
 |---|---|---|
 | S | F-03, F-12 | ~1d |
-| M | F-02, F-08, F-11 | ~5d |
+| M | F-08, F-11 | ~3d |
 | L | — | 0 |
-| **Total** | 5 active follow-up items | **~1w** |
+| **Total** | 4 active follow-up items | **~4d** |
 
-Recommended order: F-02 → F-08 → F-11 → F-12 → F-03.
+Recommended order: F-08 → F-11 → F-12 → F-03.
 
 ---
 

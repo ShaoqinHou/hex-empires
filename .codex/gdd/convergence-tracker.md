@@ -15,7 +15,7 @@
 | System | Audit file | Findings | Status tally |
 |---|---|---|---|
 | ages | `.codex/gdd/audits/ages.md` | 17 | 11M / 5C / 1D / 0X / 0E |
-| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 7M / 3C / 0D / 2X / 0E |
+| buildings-wonders | `.codex/gdd/audits/buildings-wonders.md` | 12 | 8M / 2C / 0D / 2X / 0E |
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
@@ -30,7 +30,7 @@
 | legends | `.codex/gdd/audits/legends.md` | 8 | 0M / 1C / 2D / 5X / 0E |
 | map-terrain | `.codex/gdd/audits/map-terrain.md` | 12 | 0M / 4C / 3D / 4X / 1E |
 | mementos | `.codex/gdd/audits/mementos.md` | 6 | 0M / 0C / 0D / 6X / 0E |
-| narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 0M / 0C / 0D / 7X / 0E |
+| narrative-events | `.codex/gdd/audits/narrative-events.md` | 7 | 3M / 4C / 0D / 0X / 0E |
 | population-specialists | `.codex/gdd/audits/population-specialists.md` | 9 | 5M / 3C / 1D / 0X / 0E |
 | religion | `.codex/gdd/audits/religion.md` | 13 | 7M / 4C / 2D / 0X / 0E |
 | resources | `.codex/gdd/audits/resources.md` | 11 | 1M / 0C / 3D / 6X / 1E |
@@ -58,7 +58,7 @@
 | ages | F-05 | `no-tech-tree-reset-on-transition` | ✓ MATCH | M | `packages/engine/src/systems/ageSystem.ts` |
 | ages | F-06 | `no-civic-tree-reset-on-transition` | ✓ MATCH | S | `packages/engine/src/systems/ageSystem.ts` |
 | buildings-wonders | F-01 | `isAgeless`, `isCivUnique`, `civId` fields present on `Build | ✓ MATCH | S | `packages/engine/src/types/Building.ts` |
-| buildings-wonders | F-02 | `ageSystem` removes older non-ageless city buildings, but V2 | ≈ CLOSE | M | `packages/engine/src/systems/ageSystem.ts:307-341`; `packages/engine/src/systems |
+| buildings-wonders | F-02 | `ageSystem` removes older non-ageless city and V2 urban-tile | ✓ MATCH | M | `packages/engine/src/systems/ageSystem.ts:307-341`; `packages/engine/src/systems |
 | buildings-wonders | F-03 | Wonder geography validation is enforced through the placemen | ≈ CLOSE | M | `packages/engine/src/systems/wonderPlacementSystem.ts`; `packages/engine/src/sta |
 | buildings-wonders | F-04 | Quarter formation supports unique quarters, ageless pairs, a | ✓ MATCH | M | `packages/engine/src/systems/urbanBuildingSystem.ts:61-127`; `packages/engine/sr |
 | buildings-wonders | F-05 | Specialist adjacency amplification implemented with capped s | ✓ MATCH | M | `packages/engine/src/state/DistrictAdjacency.ts:213-231`; `packages/engine/src/s |
@@ -116,11 +116,11 @@
 | mementos | F-02 | `LeaderDef.mementoSlots` or equivalent slot count derivation | ⊘ MISSING | S | `packages/engine/src/data/leaders/types.ts` line 3 |
 | mementos | F-03 | `PlayerState.equippedMementos` and `mementoSlotCount` absent | ⊘ MISSING | S | `packages/engine/src/types/GameState.ts` lines 147–210 |
 | mementos | F-04 | Cross-session `AccountState` persistence layer absent | ⊘ MISSING | L | no file |
-| narrative-events | F-01 | `NarrativeEventDef` type and content database absent | ⊘ MISSING | L | no file |
-| narrative-events | F-02 | `PlayerState.narrativeTags` absent | ⊘ MISSING | S | `types/GameState.ts:147-210` |
-| narrative-events | F-03 | `GameState.firedNarrativeEvents` deduplication store absent | ⊘ MISSING | S | `types/GameState.ts:355-393` |
-| narrative-events | F-04 | `narrativeEventSystem.ts` absent | ⊘ MISSING | M | no file in `systems/` |
-| narrative-events | F-05 | `RESOLVE_NARRATIVE_EVENT` action + `pendingNarrativeEvents`  | ⊘ MISSING | S | `types/GameState.ts:404-455` (GameAction union) |
+| narrative-events | F-01 | `NarrativeEventDef` type and content database exist at start | ≈ CLOSE | L | `packages/engine/src/types/NarrativeEvent.ts:9`; `packages/engine/src/data/narra |
+| narrative-events | F-02 | `PlayerState.narrativeTags` exists and persists | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:385` |
+| narrative-events | F-03 | `GameState.firedNarrativeEvents` deduplication store exists | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:1116`; `packages/engine/src/state/GameIn |
+| narrative-events | F-04 | `narrativeEventSystem` exists, but trigger and effect depth  | ≈ CLOSE | M | `packages/engine/src/systems/narrativeEventSystem.ts:23`; `packages/engine/src/G |
+| narrative-events | F-05 | `RESOLVE_NARRATIVE_EVENT` action and pending queue exist | ✓ MATCH | S | `packages/engine/src/types/GameState.ts:1117,1393`; `packages/engine/src/systems |
 | population-specialists | F-01 | Growth formula constants align with GDD quadratic constants | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts` |
 | population-specialists | F-02 | Specialist food and happiness costs are both represented | ✓ MATCH | M | `packages/engine/src/state/YieldCalculator.ts`, `packages/engine/src/state/Happi |
 | population-specialists | F-03 | Specialist adjacency amplification exists but depends on spa | ≈ CLOSE | M | `packages/engine/src/state/DistrictAdjacency.ts`, `packages/engine/src/state/Cit |
@@ -214,7 +214,7 @@
 | government-policies | F-06 | Government system not wired to celebration slot grants | ✓ MATCH | S | `packages/engine/src/state/PolicySlotUtils.ts`, `packages/engine/src/systems/gov |
 | government-policies | F-07 | Crisis policy slots entirely absent | ≈ CLOSE | M | `packages/engine/src/types/GameState.ts`, `packages/engine/src/systems/crisisSys |
 | independent-powers | F-06 | Named IP data registry exists but roster and map seeding rem | ≈ CLOSE | S | `packages/engine/src/data/independent-powers/`; `packages/engine/src/types/GameC |
-| independent-powers | F-07 | DiplomacyPanel has an Independent Powers tab, with panel-pri | ≈ CLOSE | S | `packages/web/src/ui/panels/DiplomacyPanel.tsx:11,48-52,337-467`; `packages/web/ |
+| independent-powers | F-07 | DiplomacyPanel has an Independent Powers tab, with partial d | ≈ CLOSE | S | `packages/web/src/ui/panels/DiplomacyPanel.tsx:39,337-467`; `packages/web/src/ui |
 | leaders | F-03 | Leader roster is 9 leaders; VII shipped 21 unique (26 w/ per | ⚠ DIVERGED | M | `data/leaders/all-leaders.ts` |
 | leaders | F-04 | `LeaderDef.agendas` is free-form string array, not typed | ⚠ DIVERGED | M | `data/leaders/types.ts:8` |
 | leaders | F-05 | Persona system absent from LeaderDef | ⊘ MISSING | M | `data/leaders/types.ts` |
@@ -238,8 +238,8 @@
 | map-terrain | F-11 | Fresh water flag absent from HexTile | ⊘ MISSING | S | `types/GameState.ts` (HexTile) |
 | mementos | F-05 | `mementoSystem.ts` startup effect application absent | ⊘ MISSING | M | no file |
 | mementos | F-06 | Challenge evaluation and XP award (`legendsSystem`) absent | ⊘ MISSING | M | no file |
-| narrative-events | F-06 | Discovery tile mechanic absent | ⊘ MISSING | M | no file; `HexTile` has no `discoveryId` |
-| narrative-events | F-07 | Narrative-event UI (vignette popup + choices) absent | ⊘ MISSING | M | no `NarrativeEventPanel.tsx` |
+| narrative-events | F-06 | Discovery tile mechanic exists, but reward/consumption paths | ≈ CLOSE | M | `packages/engine/src/types/GameState.ts:40,1579`; `packages/engine/src/data/disc |
+| narrative-events | F-07 | Narrative event UI exists, with presentation polish still pa | ≈ CLOSE | M | `packages/web/src/ui/panels/NarrativeEventPanel.tsx:30`; `packages/web/src/ui/pa |
 | population-specialists | F-05 | Town pop-7 cap and specialization unlock | ✓ MATCH | S | `packages/engine/src/systems/growthSystem.ts` |
 | population-specialists | F-06 | Settlement cap increases are age-automatic, not tech/civic-d | ⚠ DIVERGED | M | `packages/engine/src/state/HappinessUtils.ts` |
 | population-specialists | F-07 | growthEventCount resets on age transition | ✓ MATCH | S | `packages/engine/src/state/GrowthUtils.ts`, `packages/engine/src/systems/growthS |
@@ -350,10 +350,10 @@
 
 | Status | Count |
 |---|---|
-| MATCH | 84 |
-| CLOSE | 72 |
+| MATCH | 88 |
+| CLOSE | 75 |
 | DIVERGED | 48 |
-| MISSING | 70 |
+| MISSING | 63 |
 | EXTRA | 12 |
 | **Total findings** | **286** |
 

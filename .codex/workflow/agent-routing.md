@@ -93,9 +93,12 @@ model. Do not keep looping Spark on the same failed brief.
 
 When a worker is spawned for a substantial task, the lead should record the
 spawn and completion in `.codex/workflow/scratch/agent-timing.jsonl` using
-`.codex/workflow/scripts/log-agent-timing.sh` where the runtime exposes enough
-metadata. The timing report is advisory, not a source of truth; the lead review
-gate remains mandatory.
+`.codex/workflow/scripts/log-agent-timing.ps1` on Windows, or
+`.codex/workflow/scripts/log-agent-timing.sh` where Git Bash has `node`
+available. If the runtime does not expose duration/token metadata, record
+best-effort spawn/complete rows and note that metrics are unavailable. The
+timing report is advisory, not a source of truth; the lead review gate remains
+mandatory.
 
 ## Lead Review Gate
 

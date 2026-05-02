@@ -1520,6 +1520,88 @@ describe('AA1.1: building obsolescence on age transition', () => {
     // bank is an exploration building — must still be in the city after transitioning to exploration
     expect(next.cities.get('cap')!.buildings).toContain('bank');
   });
+
+  it('scrubs obsolete non-ageless buildings from V2 urban tiles and clears stale quarters', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      owner: 'p1',
+      isCapital: true,
+      buildings: ['granary', 'pyramids'],
+      urbanTiles: new Map([
+        ['1,0', {
+          cityId: 'cap',
+          coord: { q: 1, r: 0 },
+          buildings: ['granary', 'pyramids'],
+          specialistCount: 1,
+          specialistCapPerTile: 1,
+          walled: false,
+        }],
+      ]),
+      quarters: [{
+        cityId: 'cap',
+        coord: { q: 1, r: 0 },
+        age: 'antiquity',
+        kind: 'pure_age',
+        buildingIds: ['granary', 'pyramids'],
+        quarterId: null,
+      }],
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const nextCapital = next.cities.get('cap')!;
+    const urbanTile = nextCapital.urbanTiles!.get('1,0')!;
+
+    expect(urbanTile.buildings).not.toContain('granary');
+    expect(urbanTile.buildings).toEqual(['pyramids']);
+    expect(urbanTile.specialistCount).toBe(1);
+    expect(nextCapital.quarters).toEqual([]);
+  });
+
+  it('preserves ageless and same-age V2 urban tile buildings on age transition', () => {
+    const player = createTestPlayer({
+      age: 'antiquity',
+      civilizationId: 'rome',
+      ageProgress: 50,
+      legacyPaths: { military: 1, economic: 1, science: 1, culture: 1 },
+    });
+    const capital = createTestCity({
+      id: 'cap',
+      owner: 'p1',
+      isCapital: true,
+      buildings: ['bank', 'pyramids'],
+      urbanTiles: new Map([
+        ['1,0', {
+          cityId: 'cap',
+          coord: { q: 1, r: 0 },
+          buildings: ['bank', 'pyramids'],
+          specialistCount: 0,
+          specialistCapPerTile: 1,
+          walled: false,
+        }],
+      ]),
+    });
+    const state = createTestState({
+      players: new Map([['p1', player]]),
+      cities: new Map([['cap', capital]]),
+      age: { currentAge: 'antiquity', ageThresholds: { exploration: 50, modern: 100 } },
+    });
+
+    const next = ageSystem(state, { type: 'TRANSITION_AGE', newCivId: 'spain' });
+    const urbanTile = next.cities.get('cap')!.urbanTiles!.get('1,0')!;
+
+    expect(urbanTile.buildings).toEqual(['bank', 'pyramids']);
+  });
 });
 
 describe('AA1.3: legacyPointsByAxis typed breakdown', () => {
