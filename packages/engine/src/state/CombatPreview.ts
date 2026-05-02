@@ -14,11 +14,19 @@ import {
 } from './CombatAnalytics';
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
 import { getCommanderAuraCombatBonus } from './CommanderAura';
+import {
+  getCityCenterDistrictKey,
+  getDistrictHPs,
+  hasStandingOuterDistricts,
+} from './DistrictSiege';
 
 /**
  * Target type for combat preview.
  */
-export type CombatTarget = { readonly type: 'unit'; readonly unitId: string } | { readonly type: 'city'; readonly cityId: string };
+export type CombatTarget =
+  | { readonly type: 'unit'; readonly unitId: string }
+  | { readonly type: 'city'; readonly cityId: string }
+  | { readonly type: 'district'; readonly cityId: string; readonly districtTile: string };
 
 /**
  * Result of checking if a target can be attacked.
@@ -582,6 +590,29 @@ export function calculateCityCombatPreview(
     }
   }
 
+  if (hasStandingOuterDistricts(city)) {
+    return {
+      attackerId,
+      target: { type: 'city', cityId },
+      canAttack: false,
+      reason: 'Must destroy all outer districts before attacking the city center',
+      attackerStrength: 0,
+      defenderStrength: 0,
+      strengthDifference: 0,
+      isRanged,
+      expectedDamageToDefender: 0,
+      minDamageToDefender: 0,
+      maxDamageToDefender: 0,
+      expectedDamageToAttacker: 0,
+      minDamageToAttacker: 0,
+      maxDamageToAttacker: 0,
+      defenderWillDie: false,
+      attackerWillDie: false,
+      odds: { attackerWinPercent: 0, drawPercent: 0, defenderWinPercent: 0, expectedDefenderHP: 0, expectedAttackerHP: 0 },
+      modifiers: createEmptyModifiers(),
+    };
+  }
+
   // Calculate strengths
   const attackerTile = state.map.tiles.get(coordToKey(attacker.position));
   const cityDefense = getCityDefenseStrength(city);
@@ -682,6 +713,7 @@ export function getAttackableCities(
 
   for (const [id, city] of state.cities) {
     if (city.owner === attacker.owner) continue;
+    if (hasStandingOuterDistricts(city)) continue;
 
     const dist = distance(attacker.position, city.position);
 
@@ -692,6 +724,43 @@ export function getAttackableCities(
     } else {
       if (dist === 1) {
         attackable.push({ cityId: id, position: city.position });
+      }
+    }
+  }
+
+  return attackable;
+}
+
+export function getAttackableDistricts(
+  state: GameState,
+  attackerId: string,
+): ReadonlyArray<{ cityId: string; districtTile: string; position: HexCoord }> {
+  const attacker = state.units.get(attackerId);
+  if (!attacker || attacker.owner !== state.currentPlayerId || attacker.movementLeft <= 0) {
+    return [];
+  }
+
+  const baseRange = getUnitRange(state, attacker.typeId);
+  const attackerRange = baseRange + getPromotionRangeBonus(state, attacker);
+  const isRanged = baseRange > 0;
+  const attackable: Array<{ cityId: string; districtTile: string; position: HexCoord }> = [];
+
+  for (const [cityId, city] of state.cities) {
+    if (city.owner === attacker.owner) continue;
+
+    const districtHPs = getDistrictHPs(city);
+    const cityCenter = getCityCenterDistrictKey(city);
+
+    for (const [districtTile, hp] of districtHPs) {
+      if (hp <= 0) continue;
+      if (districtTile === cityCenter) continue;
+      const [q, r] = districtTile.split(',').map(Number);
+      const position = { q, r };
+      const dist = distance(attacker.position, position);
+      if (isRanged) {
+        if (dist > 0 && dist <= attackerRange) attackable.push({ cityId, districtTile, position });
+      } else if (dist === 1) {
+        attackable.push({ cityId, districtTile, position });
       }
     }
   }

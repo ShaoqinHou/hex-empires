@@ -414,6 +414,81 @@ describe('combatSystem — ATTACK_CITY', () => {
     if (attacker) expect(attacker.position).toEqual({ q: 4, r: 3 });
   });
 
+  it('blocks city center attack while an outer district still has HP', () => {
+    const city = makeCity({
+      defenseHP: 1,
+      districtHPs: new Map([['4,3', 200], ['5,3', 100]]),
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
+
+    const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
+
+    expect(next.lastValidation).toMatchObject({
+      valid: false,
+      reason: 'Must destroy all outer districts before attacking the city center',
+    });
+    expect(next.cities.get('c1')!.owner).toBe('p2');
+    expect(next.cities.get('c1')!.defenseHP).toBe(1);
+    expect(next.units.get('a1')!.movementLeft).toBe(2);
+  });
+
+  it('uses urbanTiles to block city center attack before districtHPs are initialized', () => {
+    const city = makeCity({
+      defenseHP: 1,
+      urbanTiles: new Map([[
+        '5,3',
+        {
+          cityId: 'c1',
+          coord: { q: 5, r: 3 },
+          buildings: ['walls'],
+          specialistCount: 0,
+          specialistCapPerTile: 1,
+          walled: true,
+        },
+      ]]),
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const state = createTestState({ units, cities: new Map([['c1', city]]) });
+
+    const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
+
+    expect(next.lastValidation).toMatchObject({
+      valid: false,
+      reason: 'Must destroy all outer districts before attacking the city center',
+    });
+    expect(next.cities.get('c1')!.owner).toBe('p2');
+  });
+
+  it('allows city center capture after outer district HP is destroyed', () => {
+    const city = makeCity({
+      defenseHP: 1,
+      districtHPs: new Map([['4,3', 200], ['5,3', 0]]),
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
+
+    const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
+
+    expect(next.lastValidation).toBeNull();
+    expect(next.cities.get('c1')!.owner).toBe('p1');
+    expect(next.cities.get('c1')!.defenseHP).toBe(0);
+  });
+
   it('ranged unit cannot capture city even at 0 HP', () => {
     const city = makeCity({ defenseHP: 1, position: { q: 5, r: 3 } });
     const units = new Map([

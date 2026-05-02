@@ -25,9 +25,9 @@
 | Status | Count |
 |---|---|
 | MATCH | 11 |
-| CLOSE | 2 |
+| CLOSE | 3 |
 | DIVERGED | 0 |
-| MISSING | 1 |
+| MISSING | 0 |
 | EXTRA | 0 |
 
 **Total findings:** 14
@@ -132,15 +132,15 @@
 
 ---
 
-### F-09: siege-district-hp-model-missing --- MISSING
+### F-09: siege-district-hp-model-partial --- CLOSE
 
-**Location:** packages/engine/src/systems/combatSystem.ts:340-496
+**Location:** packages/engine/src/state/DistrictSiege.ts:1-34; packages/engine/src/systems/combatSystem.ts:500-837; packages/engine/src/state/CombatPreview.ts:430-709
 **GDD reference:** systems/combat.md section Siege Mechanics
 **Severity:** HIGH  **Effort:** L
-**VII says:** Settlements have multiple district tiles each with independent HP (100 base, 200 with walls). All districts must fall before the City Center tile can be captured. Siege units split damage between district HP and unit inside.
-**Engine does:** Cities have a single defenseHP bar (100 or 200 with walls). No individual district tiles. ATTACK_CITY targets the full city HP pool.
-**Gap:** Multi-district siege model is entirely absent. Engine uses simplified single-HP city model (Civ VI-ish). No DistrictState, no per-district HP, no sequential district destruction, no split-damage Siege ability.
-**Recommendation:** L-effort architectural change. Requires: DistrictState with independent HP, ATTACK_DISTRICT action, capture logic requiring all districts destroyed first. Defer to city/district system redesign milestone.
+**VII says:** Fortified districts have independent HP and must be destroyed/captured before a settlement can fall. The City Center is always a fortified district. Units stationed in fortified districts are protected from damage except siege bombardment. Source refresh 2026-05-03: Firaxis Dev Diary #5 confirms district-by-district siege; Fandom District_(Civ7) documents 100 HP fortified districts, 200 HP walled City Center, per-district capture, and siege-only garrison damage.
+**Engine does:** `CityState.districtHPs` tracks per-district HP. `ATTACK_DISTRICT` targets one district tile, lazily initializes city-center 200 HP plus outer urban tiles at 100 HP, blocks district attacks on the center while outer districts stand, and writes HP back. `ATTACK_CITY`, `calculateCityCombatPreview`, and `getAttackableCities` now block the legacy city-center path while standing outer district HP exists.
+**Gap:** Partial scaffold only. Destroying an outer district does not transfer district ownership/control, occupy/flip a district tile, deprive yields, or drive unrest. Siege damage is not split to a garrisoned unit inside the district. Per-tile wall state, wall age obsolescence/regeneration, naval district capture, UI targeting of non-center districts, and AI use of `ATTACK_DISTRICT` remain missing. Legacy `defenseHP` still exists for city-center/back-compat combat once outer districts are down.
+**Recommendation:** Keep this CLOSE until the district capture/control model lands. Next safe slices: wire UI/AI to choose `ATTACK_DISTRICT`; add garrison protection plus siege split damage; then model district control and settlement capture side effects.
 
 ---
 
@@ -212,7 +212,6 @@ None currently tracked for combat.
 
 ## Missing items (not yet implemented)
 
-- **Multi-district siege model** -- VII requires per-district HP pools and sequential destruction; engine has single city HP bar.
 - **bombardStrength separation** -- GDD defines a separate bombardStrength for siege units vs fortified districts/naval; engine uses single rangedCombat field.
 
 ---
@@ -221,8 +220,8 @@ None currently tracked for combat.
 
 Paste into .codex/gdd/systems/combat.md section Mapping to hex-empires:
 
-Status: 11 MATCH / 2 CLOSE / 0 DIVERGED / 1 MISSING / 0 EXTRA (audit: .codex/gdd/audits/combat.md)
-Highest-severity: F-09 -- Multi-district siege model remains simplified.
+Status: 11 MATCH / 3 CLOSE / 0 DIVERGED / 0 MISSING / 0 EXTRA (audit: .codex/gdd/audits/combat.md)
+Highest-severity: F-09 -- Multi-district siege model remains partial.
 
 ---
 
@@ -241,7 +240,7 @@ Highest-severity: F-09 -- Multi-district siege model remains simplified.
 |---|---|---|
 | S (half-day) | F-10, F-14 content assignment | ~1h |
 | L (week+) | F-09 | ~2w |
-| **Total** | 3 open findings | **~2w+** |
+| **Total** | 3 open findings | **~2w** |
 
 Recommended order: F-14 content assignment (unit data only, after unit source audit) -> F-09 (district siege model).
 

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCombatPreview, calculateCityCombatPreview, getAttackableUnits, getAttackableCities } from '../CombatPreview';
+import {
+  calculateCombatPreview,
+  calculateCityCombatPreview,
+  getAttackableCities,
+  getAttackableDistricts,
+  getAttackableUnits,
+} from '../CombatPreview';
 import { computeCombatDamageFromRoll, computeEffectiveCS } from '../CombatAnalytics';
 import { combatSystem } from '../../systems/combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, setTile } from '../../systems/__tests__/helpers';
@@ -540,6 +546,76 @@ describe('calculateCityCombatPreview', () => {
     expect(preview.canAttack).toBe(true);
     expect(preview.defenderWillDie).toBe(true); // Melee can capture
     expect(preview.target.type).toBe('city');
+  });
+
+  it('blocks city-center preview while outer district HP remains', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const city = makeCity({
+      defenseHP: 5,
+      districtHPs: new Map([['4,3', 200], ['5,3', 100]]),
+    });
+    const state = createTestState({ units, cities: new Map([['c1', city]]) });
+
+    const preview = calculateCityCombatPreview(state, 'a1', 'c1');
+
+    expect(preview.canAttack).toBe(false);
+    expect(preview.reason).toBe('Must destroy all outer districts before attacking the city center');
+    expect(preview.defenderWillDie).toBe(false);
+  });
+
+  it('omits cities with standing outer district HP from attackable city targets', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      cities: new Map([[
+        'c1',
+        makeCity({ districtHPs: new Map([['4,3', 200], ['5,3', 100]]) }),
+      ]]),
+    });
+
+    expect(getAttackableCities(state, 'a1')).toEqual([]);
+  });
+
+  it('lists attackable outer districts before the city center', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 4 }, movementLeft: 2, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      cities: new Map([[
+        'c1',
+        makeCity({ districtHPs: new Map([['4,3', 200], ['4,4', 100]]) }),
+      ]]),
+    });
+
+    expect(getAttackableDistricts(state, 'a1')).toEqual([{
+      cityId: 'c1',
+      districtTile: '4,4',
+      position: { q: 4, r: 4 },
+    }]);
+  });
+
+  it('keeps city-center capture on the attackable city path once outer districts are destroyed', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      cities: new Map([[
+        'c1',
+        makeCity({ districtHPs: new Map([['4,3', 200], ['5,3', 0]]) }),
+      ]]),
+    });
+
+    expect(getAttackableDistricts(state, 'a1')).toEqual([]);
+    expect(getAttackableCities(state, 'a1')).toEqual([{
+      cityId: 'c1',
+      position: { q: 4, r: 3 },
+    }]);
   });
 
   it('ranged attacker cannot capture city even at 0 HP', () => {

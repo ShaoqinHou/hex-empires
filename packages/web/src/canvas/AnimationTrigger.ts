@@ -71,6 +71,9 @@ export function triggerAnimationsForAction(
     case 'ATTACK_CITY':
       triggerCityAttackAnimation(manager, prevState, newState, action);
       break;
+    case 'ATTACK_DISTRICT':
+      triggerDistrictAttackAnimation(manager, prevState, newState, action);
+      break;
     case 'FOUND_CITY':
       triggerCityFoundedAnimation(manager, action);
       break;
@@ -256,6 +259,60 @@ function triggerCityAttackAnimation(
     // City was captured - show special effect
     // This could be expanded with a "city captured" animation
   }
+}
+
+function triggerDistrictAttackAnimation(
+  manager: AnimationManager,
+  prevState: GameState,
+  newState: GameState,
+  action: { type: 'ATTACK_DISTRICT'; attackerId: string; cityId: string; districtTile: string },
+): void {
+  const attacker = newState.units.get(action.attackerId);
+  const city = newState.cities.get(action.cityId);
+  if (!attacker || !city) return;
+
+  const [q, r] = action.districtTile.split(',').map(Number);
+  const position = { q, r };
+  const attackerDef = newState.config.units.get(attacker.typeId);
+  const isRanged = (attackerDef?.rangedCombat ?? 0) > 0;
+
+  if (isRanged) {
+    manager.add(manager.createRangedAttackAnimation(
+      action.attackerId,
+      attacker.typeId,
+      attacker.owner,
+      action.districtTile,
+      'district',
+      city.owner,
+      attacker.position,
+      position,
+      '#ff5722',
+      300,
+    ));
+  } else {
+    manager.add(manager.createMeleeAttackAnimation(
+      action.attackerId,
+      attacker.typeId,
+      attacker.owner,
+      action.districtTile,
+      'district',
+      city.owner,
+      attacker.position,
+      position,
+      200,
+    ));
+  }
+
+  const prevHP = prevState.cities.get(action.cityId)?.districtHPs?.get(action.districtTile);
+  const nextHP = city.districtHPs?.get(action.districtTile);
+  const dealt = prevHP !== undefined && nextHP !== undefined ? Math.max(0, prevHP - nextHP) : 0;
+
+  setTimeout(() => {
+    manager.add(manager.createDamageFlashAnimation(action.districtTile, position, true, 150));
+    if (dealt > 0) {
+      manager.add(manager.createFloatingDamageAnimation(action.districtTile, position, dealt));
+    }
+  }, isRanged ? 200 : 100);
 }
 
 /**

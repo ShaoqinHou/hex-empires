@@ -19,7 +19,7 @@
 | celebrations | `.codex/gdd/audits/celebrations.md` | 13 | 1M / 3C / 4D / 5X / 0E |
 | civic-tree | `.codex/gdd/audits/civic-tree.md` | 13 | 6M / 7C / 0D / 0X / 0E |
 | civilizations | `.codex/gdd/audits/civilizations.md` | 10 | 3M / 2C / 2D / 2X / 1E |
-| combat | `.codex/gdd/audits/combat.md` | 14 | 11M / 2C / 0D / 1X / 0E |
+| combat | `.codex/gdd/audits/combat.md` | 14 | 11M / 3C / 0D / 0X / 0E |
 | commanders | `.codex/gdd/audits/commanders.md` | 10 | 3M / 3C / 1D / 1X / 2E |
 | crises | `.codex/gdd/audits/crises.md` | 10 | 0M / 0C / 4D / 5X / 1E |
 | diplomacy-influence | `.codex/gdd/audits/diplomacy-influence.md` | 13 | 1M / 4C / 2D / 5X / 1E |
@@ -78,7 +78,7 @@
 | combat | F-01 | fortify-bonus-comment-wrong - | ✓ MATCH | UNK | packages/engine/src/systems/fortifySystem.ts:1-6 |
 | combat | F-02 | flanking-directional-vs-unit-count - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:55-104; packages/engine/src/systems |
 | combat | F-03 | health-penalty-formula-diverged - | ✓ MATCH | UNK | packages/engine/src/state/CombatAnalytics.ts:4-27; packages/engine/src/systems/c |
-| combat | F-09 | siege-district-hp-model-missing - | ⊘ MISSING | UNK | packages/engine/src/systems/combatSystem.ts:340-496 |
+| combat | F-09 | siege-district-hp-model-partial - | ≈ CLOSE | UNK | packages/engine/src/state/DistrictSiege.ts:1-34; packages/engine/src/systems/com |
 | combat | F-13 | combat-preview-formula-divergence - | ✓ MATCH | UNK | packages/engine/src/state/CombatPreview.ts:705-743; packages/engine/src/systems/ |
 | commanders | F-01 | `pack-unpack-system-present-with-duplicate-paths` | ≈ CLOSE | L | `packages/engine/src/systems/commanderArmySystem.ts`; `packages/engine/src/types |
 | commanders | F-02 | `commander-state-wired-in-gamestate` | ✓ MATCH | M | `packages/engine/src/types/Commander.ts:163-172`, `packages/engine/src/types/Gam |
@@ -351,9 +351,9 @@
 | Status | Count |
 |---|---|
 | MATCH | 95 |
-| CLOSE | 76 |
+| CLOSE | 77 |
 | DIVERGED | 43 |
-| MISSING | 61 |
+| MISSING | 60 |
 | EXTRA | 11 |
 | **Total findings** | **286** |
 

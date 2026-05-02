@@ -9,7 +9,7 @@ import { createUnitMoveAnimationPlan } from './AnimationTrigger';
 import { animationEventBus } from '../hooks/AnimationEventBus';
 import { RANGED_PROJECTILE_COLOR } from './canvasTokens';
 import type { HexCoord, CityState } from '@hex/engine';
-import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getTileContents, getSelectionCycle, listValidTilesForBuilding } from '@hex/engine';
+import { coordToKey, findPath, getMovementCost, getAttackableUnits, calculateCombatPreview, calculateCityCombatPreview, getAttackableCities, getAttackableDistricts, getTileContents, getSelectionCycle, listValidTilesForBuilding } from '@hex/engine';
 
 interface GameCanvasProps {
   onCityClick?: (city: CityState) => void;
@@ -117,7 +117,7 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
     } else if (enemyCityId) {
       // Use city combat preview
       const preview = calculateCityCombatPreview(state, selectedUnit.id, enemyCityId);
-      if (preview.canAttack) {
+      if (preview.canAttack || preview.reason === 'Must destroy all outer districts before attacking the city center') {
         setCombatPreview(preview);
         setCombatPreviewPosition(null); // Position will be set by mouse move
       } else {
@@ -312,6 +312,25 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
               const dealt = Math.max(0, prevCity.defenseHP - city.defenseHP);
               if (dealt > 0) {
                 am.add(am.createFloatingDamageAnimation(action.cityId, city.position, dealt));
+              }
+            }
+          }
+          break;
+        }
+
+        case 'ATTACK_DISTRICT': {
+          const city = nextState.cities.get(action.cityId);
+          const prevCity = prevState.cities.get(action.cityId);
+          const [q, r] = action.districtTile.split(',').map(Number);
+          const position = { q, r };
+          am.add(am.createDamageFlashAnimation(action.districtTile, position, true, 300));
+          if (prevCity && city) {
+            const prevHP = prevCity.districtHPs?.get(action.districtTile);
+            const nextHP = city.districtHPs?.get(action.districtTile);
+            if (prevHP !== undefined && nextHP !== undefined) {
+              const dealt = Math.max(0, prevHP - nextHP);
+              if (dealt > 0) {
+                am.add(am.createFloatingDamageAnimation(action.districtTile, position, dealt));
               }
             }
           }
@@ -618,7 +637,20 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
       }
     }
 
-    // 2. Attack enemy city in range
+    // 2. Attack enemy fortified district in range
+    const attackableDistricts = getAttackableDistricts(state, selectedUnit.id);
+    const targetDistrict = attackableDistricts.find(d => coordToKey(d.position) === key);
+    if (targetDistrict) {
+      dispatch({
+        type: 'ATTACK_DISTRICT',
+        attackerId: selectedUnit.id,
+        cityId: targetDistrict.cityId,
+        districtTile: targetDistrict.districtTile,
+      });
+      return;
+    }
+
+    // 3. Attack enemy city in range
     if (contents.city && contents.city.owner !== state.currentPlayerId) {
       const attackableCities = getAttackableCities(state, selectedUnit.id);
       if (attackableCities.some(a => a.cityId === contents.city!.id)) {

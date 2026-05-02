@@ -239,4 +239,124 @@ test.describe('Selection System: Unified TileContents', () => {
       expect(stateAfter!.units[i].position).toEqual(stateBefore!.units[i].position);
     }
   });
+
+  test('district siege: right-clicking an outer district dispatches ATTACK_DISTRICT', async ({ page }) => {
+    await startGame(page);
+
+    const setup = await page.evaluate(() => {
+      const s = (window as any).__gameState;
+      const currentPlayerId = s.currentPlayerId;
+      const attacker = [...s.units.values()].find((u: any) => u.owner === currentPlayerId && u.typeId === 'warrior') as any;
+      if (!attacker) return null;
+
+      const dirs = [
+        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+      ];
+
+      const isUsable = (coord: { q: number; r: number }) => {
+        const tile = s.map.tiles.get(`${coord.q},${coord.r}`);
+        if (!tile || tile.terrain === 'ocean' || tile.terrain === 'coast' || tile.terrain === 'reef') return false;
+        return ![...s.units.values()].some((u: any) => u.id !== attacker.id && u.position.q === coord.q && u.position.r === coord.r)
+          && ![...s.cities.values()].some((c: any) => c.position.q === coord.q && c.position.r === coord.r);
+      };
+
+      let district = null as { q: number; r: number } | null;
+      let center = null as { q: number; r: number } | null;
+      for (const d1 of dirs) {
+        const candidateDistrict = { q: attacker.position.q + d1.q, r: attacker.position.r + d1.r };
+        if (!isUsable(candidateDistrict)) continue;
+        for (const d2 of dirs) {
+          const candidateCenter = { q: candidateDistrict.q + d2.q, r: candidateDistrict.r + d2.r };
+          if (candidateCenter.q === attacker.position.q && candidateCenter.r === attacker.position.r) continue;
+          if (isUsable(candidateCenter)) {
+            district = candidateDistrict;
+            center = candidateCenter;
+            break;
+          }
+        }
+        if (district && center) break;
+      }
+      if (!district || !center) return null;
+
+      const defenderId = [...s.players.keys()].find((id: string) => id !== currentPlayerId) ?? 'e2e_defender';
+      if (!s.players.has(defenderId)) {
+        const player = s.players.get(currentPlayerId);
+        s.players.set(defenderId, { ...player, id: defenderId });
+      }
+
+      attacker.position = { ...attacker.position };
+      attacker.movementLeft = 2;
+      attacker.health = 100;
+
+      const cityId = 'e2e_siege_city';
+      const districtTile = `${district.q},${district.r}`;
+      const centerTile = `${center.q},${center.r}`;
+      s.cities.set(cityId, {
+        id: cityId,
+        name: 'Siege Test',
+        owner: defenderId,
+        position: center,
+        population: 3,
+        food: 0,
+        productionQueue: [],
+        productionProgress: 0,
+        buildings: [],
+        territory: [centerTile, districtTile],
+        settlementType: 'city',
+        happiness: 10,
+        isCapital: false,
+        defenseHP: 100,
+        specialization: null,
+        specialists: 0,
+        districts: [],
+        urbanTiles: new Map([[districtTile, {
+          cityId,
+          coord: district,
+          buildings: ['walls'],
+          specialistCount: 0,
+          specialistCapPerTile: 1,
+          walled: true,
+        }]]),
+        districtHPs: new Map([[centerTile, 200], [districtTile, 100]]),
+      });
+
+      return {
+        attackerId: attacker.id,
+        attackerPosition: attacker.position,
+        cityId,
+        defenderId,
+        district,
+        districtTile,
+      };
+    });
+    expect(setup).toBeTruthy();
+
+    const attackerScreen = await hexToScreen(page, setup!.attackerPosition.q, setup!.attackerPosition.r);
+    await page.mouse.click(attackerScreen!.x, attackerScreen!.y, { button: 'left' });
+    await page.waitForTimeout(150);
+
+    const districtScreen = await hexToScreen(page, setup!.district.q, setup!.district.r);
+    await page.mouse.click(districtScreen!.x, districtScreen!.y, { button: 'right' });
+    await page.waitForTimeout(400);
+
+    const result = await page.evaluate(({ cityId, districtTile, attackerId }) => {
+      const s = (window as any).__gameState;
+      const city = s.cities.get(cityId);
+      const attacker = s.units.get(attackerId);
+      return {
+        districtHP: city?.districtHPs?.get(districtTile),
+        cityOwner: city?.owner,
+        cityDefenseHP: city?.defenseHP,
+        attackerMovementLeft: attacker?.movementLeft,
+        validation: s.lastValidation,
+      };
+    }, setup!);
+
+    expect(result.validation).toBeNull();
+    expect(result.districtHP).toBeLessThan(100);
+    expect(result.cityOwner).toBe(setup!.defenderId);
+    expect(result.cityDefenseHP).toBe(100);
+    expect(result.attackerMovementLeft).toBe(0);
+  });
 });

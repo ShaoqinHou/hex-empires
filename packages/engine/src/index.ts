@@ -107,8 +107,17 @@ export {
   calculateCityCombatPreview,
   getAttackableUnits,
   getAttackableCities,
+  getAttackableDistricts,
 } from './state/CombatPreview';
 export type { CombatPreview, CombatOdds, CombatModifiers, CombatTarget, AttackableTarget } from './state/CombatPreview';
+export {
+  CITY_CENTER_DISTRICT_HP,
+  URBAN_DISTRICT_HP,
+  buildInitialDistrictHPs,
+  getCityCenterDistrictKey,
+  getDistrictHPs,
+  hasStandingOuterDistricts,
+} from './state/DistrictSiege';
 export { getTileContents, getSelectionCycle, hasStackedEntities } from './state/TileContents';
 export type { TileContents } from './state/TileContents';
 export {

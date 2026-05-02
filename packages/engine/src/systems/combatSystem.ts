@@ -13,6 +13,11 @@ import {
 } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
 import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
+import {
+  buildInitialDistrictHPs,
+  getCityCenterDistrictKey,
+  hasStandingOuterDistricts,
+} from '../state/DistrictSiege';
 import type { ActiveTreaty } from '../types/Treaty';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
@@ -522,6 +527,10 @@ function handleAttackCity(
     if (dist > attackerRange || dist === 0) return createInvalidResult(state, 'Target out of attack range', 'combat');
   }
 
+  if (hasStandingOuterDistricts(city)) {
+    return createInvalidResult(state, 'Must destroy all outer districts before attacking the city center', 'combat');
+  }
+
   const isMelee = baseRange === 0;
   const cityDefense = getCityDefenseStrength(city);
 
@@ -712,7 +721,7 @@ function handleAttackDistrict(
   }
 
   // City center cannot be attacked while non-center districts still stand
-  const cityCenter = coordToKey(city.position);
+  const cityCenter = getCityCenterDistrictKey(city);
   if (action.districtTile === cityCenter) {
     const hasStandingNonCenter = [...districtHPs.entries()].some(
       ([key, hp]) => key !== cityCenter && hp > 0,
@@ -817,27 +826,6 @@ function handleAttackDistrict(
     rng: rng2,
     lastValidation: null,
   };
-}
-
-/**
- * Build the initial districtHPs map for a city that has not yet been attacked.
- * City center (city.position key) = 200 HP; each urban district tile = 100 HP.
- * Falls back to just the city center when no urbanTiles are present.
- */
-function buildInitialDistrictHPs(city: CityState): Map<string, number> {
-  const hps = new Map<string, number>();
-  const centerKey = coordToKey(city.position);
-  hps.set(centerKey, 200);
-
-  if (city.urbanTiles) {
-    for (const [tileKey] of city.urbanTiles) {
-      if (tileKey !== centerKey) {
-        hps.set(tileKey, 100);
-      }
-    }
-  }
-
-  return hps;
 }
 
 /**
