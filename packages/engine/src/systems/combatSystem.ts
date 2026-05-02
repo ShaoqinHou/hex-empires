@@ -6,6 +6,7 @@ import { nextRandom } from '../state/SeededRng';
 import { getCombatBonus, getWarSupportBonus } from '../state/EffectUtils';
 import { computeEffectiveCS } from '../state/CombatAnalytics';
 import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
+import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 import type { ActiveTreaty } from '../types/Treaty';
 import { getRelationKey, defaultRelation } from '../state/DiplomacyUtils';
 
@@ -229,7 +230,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     }
   }
 
-  return {
+  const nextState: GameState = {
     ...state,
     units: updatedUnits,
     players: updatedPlayers,
@@ -237,6 +238,15 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
     rng: currentRng,
     lastValidation: null,
   };
+
+  if (newDefenderHealth <= 0 && newAttackerHealth > 0) {
+    return enqueueFirstEligibleNarrativeEvent(nextState, 'BATTLE_WON', {
+      playerId: attacker.owner,
+      messagePrefix: 'Battle',
+    });
+  }
+
+  return nextState;
 }
 
 /**

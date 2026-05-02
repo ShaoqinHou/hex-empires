@@ -2,6 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { combatSystem } from '../combatSystem';
 import { createTestState, createTestUnit, createTestPlayer, createTestCity, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
+import type { NarrativeEventDef } from '../../types/NarrativeEvent';
+
+const BATTLE_WON_EVENT: NarrativeEventDef = {
+  id: 'battle_won_test',
+  title: 'Battle Won',
+  vignette: 'A hard-fought victory echoes through the camp.',
+  category: 'battle',
+  requirements: { triggerType: 'BATTLE_WON' },
+  choices: [{ label: 'Honor the troops', effects: [] }],
+};
 
 function simulateDamageToDefender(state: ReturnType<typeof createTestState>): number {
   const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
@@ -109,6 +119,56 @@ describe('combatSystem', () => {
     const state = createTestState({ units, players });
     const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
     expect(next.units.has('d1')).toBe(false);
+  });
+
+  it('queues a BATTLE_WON narrative event when the attacker destroys a unit and survives', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 1 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const base = createTestState({ units, players, currentPlayerId: 'p1' });
+    const state = {
+      ...base,
+      config: {
+        ...base.config,
+        narrativeEvents: new Map([[BATTLE_WON_EVENT.id, BATTLE_WON_EVENT]]),
+      },
+    };
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(next.units.has('d1')).toBe(false);
+    expect(next.pendingNarrativeEvents).toContain(BATTLE_WON_EVENT.id);
+    expect(next.firedNarrativeEvents).toContain(BATTLE_WON_EVENT.id);
+  });
+
+  it('does not queue a BATTLE_WON narrative event when the defender survives', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const base = createTestState({ units, players, currentPlayerId: 'p1' });
+    const state = {
+      ...base,
+      config: {
+        ...base.config,
+        narrativeEvents: new Map([[BATTLE_WON_EVENT.id, BATTLE_WON_EVENT]]),
+      },
+    };
+
+    const next = combatSystem(state, { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(next.units.has('d1')).toBe(true);
+    expect(next.pendingNarrativeEvents ?? []).not.toContain(BATTLE_WON_EVENT.id);
+    expect(next.firedNarrativeEvents ?? []).not.toContain(BATTLE_WON_EVENT.id);
   });
 
   it('melee attacker moves into defeated defender position', () => {
