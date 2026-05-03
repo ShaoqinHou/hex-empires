@@ -12,7 +12,7 @@ import {
   computeEffectiveCS,
   hexDirectionIndex,
 } from '../state/CombatAnalytics';
-import { getCommanderAuraCombatBonus } from '../state/CommanderAura';
+import { getCommanderAuraCombatBonus, getCommanderAuraHealAfterAttackAmount } from '../state/CommanderAura';
 import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 import {
   buildInitialDistrictHPs,
@@ -149,7 +149,7 @@ export function combatSystem(state: GameState, action: GameAction): GameState {
   } else {
     updatedUnits.set(attacker.id, {
       ...attacker,
-      health: newAttackerHealth,
+      health: applyAfterAttackHealing(state, attacker, newAttackerHealth),
       movementLeft: 0, // attacking ends movement
       experience: attacker.experience + 5,
     });
@@ -434,6 +434,15 @@ function getUnitRange(state: GameState, typeId: string): number {
   return state.config.units.get(typeId)?.range ?? 0;
 }
 
+function applyAfterAttackHealing(
+  state: GameState,
+  preAttackAttacker: UnitState,
+  postCombatHealth: number,
+): number {
+  const amount = getCommanderAuraHealAfterAttackAmount(state, preAttackAttacker);
+  return amount > 0 ? Math.min(100, postCombatHealth + amount) : postCombatHealth;
+}
+
 /** Terrain defense bonus from state.config.terrains and state.config.features — driven by data */
 function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: number; flat: number } {
   let percent = 0;
@@ -651,7 +660,7 @@ function handleAttackCity(
   } else {
     updatedUnits.set(attacker.id, {
       ...attacker,
-      health: newAttackerHealth,
+      health: applyAfterAttackHealing(state, attacker, newAttackerHealth),
       movementLeft: 0, // attacking ends movement
       experience: attacker.experience + 5,
     });
@@ -856,7 +865,7 @@ function handleAttackDistrict(
   } else {
     updatedUnits.set(attacker.id, {
       ...attacker,
-      health: newAttackerHealth,
+      health: applyAfterAttackHealing(state, attacker, newAttackerHealth),
       movementLeft: 0,
       experience: attacker.experience + 5,
     });

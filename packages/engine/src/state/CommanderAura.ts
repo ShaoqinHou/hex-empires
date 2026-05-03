@@ -138,3 +138,29 @@ export function hasCommanderGrantedAbility(
 
   return false;
 }
+
+export function getCommanderAuraHealAfterAttackAmount(
+  state: GameState,
+  unit: AuraTargetUnit,
+): number {
+  if (!state.commanders) return 0;
+
+  let amount = 0;
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.owner !== unit.owner) continue;
+
+    const promotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_HEAL_AFTER_ATTACK') continue;
+      if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
+      if (distance(commanderUnit.position, unit.position) <= promotion.aura.radius) {
+        amount = Math.max(amount, promotion.aura.amount);
+      }
+    }
+  }
+
+  return amount;
+}

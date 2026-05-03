@@ -407,6 +407,71 @@ describe('calculateCombatPreview', () => {
     expect(preview.modifiers.firstStrikeBonus).toBe(true);
   });
 
+  it('includes Bastion Resolute healing in expected attacker HP', () => {
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],
+      ['p2', createTestPlayer({ id: 'p2', leaderId: 'cleopatra' })],
+    ]);
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: [],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 80 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+
+    const basePreview = calculateCombatPreview(createTestState({
+      units,
+      players,
+      commanders: new Map([['cmd1', commander]]),
+      currentPlayerId: 'p1',
+    }), 'a1', 'd1');
+    const resolutePreview = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      commanders: new Map([['cmd1', { ...commander, promotions: ['bastion_resolute'] }]]),
+      currentPlayerId: 'p1',
+    }), 'a1', 'd1');
+
+    expect(basePreview.canAttack).toBe(true);
+    expect(resolutePreview.canAttack).toBe(true);
+    expect(resolutePreview.odds.expectedAttackerHP).toBe(basePreview.odds.expectedAttackerHP + 5);
+  });
+
+  it('caps Bastion Resolute preview healing at 100 expected attacker HP', () => {
+    const commander: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['bastion_resolute'],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'archer', position: { q: 3, r: 3 }, movementLeft: 2, health: 98 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 5, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'captain', position: { q: 3, r: 4 }, health: 100 })],
+    ]);
+    const preview = calculateCombatPreview(createTestState({
+      units,
+      commanders: new Map([['cmd1', commander]]),
+      currentPlayerId: 'p1',
+    }), 'a1', 'd1');
+
+    expect(preview.canAttack).toBe(true);
+    expect(preview.odds.expectedAttackerHP).toBe(100);
+  });
+
   it('includes Assault Rout in attacker preview strength but not defender strength', () => {
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],

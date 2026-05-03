@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resourceSystem, nextCelebrationThreshold, calculateCityHappiness, calculateSettlementCapPenalty, calculateEffectiveSettlementCap } from '../resourceSystem';
 import { createTestState, createTestPlayer, createTestUnit } from './helpers';
+import type { CommanderState } from '../../types/Commander';
 import type { CityState, HexTile } from '../../types/GameState';
 import { coordToKey } from '../../hex/HexMath';
 
@@ -11,6 +12,20 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     buildings: [], territory: [coordToKey({ q: 3, r: 3 }), coordToKey({ q: 4, r: 3 })],
     settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
     specialization: null, specialists: 0, districts: [],
+    ...overrides,
+  };
+}
+
+function makeCommanderState(overrides: Partial<CommanderState> = {}): CommanderState {
+  return {
+    unitId: 'cmd',
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions: [],
+    tree: null,
+    attachedUnits: [],
+    packed: true,
     ...overrides,
   };
 }
@@ -74,6 +89,117 @@ describe('resourceSystem', () => {
     const nextNoUnits = resourceSystem(stateNoUnits, { type: 'END_TURN' });
     // Settler has no maintenance, so gold should be equal
     expect(next.players.get('p1')!.gold).toBe(nextNoUnits.players.get('p1')!.gold);
+  });
+
+  it('adds +1 gold per packed unit when quartermaster promotion is present (2 packed snapshots => +2)', () => {
+    const stateWithQuartermaster: ReturnType<typeof createTestState> = createTestState({
+      units: new Map([
+        ['cmd1', createTestUnit({ id: 'cmd1', typeId: 'captain' })],
+        ['a1', createTestUnit({ id: 'a1', typeId: 'warrior' })],
+        ['a2', createTestUnit({ id: 'a2', typeId: 'warrior' })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState({
+          unitId: 'cmd1',
+          promotions: ['logistics_quartermaster'],
+          packedUnitStates: [
+            createTestUnit({ id: 'a1', typeId: 'warrior' }),
+            createTestUnit({ id: 'a2', typeId: 'warrior' }),
+          ],
+        })],
+      ]),
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+    const stateWithoutQuartermaster: ReturnType<typeof createTestState> = createTestState({
+      units: new Map([
+        ['cmd1', createTestUnit({ id: 'cmd1', typeId: 'captain' })],
+        ['a1', createTestUnit({ id: 'a1', typeId: 'warrior' })],
+        ['a2', createTestUnit({ id: 'a2', typeId: 'warrior' })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState({
+          unitId: 'cmd1',
+          packedUnitStates: [
+            createTestUnit({ id: 'a1', typeId: 'warrior' }),
+            createTestUnit({ id: 'a2', typeId: 'warrior' }),
+          ],
+        })],
+      ]),
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+
+    const nextWithQuartermaster = resourceSystem(stateWithQuartermaster, { type: 'END_TURN' });
+    const nextWithoutQuartermaster = resourceSystem(stateWithoutQuartermaster, { type: 'END_TURN' });
+    expect(nextWithQuartermaster.players.get('p1')!.gold - nextWithoutQuartermaster.players.get('p1')!.gold).toBe(2);
+  });
+
+  it('does not grant quartermaster gold when commander is not packed', () => {
+    const state = createTestState({
+      units: new Map([
+        ['cmd1', createTestUnit({ id: 'cmd1', typeId: 'captain' })],
+        ['a1', createTestUnit({ id: 'a1', typeId: 'warrior' })],
+        ['a2', createTestUnit({ id: 'a2', typeId: 'warrior' })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState({
+          unitId: 'cmd1',
+          packed: false,
+          promotions: ['logistics_quartermaster'],
+          packedUnitStates: [
+            createTestUnit({ id: 'a1', typeId: 'warrior' }),
+            createTestUnit({ id: 'a2', typeId: 'warrior' }),
+          ],
+        })],
+      ]),
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.gold).toBe(100);
+  });
+
+  it('uses attachedUnits when packedUnitStates is missing (legacy packed state)', () => {
+    const state = createTestState({
+      units: new Map([
+        ['cmd1', createTestUnit({ id: 'cmd1', typeId: 'captain' })],
+        ['a1', createTestUnit({ id: 'a1', typeId: 'warrior', packedInCommanderId: 'cmd1' })],
+        ['a2', createTestUnit({ id: 'a2', typeId: 'warrior', packedInCommanderId: 'cmd1' })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState({
+          unitId: 'cmd1',
+          promotions: ['logistics_quartermaster'],
+          attachedUnits: ['a1', 'a2'],
+        })],
+      ]),
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.gold).toBe(102);
+  });
+
+  it('counts quartermaster promotion when stored only on commander unit promotions', () => {
+    const state = createTestState({
+      units: new Map([
+        ['cmd1', createTestUnit({ id: 'cmd1', typeId: 'captain', promotions: ['logistics_quartermaster'] })],
+        ['a1', createTestUnit({ id: 'a1', typeId: 'warrior' })],
+        ['a2', createTestUnit({ id: 'a2', typeId: 'warrior' })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState({
+          unitId: 'cmd1',
+          promotions: [],
+          packedUnitStates: [
+            createTestUnit({ id: 'a1', typeId: 'warrior' }),
+            createTestUnit({ id: 'a2', typeId: 'warrior' }),
+          ],
+        })],
+      ]),
+      players: new Map([['p1', createTestPlayer({ gold: 100 })]]),
+    });
+
+    const next = resourceSystem(state, { type: 'END_TURN' });
+    expect(next.players.get('p1')!.gold).toBe(102);
   });
 
   it('ignores non-END_TURN actions', () => {

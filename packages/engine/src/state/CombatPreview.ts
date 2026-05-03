@@ -13,7 +13,7 @@ import {
   hexDirectionIndex,
 } from './CombatAnalytics';
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
-import { getCommanderAuraCombatBonus } from './CommanderAura';
+import { getCommanderAuraCombatBonus, getCommanderAuraHealAfterAttackAmount } from './CommanderAura';
 import {
   getCityCenterDistrictKey,
   getDistrictHPs,
@@ -278,6 +278,7 @@ export function calculateCombatPreview(
   const defenderDamageMin = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
   const defenderDamageMax = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const defenderDamageExpected = isRanged ? 0 : Math.round((defenderDamageMin + defenderDamageMax) / 2);
+  const afterAttackHeal = getCommanderAuraHealAfterAttackAmount(state, attacker);
 
   // Check if units will die
   const defenderWillDie = attackerDamageMin >= defender.health;
@@ -291,6 +292,7 @@ export function calculateCombatPreview(
     attackerDamageMax,
     defenderDamageMin,
     defenderDamageMax,
+    afterAttackHeal,
     state.rng,
   );
 
@@ -349,6 +351,7 @@ function calculateCombatOdds(
   attackerDmgMax: number,
   defenderDmgMin: number,
   defenderDmgMax: number,
+  afterAttackHeal: number,
   rng: RngState,
 ): CombatOdds {
   const SAMPLES = 100;
@@ -368,7 +371,10 @@ function calculateCombatOdds(
     const defenderDmg = defenderDmgMin + r2 * (defenderDmgMax - defenderDmgMin);
 
     const newDefenderHP = Math.max(0, defenderHP - attackerDmg);
-    const newAttackerHP = Math.max(0, attackerHP - defenderDmg);
+    const damagedAttackerHP = Math.max(0, attackerHP - defenderDmg);
+    const newAttackerHP = damagedAttackerHP > 0
+      ? applyAfterAttackHealing(damagedAttackerHP, afterAttackHeal)
+      : 0;
 
     totalDefenderHP += newDefenderHP;
     totalAttackerHP += newAttackerHP;
@@ -638,6 +644,7 @@ export function calculateCityCombatPreview(
   const defenderDamageMin = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MIN);
   const defenderDamageMax = isRanged ? 0 : computeCombatDamage(-strengthDiff, COMBAT_DAMAGE_RANDOM_MAX);
   const defenderDamageExpected = isRanged ? 0 : Math.round((defenderDamageMin + defenderDamageMax) / 2);
+  const afterAttackHeal = getCommanderAuraHealAfterAttackAmount(state, attacker);
 
   const maxCityHP = city.buildings.includes('walls') ? 200 : 100;
   const defenderWillDie = !isRanged && attackerDamageMin >= city.defenseHP; // Only melee can capture
@@ -645,13 +652,16 @@ export function calculateCityCombatPreview(
 
   // For cities, "win" means capturing the city (melee only)
   const attackerWinPercent = isRanged ? 0 : Math.min(100, Math.round((attackerDamageExpected / city.defenseHP) * 100));
+  const expectedPostCombatAttackerHP = Math.max(0, attacker.health - defenderDamageExpected);
 
   const odds: CombatOdds = {
     attackerWinPercent,
     drawPercent: isRanged ? 100 : 100 - attackerWinPercent,
     defenderWinPercent: 0,
     expectedDefenderHP: Math.max(0, city.defenseHP - attackerDamageExpected),
-    expectedAttackerHP: Math.max(0, attacker.health - defenderDamageExpected),
+    expectedAttackerHP: expectedPostCombatAttackerHP > 0
+      ? applyAfterAttackHealing(expectedPostCombatAttackerHP, afterAttackHeal)
+      : 0,
   };
 
   const riverPenalty = Boolean(attackerTile && attackerTile.river.length > 0);
@@ -862,6 +872,10 @@ function getBaseCombatStrength(state: GameState, typeId: string, isRangedAttack:
 
 function getUnitRange(state: GameState, typeId: string): number {
   return state.config.units.get(typeId)?.range ?? 0;
+}
+
+function applyAfterAttackHealing(postCombatHealth: number, amount: number): number {
+  return amount > 0 ? Math.min(100, postCombatHealth + amount) : postCombatHealth;
 }
 
 function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: number; flat: number } {

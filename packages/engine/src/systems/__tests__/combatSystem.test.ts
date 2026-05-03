@@ -1742,6 +1742,175 @@ describe('combatSystem — commander aura', () => {
   });
 });
 
+describe('combatSystem — Bastion Resolute', () => {
+  const players = new Map([
+    ['p1', createTestPlayer({ id: 'p1' })],
+    ['p2', createTestPlayer({ id: 'p2' })],
+  ]);
+
+  function commander(promotions: ReadonlyArray<string>): CommanderState {
+    return {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions,
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+  }
+
+  function makeAttackUnitState(options: {
+    readonly attackerTypeId?: string;
+    readonly attackerHealth?: number;
+    readonly commanderOwner?: string;
+    readonly commanderPosition?: { q: number; r: number };
+    readonly promotions?: ReadonlyArray<string>;
+    readonly commanderUnitPromotions?: ReadonlyArray<string>;
+  } = {}) {
+    const commanderOwner = options.commanderOwner ?? 'p1';
+    const units = new Map([
+      ['a1', createTestUnit({
+        id: 'a1',
+        owner: 'p1',
+        typeId: options.attackerTypeId ?? 'warrior',
+        position: { q: 3, r: 3 },
+        movementLeft: 2,
+        health: options.attackerHealth ?? 80,
+      })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100 })],
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: commanderOwner,
+        typeId: 'captain',
+        position: options.commanderPosition ?? { q: 3, r: 4 },
+        health: 100,
+        promotions: [...(options.commanderUnitPromotions ?? [])],
+      })],
+    ]);
+
+    return createTestState({
+      units,
+      players: new Map(players),
+      commanders: new Map([['cmd1', commander(options.promotions ?? [])]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+  }
+
+  it('heals a matching land attacker by 5 after ATTACK_UNIT', () => {
+    const base = combatSystem(makeAttackUnitState(), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const healed = combatSystem(makeAttackUnitState({ promotions: ['bastion_resolute'] }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(healed.units.get('a1')!.health).toBe(base.units.get('a1')!.health + 5);
+    expect(healed.units.get('a1')!.movementLeft).toBe(0);
+  });
+
+  it('heals when Resolute is stored only on the commander unit legacy promotions', () => {
+    const base = combatSystem(makeAttackUnitState(), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const healed = combatSystem(makeAttackUnitState({
+      commanderUnitPromotions: ['bastion_resolute'],
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(healed.units.get('a1')!.health).toBe(base.units.get('a1')!.health + 5);
+  });
+
+  it('caps Resolute healing at 100', () => {
+    const healed = combatSystem(makeAttackUnitState({
+      attackerTypeId: 'archer',
+      attackerHealth: 98,
+      promotions: ['bastion_resolute'],
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(healed.units.get('a1')!.health).toBe(100);
+  });
+
+  it('does not heal outside command radius', () => {
+    const base = combatSystem(makeAttackUnitState({
+      commanderPosition: { q: 0, r: 3 },
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const promoted = combatSystem(makeAttackUnitState({
+      commanderPosition: { q: 0, r: 3 },
+      promotions: ['bastion_resolute'],
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(promoted.units.get('a1')!.health).toBe(base.units.get('a1')!.health);
+  });
+
+  it('does not heal for wrong owner or non-matching category', () => {
+    const wrongOwnerBase = combatSystem(makeAttackUnitState({
+      commanderOwner: 'p2',
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const wrongOwnerPromoted = combatSystem(makeAttackUnitState({
+      commanderOwner: 'p2',
+      promotions: ['bastion_resolute'],
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(wrongOwnerPromoted.units.get('a1')!.health).toBe(wrongOwnerBase.units.get('a1')!.health);
+
+    const navalBase = combatSystem(makeAttackUnitState({
+      attackerTypeId: 'galley',
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+    const navalPromoted = combatSystem(makeAttackUnitState({
+      attackerTypeId: 'galley',
+      promotions: ['bastion_resolute'],
+    }), { type: 'ATTACK_UNIT', attackerId: 'a1', targetId: 'd1' });
+
+    expect(navalPromoted.units.get('a1')!.health).toBe(navalBase.units.get('a1')!.health);
+  });
+
+  it('heals matching land attackers after ATTACK_CITY', () => {
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: { q: 4, r: 3 },
+      territory: ['4,3'],
+      isCapital: false,
+      defenseHP: 100,
+    });
+    const action = { type: 'ATTACK_CITY' as const, attackerId: 'a1', cityId: 'c1' };
+    const base = combatSystem({
+      ...makeAttackUnitState(),
+      cities: new Map([['c1', city]]),
+    }, action);
+    const healed = combatSystem({
+      ...makeAttackUnitState({ promotions: ['bastion_resolute'] }),
+      cities: new Map([['c1', city]]),
+    }, action);
+
+    expect(healed.units.get('a1')!.health).toBe(base.units.get('a1')!.health + 5);
+  });
+
+  it('heals matching land attackers after ATTACK_DISTRICT', () => {
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: { q: 5, r: 3 },
+      territory: ['5,3', '4,3'],
+      isCapital: false,
+      defenseHP: 100,
+      districtHPs: new Map([['5,3', 200], ['4,3', 100]]),
+    });
+    const action = {
+      type: 'ATTACK_DISTRICT' as const,
+      attackerId: 'a1',
+      cityId: 'c1',
+      districtTile: '4,3',
+    };
+    const base = combatSystem({
+      ...makeAttackUnitState(),
+      cities: new Map([['c1', city]]),
+    }, action);
+    const healed = combatSystem({
+      ...makeAttackUnitState({ promotions: ['bastion_resolute'] }),
+      cities: new Map([['c1', city]]),
+    }, action);
+
+    expect(healed.units.get('a1')!.health).toBe(base.units.get('a1')!.health + 5);
+  });
+});
+
 describe('AA1.2: wasConquered provenance on city capture', () => {
   it('captured city has wasConquered set to true', () => {
     // Set defenseHP to 1 so a single warrior attack captures it

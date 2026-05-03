@@ -117,6 +117,31 @@ export function resourceSystem(state: GameState, action: GameAction): GameState 
     }
     totalGold -= sanctionGoldPenalty;
 
+    // Commander quartermaster auras grant gold per packed unit for the processed player.
+    let quartermasterGold = 0;
+    if (state.commanders) {
+      for (const [commanderId, commander] of state.commanders) {
+        if (!commander.packed) continue;
+
+        const commanderUnit = state.units.get(commanderId);
+        if (!commanderUnit || commanderUnit.owner !== playerId) continue;
+
+        const packedUnitCount = (commander.packedUnitStates && commander.packedUnitStates.length > 0)
+          ? commander.packedUnitStates.length
+          : commander.attachedUnits.length;
+        if (packedUnitCount <= 0) continue;
+
+        const promotionIds = new Set([...commander.promotions, ...commanderUnit.promotions]);
+        for (const promotionId of promotionIds) {
+          const promo = state.config.commanderPromotions?.get(promotionId);
+          if (promo?.aura.type === 'AURA_GOLD_PER_PACKED_UNIT') {
+            quartermasterGold += packedUnitCount * promo.aura.value;
+          }
+        }
+      }
+    }
+    totalGold += quartermasterGold;
+
     // Calculate influence (§11.1):
     //   Base +10 per turn once the player has founded their first city
     //   (this represents the civilization's baseline diplomatic presence).
