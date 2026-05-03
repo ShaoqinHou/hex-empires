@@ -1,4 +1,4 @@
-import type { BuildingCategory, GameState, GameAction, CityState, UnitState, HexTile, ProductionItem, PlayerState, GameEvent } from '../types/GameState';
+import type { BuildingCategory, GameState, GameAction, CityState, UnitState, UnitCategory, HexTile, ProductionItem, PlayerState, GameEvent } from '../types/GameState';
 import type { HexCoord } from '../types/HexCoord';
 import type { BuildingId } from '../types/Ids';
 import type { BuildingDef } from '../types/Building';
@@ -6,6 +6,7 @@ import { coordToKey } from '../hex/HexMath';
 import { calculateCityYieldsWithAdjacency } from '../state/CityYieldsWithAdjacency';
 import { validateBuildingPlacement } from '../state/BuildingPlacementValidator';
 import { getProductionPercentBonus, isStructuredActiveCelebrationBonus } from '../state/EffectUtils';
+import { findDistrictStationedCityId } from '../state/DistrictStationing';
 
 /** Generate deterministic unit ID from state */
 function nextUnitId(state: GameState, cityId: string): string {
@@ -537,6 +538,11 @@ function processProduction(state: GameState): GameState {
       productionPerTurn = Math.floor(productionPerTurn * 1.1);
     }
 
+    const commanderRecruitmentBonus = getCommanderRecruitmentProductionBonusPercent(state, currentCity, currentItem);
+    if (commanderRecruitmentBonus > 0) {
+      productionPerTurn = Math.floor(productionPerTurn * (100 + commanderRecruitmentBonus) / 100);
+    }
+
     // Structured celebration production effects.
     const player = state.players.get(currentCity.owner);
     if (player) {
@@ -766,6 +772,39 @@ function mergeTiles(
   const merged = new Map(base);
   for (const [k, v] of overrides) merged.set(k, v);
   return merged;
+}
+
+const LAND_MILITARY_UNIT_CATEGORIES = new Set<UnitCategory>(['melee', 'ranged', 'cavalry', 'siege']);
+
+function getCommanderRecruitmentProductionBonusPercent(
+  state: GameState,
+  city: CityState,
+  item: ProductionItem,
+): number {
+  if (!state.commanders || item.type !== 'unit') return 0;
+
+  const unitCategory = state.config.units.get(item.id)?.category;
+  if (unitCategory === undefined || !LAND_MILITARY_UNIT_CATEGORIES.has(unitCategory)) return 0;
+
+  let bonusPercent = 0;
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.owner !== city.owner) continue;
+    if (findDistrictStationedCityId(state, commanderUnit) !== city.id) continue;
+
+    const promotionIds = new Set([
+      ...commanderState.promotions,
+      ...commanderUnit.promotions,
+    ]);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_LAND_PRODUCTION_BONUS_WHILE_STATIONED') continue;
+      bonusPercent = Math.max(bonusPercent, promotion.aura.value);
+    }
+  }
+
+  return bonusPercent;
 }
 
 /** Production cost for items — driven by state.config.units, state.config.buildings, and state.config.districts */

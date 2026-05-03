@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { productionSystem } from '../productionSystem';
-import { createTestState, createTestPlayer } from './helpers';
-import type { CityState, HexTile } from '../../types/GameState';
+import { createTestState, createTestPlayer, createTestUnit } from './helpers';
+import type { CommanderState } from '../../types/Commander';
+import type { CityState, GameState, HexTile } from '../../types/GameState';
+import type { UrbanTileV2 } from '../../types/DistrictOverhaul';
+import type { TerrainId } from '../../types/Terrain';
 import { coordToKey } from '../../hex/HexMath';
 
 function createTestCity(overrides: Partial<CityState> = {}): CityState {
@@ -29,6 +32,31 @@ function createTestCity(overrides: Partial<CityState> = {}): CityState {
     specialization: null,
     specialists: 0,
     districts: [],
+    ...overrides,
+  };
+}
+
+function mapWithTerrain(state: GameState, terrain: TerrainId): GameState {
+  const tiles = new Map<string, HexTile>();
+  for (const [key, tile] of state.map.tiles) {
+    tiles.set(key, { ...tile, terrain, feature: null });
+  }
+  return {
+    ...state,
+    map: { ...state.map, tiles },
+  };
+}
+
+function makeCommanderState(overrides: Partial<CommanderState> = {}): CommanderState {
+  return {
+    unitId: 'cmd1',
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions: [],
+    tree: null,
+    attachedUnits: [],
+    packed: false,
     ...overrides,
   };
 }
@@ -184,6 +212,220 @@ describe('productionSystem', () => {
       // Default city has territory:[] → city-center production yield 2 (verified empirically).
       // productionProgress = 0 + 2 = 2.
       expect(next.cities.get('c1')!.productionProgress).toBe(2);
+    });
+
+    it('applies Logistics Recruitment production bonus for land units when commander is on the city center', () => {
+      const baseState = mapWithTerrain(createTestState(), 'plains');
+      const territory = [...baseState.map.tiles.keys()].slice(0, 30);
+      const city = createTestCity({
+        productionQueue: [{ type: 'unit', id: 'warrior' }],
+        productionProgress: -500,
+        territory,
+      });
+      const commanderUnit = createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: city.position,
+      });
+
+      const withoutPromotion = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', commanderUnit]]),
+        commanders: new Map([['cmd1', makeCommanderState()]]),
+      }, { type: 'END_TURN' });
+      const withRecruitment = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', commanderUnit]]),
+        commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+      }, { type: 'END_TURN' });
+
+      const basePerTurn = withoutPromotion.cities.get('c1')!.productionProgress - city.productionProgress;
+      const boostedPerTurn = withRecruitment.cities.get('c1')!.productionProgress - city.productionProgress;
+      expect(basePerTurn).toBeGreaterThan(0);
+      expect(boostedPerTurn).toBe(Math.floor(basePerTurn * 1.15));
+    });
+
+    it('treats V2 urban tiles as stationed districts for Logistics Recruitment', () => {
+      const baseState = mapWithTerrain(createTestState(), 'plains');
+      const territory = [...baseState.map.tiles.keys()].slice(0, 30);
+      const urbanCoord = { q: 4, r: 3 };
+      const urbanKey = coordToKey(urbanCoord);
+      const urbanTile: UrbanTileV2 = {
+        cityId: 'c1',
+        coord: urbanCoord,
+        buildings: [],
+        specialistCount: 0,
+        specialistCapPerTile: 1,
+        walled: false,
+      };
+      const city = createTestCity({
+        productionQueue: [{ type: 'unit', id: 'warrior' }],
+        productionProgress: -500,
+        territory,
+        urbanTiles: new Map([[urbanKey, urbanTile]]),
+      });
+      const commanderUnit = createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: urbanCoord,
+      });
+
+      const withoutPromotion = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', commanderUnit]]),
+        commanders: new Map([['cmd1', makeCommanderState()]]),
+      }, { type: 'END_TURN' });
+      const withRecruitment = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', commanderUnit]]),
+        commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+      }, { type: 'END_TURN' });
+
+      expect(withRecruitment.cities.get('c1')!.productionProgress).toBeGreaterThan(
+        withoutPromotion.cities.get('c1')!.productionProgress,
+      );
+    });
+
+    it('does not apply Logistics Recruitment without the promotion or off a district', () => {
+      const baseState = mapWithTerrain(createTestState(), 'plains');
+      const territory = [...baseState.map.tiles.keys()].slice(0, 30);
+      const city = createTestCity({
+        productionQueue: [{ type: 'unit', id: 'warrior' }],
+        productionProgress: -500,
+        territory,
+      });
+      const unpromotedCommander = createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: city.position,
+      });
+      const offDistrictCommander = createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: { q: 0, r: 0 },
+      });
+
+      const baseline = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+      }, { type: 'END_TURN' });
+      const missingPromotion = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', unpromotedCommander]]),
+        commanders: new Map([['cmd1', makeCommanderState()]]),
+      }, { type: 'END_TURN' });
+      const offDistrict = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city]]),
+        units: new Map([['cmd1', offDistrictCommander]]),
+        commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+      }, { type: 'END_TURN' });
+
+      expect(missingPromotion.cities.get('c1')!.productionProgress).toBe(
+        baseline.cities.get('c1')!.productionProgress,
+      );
+      expect(offDistrict.cities.get('c1')!.productionProgress).toBe(
+        baseline.cities.get('c1')!.productionProgress,
+      );
+    });
+
+    it('does not apply Logistics Recruitment from another city or enemy commander', () => {
+      const baseState = mapWithTerrain(createTestState(), 'plains');
+      const territory = [...baseState.map.tiles.keys()].slice(0, 30);
+      const city = createTestCity({
+        productionQueue: [{ type: 'unit', id: 'warrior' }],
+        productionProgress: -500,
+        territory,
+      });
+      const otherCity = createTestCity({
+        id: 'c2',
+        name: 'Antium',
+        position: { q: 8, r: 8 },
+        territory: [coordToKey({ q: 8, r: 8 })],
+        isCapital: false,
+      });
+
+      const baseline = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city], ['c2', otherCity]]),
+      }, { type: 'END_TURN' });
+
+      const sameOwnerOtherCity = productionSystem({
+        ...baseState,
+        cities: new Map([['c1', city], ['c2', otherCity]]),
+        units: new Map([['cmd1', createTestUnit({
+          id: 'cmd1',
+          typeId: 'army_commander',
+          owner: 'p1',
+          position: otherCity.position,
+        })]]),
+        commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+      }, { type: 'END_TURN' });
+
+      const enemyCommanderOnCity = productionSystem({
+        ...baseState,
+        players: new Map([
+          ['p1', createTestPlayer({ id: 'p1' })],
+          ['p2', createTestPlayer({ id: 'p2', civilizationId: 'egypt' })],
+        ]),
+        cities: new Map([['c1', city], ['c2', otherCity]]),
+        units: new Map([['cmd1', createTestUnit({
+          id: 'cmd1',
+          typeId: 'army_commander',
+          owner: 'p2',
+          position: city.position,
+        })]]),
+        commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+      }, { type: 'END_TURN' });
+
+      expect(sameOwnerOtherCity.cities.get('c1')!.productionProgress).toBe(
+        baseline.cities.get('c1')!.productionProgress,
+      );
+      expect(enemyCommanderOnCity.cities.get('c1')!.productionProgress).toBe(
+        baseline.cities.get('c1')!.productionProgress,
+      );
+    });
+
+    it('does not apply Logistics Recruitment to civilian or naval units', () => {
+      const baseState = mapWithTerrain(createTestState(), 'plains');
+      const territory = [...baseState.map.tiles.keys()].slice(0, 30);
+      const commanderUnit = createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: { q: 3, r: 3 },
+      });
+
+      for (const unitId of ['settler', 'galley']) {
+        const city = createTestCity({
+          productionQueue: [{ type: 'unit', id: unitId }],
+          productionProgress: -500,
+          territory,
+        });
+        const baseline = productionSystem({
+          ...baseState,
+          cities: new Map([['c1', city]]),
+        }, { type: 'END_TURN' });
+        const withRecruitment = productionSystem({
+          ...baseState,
+          cities: new Map([['c1', city]]),
+          units: new Map([['cmd1', commanderUnit]]),
+          commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_recruitment'] })]]),
+        }, { type: 'END_TURN' });
+
+        expect(withRecruitment.cities.get('c1')!.productionProgress).toBe(
+          baseline.cities.get('c1')!.productionProgress,
+        );
+      }
     });
 
     it('creates unit when production completes', () => {

@@ -16,6 +16,7 @@
 import type { GameState, UnitState } from '../types/GameState';
 import type { AuraTarget, CommanderState } from '../types/Commander';
 import { distance } from '../hex/HexMath';
+import { unitIsStationedOnDistrict } from './DistrictStationing';
 
 type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'> & {
   readonly fortified?: boolean;
@@ -93,22 +94,6 @@ function auraTargetMatches(
 
   const category = state.config.units.get(unit.typeId)?.category;
   return category !== undefined && targets.includes(category);
-}
-
-function unitIsStationedOnDistrict(state: GameState, unit: AuraTargetUnit): boolean {
-  for (const district of state.districts.values()) {
-    if (sameHex(district.position, unit.position)) return true;
-  }
-
-  for (const city of state.cities.values()) {
-    if (sameHex(city.position, unit.position)) return true;
-  }
-
-  return false;
-}
-
-function sameHex(a: { readonly q: number; readonly r: number }, b: { readonly q: number; readonly r: number }): boolean {
-  return a.q === b.q && a.r === b.r;
 }
 
 export function hasCommanderGrantedAbility(
