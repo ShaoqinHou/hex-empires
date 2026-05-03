@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { serializeState, deserializeState } from '../SaveLoad';
-import { createTestState, createTestPlayer, createTestUnit } from '../../systems/__tests__/helpers';
+import { createTestState, createTestPlayer, createTestUnit, createTestCity } from '../../systems/__tests__/helpers';
 import { coordToKey } from '../../hex/HexMath';
 
 describe('SaveLoad', () => {
@@ -36,6 +36,24 @@ describe('SaveLoad', () => {
     expect(restored.units instanceof Map).toBe(true);
     expect(restored.map.tiles instanceof Map).toBe(true);
     expect(restored.diplomacy.relations instanceof Map).toBe(true);
+  });
+
+  it('round-trips district bonus HP maps', () => {
+    const city = createTestCity({
+      id: 'c1',
+      districtHPs: new Map([['0,0', 200], ['1,0', 80]]),
+      districtBonusHPs: new Map([['1,0', 4]]),
+    });
+    const state = createTestState({
+      cities: new Map([['c1', city]]),
+    });
+
+    const restored = deserializeState(serializeState(state));
+    const restoredCity = restored.cities.get('c1')!;
+
+    expect(restoredCity.districtHPs instanceof Map).toBe(true);
+    expect(restoredCity.districtBonusHPs instanceof Map).toBe(true);
+    expect(restoredCity.districtBonusHPs!.get('1,0')).toBe(4);
   });
 
   it('preserves Sets', () => {

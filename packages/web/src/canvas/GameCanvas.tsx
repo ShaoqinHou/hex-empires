@@ -5,7 +5,7 @@ import { HexRenderer, pixelToHex, hexToPixel } from './HexRenderer';
 import { RenderCache } from './RenderCache';
 import { AnimationManager } from './AnimationManager';
 import { AnimationRenderer } from './AnimationRenderer';
-import { createUnitMoveAnimationPlan } from './AnimationTrigger';
+import { calculateDistrictDamageDelta, createUnitMoveAnimationPlan } from './AnimationTrigger';
 import { animationEventBus } from '../hooks/AnimationEventBus';
 import { RANGED_PROJECTILE_COLOR } from './canvasTokens';
 import type { HexCoord, CityState } from '@hex/engine';
@@ -325,13 +325,9 @@ export function GameCanvas({ onCityClick, onToggleTechTree, onToggleYields, onBu
           const position = { q, r };
           am.add(am.createDamageFlashAnimation(action.districtTile, position, true, 300));
           if (prevCity && city) {
-            const prevHP = prevCity.districtHPs?.get(action.districtTile);
-            const nextHP = city.districtHPs?.get(action.districtTile);
-            if (prevHP !== undefined && nextHP !== undefined) {
-              const dealt = Math.max(0, prevHP - nextHP);
-              if (dealt > 0) {
-                am.add(am.createFloatingDamageAnimation(action.districtTile, position, dealt));
-              }
+            const dealt = calculateDistrictDamageDelta(prevState, nextState, action.cityId, action.districtTile);
+            if (dealt > 0) {
+              am.add(am.createFloatingDamageAnimation(action.districtTile, position, dealt));
             }
           }
           break;

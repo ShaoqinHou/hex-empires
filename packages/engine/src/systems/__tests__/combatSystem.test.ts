@@ -652,10 +652,34 @@ describe('combatSystem — ATTACK_CITY', () => {
     expect(next.cities.get('c1')!.owner).toBe('p2');
   });
 
-  it('allows city center capture after outer district HP is destroyed', () => {
+  it('blocks city attack while the city center district still has HP', () => {
     const city = makeCity({
       defenseHP: 1,
       districtHPs: new Map([['4,3', 200], ['5,3', 0]]),
+    });
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const state = createTestState({ units, players, cities: new Map([['c1', city]]) });
+
+    const next = combatSystem(state, { type: 'ATTACK_CITY', attackerId: 'a1', cityId: 'c1' });
+
+    expect(next.lastValidation).toMatchObject({
+      valid: false,
+      reason: 'Must destroy the city center district before attacking the city',
+    });
+    expect(next.cities.get('c1')!.owner).toBe('p2');
+    expect(next.cities.get('c1')!.defenseHP).toBe(1);
+  });
+
+  it('allows city center capture after all district HP is destroyed', () => {
+    const city = makeCity({
+      defenseHP: 1,
+      districtHPs: new Map([['4,3', 0], ['5,3', 0]]),
     });
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
@@ -1172,6 +1196,121 @@ describe('combatSystem — W4-03: ATTACK_DISTRICT', () => {
     });
     const next = combatSystem(state, { type: 'ATTACK_DISTRICT', attackerId: 'a1', cityId: 'c1', districtTile: 'nonexistent,tile' });
     expect(next.lastValidation).toMatchObject({ valid: false });
+  });
+
+  it('lets Garrison bonus HP absorb district attack damage before base district HP', () => {
+    const cityPos = { q: 0, r: 0 };
+    const districtKey = '1,0';
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: cityPos,
+      defenseHP: 100,
+      districtHPs: new Map([['0,0', 200], [districtKey, 100]]),
+    });
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['bastion_garrison'],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const action = { type: 'ATTACK_DISTRICT' as const, attackerId: 'a1', cityId: 'c1', districtTile: districtKey };
+    const baseState = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 2, r: 0 }, movementLeft: 2, health: 100 })],
+      ]),
+      players,
+      cities: new Map([['c1', city]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+    const garrisonState = createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 2, r: 0 }, movementLeft: 2, health: 100 })],
+        ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: cityPos, movementLeft: 2, health: 100 })],
+      ]),
+      players: new Map(players),
+      cities: new Map([['c1', city]]),
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    });
+
+    const base = combatSystem(baseState, action);
+    const garrison = combatSystem(garrisonState, action);
+
+    const baseRemaining = base.cities.get('c1')!.districtHPs!.get(districtKey)!;
+    const garrisonCity = garrison.cities.get('c1')!;
+    expect(garrisonCity.districtHPs!.get(districtKey)).toBe(baseRemaining + 10);
+    expect(garrisonCity.districtBonusHPs!.get(districtKey)).toBe(0);
+  });
+
+  it('uses stored partial Garrison bonus HP instead of regranting a full bonus', () => {
+    const cityPos = { q: 0, r: 0 };
+    const districtKey = '1,0';
+    const city = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: cityPos,
+      defenseHP: 100,
+      districtHPs: new Map([['0,0', 200], [districtKey, 100]]),
+      districtBonusHPs: new Map([[districtKey, 4]]),
+    });
+    const commanderState: CommanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['bastion_garrison'],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1' })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const action = { type: 'ATTACK_DISTRICT' as const, attackerId: 'a1', cityId: 'c1', districtTile: districtKey };
+    const baseCity = createTestCity({
+      id: 'c1',
+      owner: 'p2',
+      position: cityPos,
+      defenseHP: 100,
+      districtHPs: new Map([['0,0', 200], [districtKey, 100]]),
+    });
+    const base = combatSystem(createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 2, r: 0 }, movementLeft: 2, health: 100 })],
+      ]),
+      players,
+      cities: new Map([['c1', baseCity]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    }), action);
+    const garrison = combatSystem(createTestState({
+      units: new Map([
+        ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 2, r: 0 }, movementLeft: 2, health: 100 })],
+        ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p2', typeId: 'captain', position: cityPos, movementLeft: 2, health: 100 })],
+      ]),
+      players: new Map(players),
+      cities: new Map([['c1', city]]),
+      commanders: new Map([['cmd1', commanderState]]),
+      currentPlayerId: 'p1',
+      rng: { seed: 42, counter: 0 },
+    }), action);
+
+    const baseRemaining = base.cities.get('c1')!.districtHPs!.get(districtKey)!;
+    const garrisonCity = garrison.cities.get('c1')!;
+    expect(garrisonCity.districtHPs!.get(districtKey)).toBe(baseRemaining + 4);
+    expect(garrisonCity.districtBonusHPs!.get(districtKey)).toBe(0);
   });
 });
 

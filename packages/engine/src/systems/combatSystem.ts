@@ -17,6 +17,9 @@ import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils
 import {
   buildInitialDistrictHPs,
   getCityCenterDistrictKey,
+  getDistrictCurrentBonusHP,
+  getDistrictHpBonusByTile,
+  hasStandingCityCenterDistrict,
   hasStandingOuterDistricts,
 } from '../state/DistrictSiege';
 import { markCommanderDefeated } from '../state/CommanderRespawn';
@@ -603,6 +606,9 @@ function handleAttackCity(
   if (hasStandingOuterDistricts(city)) {
     return createInvalidResult(state, 'Must destroy all outer districts before attacking the city center', 'combat');
   }
+  if (hasStandingCityCenterDistrict(state, city)) {
+    return createInvalidResult(state, 'Must destroy the city center district before attacking the city', 'combat');
+  }
 
   const isMelee = baseRange === 0;
   const cityDefense = getCityDefenseStrength(city);
@@ -786,12 +792,20 @@ function handleAttackDistrict(
   const districtHPs: Map<string, number> = city.districtHPs
     ? new Map(city.districtHPs)
     : buildInitialDistrictHPs(city);
+  const districtHpBonusByTile = getDistrictHpBonusByTile(state, city);
 
   // Validate the target district tile exists
-  const currentDistrictHP = districtHPs.get(action.districtTile);
-  if (currentDistrictHP === undefined) {
+  const currentBaseDistrictHP = districtHPs.get(action.districtTile);
+  if (currentBaseDistrictHP === undefined) {
     return createInvalidResult(state, 'Target district tile not found in city', 'combat');
   }
+  const currentBonusDistrictHP = getDistrictCurrentBonusHP(
+    city,
+    action.districtTile,
+    districtHpBonusByTile.get(action.districtTile) ?? 0,
+    currentBaseDistrictHP,
+  );
+  const currentDistrictHP = currentBaseDistrictHP + currentBonusDistrictHP;
   if (currentDistrictHP <= 0) {
     return createInvalidResult(state, 'District already destroyed', 'combat');
   }
@@ -832,8 +846,17 @@ function handleAttackDistrict(
   const { value: randomFactor1, rng: rng1 } = nextRandom(state.rng);
   const damageToDistrict = computeCombatDamageFromRoll(strengthDiff, randomFactor1);
 
-  const newDistrictHP = Math.max(0, currentDistrictHP - damageToDistrict);
-  districtHPs.set(action.districtTile, newDistrictHP);
+  const damageToBonusHP = Math.min(currentBonusDistrictHP, damageToDistrict);
+  const damageToBaseHP = damageToDistrict - damageToBonusHP;
+  const newBonusDistrictHP = currentBonusDistrictHP - damageToBonusHP;
+  const newBaseDistrictHP = Math.max(0, currentBaseDistrictHP - damageToBaseHP);
+  const newDistrictHP = newBaseDistrictHP + newBonusDistrictHP;
+  districtHPs.set(action.districtTile, newBaseDistrictHP);
+
+  const districtBonusHPs = new Map(city.districtBonusHPs ?? []);
+  if (currentBonusDistrictHP > 0 || districtBonusHPs.has(action.districtTile)) {
+    districtBonusHPs.set(action.districtTile, newBaseDistrictHP > 0 ? newBonusDistrictHP : 0);
+  }
 
   // City retaliates on melee attackers
   const isMelee = baseRange === 0;
@@ -875,6 +898,7 @@ function handleAttackDistrict(
   updatedCities.set(city.id, {
     ...city,
     districtHPs,
+    ...(districtBonusHPs.size > 0 ? { districtBonusHPs } : {}),
   });
 
   const districtLabel = action.districtTile === cityCenter ? 'city center' : 'district';

@@ -15,8 +15,11 @@ import {
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
 import { getCommanderAuraCombatBonus, getCommanderAuraHealAfterAttackAmount } from './CommanderAura';
 import {
+  cityUsesDistrictSiegeModel,
   getCityCenterDistrictKey,
+  getEffectiveDistrictHPs,
   getDistrictHPs,
+  hasStandingCityCenterDistrict,
   hasStandingOuterDistricts,
 } from './DistrictSiege';
 
@@ -619,6 +622,29 @@ export function calculateCityCombatPreview(
     };
   }
 
+  if (hasStandingCityCenterDistrict(state, city)) {
+    return {
+      attackerId,
+      target: { type: 'city', cityId },
+      canAttack: false,
+      reason: 'Must destroy the city center district before attacking the city',
+      attackerStrength: 0,
+      defenderStrength: 0,
+      strengthDifference: 0,
+      isRanged,
+      expectedDamageToDefender: 0,
+      minDamageToDefender: 0,
+      maxDamageToDefender: 0,
+      expectedDamageToAttacker: 0,
+      minDamageToAttacker: 0,
+      maxDamageToAttacker: 0,
+      defenderWillDie: false,
+      attackerWillDie: false,
+      odds: { attackerWinPercent: 0, drawPercent: 0, defenderWinPercent: 0, expectedDefenderHP: 0, expectedAttackerHP: 0 },
+      modifiers: createEmptyModifiers(),
+    };
+  }
+
   // Calculate strengths
   const attackerTile = state.map.tiles.get(coordToKey(attacker.position));
   const cityDefense = getCityDefenseStrength(city);
@@ -724,6 +750,7 @@ export function getAttackableCities(
   for (const [id, city] of state.cities) {
     if (city.owner === attacker.owner) continue;
     if (hasStandingOuterDistricts(city)) continue;
+    if (hasStandingCityCenterDistrict(state, city)) continue;
 
     const dist = distance(attacker.position, city.position);
 
@@ -758,12 +785,17 @@ export function getAttackableDistricts(
   for (const [cityId, city] of state.cities) {
     if (city.owner === attacker.owner) continue;
 
-    const districtHPs = getDistrictHPs(city);
+    if (!cityUsesDistrictSiegeModel(state, city)) continue;
+
+    const districtHPs = getEffectiveDistrictHPs(state, city);
     const cityCenter = getCityCenterDistrictKey(city);
+    const hasStandingNonCenter = [...districtHPs.entries()].some(
+      ([districtTile, hp]) => districtTile !== cityCenter && hp > 0,
+    );
 
     for (const [districtTile, hp] of districtHPs) {
       if (hp <= 0) continue;
-      if (districtTile === cityCenter) continue;
+      if (districtTile === cityCenter && hasStandingNonCenter) continue;
       const [q, r] = districtTile.split(',').map(Number);
       const position = { q, r };
       const dist = distance(attacker.position, position);

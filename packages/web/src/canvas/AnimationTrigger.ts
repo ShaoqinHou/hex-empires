@@ -6,7 +6,7 @@
  */
 
 import type { HexCoord, GameState } from '@hex/engine';
-import { coordToKey } from '@hex/engine';
+import { coordToKey, getEffectiveDistrictHP } from '@hex/engine';
 import type {
   UnitMoveAnimation,
   MeleeAttackAnimation,
@@ -49,6 +49,21 @@ export function createUnitMoveAnimationPlan(
     unitTypeId: unit.typeId,
     path: [prevUnit.position, ...traversedPath],
   };
+}
+
+export function calculateDistrictDamageDelta(
+  prevState: GameState,
+  newState: GameState,
+  cityId: string,
+  districtTile: string,
+): number {
+  const prevCity = prevState.cities.get(cityId);
+  const city = newState.cities.get(cityId);
+  if (!prevCity || !city) return 0;
+
+  const prevHP = getEffectiveDistrictHP(prevState, prevCity, districtTile);
+  const nextHP = getEffectiveDistrictHP(newState, city, districtTile);
+  return Math.max(0, prevHP - nextHP);
 }
 
 /**
@@ -303,9 +318,7 @@ function triggerDistrictAttackAnimation(
     ));
   }
 
-  const prevHP = prevState.cities.get(action.cityId)?.districtHPs?.get(action.districtTile);
-  const nextHP = city.districtHPs?.get(action.districtTile);
-  const dealt = prevHP !== undefined && nextHP !== undefined ? Math.max(0, prevHP - nextHP) : 0;
+  const dealt = calculateDistrictDamageDelta(prevState, newState, action.cityId, action.districtTile);
 
   setTimeout(() => {
     manager.add(manager.createDamageFlashAnimation(action.districtTile, position, true, 150));

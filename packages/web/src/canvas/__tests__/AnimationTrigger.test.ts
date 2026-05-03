@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState, HexCoord, UnitState } from '@hex/engine';
 import { AnimationManager } from '../AnimationManager';
 import {
+  calculateDistrictDamageDelta,
   createUnitMoveAnimationPlan,
   triggerAnimationsForAction,
 } from '../AnimationTrigger';
@@ -67,5 +68,56 @@ describe('AnimationTrigger movement diffing', () => {
     });
 
     expect(plan?.path).toEqual([{ q: 3, r: 3 }, { q: 4, r: 3 }]);
+  });
+
+  it('counts district damage absorbed by Garrison bonus HP', () => {
+    const city = {
+      id: 'c1',
+      owner: 'p2',
+      position: { q: 0, r: 0 },
+      districtHPs: new Map([['0,0', 200], ['1,0', 100]]),
+    };
+    const commander = {
+      id: 'cmd1',
+      owner: 'p2',
+      typeId: 'captain',
+      position: { q: 0, r: 0 },
+      movementLeft: 2,
+      health: 100,
+      experience: 0,
+      promotions: [],
+      fortified: false,
+    };
+    const commanderState = {
+      unitId: 'cmd1',
+      xp: 300,
+      commanderLevel: 4,
+      unspentPromotionPicks: 0,
+      promotions: ['bastion_garrison'],
+      tree: 'bastion',
+      attachedUnits: [],
+      packed: false,
+    };
+    const config = {
+      commanderPromotions: new Map([[
+        'bastion_garrison',
+        { aura: { type: 'AURA_DISTRICT_HP_BONUS', value: 10, requiresCommanderOnCityCenter: true } },
+      ]]),
+    };
+    const prev = {
+      units: new Map([['cmd1', commander]]),
+      cities: new Map([['c1', city]]),
+      commanders: new Map([['cmd1', commanderState]]),
+      config,
+    } as unknown as GameState;
+    const next = {
+      ...prev,
+      cities: new Map([['c1', {
+        ...city,
+        districtBonusHPs: new Map([['1,0', 0]]),
+      }]]),
+    } as unknown as GameState;
+
+    expect(calculateDistrictDamageDelta(prev, next, 'c1', '1,0')).toBe(10);
   });
 });

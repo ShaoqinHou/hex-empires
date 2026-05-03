@@ -114,8 +114,15 @@ export {
   CITY_CENTER_DISTRICT_HP,
   URBAN_DISTRICT_HP,
   buildInitialDistrictHPs,
+  cityUsesDistrictSiegeModel,
   getCityCenterDistrictKey,
+  getDistrictCurrentBonusHP,
+  getEffectiveDistrictHP,
+  getDistrictHpBonusByTile,
   getDistrictHPs,
+  getEffectiveDistrictHPs,
+  getStationedCommanderDistrictHpBonus,
+  hasStandingCityCenterDistrict,
   hasStandingOuterDistricts,
 } from './state/DistrictSiege';
 export { getTileContents, getSelectionCycle, hasStackedEntities } from './state/TileContents';

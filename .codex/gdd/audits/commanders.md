@@ -11,6 +11,13 @@
 ## Engine files audited
 
 - `packages/engine/src/systems/commanderPromotionSystem.ts`
+- `packages/engine/src/systems/combatSystem.ts`
+- `packages/engine/src/systems/movementSystem.ts`
+- `packages/engine/src/systems/productionSystem.ts`
+- `packages/engine/src/systems/resourceSystem.ts`
+- `packages/engine/src/systems/turnSystem.ts`
+- `packages/engine/src/state/CommanderAura.ts`
+- `packages/engine/src/state/DistrictSiege.ts`
 - `packages/engine/src/types/Commander.ts`
 - `packages/engine/src/data/commanders/commanders.ts`
 - `packages/engine/src/data/commanders/promotion-trees.ts`
@@ -24,8 +31,8 @@
 | Status | Count |
 |---|---|
 | MATCH — code does what VII does | 3 |
-| CLOSE — right shape, wrong specifics | 4 |
-| DIVERGED — fundamentally different | 1 |
+| CLOSE — right shape, wrong specifics | 5 |
+| DIVERGED — fundamentally different | 0 |
 | MISSING — GDD describes, engine lacks | 0 |
 | EXTRA — engine has, VII/GDD does not | 2 |
 
@@ -61,15 +68,15 @@
 
 ---
 
-### F-03: `promotion-trees-wrong-shape` — DIVERGED
+### F-03: `promotion-hooks-partial` — CLOSE
 
-**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts`, `packages/engine/src/systems/commanderPromotionSystem.ts`, `packages/engine/src/state/CommanderAura.ts`
+**Location:** `packages/engine/src/data/commanders/promotion-trees.ts`, `packages/engine/src/types/Commander.ts`, `packages/engine/src/systems/commanderPromotionSystem.ts`, `packages/engine/src/state/CommanderAura.ts`, `packages/engine/src/state/DistrictSiege.ts`, `packages/engine/src/systems/combatSystem.ts`
 **GDD reference:** `systems/commanders.md` § "Promotion System"
 **Severity:** MED
 **Effort:** M (1-3 days)
 **VII says:** Five independent Army Commander trees use named promotion nodes. Source refresh 2026-05-03: Fandom List_of_promotions_in_Civ7 lists Bastion I Steadfast -> II Bulwark/Hold the Line -> III Defilade/Garrison -> IV Resolute; Assault I Initiative -> II Rout/Storm -> III Shock Tactics/Enfilade -> IV Advancement; Logistics I Quartermaster/Recruitment -> II Regiments -> III Field Medic/Looting -> IV Survival Training; Maneuver I Mobility -> II Harassment/Redeploy -> III Amphibious/Pathfinder -> IV Area Denial; and Leadership I Zeal -> II Field Commission -> III Old Guard/Resilience -> IV Barrage/Onslaught. Completing a tree earns 1 Commendation Point; 5 named commendations: Valor, Duty, Service, Merit, Order. Fandom lists Onslaught as +4 CS with Coordinated Attack, while Game8 lists +5; local data follows Fandom pending a target-patch refresh.
-**Engine does:** Five trees are present. Army Assault, Logistics, Bastion, Maneuver, and Leadership now match the refreshed source node shape. `assault_advancement` grants First Strike to the local infantry proxy (`melee`) and cavalry. Bastion Steadfast gives +2 defending CS to local land military categories (`melee`, `ranged`, `cavalry`, `siege`) in Command Radius. Bastion Hold the Line gives +2 CS to land units stationed on a District or city center (local City Center is treated as a district tile) in Command Radius, Bastion Defilade gives +3 defending CS to fortified land units in Command Radius, and Bastion Resolute heals surviving matching land attackers 5 HP after attacking; these affect live combat and combat preview through `CommanderAura`. Logistics Quartermaster grants +1 Gold per packed unit during `resourceSystem` end-turn income. Logistics Recruitment grants +15% production toward land military units while a promoted commander is stationed on the producing city's district, city center, or V2 urban tile through `productionSystem`. Logistics Field Medic adds +5 healing to matching land military units in Command Radius during `turnSystem` START_TURN healing when they are in neutral or enemy territory. Leadership Field Commission lets land units in Command Radius upgrade outside friendly territory and heals 10 HP on upgrade through `movementSystem`. Leadership Resilience reduces commander respawn duration from 20 to 10 turns through `CommanderRespawn`. Bastion Bulwark, Garrison, Looting, Survival Training, most Maneuver effects, and remaining Leadership effects are represented as typed metadata aura variants for later hooks. `logistics_regiments` is wired to the pack-cap path through `AURA_EXPAND_STACK`, so the engine allows 4 packed units by default and 6 only after Regiments. The engine supports `AURA_DEPLOY_WITH_MOVEMENT`, attack/defense conditioned `AURA_MODIFY_CS`, district/fortified combat-aura filters, `AURA_GRANT_ABILITY`, `AURA_HEAL_PER_TURN`, `AURA_EXPAND_STACK`, and OR-style promotion prerequisites. The AI commander picker also honors OR prerequisites.
-**Gap:** Army promotion data shape is now canonical, but three broader divergences remain: (1) many metadata-only effects still lack runtime hooks, including Bulwark, Garrison, Looting, Survival Training, Maneuver hooks, and Leadership settlement/command-action hooks; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
+**Engine does:** Five trees are present. Army Assault, Logistics, Bastion, Maneuver, and Leadership now match the refreshed source node shape. `assault_advancement` grants First Strike to the local infantry proxy (`melee`) and cavalry. Bastion Steadfast gives +2 defending CS to local land military categories (`melee`, `ranged`, `cavalry`, `siege`) in Command Radius. Bastion Hold the Line gives +2 CS to land units stationed on a District or city center (local City Center is treated as a district tile) in Command Radius, Bastion Defilade gives +3 defending CS to fortified land units in Command Radius, Bastion Garrison adds a +10 damageable bonus-HP layer to standing city-center/urban district HP pools when the defender's promoted commander is stationed on the City Center, and Bastion Resolute heals surviving matching land attackers 5 HP after attacking. The combat-strength hooks affect live combat and combat preview through `CommanderAura`, while Garrison and Resolute affect live combat through `DistrictSiege` and `combatSystem`. Logistics Quartermaster grants +1 Gold per packed unit during `resourceSystem` end-turn income. Logistics Recruitment grants +15% production toward land military units while a promoted commander is stationed on the producing city's district, city center, or V2 urban tile through `productionSystem`. Logistics Field Medic adds +5 healing to matching land military units in Command Radius during `turnSystem` START_TURN healing when they are in neutral or enemy territory. Leadership Field Commission lets land units in Command Radius upgrade outside friendly territory and heals 10 HP on upgrade through `movementSystem`. Leadership Resilience reduces commander respawn duration from 20 to 10 turns through `CommanderRespawn`. Bastion Bulwark, Looting, Survival Training, most Maneuver effects, and remaining Leadership effects are represented as typed metadata aura variants for later hooks. `logistics_regiments` is wired to the pack-cap path through `AURA_EXPAND_STACK`, so the engine allows 4 packed units by default and 6 only after Regiments. The engine supports `AURA_DEPLOY_WITH_MOVEMENT`, attack/defense conditioned `AURA_MODIFY_CS`, district/fortified combat-aura filters, `AURA_DISTRICT_HP_BONUS`, `AURA_GRANT_ABILITY`, `AURA_HEAL_PER_TURN`, `AURA_EXPAND_STACK`, and OR-style promotion prerequisites. The AI commander picker also honors OR prerequisites.
+**Gap:** Army promotion data shape is now canonical, but three broader divergences remain: (1) several metadata-only effects still lack runtime hooks, including Bulwark, Looting, Survival Training, Maneuver hooks, and Leadership settlement/command-action hooks; (2) legacy single-tree lock/action shapes are still present; (3) the commendation system is absent.
 **Recommendation:** Continue F-03 by wiring typed metadata effects into their owning systems in small slices, remove single-tree-lock remnants, add CommendationDef/CommanderState fields, and earn commendations when a full tree is completed.
 
 ---
@@ -175,7 +182,7 @@
 
 ## Missing items
 
-- Remaining commander promotion hooks (F-03) — Bulwark fortify duration, Garrison fortified-district HP, Looting pillage yield/HP, Survival Training terrain/cliff behavior, Maneuver movement/flanking/amphibious/pathfinding/ZoC behavior, and Leadership settlement/command-action behavior.
+- Remaining commander promotion hooks (F-03) — Bulwark fortify duration, Looting pillage yield/HP, Survival Training terrain/cliff behavior, Maneuver movement/flanking/amphibious/pathfinding/ZoC behavior, and Leadership settlement/command-action behavior.
 - Commendation system (F-03) — 5 named commendations earned by completing promotion trees.
 - Commander pack-model consolidation and Fleet Commander Weather Gage deployment exception (F-01).
 - Commander age-transition follow-ups (F-08) — UI transition summary, exact Fleet Commander retained-unit placement behavior, and the generic unit retirement/upgrade pipeline.
@@ -194,7 +201,7 @@ Paste into `.codex/gdd/systems/commanders.md` section "Mapping to hex-empires":
 - `packages/engine/src/data/commanders/`
 - `packages/web/src/ui/panels/CommanderPanel.tsx`
 
-**Status:** 3 MATCH / 4 CLOSE / 1 DIVERGED / 0 MISSING / 2 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
+**Status:** 3 MATCH / 5 CLOSE / 0 DIVERGED / 0 MISSING / 2 EXTRA (see `.codex/gdd/audits/commanders.md` for details)
 
 **Highest-severity finding:** F-01 — pack/unpack is present but still has duplicate state models and unresolved removed-unit snapshot behavior.
 

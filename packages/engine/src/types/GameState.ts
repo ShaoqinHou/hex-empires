@@ -280,6 +280,12 @@ export interface CityState {
    * @deprecated defenseHP — prefer districtHPs for multi-district siege.
    */
   readonly districtHPs?: ReadonlyMap<string, number>;
+  /**
+   * Remaining temporary HP provided by active district-HP modifiers such as
+   * Bastion Garrison. `districtHPs` remains the base fortification HP; this
+   * map tracks the extra layer so repeated reads do not keep granting HP.
+   */
+  readonly districtBonusHPs?: ReadonlyMap<string, number>;
 }
 
 export interface ProductionItem {

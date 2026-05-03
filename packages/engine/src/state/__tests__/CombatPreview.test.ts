@@ -901,6 +901,23 @@ describe('calculateCityCombatPreview', () => {
     expect(preview.defenderWillDie).toBe(false);
   });
 
+  it('blocks city preview while city-center district HP remains', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const city = makeCity({
+      defenseHP: 5,
+      districtHPs: new Map([['4,3', 200], ['5,3', 0]]),
+    });
+    const state = createTestState({ units, cities: new Map([['c1', city]]) });
+
+    const preview = calculateCityCombatPreview(state, 'a1', 'c1');
+
+    expect(preview.canAttack).toBe(false);
+    expect(preview.reason).toBe('Must destroy the city center district before attacking the city');
+    expect(preview.defenderWillDie).toBe(false);
+  });
+
   it('omits cities with standing outer district HP from attackable city targets', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
@@ -935,7 +952,7 @@ describe('calculateCityCombatPreview', () => {
     }]);
   });
 
-  it('keeps city-center capture on the attackable city path once outer districts are destroyed', () => {
+  it('lists the city center as an attackable district once outer districts are destroyed', () => {
     const units = new Map([
       ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
     ]);
@@ -944,6 +961,26 @@ describe('calculateCityCombatPreview', () => {
       cities: new Map([[
         'c1',
         makeCity({ districtHPs: new Map([['4,3', 200], ['5,3', 0]]) }),
+      ]]),
+    });
+
+    expect(getAttackableDistricts(state, 'a1')).toEqual([{
+      cityId: 'c1',
+      districtTile: '4,3',
+      position: { q: 4, r: 3 },
+    }]);
+    expect(getAttackableCities(state, 'a1')).toEqual([]);
+  });
+
+  it('keeps city-center capture on the attackable city path once all district HP is destroyed', () => {
+    const units = new Map([
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 2, health: 100 })],
+    ]);
+    const state = createTestState({
+      units,
+      cities: new Map([[
+        'c1',
+        makeCity({ districtHPs: new Map([['4,3', 0], ['5,3', 0]]) }),
       ]]),
     });
 
