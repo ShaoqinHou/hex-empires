@@ -3,6 +3,7 @@ import type { YieldSet } from '../types/Yields';
 import { addYields } from '../types/Yields';
 import { calculateCityYields } from './YieldCalculator';
 import { totalAdjacencyYieldsForCity, quarterBonus } from './DistrictAdjacency';
+import { findDistrictStationedCityId } from './DistrictStationing';
 
 /**
  * Stacked city-yield calculator (M11 Cycle follow-up).
@@ -33,5 +34,47 @@ export function calculateCityYieldsWithAdjacency(
   const base = calculateCityYields(city, state);
   const adjacency = totalAdjacencyYieldsForCity(city, state);
   const quarters = quarterBonus(city, state);
-  return addYields(addYields(base, adjacency), quarters);
+  const stacked = addYields(addYields(base, adjacency), quarters);
+  const zealPercent = getCityLeadershipZealPercent(state, city);
+  return applyLeadershipZeal(stacked, zealPercent);
+}
+
+function getCityLeadershipZealPercent(state: GameState, city: CityState): number {
+  if (!state.commanders || !state.config.commanderPromotions) return 0;
+
+  let totalZealPercent = 0;
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.owner !== city.owner) continue;
+    if (findDistrictStationedCityId(state, commanderUnit) !== city.id) continue;
+
+    const promotionIds = new Set([...commanderState.promotions, ...commanderUnit.promotions]);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_SETTLEMENT_YIELD_BONUS_WHILE_STATIONED') continue;
+      totalZealPercent += promotion.aura.value;
+    }
+  }
+
+  return totalZealPercent;
+}
+
+function applyLeadershipZeal(yields: YieldSet, percent: number): YieldSet {
+  if (percent <= 0) return yields;
+  return {
+    food: applyPositivePercent(yields.food, percent),
+    production: applyPositivePercent(yields.production, percent),
+    gold: applyPositivePercent(yields.gold, percent),
+    science: applyPositivePercent(yields.science, percent),
+    culture: applyPositivePercent(yields.culture, percent),
+    faith: applyPositivePercent(yields.faith, percent),
+    influence: applyPositivePercent(yields.influence, percent),
+    happiness: applyPositivePercent(yields.happiness, percent),
+  };
+}
+
+function applyPositivePercent(value: number, percent: number): number {
+  if (value <= 0) return value;
+  return Math.floor(value * (100 + percent) / 100);
 }

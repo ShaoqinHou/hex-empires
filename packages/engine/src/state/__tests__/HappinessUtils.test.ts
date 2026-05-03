@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computePlayerHappiness, applyHappinessAccumulator, calculateCityHappiness } from '../HappinessUtils';
-import { createTestState, createTestPlayer } from '../../systems/__tests__/helpers';
+import { createTestState, createTestPlayer, createTestUnit } from '../../systems/__tests__/helpers';
+import type { CommanderState } from '../../types/Commander';
 import type { CityState } from '../../types/GameState';
 import type { BuildingDef } from '../../types/Building';
 import { coordToKey } from '../../hex/HexMath';
@@ -12,6 +13,20 @@ function makeCity(overrides: Partial<CityState> = {}): CityState {
     buildings: [], territory: [coordToKey({ q: 3, r: 3 })],
     settlementType: 'city', happiness: 10, isCapital: true, defenseHP: 100,
     specialization: null, specialists: 0, districts: [],
+    ...overrides,
+  };
+}
+
+function makeCommanderState(overrides: Partial<CommanderState> = {}): CommanderState {
+  return {
+    unitId: 'cmd1',
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions: [],
+    tree: null,
+    attachedUnits: [],
+    packed: false,
     ...overrides,
   };
 }
@@ -43,6 +58,40 @@ describe('X3.2: computePlayerHappiness — YieldSet.happiness from cities', () =
 
     const happiness = computePlayerHappiness(testState, 'p1');
     expect(happiness).toBe(5);
+  });
+
+  it('includes Leadership Zeal in stacked happiness-yield summaries', () => {
+    const bath: BuildingDef = {
+      id: 'bath', name: 'Bath', age: 'antiquity', cost: 90, maintenance: 1,
+      yields: { happiness: 10 },
+      effects: [], requiredTech: 'construction', category: 'happiness', happinessCost: 0,
+    };
+    const aqueduct: BuildingDef = {
+      id: 'aqueduct', name: 'Aqueduct', age: 'antiquity', cost: 75, maintenance: 0,
+      yields: { happiness: 10 },
+      effects: [], requiredTech: 'construction', category: 'food', happinessCost: 0,
+    };
+
+    const state = createTestState();
+    const buildings = new Map(state.config.buildings);
+    buildings.set('bath', bath);
+    buildings.set('aqueduct', aqueduct);
+    const city = makeCity({ buildings: ['bath', 'aqueduct'] });
+    const testState = {
+      ...state,
+      config: { ...state.config, buildings },
+      cities: new Map([['c1', city]]),
+      units: new Map([['cmd1', createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: city.position,
+      })]]),
+      commanders: new Map([['cmd1', makeCommanderState({ promotions: ['leadership_zeal'] })]]),
+    };
+
+    const happiness = computePlayerHappiness(testState, 'p1');
+    expect(happiness).toBe(21);
   });
 
   it('accumulates globalHappiness over 3 turns to reach +15 when delta is +5/turn', () => {

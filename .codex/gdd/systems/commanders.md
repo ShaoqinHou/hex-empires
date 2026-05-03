@@ -120,7 +120,7 @@ Each promotion point unlocks one node from the 5 promotion trees. Points bank in
 | Assault | Offense | Initiative: move+act on unpack; Rout: Infantry +2 CS attacking; Storm: Ranged +2 CS attacking; Shock Tactics: Cavalry +3 CS attacking; Enfilade: Siege +3 CS attacking; Advancement: Infantry/Cavalry First Strike |
 | Logistics | Sustain + capacity | Quartermaster: +1 Gold per packed unit (wired); Recruitment: +15% Production toward land units while stationed on a District (wired); Regiments: +2 unit slots and faster reinforcement; Field Medic: +5 Healing in enemy/neutral territory (wired); Looting: +50% yield/HP from pillaging; Survival Training: Commando plus terrain/cliff benefits |
 | Maneuver | Mobility and flanking | Mobility: +1 movement while on land and ignore terrain restrictions when packed; Harassment: +2 flanking bonus attacking; Redeploy: enemy flanking bonuses -2 attacking units in radius; Amphibious: no embarked attack penalty and 1 movement embark/disembark; Pathfinder: ignore terrain movement restrictions; Area Denial: command radius projects ZoC to enemy land units |
-| Leadership | Settlement and command actions | Zeal: stackable +5% settlement yields while stationed on a District; Field Commission: upgrade land units in radius as friendly-territory and heal 10 HP on upgrade (wired); Old Guard: commander +10 CS defending; Resilience: -50% recovery time (wired); Barrage: +5 CS with Focus Fire; Onslaught: +4 CS with Coordinated Attack `[source-conflict: Game8 says +5]` |
+| Leadership | Settlement and command actions | Zeal: stackable +5% settlement yields while stationed on a District (wired); Field Commission: upgrade land units in radius as friendly-territory and heal 10 HP on upgrade (wired); Old Guard: commander +10 CS defending; Resilience: -50% recovery time (wired); Barrage: +5 CS with Focus Fire; Onslaught: +4 CS with Coordinated Attack `[source-conflict: Game8 says +5]` |
 
 **Fleet Commander trees** mirror Army structure: Engagement (Weather Gage), Assault (Naval Artillery: +5 CS vs fortified districts), Logistics (Warships: +15% naval unit production), Maneuver. Fifth tree name not confirmed.
 
@@ -284,7 +284,7 @@ XP thresholds per level: not published.
 - Commander defeated in last ~20 turns of age: respawns in new age. `[INFERRED]`
 - Non-fleet commander with packed units at age transition: commander persists unpacked; packed units are cleared.
 - Fleet Commander with packed naval units at Exploration → Modern: assigned naval units retained in the Fleet Commander; unassigned ships lost.
-- Zeal (stackable): multiple commanders in same city each provide +5% yield additively.
+- Zeal (stackable): multiple commanders in same city each provide +5% yield additively. Local implementation treats city centers and V2 urban tiles as district-like stationing targets, matching the Recruitment hook.
 - Two commanders in radius of same fight: XP equally shared. May disincentivize clustering.
 - Merit XP bug: expanded radius does NOT expand XP eligibility.
 - Happiness reduction at high promotion counts: likely capped. `[INFERRED]`

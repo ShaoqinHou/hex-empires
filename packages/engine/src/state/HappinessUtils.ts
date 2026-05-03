@@ -1,6 +1,6 @@
 import type { GameState, CityState, PlayerState } from '../types/GameState';
 import { coordToKey } from '../hex/HexMath';
-import { calculateCityYields } from './YieldCalculator';
+import { calculateCityYieldsWithAdjacency } from './CityYieldsWithAdjacency';
 import { isFreshWater } from './MapAnalytics';
 
 /** Number of free settlements before happiness penalty applies (Civ VII: 4) */
@@ -126,8 +126,8 @@ export function applyHappinessPenalty(value: number, happiness: number): number 
 /**
  * X3.2: Compute the total per-turn happiness yield for a player.
  *
- * Sums YieldSet.happiness from every city owned by the player using
- * calculateCityYields. This value represents happiness produced by
+ * Sums YieldSet.happiness from every city owned by the player using the stacked
+ * city-yield path. This value represents happiness produced by
  * buildings (Bath, Aqueduct, Hanging Gardens, etc.) plus any
  * MODIFY_YIELD empire-happiness effects from civ/leader abilities.
  *
@@ -140,7 +140,7 @@ export function computePlayerHappiness(state: GameState, playerId: string): numb
   let total = 0;
   for (const city of state.cities.values()) {
     if (city.owner !== playerId) continue;
-    const yields = calculateCityYields(city, state);
+    const yields = calculateCityYieldsWithAdjacency(city, state);
     total += yields.happiness;
   }
   return total;

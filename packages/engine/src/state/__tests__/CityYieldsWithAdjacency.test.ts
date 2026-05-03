@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCityYieldsWithAdjacency } from '../CityYieldsWithAdjacency';
 import { calculateCityYields } from '../YieldCalculator';
-import { createTestState } from '../../systems/__tests__/helpers';
+import { createTestState, createTestUnit } from '../../systems/__tests__/helpers';
 import { coordToKey } from '../../hex/HexMath';
 import type { GameState, HexTile, CityState } from '../../types/GameState';
+import type { CommanderState } from '../../types/Commander';
 import type { HexKey, HexCoord } from '../../types/HexCoord';
 import type { BuildingId, CityId } from '../../types/Ids';
 import type { UrbanTileV2, QuarterV2 } from '../../types/DistrictOverhaul';
@@ -83,6 +84,20 @@ function makeCity(
     districts: [],
     urbanTiles: urbanMap,
     quarters,
+  };
+}
+
+function makeCommanderState(overrides: Partial<CommanderState> = {}): CommanderState {
+  return {
+    unitId: 'cmd1',
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions: [],
+    tree: null,
+    attachedUnits: [],
+    packed: false,
+    ...overrides,
   };
 }
 
@@ -345,5 +360,201 @@ describe('calculateCityYieldsWithAdjacency', () => {
       expect(typeof result[key]).toBe('number');
       expect(Number.isFinite(result[key])).toBe(true);
     }
+  });
+
+  it('applies +5% Leadership Zeal to all nonzero city yields when one commander is stationed in city center', () => {
+    const state = stateWithTiles([
+      makeTile({ coord: { q: 0, r: 0 } }),
+      makeTile({ coord: { q: 1, r: 0 }, feature: 'mountains' }),
+    ]);
+    const city = {
+      ...makeCity('c1'),
+      buildings: ['monument', 'market', 'shrine', 'library'],
+    };
+    const base = calculateCityYields(city, state);
+
+    const withZeal = calculateCityYieldsWithAdjacency(city, {
+      ...state,
+      cities: new Map([['c1', city]]),
+      units: new Map([['cmd1', createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: city.owner,
+        position: city.position,
+        promotions: ['leadership_zeal'],
+      })]]),
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+
+    for (const key of YIELD_KEYS) {
+      if (base[key] > 0) {
+        expect(withZeal[key]).toBe(Math.floor(base[key] * 105 / 100));
+      }
+    }
+  });
+
+  it('stacks Leadership Zeal additively across commanders', () => {
+    const state = stateWithTiles([makeTile({ coord: { q: 0, r: 0 } })]);
+    const city = {
+      ...makeCity('c1'),
+      buildings: ['library', 'market', 'shrine'],
+    };
+    const base = calculateCityYields(city, state);
+
+    const withDoubleZeal = calculateCityYieldsWithAdjacency(city, {
+      ...state,
+      cities: new Map([['c1', city]]),
+      units: new Map([
+        ['cmd1', createTestUnit({
+          id: 'cmd1',
+          typeId: 'army_commander',
+          owner: city.owner,
+          position: city.position,
+          promotions: ['leadership_zeal'],
+        })],
+        ['cmd2', createTestUnit({
+          id: 'cmd2',
+          typeId: 'army_commander',
+          owner: city.owner,
+          position: city.position,
+        })],
+      ]),
+      commanders: new Map([
+        ['cmd1', makeCommanderState()],
+        ['cmd2', makeCommanderState({ promotions: ['leadership_zeal'] })],
+      ]),
+    });
+
+    for (const key of YIELD_KEYS) {
+      if (base[key] > 0) {
+        expect(withDoubleZeal[key]).toBe(Math.floor(base[key] * 110 / 100));
+      }
+    }
+  });
+
+  it('does not apply Leadership Zeal for enemy commanders or commanders elsewhere', () => {
+    const baseState = stateWithTiles([
+      makeTile({ coord: { q: 0, r: 0 } }),
+      makeTile({ coord: { q: 5, r: 5 } }),
+    ]);
+    const city = {
+      ...makeCity('c1'),
+      buildings: ['library', 'market', 'shrine'],
+      position: { q: 0, r: 0 },
+    };
+    const otherCity = {
+      ...makeCity('c2', [coordToKey({ q: 5, r: 5 })]),
+      position: { q: 5, r: 5 },
+      isCapital: false,
+      name: 'Other',
+      owner: 'p1',
+      buildings: ['market'],
+    };
+    const base = calculateCityYields(city, baseState);
+
+    const enemyCommander = calculateCityYieldsWithAdjacency(city, {
+      ...baseState,
+      cities: new Map([['c1', city]]),
+      units: new Map([['cmd1', createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p2',
+        position: city.position,
+        promotions: ['leadership_zeal'],
+      })]]),
+      commanders: new Map([['cmd1', makeCommanderState({
+        unitId: 'cmd1',
+        promotions: ['leadership_zeal'],
+      })]]),
+      players: new Map([
+        ['p1', baseState.players.get('p1')!],
+        ['p2', { ...baseState.players.get('p1')!, id: 'p2', civilizationId: 'egypt' }],
+      ]),
+    });
+    expect(enemyCommander).toEqual(base);
+
+    const otherCityCommander = calculateCityYieldsWithAdjacency(city, {
+      ...baseState,
+      cities: new Map([
+        ['c1', city],
+        ['c2', otherCity],
+      ]),
+      units: new Map([['cmd2', createTestUnit({
+        id: 'cmd2',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: { q: 5, r: 5 },
+      })]]),
+      commanders: new Map([['cmd2', makeCommanderState({
+        unitId: 'cmd2',
+        promotions: ['leadership_zeal'],
+      })]]),
+    });
+    expect(otherCityCommander).toEqual(base);
+  });
+
+  it('counts a commander stationed on a V2 urban tile for Leadership Zeal', () => {
+    const urbanCoord = { q: 1, r: 0 };
+    const urbanTile = makeUrban('c1', urbanCoord, ['shrine']);
+    const state = stateWithTiles([
+      makeTile({ coord: { q: 0, r: 0 } }),
+      makeTile({ coord: urbanCoord }),
+    ]);
+    const city = {
+      ...makeCity('c1', [], [urbanTile]),
+      buildings: ['library', 'market', 'shrine'],
+      urbanTiles: new Map([[coordToKey(urbanCoord), urbanTile]]),
+    };
+    const base = calculateCityYields(city, state);
+
+    const onUrbanTile = calculateCityYieldsWithAdjacency(city, {
+      ...state,
+      cities: new Map([['c1', city]]),
+      units: new Map([['cmd1', createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: urbanCoord,
+        promotions: ['leadership_zeal'],
+      })]]),
+      commanders: new Map([['cmd1', makeCommanderState({
+        unitId: 'cmd1',
+        promotions: ['logistics_recruitment'],
+      })]]),
+    });
+
+    for (const key of YIELD_KEYS) {
+      if (base[key] > 0) {
+        expect(onUrbanTile[key]).toBe(Math.floor(base[key] * 105 / 100));
+      }
+    }
+  });
+
+  it('does not make negative net yields worse with Leadership Zeal', () => {
+    const state = stateWithTiles([makeTile({ coord: { q: 0, r: 0 }, terrain: 'desert' })]);
+    const city = {
+      ...makeCity('c1'),
+      specialists: 2,
+      territory: [],
+      buildings: [],
+    };
+    const base = calculateCityYields(city, state);
+    expect(base.food).toBe(-2);
+
+    const withZeal = calculateCityYieldsWithAdjacency(city, {
+      ...state,
+      cities: new Map([['c1', city]]),
+      units: new Map([['cmd1', createTestUnit({
+        id: 'cmd1',
+        typeId: 'army_commander',
+        owner: 'p1',
+        position: city.position,
+        promotions: ['leadership_zeal'],
+      })]]),
+      commanders: new Map([['cmd1', makeCommanderState({ unitId: 'cmd1' })]]),
+    });
+
+    expect(withZeal.food).toBe(-2);
+    expect(withZeal.production).toBe(Math.floor(base.production * 105 / 100));
   });
 });

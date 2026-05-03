@@ -1,5 +1,5 @@
 import type { GameState, CityState } from '../types/GameState';
-import { calculateCityYields, getSpecializationYields } from './YieldCalculator';
+import { calculateCityYieldsWithAdjacency } from './CityYieldsWithAdjacency';
 import { calculateCityHappiness, calculateSettlementCapPenalty, applyHappinessPenalty } from './HappinessUtils';
 import { getCityGrowthThreshold } from './GrowthUtils';
 
@@ -73,7 +73,7 @@ export function calculateResourceChanges(state: GameState, playerId: string): Re
     if (city.owner !== playerId) continue;
     cityCount++;
 
-    const yields = calculateCityYields(city, state);
+    const yields = calculateCityYieldsWithAdjacency(city, state);
 
     // Calculate happiness
     const cityHappiness = calculateCityHappiness(city, state) - settlementCapPenalty;
