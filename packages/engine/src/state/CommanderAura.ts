@@ -22,6 +22,8 @@ type AuraTargetUnit = Pick<UnitState, 'id' | 'typeId' | 'owner' | 'position'> & 
   readonly fortified?: boolean;
 };
 
+type CommanderHealScope = 'enemy_territory' | 'neutral_territory' | 'enemy_or_neutral_territory';
+
 interface CommanderAuraCombatContext {
   readonly isAttacking?: boolean;
 }
@@ -72,6 +74,48 @@ export function getCommanderAuraCombatBonus(
     }
   }
   return bonus;
+}
+
+export function getCommanderAuraHealPerTurnAmount(
+  state: GameState,
+  unit: AuraTargetUnit,
+  territoryScope: CommanderHealScope,
+): number {
+  if (!state.commanders) return 0;
+
+  let amount = 0;
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.owner !== unit.owner) continue;
+
+    const promotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_HEAL_PER_TURN') continue;
+      if (!auraTargetMatches(state, unit, promotion.aura.target)) continue;
+      if (promotion.aura.territoryScope !== undefined
+        && !doesHealTerritoryMatch(promotion.aura.territoryScope, territoryScope)
+      ) {
+        continue;
+      }
+      if (distance(commanderUnit.position, unit.position) > promotion.aura.radius) continue;
+
+      amount = Math.max(amount, promotion.aura.amount);
+    }
+  }
+
+  return amount;
+}
+
+function doesHealTerritoryMatch(
+  auraScope: CommanderHealScope,
+  unitScope: CommanderHealScope,
+): boolean {
+  if (auraScope === 'enemy_or_neutral_territory') {
+    return unitScope === 'enemy_territory' || unitScope === 'neutral_territory';
+  }
+  return auraScope === unitScope;
 }
 
 function getCommanderPromotionIds(

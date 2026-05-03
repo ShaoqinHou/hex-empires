@@ -9,6 +9,7 @@ import type {
   PlayerState,
   UnitState,
 } from '../../types/GameState';
+import type { CommanderState } from '../../types/Commander';
 
 /**
  * Rulebook §6.9 parity audit — Healing Rates.
@@ -87,6 +88,34 @@ function makeWarRelation(overrides: Partial<DiplomacyRelation> = {}): DiplomacyR
   };
 }
 
+function makeCommanderState(overrides: Partial<CommanderState> = {}): CommanderState {
+  return {
+    unitId: 'cmd1',
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions: ['logistics_field_medic'],
+    tree: null,
+    attachedUnits: [],
+    packed: false,
+    ...overrides,
+  };
+}
+
+function buildTurnState(args: {
+  cities?: ReadonlyMap<string, CityState>;
+  diplomacy?: GameState['diplomacy'];
+  commanders?: ReadonlyMap<string, CommanderState>;
+  units: ReadonlyMap<string, UnitState>;
+}): GameState {
+  return buildState({
+    units: args.units,
+    cities: args.cities,
+    diplomacy: args.diplomacy ?? { relations: new Map() },
+    commanders: args.commanders,
+  });
+}
+
 /**
  * Build a minimal two-player state where `p1` is the current player. Any
  * `cities` / `units` / `diplomacy` supplied replace the defaults wholesale.
@@ -96,6 +125,7 @@ function buildState(opts: {
   readonly cities?: ReadonlyMap<string, CityState>;
   readonly diplomacy?: GameState['diplomacy'];
   readonly players?: ReadonlyMap<string, PlayerState>;
+  readonly commanders?: ReadonlyMap<string, CommanderState>;
 }): GameState {
   const players: ReadonlyMap<string, PlayerState> =
     opts.players ??
@@ -109,6 +139,7 @@ function buildState(opts: {
     units: new Map(opts.units),
     cities: opts.cities ? new Map(opts.cities) : new Map(),
     diplomacy: opts.diplomacy ?? { relations: new Map() },
+    commanders: opts.commanders,
     players: new Map(players),
   });
 }
@@ -431,4 +462,257 @@ describe('H9: Partisan unique unit receives +10 healing', () => {
       expect(next.units.get('u1')!.health).toBe(70);
     },
   );
+});
+
+// ── H10: Field Medic healing bonus ──────────────────────────────────────────
+
+describe('H10: Field Medic grants +5 healing in neutral/enemy territory', () => {
+  it('heals a neutral land unit within radius for +5 (50 -> 65)', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+        movementLeft: 2,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(65);
+  });
+
+  it('heals an enemy-territory land unit within radius for +5 (50 -> 60)', () => {
+    const enemyCity = createCity({
+      id: 'ec1',
+      owner: 'p2',
+      name: 'Outpost',
+      position: { q: 5, r: 5 },
+      territory: [coordToKey({ q: 5, r: 5 }), coordToKey({ q: 1, r: 0 })],
+      isCapital: true,
+    });
+
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+        movementLeft: 2,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const diplomacy: GameState['diplomacy'] = {
+      relations: new Map([['p1:p2', makeWarRelation()]]),
+    };
+
+    const state = buildTurnState({
+      units,
+      cities: new Map([['ec1', enemyCity]]),
+      diplomacy,
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(60);
+  });
+
+  it('does not apply Field Medic in friendly territory, so +15 only', () => {
+    const city = createCity({
+      position: { q: 2, r: 2 },
+      territory: [coordToKey({ q: 2, r: 2 }), coordToKey({ q: 2, r: 3 })],
+    });
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 2, r: 3 },
+        health: 100,
+        movementLeft: 2,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 2, r: 3 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      cities: new Map([['c1', city]]),
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(65);
+  });
+
+  it('does not heal civilian or naval units from Field Medic', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+      })],
+      ['settler', createTestUnit({
+        id: 'settler',
+        owner: 'p1',
+        typeId: 'settler',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+      ['galley', createTestUnit({
+        id: 'galley',
+        owner: 'p1',
+        typeId: 'galley',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('settler')!.health).toBe(60);
+    expect(next.units.get('galley')!.health).toBe(60);
+  });
+
+  it('does not apply Field Medic when unit is outside aura radius', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 2, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(60);
+  });
+
+  it('uses legacy commander-unit UnitState promotions when state promotions are absent', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+        movementLeft: 2,
+        promotions: ['logistics_field_medic'],
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState({ promotions: [] })]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(65);
+  });
+
+  it('does not apply Field Medic from an enemy commander', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p2',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 1,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState({ promotions: ['logistics_field_medic'] })]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(60);
+  });
+
+  it('does not heal exhausted units even when Field Medic is nearby', () => {
+    const units = new Map<string, UnitState>([
+      ['cmd1', createTestUnit({
+        id: 'cmd1',
+        owner: 'p1',
+        typeId: 'captain',
+        position: { q: 0, r: 0 },
+        health: 100,
+      })],
+      ['u1', createTestUnit({
+        id: 'u1',
+        owner: 'p1',
+        typeId: 'warrior',
+        position: { q: 1, r: 0 },
+        health: 50,
+        movementLeft: 0,
+      })],
+    ]);
+
+    const state = buildTurnState({
+      units,
+      commanders: new Map([['cmd1', makeCommanderState()]]),
+    });
+    const next = turnSystem(state, { type: 'START_TURN' });
+    expect(next.units.get('u1')!.health).toBe(50);
+  });
 });

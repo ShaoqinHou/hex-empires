@@ -1,6 +1,7 @@
 import type { GameState, GameAction, CityState, GameEvent, UnitState } from '../types/GameState';
 import { coordToKey, distance } from '../hex/HexMath';
 import { getMovementBonus } from '../state/EffectUtils';
+import { getCommanderAuraHealPerTurnAmount } from '../state/CommanderAura';
 
 /**
  * TurnSystem manages turn phases and player order.
@@ -50,7 +51,17 @@ function handleStartTurn(state: GameState): GameState {
         // Skip healing if unit used all movement last turn (attacked)
         const wasExhausted = unit.movementLeft === 0;
         if (!wasExhausted) {
-          const healAmount = getHealAmount(unit.position, ownedCities, unit.owner, state, unit.typeId);
+          const healingTerritory = getHealingTerritory(unit.position, ownedCities, unit.owner, state);
+          const commanderHealBonus = healingTerritory === 'enemy_territory' || healingTerritory === 'neutral_territory'
+            ? getCommanderAuraHealPerTurnAmount(state, unit, healingTerritory)
+            : 0;
+          const healAmount = getHealAmount(
+            unit.position,
+            healingTerritory,
+            ownedCities,
+            state,
+            unit.typeId,
+          ) + commanderHealBonus;
           health = Math.min(100, health + healAmount);
         }
       }
@@ -124,53 +135,13 @@ function handleStartTurn(state: GameState): GameState {
  */
 function getHealAmount(
   position: { readonly q: number; readonly r: number },
+  territory: HealingTerritory,
   ownedCities: ReadonlyArray<CityState>,
-  unitOwner: string,
   state: GameState,
   typeId: string,
 ): number {
   const posKey = coordToKey(position);
-
-  let base = 10; // Neutral territory default
-
-  // Check if in a city (unit position matches city position)
-  let cityTileMatch = false;
-  for (const city of ownedCities) {
-    if (coordToKey(city.position) === posKey) {
-      base = 20;
-      cityTileMatch = true;
-      break;
-    }
-  }
-
-  // Check if in friendly territory (unit position is in any owned city's territory)
-  if (!cityTileMatch) {
-    for (const city of ownedCities) {
-      if (city.territory.includes(posKey)) {
-        base = 15;
-        break;
-      }
-    }
-  }
-
-  // Check if in enemy territory (owned by a player at war with the unit owner).
-  // Only override if the base is still the neutral default (10): a tile inside
-  // one of the unit owner's own cities/territories is never "enemy" territory.
-  if (base === 10) {
-    for (const city of state.cities.values()) {
-      if (city.owner === unitOwner) continue; // skip own cities (already handled above)
-      if (!city.territory.includes(posKey)) continue;
-      // This tile belongs to another player — check if at war
-      const enemyId = city.owner;
-      for (const [key, rel] of state.diplomacy.relations) {
-        if (rel.status === 'war' && key.includes(unitOwner) && key.includes(enemyId)) {
-          base = 5; // enemy territory gives only 5 HP/turn
-          break;
-        }
-      }
-      if (base === 5) break;
-    }
-  }
+  const base = getHealBaseFromTerritory(territory);
 
   // Additive §6.9 bonuses.
   let bonus = 0;
@@ -191,6 +162,52 @@ function getHealAmount(
   }
 
   return base + bonus;
+}
+
+type HealingTerritory =
+  | 'city'
+  | 'friendly_territory'
+  | 'neutral_territory'
+  | 'enemy_territory';
+
+function getHealingTerritory(
+  position: { readonly q: number; readonly r: number },
+  ownedCities: ReadonlyArray<CityState>,
+  unitOwner: string,
+  state: GameState,
+): HealingTerritory {
+  const posKey = coordToKey(position);
+
+  for (const city of ownedCities) {
+    if (coordToKey(city.position) === posKey) {
+      return 'city';
+    }
+  }
+
+  for (const city of ownedCities) {
+    if (city.territory.includes(posKey)) {
+      return 'friendly_territory';
+    }
+  }
+
+  for (const city of state.cities.values()) {
+    if (city.owner === unitOwner) continue;
+    if (!city.territory.includes(posKey)) continue;
+    for (const [key, rel] of state.diplomacy.relations) {
+      if (rel.status === 'war' && key.includes(unitOwner) && key.includes(city.owner)) {
+        return 'enemy_territory';
+      }
+    }
+  }
+
+  return 'neutral_territory';
+}
+
+function getHealBaseFromTerritory(territory: HealingTerritory): number {
+  if (territory === 'city') return 20;
+  if (territory === 'friendly_territory') return 15;
+  if (territory === 'enemy_territory') return 5;
+  return 10;
 }
 
 /**
