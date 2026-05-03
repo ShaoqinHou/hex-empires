@@ -1,4 +1,4 @@
-import type { GameState, GameAction, UnitState, HexTile } from '../types/GameState';
+import type { GameState, GameAction, UnitCategory, UnitState, HexTile } from '../types/GameState';
 import { coordToKey, distance, neighbors, HEX_DIRECTIONS } from '../hex/HexMath';
 import type { HexCoord } from '../types/HexCoord';
 import { getMovementCost } from '../hex/TerrainCost';
@@ -78,6 +78,10 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     if (!targetDef) {
       return createInvalidResult(state, `Upgrade target '${currentDef.upgradesTo}' not found`, 'movement');
     }
+    const upgradeSupportHeal = findUpgradeSupportHeal(state, unit);
+    if (!isUnitInFriendlyTerritory(state, unit) && upgradeSupportHeal === null) {
+      return createInvalidResult(state, 'Unit must be in friendly territory to upgrade', 'movement');
+    }
     // Check required tech
     const player = state.players.get(state.currentPlayerId);
     if (!player) return state;
@@ -96,6 +100,7 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
     updatedUnits.set(unit.id, {
       ...unit,
       typeId: currentDef.upgradesTo,
+      health: Math.min(100, unit.health + (upgradeSupportHeal ?? 0)),
       movementLeft: 0, // upgrading consumes the whole turn
       fortified: false,
     });
@@ -347,6 +352,78 @@ export function movementSystem(state: GameState, action: GameAction): GameState 
 /**
  * Helper function to create an invalid result with validation reason
  */
+function findUpgradeSupportHeal(state: GameState, unit: UnitState): number | null {
+  if (!state.commanders) return null;
+
+  let healOnUpgrade: number | null = null;
+
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+    if (commanderUnit.owner !== unit.owner) continue;
+
+    const commanderPromotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of commanderPromotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (!promotion || promotion.aura.type !== 'AURA_UPGRADE_SUPPORT') continue;
+      if (!promotion.aura.allowsUpgradeOutsideFriendlyTerritory) continue;
+
+      if (!supportsUnitUpgrade(state, unit, promotion.aura.target)) {
+        continue;
+      }
+      if (distance(commanderUnit.position, unit.position) > promotion.aura.radius) {
+        continue;
+      }
+
+      if (healOnUpgrade === null || promotion.aura.healOnUpgrade > healOnUpgrade) {
+        healOnUpgrade = promotion.aura.healOnUpgrade;
+      }
+    }
+  }
+
+  return healOnUpgrade;
+}
+
+function getCommanderPromotionIds(
+  commanderUnit: UnitState,
+  commanderState: { readonly promotions: ReadonlyArray<string> },
+): ReadonlySet<string> {
+  return new Set([...commanderState.promotions, ...commanderUnit.promotions]);
+}
+
+const LAND_UNIT_UPGRADE_CATEGORIES = new Set<UnitCategory>(['melee', 'ranged', 'cavalry', 'siege']);
+
+function isLandUnitCategory(
+  category: UnitCategory | undefined,
+): category is 'melee' | 'ranged' | 'cavalry' | 'siege' {
+  return category !== undefined && LAND_UNIT_UPGRADE_CATEGORIES.has(category);
+}
+
+function supportsUnitUpgrade(
+  state: GameState,
+  unit: UnitState,
+  target: ReadonlyArray<UnitCategory | 'all'> | UnitCategory | 'all',
+): boolean {
+  const category = state.config.units.get(unit.typeId)?.category;
+  if (!isLandUnitCategory(category)) return false;
+
+  const targets = Array.isArray(target) ? target : [target];
+  if (targets.includes('all')) return true;
+  return targets.includes(category);
+}
+
+function isUnitInFriendlyTerritory(state: GameState, unit: UnitState): boolean {
+  const unitKey = coordToKey(unit.position);
+
+  for (const city of state.cities.values()) {
+    if (city.owner !== unit.owner) continue;
+    if (coordToKey(city.position) === unitKey) return true;
+    if (city.territory.includes(unitKey)) return true;
+  }
+
+  return false;
+}
+
 function createInvalidResult(
   state: GameState,
   reason: string,

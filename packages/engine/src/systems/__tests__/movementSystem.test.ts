@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { movementSystem, tilesShareRiverEdge } from '../movementSystem';
-import { createTestState, createTestUnit, createTestPlayer, setTile } from './helpers';
+import { createTestCity, createTestState, createTestUnit, createTestPlayer, setTile } from './helpers';
 import { coordToKey } from '../../hex/HexMath';
 import type { HexTile } from '../../types/GameState';
 import type { DiscoveryDef, NarrativeEventDef } from '../../types/NarrativeEvent';
@@ -459,10 +459,11 @@ describe('movementSystem', () => {
       const players = new Map([
         ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
       ]);
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: { q: 0, r: 0 } });
       const units = new Map([
         ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior', movementLeft: 2 })],
       ]);
-      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
       const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
 
       expect(next.units.get('u1')!.typeId).toBe('swordsman');
@@ -471,14 +472,35 @@ describe('movementSystem', () => {
       expect(next.players.get('p1')!.gold).toBeLessThan(500);
     });
 
+    it('upgrades a unit on owned city territory', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const city = createTestCity({
+        id: 'c1',
+        owner: 'p1',
+        position: { q: 0, r: 0 },
+        territory: [coordToKey({ q: 1, r: 0 })],
+      });
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', movementLeft: 2 })],
+      ]);
+      const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('swordsman');
+      expect(next.players.get('p1')!.gold).toBe(500 - state.config.units.get('swordsman')!.cost * 2);
+    });
+
     it('rejects upgrade without required tech', () => {
       const players = new Map([
         ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: [] })],
       ]);
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: { q: 0, r: 0 } });
       const units = new Map([
         ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior' })],
       ]);
-      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
       const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
 
       // Unit should not change
@@ -490,14 +512,210 @@ describe('movementSystem', () => {
       const players = new Map([
         ['p1', createTestPlayer({ id: 'p1', gold: 10, researchedTechs: ['iron_working'] })],
       ]);
+      const city = createTestCity({ id: 'c1', owner: 'p1', position: { q: 0, r: 0 } });
       const units = new Map([
         ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 0, r: 0 }, typeId: 'warrior' })],
       ]);
-      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const state = createTestState({ units, players, cities: new Map([['c1', city]]), currentPlayerId: 'p1' });
       const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
 
       expect(next.units.get('u1')!.typeId).toBe('warrior');
       expect(next.players.get('p1')!.gold).toBe(10);
+    });
+
+    it('rejects upgrade outside friendly territory without Field Commission', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 4, r: 0 }, typeId: 'warrior', movementLeft: 2, health: 70 })],
+      ]);
+      const state = createTestState({ units, players, currentPlayerId: 'p1' });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Unit must be in friendly territory to upgrade',
+        category: 'movement',
+      });
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+      expect(next.units.get('u1')!.health).toBe(70);
+      expect(next.players.get('p1')!.gold).toBe(500);
+    });
+
+    it('upgrades outside friendly territory with Field Commission and applies support heal', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', movementLeft: 2, health: 90 })],
+        ['c1', createTestUnit({ id: 'c1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: ['leadership_field_commission'] })],
+      ]);
+      const state = createTestState({
+        units,
+        players,
+        commanders: new Map([[
+          'c1',
+          {
+            unitId: 'c1',
+            xp: 0,
+            commanderLevel: 1,
+            unspentPromotionPicks: 0,
+            promotions: [],
+            tree: null,
+            attachedUnits: [],
+            packed: false,
+          },
+        ]]),
+        currentPlayerId: 'p1',
+      });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+      const upgradeCost = state.config.units.get('swordsman')!.cost * 2;
+
+      expect(next.units.get('u1')!.typeId).toBe('swordsman');
+      expect(next.units.get('u1')!.movementLeft).toBe(0);
+      expect(next.units.get('u1')!.fortified).toBe(false);
+      expect(next.units.get('u1')!.health).toBe(100);
+      expect(next.players.get('p1')!.gold).toBe(500 - upgradeCost);
+    });
+
+    it('uses CommanderState promotions for Field Commission upgrade support', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', movementLeft: 2, health: 80 })],
+        ['c1', createTestUnit({ id: 'c1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: [] })],
+      ]);
+      const state = createTestState({
+        units,
+        players,
+        commanders: new Map([[
+          'c1',
+          {
+            unitId: 'c1',
+            xp: 0,
+            commanderLevel: 1,
+            unspentPromotionPicks: 0,
+            promotions: ['leadership_field_commission'],
+            tree: null,
+            attachedUnits: [],
+            packed: false,
+          },
+        ]]),
+        currentPlayerId: 'p1',
+      });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.typeId).toBe('swordsman');
+      expect(next.units.get('u1')!.health).toBe(90);
+    });
+
+    it('does not let Field Commission bypass missing upgrade tech', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: [] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', health: 80 })],
+        ['c1', createTestUnit({ id: 'c1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: ['leadership_field_commission'] })],
+      ]);
+      const state = createTestState({
+        units,
+        players,
+        commanders: new Map([[
+          'c1',
+          {
+            unitId: 'c1',
+            xp: 0,
+            commanderLevel: 1,
+            unspentPromotionPicks: 0,
+            promotions: [],
+            tree: null,
+            attachedUnits: [],
+            packed: false,
+          },
+        ]]),
+        currentPlayerId: 'p1',
+      });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Requires tech: iron_working',
+        category: 'movement',
+      });
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+      expect(next.units.get('u1')!.health).toBe(80);
+      expect(next.players.get('p1')!.gold).toBe(500);
+    });
+
+    it('does not let Field Commission bypass upgrade gold cost', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 10, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', health: 80 })],
+        ['c1', createTestUnit({ id: 'c1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: ['leadership_field_commission'] })],
+      ]);
+      const state = createTestState({
+        units,
+        players,
+        commanders: new Map([[
+          'c1',
+          {
+            unitId: 'c1',
+            xp: 0,
+            commanderLevel: 1,
+            unspentPromotionPicks: 0,
+            promotions: [],
+            tree: null,
+            attachedUnits: [],
+            packed: false,
+          },
+        ]]),
+        currentPlayerId: 'p1',
+      });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.lastValidation).toEqual({
+        valid: false,
+        reason: 'Not enough gold (need 180, have 10)',
+        category: 'movement',
+      });
+      expect(next.units.get('u1')!.typeId).toBe('warrior');
+      expect(next.units.get('u1')!.health).toBe(80);
+      expect(next.players.get('p1')!.gold).toBe(10);
+    });
+
+    it('caps Field Commission heal at 100', () => {
+      const players = new Map([
+        ['p1', createTestPlayer({ id: 'p1', gold: 500, researchedTechs: ['iron_working'] })],
+      ]);
+      const units = new Map([
+        ['u1', createTestUnit({ id: 'u1', owner: 'p1', position: { q: 1, r: 0 }, typeId: 'warrior', movementLeft: 2, health: 95 })],
+        ['c1', createTestUnit({ id: 'c1', owner: 'p1', typeId: 'captain', position: { q: 0, r: 0 }, promotions: ['leadership_field_commission'] })],
+      ]);
+      const state = createTestState({
+        units,
+        players,
+        commanders: new Map([[
+          'c1',
+          {
+            unitId: 'c1',
+            xp: 0,
+            commanderLevel: 1,
+            unspentPromotionPicks: 0,
+            promotions: [],
+            tree: null,
+            attachedUnits: [],
+            packed: false,
+          },
+        ]]),
+        currentPlayerId: 'p1',
+      });
+      const next = movementSystem(state, { type: 'UPGRADE_UNIT', unitId: 'u1' });
+
+      expect(next.units.get('u1')!.health).toBe(100);
     });
 
     it('rejects upgrade for unit with no upgrade path', () => {
