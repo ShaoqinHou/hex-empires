@@ -13,7 +13,7 @@ import {
   hexDirectionIndex,
 } from './CombatAnalytics';
 import { getCombatBonus, getWarSupportBonus } from './EffectUtils';
-import { getCommanderAuraCombatBonus, getCommanderAuraHealAfterAttackAmount } from './CommanderAura';
+import { getCommanderAuraCombatBonus, getCommanderAuraFlankingAdjustment, getCommanderAuraHealAfterAttackAmount } from './CommanderAura';
 import {
   cityUsesDistrictSiegeModel,
   getCityCenterDistrictKey,
@@ -300,7 +300,7 @@ export function calculateCombatPreview(
   );
 
   // Gather modifiers for display
-  const flankingBonus = calculateFlankingBonus(attacker, defender.position, state);
+  const flankingBonus = calculateFlankingBonus(attacker, defender, state);
   const terrainBonusForDisplay = defenderTile ? getTerrainDefenseBonus(state, defenderTile) : { percent: 0, flat: 0 };
   // River penalty: only applies when crossing the specific edge facing the defender
   const riverPenalty = Boolean(attackerTile && isRiverEdgeBetweenPreview(attackerTile, attacker.position, defender.position));
@@ -838,8 +838,8 @@ function getEffectiveCombatStrength(
   // VII: wounded penalty is additive — same formula as combatSystem.
   const effectiveBase = computeEffectiveCS(base, unit.health);
   const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, unit, isAttacking);
-  const flankingBonus = isAttacking && defenderPosition
-    ? calculateFlankingBonus(unit, defenderPosition, state)
+  const flankingBonus = isAttacking
+    ? calculateFlankingBonus(unit, defenderUnit, state)
     : 0;
   // B1: River penalty — multiplicative -25% when crossing a river edge to attack
   const crossingRiver = isAttacking && attackerTile && defenderPosition
@@ -926,8 +926,11 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
   return { percent, flat };
 }
 
-function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
-  return calculateBattlefrontFlankingBonus(state, attacker, defenderPosition);
+function calculateFlankingBonus(attacker: UnitState, defender: UnitState | undefined, state: GameState): number {
+  if (!defender) return 0;
+  const base = calculateBattlefrontFlankingBonus(state, attacker, defender.position);
+  if (base <= 0) return 0;
+  return Math.max(0, base + getCommanderAuraFlankingAdjustment(state, attacker, defender));
 }
 
 function checkAdjacentAlly(attacker: UnitState, defender: UnitState, state: GameState): boolean {

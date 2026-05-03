@@ -12,7 +12,7 @@ import {
   computeEffectiveCS,
   hexDirectionIndex,
 } from '../state/CombatAnalytics';
-import { getCommanderAuraCombatBonus, getCommanderAuraHealAfterAttackAmount } from '../state/CommanderAura';
+import { getCommanderAuraCombatBonus, getCommanderAuraFlankingAdjustment, getCommanderAuraHealAfterAttackAmount } from '../state/CommanderAura';
 import { enqueueFirstEligibleNarrativeEvent } from '../state/narrativeEventUtils';
 import {
   buildInitialDistrictHPs,
@@ -331,7 +331,7 @@ function getEffectiveCombatStrength(state: GameState, unit: UnitState, isAttacki
   const base = getBaseCombatStrength(state, unit.typeId, isAttacking);
   // VII: wounded penalty is additive: base CS minus round(10 - HP / 10).
   const effectiveBase = computeEffectiveCS(base, unit.health);
-  const flankingBonus = (isAttacking && defenderPosition) ? calculateFlankingBonus(unit, defenderPosition, state) : 0;
+  const flankingBonus = (isAttacking && defenderUnit) ? calculateFlankingBonus(unit, defenderUnit, state) : 0;
   const firstStrikeBonus = calculateFirstStrikeCombatBonus(state, unit, isAttacking);
   // Y5.2 (F-08): River-crossing penalty — if attacker crosses a river edge to attack,
   // apply -25% multiplicative CS penalty (standard Civ river crossing rule).
@@ -471,8 +471,10 @@ function getTerrainDefenseBonus(state: GameState, tile: HexTile): { percent: num
  *   - Front-side / rear-side / direct-rear attacks grant +2 / +3 / +5 CS.
  *   - Count-based adjacent-unit bonuses live in calculateSupportBonus instead.
  */
-function calculateFlankingBonus(attacker: UnitState, defenderPosition: HexCoord, state: GameState): number {
-  return calculateBattlefrontFlankingBonus(state, attacker, defenderPosition);
+function calculateFlankingBonus(attacker: UnitState, defender: UnitState, state: GameState): number {
+  const base = calculateBattlefrontFlankingBonus(state, attacker, defender.position);
+  if (base <= 0) return 0;
+  return Math.max(0, base + getCommanderAuraFlankingAdjustment(state, attacker, defender));
 }
 
 /**

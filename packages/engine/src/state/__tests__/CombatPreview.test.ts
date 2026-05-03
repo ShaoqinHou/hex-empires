@@ -166,6 +166,93 @@ describe('calculateCombatPreview', () => {
     expect(preview.modifiers.flankingBonus).toBe(5);
   });
 
+  it('includes Maneuver Harassment and Redeploy in flanking preview modifiers', () => {
+    const units = new Map([
+      ['anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 0, health: 100 })],
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 3 as const })],
+      ['cmd1', createTestUnit({ id: 'cmd1', owner: 'p1', typeId: 'army_commander', position: { q: 5, r: 2 }, movementLeft: 0 })],
+      ['cmd2', createTestUnit({ id: 'cmd2', owner: 'p2', typeId: 'army_commander', position: { q: 4, r: 2 }, movementLeft: 0 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: ['military_training'] })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const commander = (unitId: string, promotions: ReadonlyArray<string>): CommanderState => ({
+      unitId,
+      xp: 0,
+      commanderLevel: 1,
+      unspentPromotionPicks: 0,
+      promotions,
+      tree: null,
+      attachedUnits: [],
+      packed: false,
+    });
+
+    const harassment = calculateCombatPreview(createTestState({
+      units,
+      players,
+      currentPlayerId: 'p1',
+      commanders: new Map([
+        ['cmd1', commander('cmd1', ['maneuver_harassment'])],
+        ['cmd2', commander('cmd2', [])],
+      ]),
+    }), 'a1', 'd1');
+    const redeploy = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      currentPlayerId: 'p1',
+      commanders: new Map([
+        ['cmd1', commander('cmd1', [])],
+        ['cmd2', commander('cmd2', ['maneuver_redeploy'])],
+      ]),
+    }), 'a1', 'd1');
+    const both = calculateCombatPreview(createTestState({
+      units: new Map(units),
+      players: new Map(players),
+      currentPlayerId: 'p1',
+      commanders: new Map([
+        ['cmd1', commander('cmd1', ['maneuver_harassment'])],
+        ['cmd2', commander('cmd2', ['maneuver_redeploy'])],
+      ]),
+    }), 'a1', 'd1');
+
+    expect(harassment.modifiers.flankingBonus).toBe(7);
+    expect(redeploy.modifiers.flankingBonus).toBe(3);
+    expect(both.modifiers.flankingBonus).toBe(5);
+  });
+
+  it('clamps Maneuver Redeploy flanking reduction at zero', () => {
+    const units = new Map([
+      ['anchor', createTestUnit({ id: 'anchor', owner: 'p1', typeId: 'warrior', position: { q: 3, r: 3 }, movementLeft: 0, health: 100 })],
+      ['a1', createTestUnit({ id: 'a1', owner: 'p1', typeId: 'warrior', position: { q: 4, r: 2 }, movementLeft: 2, health: 100 })],
+      ['d1', createTestUnit({ id: 'd1', owner: 'p2', typeId: 'warrior', position: { q: 4, r: 3 }, health: 100, facing: 3 as const })],
+      ['cmd2', createTestUnit({ id: 'cmd2', owner: 'p2', typeId: 'army_commander', position: { q: 4, r: 2 }, movementLeft: 0 })],
+    ]);
+    const players = new Map([
+      ['p1', createTestPlayer({ id: 'p1', researchedTechs: ['military_training'] })],
+      ['p2', createTestPlayer({ id: 'p2' })],
+    ]);
+    const commander: CommanderState = {
+      unitId: 'cmd2',
+      xp: 0,
+      commanderLevel: 1,
+      unspentPromotionPicks: 0,
+      promotions: ['maneuver_redeploy'],
+      tree: null,
+      attachedUnits: [],
+      packed: false,
+    };
+    const preview = calculateCombatPreview(createTestState({
+      units,
+      players,
+      currentPlayerId: 'p1',
+      commanders: new Map([['cmd2', commander]]),
+    }), 'a1', 'd1');
+
+    expect(preview.modifiers.flankingBonus).toBe(0);
+  });
+
   it('adds +2 support per adjacent friendly to attacker and +4 with two', () => {
     const players = new Map([
       ['p1', createTestPlayer({ id: 'p1', leaderId: 'cleopatra' })],

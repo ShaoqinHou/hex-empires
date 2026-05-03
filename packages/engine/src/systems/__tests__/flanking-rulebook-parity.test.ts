@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { combatSystem } from '../combatSystem';
 import { createTestState, createTestUnit, createTestPlayer } from './helpers';
 import { calculateBattlefrontFlankingBonus } from '../../state/CombatAnalytics';
+import type { CommanderState } from '../../types/Commander';
 import type { GameState, UnitState } from '../../types/GameState';
 
 /**
@@ -76,6 +77,34 @@ function damageTo(state: GameState): number {
   return defender ? 100 - defender.health : 100;
 }
 
+function makeCommanderState(unitId: string, promotions: ReadonlyArray<string> = []): CommanderState {
+  return {
+    unitId,
+    xp: 0,
+    commanderLevel: 1,
+    unspentPromotionPicks: 0,
+    promotions,
+    tree: null,
+    attachedUnits: [],
+    packed: false,
+  };
+}
+
+function withCommander(
+  state: GameState,
+  commander: UnitState,
+  promotions: ReadonlyArray<string> = [],
+): GameState {
+  return {
+    ...state,
+    units: new Map([...state.units, [commander.id, commander]]),
+    commanders: new Map([
+      ...(state.commanders ?? new Map<string, CommanderState>()),
+      [commander.id, makeCommanderState(commander.id, promotions)],
+    ]),
+  };
+}
+
 describe('F1: battlefront angle bands', () => {
   it('maps front-side, rear-side, and direct-rear attacks to +2/+3/+5 CS', () => {
     const frontSide = buildBattlefrontScenario({ attackerPosition: { q: 4, r: 2 } });
@@ -147,5 +176,52 @@ describe('F5: count-based adjacent units are not flanking', () => {
     units.set('f3', createTestUnit({ id: 'f3', owner: 'p1', typeId: 'warrior', position: { q: 5, r: 3 }, health: 100 }));
 
     expect(damageTo({ ...baseline, units })).toBe(damageTo(baseline));
+  });
+});
+
+describe('Commander Maneuver flanking auras', () => {
+  it('Harassment adds damage to an existing battlefront flank', () => {
+    const base = buildBattlefrontScenario({ seed: 29 });
+    const commanderUnit = createTestUnit({
+      id: 'cmd1',
+      owner: 'p1',
+      typeId: 'army_commander',
+      position: { q: 5, r: 2 },
+      movementLeft: 0,
+    });
+    const unpromoted = damageTo(withCommander(base, commanderUnit));
+    const harassment = damageTo(withCommander(base, commanderUnit, ['maneuver_harassment']));
+
+    expect(harassment).toBeGreaterThan(unpromoted);
+  });
+
+  it('Redeploy reduces damage from an existing battlefront flank', () => {
+    const base = buildBattlefrontScenario({ seed: 31 });
+    const commanderUnit = createTestUnit({
+      id: 'cmd2',
+      owner: 'p2',
+      typeId: 'army_commander',
+      position: { q: 4, r: 2 },
+      movementLeft: 0,
+    });
+    const unpromoted = damageTo(withCommander(base, commanderUnit));
+    const redeploy = damageTo(withCommander(base, commanderUnit, ['maneuver_redeploy']));
+
+    expect(redeploy).toBeLessThan(unpromoted);
+  });
+
+  it('commander flanking auras do not create flanking without a valid battlefront flank', () => {
+    const noFacing = buildBattlefrontScenario({ seed: 37, defenderFacing: undefined });
+    const commanderUnit = createTestUnit({
+      id: 'cmd1',
+      owner: 'p1',
+      typeId: 'army_commander',
+      position: { q: 5, r: 2 },
+      movementLeft: 0,
+    });
+    const unpromoted = damageTo(withCommander(noFacing, commanderUnit));
+    const harassment = damageTo(withCommander(noFacing, commanderUnit, ['maneuver_harassment']));
+
+    expect(harassment).toBe(unpromoted);
   });
 });

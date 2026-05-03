@@ -193,3 +193,40 @@ export function getCommanderAuraHealAfterAttackAmount(
 
   return amount;
 }
+
+export function getCommanderAuraFlankingAdjustment(
+  state: GameState,
+  attacker: AuraTargetUnit,
+  defender: AuraTargetUnit,
+): number {
+  if (!state.commanders) return 0;
+
+  let adjustment = 0;
+  for (const [commanderId, commanderState] of state.commanders) {
+    const commanderUnit = state.units.get(commanderId);
+    if (!commanderUnit) continue;
+
+    const promotionIds = getCommanderPromotionIds(commanderUnit, commanderState);
+    for (const promotionId of promotionIds) {
+      const promotion = state.config.commanderPromotions?.get(promotionId);
+      if (promotion?.aura.type !== 'AURA_FLANKING_BONUS') continue;
+      const aura = promotion.aura;
+
+      if (aura.appliesTo === 'friendly_attacking') {
+        if (commanderUnit.owner !== attacker.owner) continue;
+        if (!auraTargetMatches(state, attacker, aura.target)) continue;
+        if (distance(commanderUnit.position, attacker.position) <= aura.radius) {
+          adjustment += aura.value;
+        }
+      } else {
+        if (commanderUnit.owner !== defender.owner) continue;
+        if (!auraTargetMatches(state, defender, aura.target)) continue;
+        if (distance(commanderUnit.position, defender.position) <= aura.radius) {
+          adjustment += aura.value;
+        }
+      }
+    }
+  }
+
+  return adjustment;
+}
