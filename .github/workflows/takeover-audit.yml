@@ -1,0 +1,60 @@
+name: Takeover audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build engine and web app
+        run: npm run build
+
+      - name: Run engine tests
+        run: npm run test:engine
+
+      - name: Run web unit tests
+        run: npm run test:web
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
+
+      - name: Run browser tests
+        run: npm run test:e2e
+
+      - name: Capture repository snapshot
+        if: always()
+        run: |
+          git ls-files -z | tar --null -T - -czf /tmp/hex-empires-source.tar.gz
+          git ls-files > /tmp/tracked-files.txt
+
+      - name: Upload source and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: takeover-audit-${{ github.sha }}
+          path: |
+            /tmp/hex-empires-source.tar.gz
+            /tmp/tracked-files.txt
+            packages/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
