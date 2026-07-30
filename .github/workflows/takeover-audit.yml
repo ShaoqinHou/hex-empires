@@ -39,6 +39,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Package dependencies for local audit
+        run: tar -czf /tmp/node-modules.tar.gz node_modules
+
+      - name: Upload dependency snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: takeover-dependencies-${{ github.sha }}
+          path: /tmp/node-modules.tar.gz
+          retention-days: 2
+
       - name: Build engine and web app
         run: npm run build
 
