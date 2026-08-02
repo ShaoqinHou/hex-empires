@@ -1,9 +1,0 @@
-export type { LeaderDef, PersonaDef, AgendaDef, TerrainBiomeBias } from './types';
-export {
-  ALL_LEADERS,
-  AUGUSTUS, CLEOPATRA, PERICLES, CYRUS,
-  GANDHI, QIN_SHI_HUANG, ALEXANDER, HATSHEPSUT,
-  GENGHIS_KHAN,
-  CONFUCIUS, IBN_BATTUTA, HARRIET_TUBMAN, NAPOLEON,
-  TECUMSEH, NAPOLEON_REVOLUTIONARY,
-} from './all-leaders';

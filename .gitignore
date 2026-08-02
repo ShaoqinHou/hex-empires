@@ -1,38 +1,16 @@
 node_modules/
 dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+test-results/
+playwright-report/
+
 .env
-.env.local
+.env.*
+!.env.example
 
-# Build outputs
-packages/web/dist/
-packages/engine/dist/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
+*.log
 .DS_Store
 Thumbs.db
-
-# Codex workflow artifacts
-.codex/workflow/test-result.txt
-.codex/workflow/verify-marker.txt
-.codex/workflow/.issues.lockdir/
-.codex/workflow/scratch/*
-!.codex/workflow/scratch/.gitignore
-.codex/workflow/verify-screenshot-*.png
-.codex/workflow/.stop_hook_active
-.codex/worktrees/
-# Per-worktree sentinel for safe-commit.sh — written at worktree spawn,
-# removed at teardown. Must never be committed (see WF-GUARD-1).
-.codex/worktree-sentinel
-test-results/
-packages/web/test-results/
-packages/web/e2e/screenshot-*.png
-.codex/scheduled_tasks.lock
-packages/web/e2e/visual-snapshot*.png
-
-# TypeScript incremental build cache (machine-specific)
-tsconfig.tsbuildinfo
-**/tsconfig.tsbuildinfo
