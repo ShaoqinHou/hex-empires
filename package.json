@@ -1,0 +1,25 @@
+{
+  "name": "hex-empires-simulation-playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
+    "test": "vitest run",
+    "check:boundaries": "node scripts/check-kernel-boundaries.mjs",
+    "verify": "npm run build && npm run typecheck:tests && npm test && npm run check:boundaries"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

@@ -56,12 +56,20 @@ the same canonical digest.
   ticks but cannot inject fractional or elapsed time into systems.
 - Commands target a future or current tick and receive a monotonic sequence at
   the authority boundary.
+- Commands and snapshots are canonical plain data. Admission takes ownership by
+  copying and freezing the command payload; batch admission is atomic.
 - Systems run in a declared stable order. Iteration over unordered collections
   must be normalized before it can affect authoritative results.
 - Parallel jobs may read a tick snapshot. Their results are applied at a later
   synchronization point in stable key order.
 - Rendering interpolates between observations and is never part of replay
   authority.
+
+Replay evidence owns immutable copies of its command log and snapshot and names
+the replay, scheduling, canonicalization, and random-stream protocols that
+produced its digest. Canonical copying is an intentional correctness cost at the
+authority boundary. A faster trusted path must not be added unless a checked-in
+benchmark demonstrates the need and an equivalent ownership proof exists.
 
 ## Randomness
 

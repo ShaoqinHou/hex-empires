@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@hex-empires/kernel": ["packages/kernel/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.test.ts", "vitest.config.ts"]
+}
