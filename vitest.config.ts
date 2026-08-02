@@ -6,6 +6,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@hex-empires/kernel": fileURLToPath(new URL("./packages/kernel/src/index.ts", import.meta.url)),
+      "@hex-empires/scenario-density": fileURLToPath(
+        new URL("./packages/scenario-density/src/index.ts", import.meta.url),
+      ),
+      "@hex-empires/benchmark-density": fileURLToPath(
+        new URL("./packages/benchmark-density/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {

@@ -8,7 +8,9 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@hex-empires/kernel": ["packages/kernel/src/index.ts"]
+      "@hex-empires/kernel": ["packages/kernel/src/index.ts"],
+      "@hex-empires/scenario-density": ["packages/scenario-density/src/index.ts"],
+      "@hex-empires/benchmark-density": ["packages/benchmark-density/src/index.ts"]
     }
   },
   "include": ["packages/**/*.test.ts", "vitest.config.ts"]

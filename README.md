@@ -28,11 +28,15 @@ Read these before adding code:
 - [`docs/intent.md`](docs/intent.md) — what this project is for;
 - [`docs/architecture.md`](docs/architecture.md) — authority and runtime
   boundaries;
+- [`docs/benchmarks/density.md`](docs/benchmarks/density.md) — how storage-layout
+  evidence is produced and interpreted;
 - [`docs/research.md`](docs/research.md) — retained research and its confidence;
 - [`docs/roadmap.md`](docs/roadmap.md) — falsifiable experiment sequence;
 - [`docs/legacy.md`](docs/legacy.md) — what was kept from the previous project;
 - [`docs/decisions/0001-reset-to-simulation-kernel.md`](docs/decisions/0001-reset-to-simulation-kernel.md)
-  — why the reset was chosen.
+  — why the reset was chosen;
+- [`docs/decisions/0002-density-benchmark-contract.md`](docs/decisions/0002-density-benchmark-contract.md)
+  — why layout comparisons use one shared semantic workload.
 
 ## Working rule
 

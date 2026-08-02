@@ -3,6 +3,8 @@
   "references": [
     { "path": "./packages/kernel" },
     { "path": "./packages/scenario-hex-turns" },
-    { "path": "./packages/scenario-particles" }
+    { "path": "./packages/scenario-particles" },
+    { "path": "./packages/scenario-density" },
+    { "path": "./packages/benchmark-density" }
   ]
 }
