@@ -9,6 +9,7 @@ export default defineConfig({
     },
   },
   test: {
+    include: ["packages/**/*.test.ts"],
     exclude: [...configDefaults.exclude, "**/dist/**"],
   },
 });
