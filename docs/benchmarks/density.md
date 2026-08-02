@@ -91,8 +91,51 @@ Checked-in baseline reports live under `benchmarks/density/results/`. Each resul
 is interpreted here only after its source is clean and all required cells pass
 semantic validation.
 
+Validate any saved report without rerunning its timings:
+
+```text
+npm run bench:density:validate -- benchmarks/density/results/<report>.json
+```
+
 ## Current guidance
 
-No storage guidance is recorded until the first clean, checked-in v2 baseline is
-accepted. Correctness evidence from the smoke profile is not a benchmark, and
-the first baseline will not justify a universal “SoA is faster” claim.
+The first accepted report is
+[`density-baseline-f9c22f4-win32-node24-i7-12700h.json`](../../benchmarks/density/results/density-baseline-f9c22f4-win32-node24-i7-12700h.json).
+It records source `f9c22f4add2b2cc8b64e5d4ed88bbd2243c0d290`, workload
+digest `699ab1e66126f8075ca4e2fbf185cbaed6039a92cba54d458ce4020aded9f7c7`,
+and report SHA-256
+`12bdf358ca5ffc7f0063b2f697fdcd896bdeea83a28f673cd38364d7064d74e8`.
+The host was Node 24.15.0 on Windows 11 `10.0.26200`, using a 12th Gen Intel
+Core i7-12700H with 20 logical CPUs and about 32 GiB of memory.
+
+Median and p95 are normalized per declared operation. Values below are
+microseconds; they remain batch-derived percentiles rather than latency
+guarantees.
+
+| Operation | Object median / p95 | SoA median / p95 | Hybrid median / p95 |
+| --- | ---: | ---: | ---: |
+| Update tick | 13.60 / 19.51 | 3.03 / 4.19 | 4.25 / 6.48 |
+| Brute-force all-pairs pass | 283.46 / 379.97 | 298.91 / 508.28 | 366.90 / 628.46 |
+| Churn batch | 25.40 / 30.40 | 24.79 / 49.89 | 25.81 / 51.69 |
+| Snapshot materialization | 39.70 / 109.50 | 23.60 / 36.40 | 42.00 / 217.50 |
+| Full capture | 2,707.70 / 3,798.00 | 2,945.10 / 4,615.00 | 2,669.70 / 3,420.20 |
+| End-to-end replay | 10,643.10 / 12,387.70 | 12,800.70 / 17,735.20 | 14,412.60 / 24,848.80 |
+
+For this workload and host:
+
+- SoA reduced the median direct update cost by about 78% versus objects, and the
+  concrete hybrid reduced it by about 69%. Dense hot motion is therefore a good
+  SoA candidate.
+- SoA also had the lowest snapshot-materialization median and p95.
+- The object layout was fastest for this brute-force all-pairs traversal and for
+  end-to-end replay. Typed storage is not an automatic win when pair traversal,
+  canonical projection, and replay overhead dominate.
+- Churn medians were within about 3%; the typed layouts had worse p95 in this
+  run. There is no useful churn winner yet.
+- The tested hybrid did not justify its extra representation for this workload;
+  its only median lead was a small full-capture difference, while its update was
+  slower than SoA and its all-pairs/replay tails were worst.
+
+This is one 512-capacity, 75%-occupied point on one machine. It establishes the
+measurement contract and narrow storage guidance, not a density curve or a
+universal layout choice. Correctness smoke results remain non-benchmarks.

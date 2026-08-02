@@ -17,6 +17,7 @@
     "check:boundaries": "node scripts/check-kernel-boundaries.mjs",
     "bench:density": "npm run build && node packages/benchmark-density/dist/cli.js --workload baseline",
     "bench:density:smoke": "node packages/benchmark-density/dist/cli.js --smoke --quiet",
+    "bench:density:validate": "npm run build && node scripts/validate-density-report.mjs",
     "verify": "npm run build && npm run typecheck:tests && npm test && npm run check:boundaries && npm run bench:density:smoke"
   },
   "devDependencies": {

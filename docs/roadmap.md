@@ -26,6 +26,9 @@ only in its consumer, not edits to the kernel.
 
 ## 2. Measured density
 
+**Status:** first claim-eligible baseline accepted; multi-size and distribution
+curves remain open.
+
 - Add a reproducible benchmark harness with environment metadata.
 - Measure update, neighborhood, spawn/despawn, snapshot, and replay workloads.
 - Compare object, SoA, and hybrid layouts where the same workload can be stated
