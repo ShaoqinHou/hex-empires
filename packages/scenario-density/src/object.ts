@@ -4,11 +4,17 @@ import {
   areNeighbors,
   assertChurnFulfilled,
   compareSnapshotEntities,
+  DENSITY_V2_POSITION_STREAM,
+  DENSITY_V2_VELOCITY_STREAM,
   type DensityConfiguration,
+  type InitialValues,
+  initialActiveMask,
+  isDensityWorkloadV2,
   profileUsesChurn,
   profileUsesNeighborhood,
   randomValues,
   validateConfiguration,
+  v2InitialValues,
   wrapCoordinate,
 } from "./shared.js";
 
@@ -127,10 +133,32 @@ export const objectDensityScenario: DensityScenario<ObjectDensityWorld> = {
   },
   applyCommand(world, command, context) {
     const workload = command.workload;
-    const random = context.random.stream("density-initial");
     world.configuration = { workload, profile: command.profile };
+    const active = initialActiveMask(workload);
+    const legacyRandom = isDensityWorkloadV2(workload)
+      ? undefined
+      : context.random.stream("density-initial");
+    const positionRandom = isDensityWorkloadV2(workload)
+      ? context.random.stream(DENSITY_V2_POSITION_STREAM)
+      : undefined;
+    const velocityRandom = isDensityWorkloadV2(workload)
+      ? context.random.stream(DENSITY_V2_VELOCITY_STREAM)
+      : undefined;
+    let activeOrdinal = 0;
     for (let id = 0; id < workload.capacity; id += 1) {
-      const values = id < workload.initialActive ? randomValues(random, workload.coordinateLimit) : undefined;
+      let values: InitialValues | undefined;
+      if (active[id] === 1) {
+        values = isDensityWorkloadV2(workload)
+          ? v2InitialValues(
+              positionRandom!,
+              velocityRandom!,
+              workload.coordinateLimit,
+              workload.initialization,
+              activeOrdinal,
+            )
+          : randomValues(legacyRandom!, workload.coordinateLimit);
+        activeOrdinal += 1;
+      }
       world.entities.push({
         id,
         active: values !== undefined,

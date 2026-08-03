@@ -1,14 +1,22 @@
 import type { CommandEnvelope, RandomSource, ScenarioDefinition } from "@hex-empires/kernel";
 
 export const DENSITY_WORKLOAD_FORMAT = "simulation-playground/density-workload/v1";
+export const DENSITY_WORKLOAD_FORMAT_V2 = "simulation-playground/density-workload/v2";
 export const MAX_DENSITY_CAPACITY = 1_000_000;
 export const MAX_DENSITY_COORDINATE = 1_000_000;
 export const MAX_DENSITY_TICKS = 0xffff_ffff;
 
 export type DensityProfile = "update" | "neighborhood-all-pairs" | "churn" | "snapshot" | "replay";
 
-export interface DensityWorkload {
-  readonly format: typeof DENSITY_WORKLOAD_FORMAT;
+export type DensityActiveSlots = "packed-prefix" | "evenly-spaced";
+export type DensityInitialPositions = "uniform-square" | "four-cluster";
+
+export interface DensityInitialization {
+  readonly activeSlots: DensityActiveSlots;
+  readonly positions: DensityInitialPositions;
+}
+
+interface DensityWorkloadFields {
   readonly id: string;
   readonly seed: string;
   readonly capacity: number;
@@ -21,6 +29,42 @@ export interface DensityWorkload {
   };
   readonly ticks: Readonly<Record<DensityProfile, number>>;
 }
+
+export interface DensityWorkloadV1 extends DensityWorkloadFields {
+  readonly format: typeof DENSITY_WORKLOAD_FORMAT;
+}
+
+export interface DensityWorkloadV2 extends DensityWorkloadFields {
+  readonly format: typeof DENSITY_WORKLOAD_FORMAT_V2;
+  readonly initialization: DensityInitialization;
+}
+
+/** V1 remains accepted verbatim; V2 adds explicit scenario-owned initialization factors. */
+export type DensityWorkload = DensityWorkloadV1 | DensityWorkloadV2;
+
+export type NormalizedDensityWorkload = DensityWorkload & {
+  readonly initialization: DensityInitialization;
+};
+
+export const LEGACY_DENSITY_INITIALIZATION: DensityInitialization = {
+  activeSlots: "packed-prefix",
+  positions: "uniform-square",
+};
+
+export const DENSITY_ACTIVE_SLOT_FACTORS: readonly DensityActiveSlots[] = [
+  "packed-prefix",
+  "evenly-spaced",
+];
+
+export const DENSITY_POSITION_FACTORS: readonly DensityInitialPositions[] = [
+  "uniform-square",
+  "four-cluster",
+];
+
+export const DENSITY_INITIALIZATION_MATRIX: readonly DensityInitialization[] =
+  DENSITY_ACTIVE_SLOT_FACTORS.flatMap((activeSlots) =>
+    DENSITY_POSITION_FACTORS.map((positions) => ({ activeSlots, positions })),
+  );
 
 export interface ConfigureDensityCommand {
   readonly kind: "configure";
@@ -94,8 +138,23 @@ function requireIntegerAtMost(value: number, label: string, maximum: number): vo
   if (value > maximum) throw new Error(`${label} must be at most ${maximum}`);
 }
 
+export function normalizeDensityWorkload(workload: DensityWorkload): NormalizedDensityWorkload {
+  if (workload.format === DENSITY_WORKLOAD_FORMAT_V2) return workload;
+  return { ...workload, initialization: LEGACY_DENSITY_INITIALIZATION };
+}
+
 export function validateDensityWorkload(workload: DensityWorkload): void {
-  if (workload.format !== DENSITY_WORKLOAD_FORMAT) throw new Error("unsupported density workload format");
+  if (workload.format !== DENSITY_WORKLOAD_FORMAT && workload.format !== DENSITY_WORKLOAD_FORMAT_V2) {
+    throw new Error("unsupported density workload format");
+  }
+  if (workload.format === DENSITY_WORKLOAD_FORMAT_V2) {
+    if (!DENSITY_ACTIVE_SLOT_FACTORS.includes(workload.initialization?.activeSlots)) {
+      throw new Error("unsupported density initialization.activeSlots");
+    }
+    if (!DENSITY_POSITION_FACTORS.includes(workload.initialization?.positions)) {
+      throw new Error("unsupported density initialization.positions");
+    }
+  }
   if (workload.id.length === 0) throw new Error("density workload id must not be empty");
   if (workload.seed.length === 0) throw new Error("density workload seed must not be empty");
   requireInteger(workload.capacity, "capacity", 1);

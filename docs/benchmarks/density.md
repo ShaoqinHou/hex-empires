@@ -139,3 +139,8 @@ For this workload and host:
 This is one 512-capacity, 75%-occupied point on one machine. It establishes the
 measurement contract and narrow storage guidance, not a density curve or a
 universal layout choice. Correctness smoke results remain non-benchmarks.
+
+The approved multi-size, occupancy, distribution, environment, sharding, and
+growth-analysis contract is documented separately in
+[`scale-matrix.md`](scale-matrix.md). It preserves this v2 report and accepted
+artifact unchanged.

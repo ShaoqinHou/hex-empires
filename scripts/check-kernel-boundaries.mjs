@@ -27,6 +27,27 @@ function packageName(specifier) {
   return specifier.split("/", 2).join("/");
 }
 
+function isScenarioPackage({ directory, manifest }) {
+  // Keep the guard extensible: new scenarios are discovered by convention,
+  // rather than by adding each package name to this checker.
+  const packageDirectoryName = path.basename(directory);
+  const packageNamePart = manifest.name.split("/").at(-1);
+  return packageDirectoryName.startsWith("scenario-") || packageNamePart.startsWith("scenario-");
+}
+
+const dependencyFields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+
+function declaredDependencies(manifest) {
+  const dependencies = new Set();
+  for (const field of dependencyFields) {
+    for (const dependency of Object.keys(manifest[field] ?? {})) dependencies.add(dependency);
+  }
+  for (const field of ["bundledDependencies", "bundleDependencies"]) {
+    for (const dependency of manifest[field] ?? []) dependencies.add(dependency);
+  }
+  return dependencies;
+}
+
 function isOutside(root, candidate) {
   const relative = path.relative(root, candidate);
   return relative.startsWith("..") || path.isAbsolute(relative);
@@ -42,6 +63,8 @@ const workspaces = await Promise.all(
   })),
 );
 const workspaceNames = new Set(workspaces.map(({ manifest }) => manifest.name));
+const scenarioWorkspaces = workspaces.filter(isScenarioPackage);
+const scenarioWorkspaceNames = new Set(scenarioWorkspaces.map(({ manifest }) => manifest.name));
 const kernelManifest = await readJson(path.join(kernelRoot, "package.json"));
 const failures = [];
 
@@ -52,13 +75,21 @@ for (const dependency of Object.keys(kernelManifest.dependencies ?? {})) {
 }
 
 const authoritativeWorkspaces = workspaces.filter(
-  ({ manifest }) => manifest.name === "@hex-empires/kernel" || manifest.name.startsWith("@hex-empires/scenario-"),
+  ({ manifest, directory }) => manifest.name === "@hex-empires/kernel" || isScenarioPackage({ directory, manifest }),
 );
 
 let checkedFileCount = 0;
 for (const { directory, manifest } of authoritativeWorkspaces) {
   const sourceRoot = path.join(directory, "src");
   const runtimeDependencies = new Set(Object.keys(manifest.dependencies ?? {}));
+  const declaredPackageDependencies = declaredDependencies(manifest);
+  if (isScenarioPackage({ directory, manifest })) {
+    for (const dependency of declaredPackageDependencies) {
+      if (scenarioWorkspaceNames.has(dependency) && dependency !== manifest.name) {
+        failures.push(`${manifest.name} declares sibling scenario workspace dependency ${dependency}`);
+      }
+    }
+  }
   const benchmarkDependencies = [...runtimeDependencies].filter((dependency) => dependency.includes("benchmark"));
   for (const dependency of benchmarkDependencies) {
     failures.push(`${manifest.name} depends on benchmark package ${dependency}`);
@@ -87,6 +118,10 @@ for (const { directory, manifest } of authoritativeWorkspaces) {
         return;
       }
       const dependency = packageName(specifier);
+      if (isScenarioPackage({ directory, manifest }) && scenarioWorkspaceNames.has(dependency) && dependency !== manifest.name) {
+        failures.push(`${path.relative(repositoryRoot, file)}:${line} imports sibling scenario workspace: ${specifier}`);
+        return;
+      }
       if (!runtimeDependencies.has(dependency)) {
         failures.push(
           `${path.relative(repositoryRoot, file)}:${line} imports undeclared runtime dependency: ${specifier}`,

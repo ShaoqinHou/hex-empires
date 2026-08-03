@@ -409,7 +409,7 @@ function proveSimulationParity(workload: DensityWorkload, operation: "capture" |
   return { operation, checkpoints: fixture.tickCount + (operation === "replay" ? 1 : 0), finalSnapshotDigest: digest } as const;
 }
 
-function proveParity(workload: DensityWorkload, operations: readonly BenchmarkOperation[]) {
+export function proveBenchmarkParity(workload: DensityWorkload, operations: readonly BenchmarkOperation[]) {
   return operations.map((operation) => {
     if (operation === "update" || operation === "neighborhood-all-pairs" || operation === "churn") {
       return proveDirectParity(workload, operation);
@@ -448,7 +448,7 @@ export function runDensityBenchmark(options: DensityBenchmarkOptions = {}): Dens
   const operations = selectedValues(options.operations, BENCHMARK_OPERATIONS, "operation");
   const variantIds = selectedValues(options.variantIds, BENCHMARK_VARIANTS, "variant");
   const measuredVariants = variantIds.map((id) => variants.find((variant) => variant.id === id)!);
-  const parityOperations = proveParity(workload, operations);
+  const parityOperations = proveBenchmarkParity(workload, operations);
   const expectedDigests = new Map(parityOperations.map((entry) => [entry.operation, entry.finalSnapshotDigest]));
   const processRunner = options.processRunner ?? runCellInFreshProcess;
   const collected = new Map<string, BenchmarkProcessResult[]>();

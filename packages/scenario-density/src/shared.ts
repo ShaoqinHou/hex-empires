@@ -2,11 +2,18 @@ import type { RandomSource } from "@hex-empires/kernel";
 
 import type {
   DensityCommand,
+  DensityInitialization,
+  DensityInitialPositions,
   DensityProfile,
   DensitySnapshotEntity,
   DensityWorkload,
+  DensityWorkloadV2,
 } from "./contracts.js";
-import { validateDensityWorkload } from "./contracts.js";
+import {
+  DENSITY_WORKLOAD_FORMAT_V2,
+  normalizeDensityWorkload,
+  validateDensityWorkload,
+} from "./contracts.js";
 
 export interface DensityConfiguration {
   readonly workload: DensityWorkload;
@@ -19,6 +26,9 @@ export interface InitialValues {
   readonly velocityX: number;
   readonly velocityY: number;
 }
+
+export const DENSITY_V2_POSITION_STREAM = "density-initial-v2/positions";
+export const DENSITY_V2_VELOCITY_STREAM = "density-initial-v2/velocities";
 
 export function validateConfiguration(
   configured: boolean,
@@ -64,6 +74,79 @@ export function randomValues(random: RandomSource, coordinateLimit: number): Ini
     velocityX: random.nextInt(7) - 3,
     velocityY: random.nextInt(7) - 3,
   };
+}
+
+/**
+ * Produces an exact-size deterministic active mask. Even spacing includes both
+ * ends when possible and centers the single-active case.
+ */
+export function initialActiveMask(workload: DensityWorkload): Uint8Array {
+  const initialization = normalizeDensityWorkload(workload).initialization;
+  const mask = new Uint8Array(workload.capacity);
+  if (initialization.activeSlots === "packed-prefix") {
+    mask.fill(1, 0, workload.initialActive);
+    return mask;
+  }
+  if (workload.initialActive === 1) {
+    mask[Math.floor((workload.capacity - 1) / 2)] = 1;
+    return mask;
+  }
+  for (let ordinal = 0; ordinal < workload.initialActive; ordinal += 1) {
+    const id = Math.floor((ordinal * (workload.capacity - 1)) / (workload.initialActive - 1));
+    mask[id] = 1;
+  }
+  return mask;
+}
+
+function initialPosition(
+  random: RandomSource,
+  coordinateLimit: number,
+  positions: DensityInitialPositions,
+  activeOrdinal: number,
+): Pick<InitialValues, "x" | "y"> {
+  if (positions === "uniform-square") {
+    const coordinateRange = coordinateLimit * 2 + 1;
+    return {
+      x: random.nextInt(coordinateRange) - coordinateLimit,
+      y: random.nextInt(coordinateRange) - coordinateLimit,
+    };
+  }
+
+  const centerOffset = Math.max(1, Math.floor(coordinateLimit / 2));
+  const spread = Math.floor(coordinateLimit / 8);
+  const offsetRange = spread * 2 + 1;
+  const cluster = activeOrdinal % 4;
+  const centerX = cluster === 0 || cluster === 2 ? -centerOffset : centerOffset;
+  const centerY = cluster < 2 ? -centerOffset : centerOffset;
+  return {
+    x: centerX + random.nextInt(offsetRange) - spread,
+    y: centerY + random.nextInt(offsetRange) - spread,
+  };
+}
+
+/** V2-only separated streams; callers keep the legacy v1 path byte-for-byte. */
+export function v2InitialValues(
+  positionRandom: RandomSource,
+  velocityRandom: RandomSource,
+  coordinateLimit: number,
+  initialization: DensityInitialization,
+  activeOrdinal: number,
+): InitialValues {
+  const position = initialPosition(
+    positionRandom,
+    coordinateLimit,
+    initialization.positions,
+    activeOrdinal,
+  );
+  return {
+    ...position,
+    velocityX: velocityRandom.nextInt(7) - 3,
+    velocityY: velocityRandom.nextInt(7) - 3,
+  };
+}
+
+export function isDensityWorkloadV2(workload: DensityWorkload): workload is DensityWorkloadV2 {
+  return workload.format === DENSITY_WORKLOAD_FORMAT_V2;
 }
 
 export function wrapCoordinate(value: number, limit: number): number {

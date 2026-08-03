@@ -1,0 +1,23 @@
+{
+  "name": "@hex-empires/experiment-lockstep",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@hex-empires/kernel": "0.0.0"
+  },
+  "devDependencies": {
+    "@hex-empires/scenario-hex-turns": "0.0.0"
+  }
+}

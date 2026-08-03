@@ -72,6 +72,34 @@ costs are acceptable. [W3C specification](https://www.w3.org/TR/webgpu/)
 whose state remains resident for many steps. Strategic authority stays on the CPU
 unless a dedicated replay experiment proves otherwise.
 
+## Multiplayer and temporal state
+
+- Factorio documents deterministic lockstep in which peers run the simulation
+  and exchange ordered player inputs rather than continuously transferring the
+  full changing world. Its server later became the input-ordering relay.
+  [Latency hiding](https://www.factorio.com/blog/post/fff-83) ·
+  [Multiplayer rewrite](https://www.factorio.com/blog/post/fff-147)
+- The same engineering record exposes the costs that a slogan hides: slow peers
+  constrain buffered lockstep, joining still needs a world transfer, and large
+  input batches can saturate server upload.
+  [Lockstep latency](https://www.factorio.com/blog/post/fff-76) ·
+  [Megapacket incident](https://factorio.com/blog/post/fff-302)
+- Factorio uses deterministic save/load and state checks for join and desync
+  recovery. Its save-size work also demonstrates that context-aware state
+  representation can matter more than blindly packing bits before general
+  compression.
+  [Deterministic save/load](https://www.factorio.com/blog/post/fff-270) ·
+  [Context-aware save encoding](https://factorio.com/blog/post/fff-66)
+- GGPO is primary implementation evidence for rollback via input prediction and
+  speculative execution. It establishes a useful alternative for latency-bound
+  small simulations, not proof that whole-world rollback fits a massive world.
+  [Repository](https://github.com/pond3r/ggpo)
+
+**Synthesis:** begin with server-arbitrated delayed lockstep and a narrow,
+rebuildable latency/presentation state. Keep exact recovery scenario-owned and
+measure checkpoint plus command-suffix cost. Test rollback only where the
+restorable state and resimulation horizon fit a declared budget.
+
 ## Legacy corpus assessment
 
 The removed repository contained 828 Civilization design documents and many

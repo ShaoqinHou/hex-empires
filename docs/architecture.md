@@ -3,18 +3,32 @@
 ## Authority map
 
 ```text
-host input -> timestamped commands -> deterministic kernel -> scenario state
-                                               |                 |
-                                               v                 v
-                                         replay/checkpoint   observations
-                                                                  |
-                                                                  v
-                                                   renderer / metrics / tools
+raw input / network
+        |
+        v
+ authority ingress -> ordered tick frames -> kernel executor -> scenario state
+                                                    |                 |
+                                                    |        +--------+--------+
+                                                    |        |        |        |
+                                                    v        v        v        v
+                                                audit    exact    recipient  render
+                                               evidence  codec   observation packet
+                                                          |         |         |
+                                                          v         v         v
+                                                  timeline/recovery network renderer
 ```
 
-The kernel owns tick progression, command ordering, system ordering, seeded
-randomness, and replay metadata. A scenario owns everything domain-specific. A
-host owns clocks, input, rendering, persistence, networking, and deployment.
+The kernel executor owns tick progression, execution of already ordered command
+frames, system ordering, seeded randomness, and replay metadata. Authority
+ingress owns player identity, deadlines, late-input policy, and construction of
+those frames. A scenario owns everything domain-specific. Hosts own clocks,
+transport, rendering, persistence, and deployment.
+
+Audit evidence, exact recovery state, recipient observations, and render packets
+are distinct data planes. They may share scenario code, but none is a universal
+`snapshot()`: audit data can be expensive and non-restorable, recovery must
+contain every future-affecting value, observations may be permission-aware, and
+render packets may be lossy and presentation-specific.
 
 ## Kernel boundary
 
@@ -27,6 +41,13 @@ contract is:
 - provide deterministic random streams derived from a run seed;
 - record enough metadata to replay the same run;
 - expose canonical snapshots and digests for verification.
+
+The current `capture()` contract is an audit capture. It is deliberately **not**
+called a checkpoint or authoritative state hash: it does not contain queued
+future commands, the command sequence cursor, random-stream cursors, or a
+scenario restore codec. `executeReplay()` reconstructs from tick zero. Exact
+rewind, rollback, branching, join-in-progress, and resynchronization therefore
+remain experiment claims until a restoration probe passes its evidence gate.
 
 The kernel does **not** define a universal `Entity`, `Component`, `Action`, map,
 physics body, AI controller, or renderer. Those types belong to scenarios or to
@@ -71,6 +92,26 @@ produced its digest. Canonical copying is an intentional correctness cost at the
 authority boundary. A faster trusted path must not be added unless a checked-in
 benchmark demonstrates the need and an equivalent ownership proof exists.
 
+## Temporal architecture
+
+There are two temporal products:
+
+1. **Observation timeline:** fast live scrubbing of scenario-owned display or
+   inspection data. It may use lossy projections, keyframes, deltas, bounded
+   retention, or reconstruction caches. It never resumes authority.
+2. **Authority recovery:** exact restoration for branching, rollback,
+   join-in-progress, or resynchronization. A valid checkpoint must identify the
+   scenario/ruleset/codec protocols and capture the exact world, next tick,
+   command sequence cursor, pending frames, random state, and log commitment.
+
+The default hypothesis is periodic scenario-owned checkpoints plus a command-log
+suffix. Object scenarios may favor immutable structure sharing; typed-array
+scenarios may favor page copies or dirty-page deltas. These are separate
+experiments, not implementations of a preselected generic timeline interface.
+Measure write cost, retained bytes per tick, random seek, restore, branch cost,
+replay/catch-up factor, change density, and eviction behavior. Generic
+compression ratios alone are not sufficient evidence.
+
 ## Randomness
 
 The run seed is explicit. Randomness comes from named deterministic streams so
@@ -103,6 +144,54 @@ families and measure them separately:
 Every benchmark records hardware/runtime metadata and percentiles. Budgets are
 set after a baseline exists, then tightened only when a real host needs them.
 
+"Extremely large" is an envelope, not a single count. Every capacity statement
+must name the relevant resident slots/bytes, active work per tick,
+candidate/accepted interactions, events/churn, AI or path requests,
+visible/dirty instances, timeline bytes and horizon, replay/restore latency,
+replicated bytes/client count, target tick rate, and p95/p99 budget. Curves run
+until a declared budget knee or recorded resource limit; censored runs remain
+failure evidence rather than disappearing from a report.
+
+Environment is an explicit factor. Results from different CPU, OS, Node/V8,
+runtime flags, browser, or GPU environments are never pooled into one percentile.
+Growth rates are empirical over tested intervals, not asymptotic proofs.
+
+## Observation and rendering
+
+Scenario-owned observation projection is separate from audit capture. Semantic
+visibility, fog, remembered knowledge, and stable public identity are
+authoritative scenario concerns. Recipient redaction happens before data leaves
+the server. Frustum/occlusion culling, LOD, interpolation, batching, and GPU work
+are presentation-only and cannot feed simulation or AI truth.
+
+Rendering evidence separates total authoritative population from projected,
+visible, dirty, uploaded, submitted, and actually shaded work. A million dormant
+authoritative records and a million visible moving sprites are different claims.
+
+## Multiplayer and authority ingress
+
+The first multiplayer hypothesis is server-arbitrated delayed deterministic
+lockstep: the authority assigns ticks and stable sequences, publishes even empty
+frames, and clients advance only over a contiguous authoritative prefix. A narrow
+non-authoritative latency state may predict local presentation, but it must be
+rebuildable from sacred state plus pending local actions.
+
+This resembles the approach documented by Factorio: deterministic peers exchange
+inputs rather than the full changing world, while the server arbitrates order;
+the same sources also expose slow-peer, join-state, and bandwidth limitations.
+It is a reference for experiments, not a mandate for every scenario.
+
+Protocol probes precede sockets. They must model reordering, jitter, loss,
+duplication, invalid or late input, empty frames, deliberate desync, hash cadence,
+catch-up, drop policy, join/resync bytes, and client count. Exact recovery uses a
+checkpoint plus command suffix only after the temporal evidence gate passes.
+Whole-world rollback is not the default for huge worlds; it may be tested for a
+small responsive subdomain if measured restore/resimulation budgets permit it.
+
+Full deterministic client simulation is also not a solution for secret state.
+A scenario with hidden authoritative information needs server-side observation
+and replication semantics as a separate protocol experiment.
+
 ## Navigation stack
 
 Navigation is a pipeline, not one algorithm:
@@ -133,3 +222,18 @@ a separate workspace that consumes scenario observations and replay fixtures. It
 can be deployed as static assets from `main`; the kernel must not know the public
 base path or hosting provider. Server functions, databases, and multiplayer are
 separate adapters introduced only by experiments that require them.
+
+## Experiment package contract
+
+Every experiment package leaves a compact local record of:
+
+- the falsifiable question and why the package exists;
+- authority it owns and authority explicitly outside its boundary;
+- scenario/library dependencies and the semantic oracle;
+- workload factors, environment requirements, and evidence artifacts;
+- current claim status and limitations; and
+- the condition that would kill, replace, or justify extracting the experiment.
+
+New experiments do not widen a central domain union or depend on sibling
+scenarios. Shared libraries are extracted only after two real consumers prove
+the same semantics and the extraction reproduces both sets of fixtures.

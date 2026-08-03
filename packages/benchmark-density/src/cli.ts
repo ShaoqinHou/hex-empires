@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { densityBaselineWorkload, densitySmokeWorkload } from "@hex-empires/scenario-density";
 
 import { runDensityBenchmark } from "./measure.js";
+import { MATRIX_COMMANDS, runMatrixCli } from "./matrix-cli.js";
 import { BENCHMARK_OPERATIONS, BENCHMARK_VARIANTS, type BenchmarkOperation, type DensityBenchmarkReport, type VariantId } from "./report.js";
 
 type WorkloadName = "baseline" | "smoke";
@@ -170,7 +171,10 @@ export function runCli(
 const entrypoint = process.argv[1];
 if (entrypoint !== undefined && fileURLToPath(import.meta.url) === resolve(entrypoint)) {
   try {
-    runCli(process.argv.slice(2));
+    const args = process.argv.slice(2);
+    const matrixArgs = args[0] === "matrix" ? args.slice(1) : args;
+    if (MATRIX_COMMANDS.includes(matrixArgs[0] as (typeof MATRIX_COMMANDS)[number])) runMatrixCli(matrixArgs);
+    else runCli(args);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
     process.exitCode = 1;

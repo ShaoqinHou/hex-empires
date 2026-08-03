@@ -18,7 +18,10 @@
     "bench:density": "npm run build && node packages/benchmark-density/dist/cli.js --workload baseline",
     "bench:density:smoke": "node packages/benchmark-density/dist/cli.js --smoke --quiet",
     "bench:density:validate": "npm run build && node scripts/validate-density-report.mjs",
-    "verify": "npm run build && npm run typecheck:tests && npm test && npm run check:boundaries && npm run bench:density:smoke"
+    "bench:density:matrix": "npm run clean && npm run build && node packages/benchmark-density/dist/cli.js matrix",
+    "bench:density:matrix:smoke": "npm run build && node scripts/smoke-density-matrix.mjs",
+    "bench:density:matrix:smoke:no-build": "node scripts/smoke-density-matrix.mjs",
+    "verify": "npm run build && npm run typecheck:tests && npm test && npm run check:boundaries && npm run bench:density:smoke && npm run bench:density:matrix:smoke:no-build"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

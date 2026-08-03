@@ -27,6 +27,12 @@ criterion.
   not evidence.
 - **Scale is empirical.** Entity-count claims need workloads and latency or
   throughput distributions, not intuition.
+- **Scale is a vector.** Resident entities, active work, interaction candidates,
+  visible/dirty presentation data, history retention, replay speed, and network
+  traffic are separate axes. A headline entity count is not a capacity claim.
+- **Time is a product surface.** Live scrubbing, exact recovery, branching,
+  replay, late network input, and join-in-progress share evidence but do not
+  require one universal snapshot or delta format.
 - **Scenario autonomy.** A hex game must not dictate the storage or command model
   for a bullet simulation, and vice versa.
 - **Human-owned intent.** Agent proposals and generated research never become
@@ -38,6 +44,8 @@ criterion.
 - independent scenarios with different state/storage strategies;
 - deterministic randomness, snapshots, and cross-runtime replay hashes;
 - benchmark fixtures for simulation, navigation, and rendering boundaries;
+- scenario-owned experiments for compact history and exact recovery;
+- transport-free multiplayer protocol simulators before sockets or services;
 - a thin browser host once the headless contracts are credible;
 - static deployment for observable experiments, followed later by optional
   service adapters when an experiment genuinely needs them.
@@ -47,8 +55,8 @@ criterion.
 - a full Civilization VII clone;
 - backward compatibility with the removed game state or save format;
 - one ECS or one physics model for every scenario;
-- networking, persistence services, WebGPU, or worker pools before a measured
-  experiment justifies them;
+- production networking, persistence services, WebGPU, or worker pools before a
+  measured experiment justifies them;
 - a large UI framework before there is a stable thing to observe.
 
 ## Superseded intent

@@ -5,6 +5,8 @@
     { "path": "./packages/scenario-hex-turns" },
     { "path": "./packages/scenario-particles" },
     { "path": "./packages/scenario-density" },
-    { "path": "./packages/benchmark-density" }
+    { "path": "./packages/benchmark-density" },
+    { "path": "./packages/experiment-lockstep" },
+    { "path": "./packages/experiment-timeline" }
   ]
 }

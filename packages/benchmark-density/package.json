@@ -15,7 +15,7 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run src",
+    "test": "vitest run --root ../.. --no-file-parallelism packages/benchmark-density/src",
     "benchmark": "node dist/cli.js",
     "smoke": "node dist/cli.js --smoke --quiet"
   },

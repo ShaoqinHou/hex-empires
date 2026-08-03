@@ -1,68 +1,133 @@
 # Roadmap
 
-This roadmap is a sequence of falsifiable questions, not a feature backlog.
+This roadmap is a set of falsifiable experiment tracks, not a feature backlog.
+Tracks may proceed in parallel. Integration happens only between probes that
+have independently passed their evidence gates.
 
-## 0. Recovery and reset
+## 0. Recovery and reset — complete
 
-- Preserve the complete old reference graph and dirty workflow state offline.
+- Preserve the old reference graph and dirty workflow state offline.
 - Keep the previous product tip reachable through normal Git history.
-- Remove repository-owned agent orchestration and generated review/research
-  machinery from the active tree.
+- Remove repository-owned agent orchestration and generated research machinery
+  from the active tree.
 - Record the current user intent and the clean-slate decision.
 
 **Exit:** the active repository is small, its authority is legible, and recovery
 does not depend on a remote backup branch.
 
-## 1. Deterministic kernel
+## 1. Deterministic kernel — complete for v1
 
 - Implement explicit ticks, command ordering, named seeded random streams, and
-  canonical snapshots/digests.
+  canonical audit captures/digests.
 - Prove two dissimilar scenarios can use it without changing kernel domain types:
   a turn-based hex walker and a dense typed-array particle world.
 - Add replay fixtures and a clean CI build.
 
 **Exit:** repeated runs match exactly; a new scenario needs registration/import
-only in its consumer, not edits to the kernel.
+only in its consumer, not edits to the kernel. Kernel v1 remains a reference
+executor, not a checkpoint, networking, or universal-engine claim.
 
-## 2. Measured density
+## 2. Measured density — first point complete
 
-**Status:** first claim-eligible baseline accepted; multi-size and distribution
-curves remain open.
+- Preserve the accepted single-workload object/SoA/hybrid baseline.
+- Keep measurement time, environment inspection, and process control outside
+  authoritative packages.
 
-- Add a reproducible benchmark harness with environment metadata.
-- Measure update, neighborhood, spawn/despawn, snapshot, and replay workloads.
-- Compare object, SoA, and hybrid layouts where the same workload can be stated
-  fairly.
+**Exit:** the single-point claims cite checked-in raw samples and remain scoped to
+their workload and host. Multi-size/distribution curves are Track 3A.
 
-**Exit:** performance claims cite checked-in workloads and median/p95 results;
-storage guidance is evidence-based.
+## 3A. Scale curves and spatial queries
 
-## 3. Navigation laboratory
+- Add curated log-spaced count curves with occupancy, live-slot pattern, spatial
+  distribution, churn intensity, and replay length as declared factors.
+- Shard long runs with explicit environment identity, time/resource limits,
+  resumability, atomic artifacts, and recorded terminal failures.
+- Keep linear and quadratic stress envelopes separate. Compare a spatial index
+  with all-pairs only as a full algorithm × storage-layout experiment.
+- Measure memory/GC, construction, churn, audit capture, and replay in addition
+  to hot-loop time.
 
-- Establish a common map/workload description, not a universal runtime API.
+**Exit:** growth and crossover statements are recomputable from raw shards,
+remain environment-local, and stop at an explicit budget knee.
+
+## 3B. Temporal laboratory
+
+- Compare a bounded observation timeline with exact authority recovery rather
+  than calling both snapshots.
+- Test object structural sharing and typed-array keyframe/dirty-page strategies
+  independently.
+- Prove random seek for observations; separately prove exact restore, continued
+  future parity, branch isolation, corruption rejection, and retention bounds.
+
+**Exit:** we can state storage cost, horizon, seek/restore latency, and catch-up
+factor for named workloads. Until then, capture remains audit evidence and
+replay begins at tick zero.
+
+## 3C. Multiplayer protocol laboratory
+
+- Simulate assembled-frame lockstep without transport or rollback first.
+- Test authoritative tick/sequence assignment, empty frames, reordering,
+  duplication, late/invalid input, stalls, desync hashes, catch-up, and drop
+  policy.
+- Test server-owned recipient projection separately for scenarios with hidden
+  information.
+
+**Exit:** isolated executors converge under a checked-in impairment schedule;
+bandwidth, join/resync, recovery, and failure behavior are measured.
+
+## 3D. Navigation laboratory
+
+- Establish common workload descriptions, not a universal runtime API.
 - Compare individual A*, hierarchical search, shared-goal fields, incremental
   replanning, cooperative reservations, formations, and local avoidance on the
   request shapes each is intended to solve.
+- Record map revision, stable tie-breaking, query deadlines, stale-result policy,
+  and whether expensive results are recomputed deterministically or admitted as
+  authoritative proposals.
 
 **Exit:** algorithm-selection guidance includes congestion, update frequency,
 memory, latency, and failure behavior—not only shortest-path quality.
 
-## 4. Observable browser host
+## 3E. Observable browser host
 
-- Render scenario observations without sharing authoritative state.
+- Render scenario-owned observations without sharing authoritative state.
 - Run the same replay fixtures in Node and the browser.
-- Measure visible/dirty rendering cost separately from simulation cost.
+- Measure total, projected, visible, dirty, uploaded, and submitted work
+  separately from simulation cost.
 - Publish static builds from `main` with a provider-neutral base path.
 
 **Exit:** the deployed host is inspectable, replay-compatible, and has no kernel
 dependency on the browser or hosting service.
 
-## 5. Optional advanced probes
+## 3F. Deterministic asynchronous jobs
+
+- Submit immutable, revision-tagged jobs with fixed commit ticks and stable
+  result keys.
+- Randomize completion order and prove stable merges, deadline behavior, and
+  deterministic fallback or stall policy.
+- Attach workers only after the synthetic contract passes; include transfer,
+  scheduling, merge, and missed-deadline cost in evidence.
+
+**Exit:** completion timing cannot select authoritative state.
+
+## 4. Integrate proven pairs
+
+- temporal recovery + late-input protocol -> rollback experiment;
+- recipient observation + authoritative replication -> multiplayer visibility;
+- asynchronous jobs + navigation -> worker navigation;
+- asynchronous jobs + spatial queries -> worker density;
+- scale curves + render projection -> large-world display envelope;
+- typed-state recovery + scale curves -> measured rewind/rollback horizon.
+
+## 5. Optional accelerators and product probes
 
 Only measured needs may schedule these:
 
-- deterministic worker jobs and stable result merging;
-- WebGPU-resident dense compute;
+- workers, WASM, or WebGPU behind replaceable experiment backends;
 - constrained-body/AVBD experiments;
-- persistence, services, or multiplayer adapters;
+- persistence or production transport adapters;
 - a deeper game assembled from primitives that survived earlier phases.
+
+Accelerator evidence includes boundary transfer, synchronization, merge/readback,
+renderer contention, and multiple-device/runtime parity—not just the accelerated
+inner loop.

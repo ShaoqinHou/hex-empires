@@ -4,11 +4,16 @@ import {
   areNeighbors,
   assertChurnFulfilled,
   compareSnapshotEntities,
+  DENSITY_V2_POSITION_STREAM,
+  DENSITY_V2_VELOCITY_STREAM,
   type DensityConfiguration,
+  initialActiveMask,
+  isDensityWorkloadV2,
   profileUsesChurn,
   profileUsesNeighborhood,
   randomValues,
   validateConfiguration,
+  v2InitialValues,
   wrapCoordinate,
 } from "./shared.js";
 
@@ -154,17 +159,35 @@ export const hybridDensityScenario: DensityScenario<HybridDensityWorld> = {
     world.velocityX = new Int32Array(workload.capacity);
     world.velocityY = new Int32Array(workload.capacity);
     world.age = new Uint32Array(workload.capacity);
-    const random = context.random.stream("density-initial");
+    const active = initialActiveMask(workload);
+    const legacyRandom = isDensityWorkloadV2(workload)
+      ? undefined
+      : context.random.stream("density-initial");
+    const positionRandom = isDensityWorkloadV2(workload)
+      ? context.random.stream(DENSITY_V2_POSITION_STREAM)
+      : undefined;
+    const velocityRandom = isDensityWorkloadV2(workload)
+      ? context.random.stream(DENSITY_V2_VELOCITY_STREAM)
+      : undefined;
+    let activeOrdinal = 0;
     for (let id = 0; id < workload.capacity; id += 1) {
-      const active = id < workload.initialActive;
       world.metadata.push({ id, kind: "density-agent" });
-      if (!active) continue;
+      if (active[id] !== 1) continue;
       world.active[id] = 1;
-      const values = randomValues(random, workload.coordinateLimit);
+      const values = isDensityWorkloadV2(workload)
+        ? v2InitialValues(
+            positionRandom!,
+            velocityRandom!,
+            workload.coordinateLimit,
+            workload.initialization,
+            activeOrdinal,
+          )
+        : randomValues(legacyRandom!, workload.coordinateLimit);
       world.x[id] = values.x;
       world.y[id] = values.y;
       world.velocityX[id] = values.velocityX;
       world.velocityY[id] = values.velocityY;
+      activeOrdinal += 1;
     }
   },
   systems: [
