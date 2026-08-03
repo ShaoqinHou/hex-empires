@@ -534,7 +534,7 @@ function consistentDirection(values: readonly number[], pooled: number): boolean
   return direction !== 0 && values.length > 0 && values.every((value) => Math.sign(value - 1) === direction);
 }
 
-function buildCrossovers(manifest: MatrixManifest, ratios: readonly MatrixRatio[]): readonly MatrixCrossoverBracket[] {
+export function buildMatrixCrossovers(manifest: MatrixManifest, ratios: readonly MatrixRatio[]): readonly MatrixCrossoverBracket[] {
   const pointById = new Map(manifest.suite.points.map((entry) => [entry.id, entry]));
   const groups = new Map<string, MatrixRatio[]>();
   for (const ratio of ratios) {
@@ -561,14 +561,22 @@ function buildCrossovers(manifest: MatrixManifest, ratios: readonly MatrixRatio[
     for (let index = 1; index < entries.length; index += 1) {
       const lower = entries[index - 1]!;
       const upper = entries[index]!;
+      const lowerPoint = pointById.get(lower.pointId)!;
       const threshold = manifest.policy.crossoverPracticalThreshold;
       if (Math.sign(lower.medianRatio - 1) === Math.sign(upper.medianRatio - 1)) continue;
       if (Math.abs(lower.medianRatio - 1) < threshold || Math.abs(upper.medianRatio - 1) < threshold) continue;
       if (!consistentDirection(lower.processRoundRatios, lower.medianRatio) || !consistentDirection(upper.processRoundRatios, upper.medianRatio)) continue;
       result.push({
+        family: lowerPoint.family,
+        factorName: lowerPoint.factor.name,
+        operation: lower.operation,
+        algorithmId: lower.algorithmId,
+        scopeId: lower.scopeId,
+        numeratorLayout: lower.numeratorLayout,
+        denominatorLayout: lower.denominatorLayout,
         lowerPointId: lower.pointId,
         upperPointId: upper.pointId,
-        lowerX: pointById.get(lower.pointId)!.factor.value as number,
+        lowerX: lowerPoint.factor.value as number,
         upperX: pointById.get(upper.pointId)!.factor.value as number,
         lowerWinner: winner(lower.medianRatio, lower.numeratorLayout, lower.denominatorLayout),
         upperWinner: winner(upper.medianRatio, upper.numeratorLayout, upper.denominatorLayout),
@@ -627,7 +635,7 @@ function buildAggregateFromArtifacts(artifacts: ValidatedArtifacts, generatedAt:
     summaries,
     ratios,
     series,
-    crossovers: buildCrossovers(artifacts.manifest, ratios),
+    crossovers: buildMatrixCrossovers(artifacts.manifest, ratios),
     claimEligibility: claimEligibility(artifacts, summaries),
   };
 }

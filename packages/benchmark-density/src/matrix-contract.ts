@@ -13,7 +13,7 @@ import type {
 export const MATRIX_SUITE_FORMAT = "simulation-playground/density-matrix-suite/v1";
 export const MATRIX_MANIFEST_FORMAT = "simulation-playground/density-matrix-manifest/v1";
 export const MATRIX_SHARD_FORMAT = "simulation-playground/density-matrix-shard/v1";
-export const MATRIX_AGGREGATE_FORMAT = "simulation-playground/density-matrix-aggregate/v1";
+export const MATRIX_AGGREGATE_FORMAT = "simulation-playground/density-matrix-aggregate/v2";
 export const MATRIX_CLAIM_POLICY = "simulation-playground/density-matrix-claim/v1";
 
 export const MATRIX_LAYOUTS: readonly VariantId[] = ["object", "soa", "hybrid"];
@@ -276,6 +276,13 @@ export interface MatrixOlsFit {
 }
 
 export interface MatrixCrossoverBracket {
+  readonly family: string;
+  readonly factorName: string;
+  readonly operation: BenchmarkOperation;
+  readonly algorithmId: string;
+  readonly scopeId: string;
+  readonly numeratorLayout: VariantId;
+  readonly denominatorLayout: VariantId;
   readonly lowerPointId: string;
   readonly upperPointId: string;
   readonly lowerX: number;

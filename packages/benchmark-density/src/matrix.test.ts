@@ -17,10 +17,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { measureBenchmarkCell } from "./measure.js";
 import { proveBenchmarkParity } from "./measure.js";
-import { aggregateMatrix, validateMatrixCorrectnessEvidence, validateMatrixOutput } from "./matrix-validator.js";
+import {
+  aggregateMatrix,
+  buildMatrixCrossovers,
+  validateMatrixCorrectnessEvidence,
+  validateMatrixOutput,
+} from "./matrix-validator.js";
 import { collectMatrixSource, createMatrixManifest, executeMatrix, writeMatrixPlan } from "./matrix-runner.js";
 import { createMatrixSuite } from "./matrix-suites.js";
-import type { MatrixCompletedInvocation } from "./matrix-contract.js";
+import type { MatrixCompletedInvocation, MatrixRatio } from "./matrix-contract.js";
 import type { CellWorkerResponse } from "./measure.js";
 import type { VariantId } from "./report.js";
 
@@ -108,6 +113,40 @@ describe("density scale matrix", () => {
       claim.blocks.map((block) => block.id),
     );
     expect(() => createMatrixManifest({ suiteId: "stress-quadratic" })).toThrow("explicit allowLarge=true");
+  });
+
+  it("makes every crossover bracket self-interpreting", () => {
+    const manifest = createMatrixManifest({ suiteId: "claim", issuedAt: "2026-08-03T00:00:00.000Z" });
+    const ratio = (pointId: string, medianRatio: number): MatrixRatio => ({
+      pointId,
+      operation: "update",
+      algorithmId: "density/direct-motion-update/v1",
+      scopeId: "density/direct-motion-update/v1",
+      numeratorLayout: "soa",
+      denominatorLayout: "object",
+      medianRatio,
+      processRoundRatios: [medianRatio - 0.01, medianRatio, medianRatio + 0.01],
+    });
+
+    expect(buildMatrixCrossovers(manifest, [
+      ratio("slot-occupancy-50", 0.8),
+      ratio("slot-occupancy-75", 1.2),
+    ])).toEqual([{
+      family: "slot-occupancy",
+      factorName: "occupancy",
+      operation: "update",
+      algorithmId: "density/direct-motion-update/v1",
+      scopeId: "density/direct-motion-update/v1",
+      numeratorLayout: "soa",
+      denominatorLayout: "object",
+      lowerPointId: "slot-occupancy-50",
+      upperPointId: "slot-occupancy-75",
+      lowerX: 50,
+      upperX: 75,
+      lowerWinner: "soa",
+      upperWinner: "object",
+      practicalThreshold: manifest.policy.crossoverPracticalThreshold,
+    }]);
   });
 
   it("recomputes a complete smoke aggregate from raw per-process samples and accepts an exact resume", () => {
