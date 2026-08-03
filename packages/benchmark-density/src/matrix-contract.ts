@@ -1,14 +1,18 @@
-import type { DensityWorkloadV2 } from "@hex-empires/scenario-density";
+import type { DensityNeighborSearchDiagnostics, DensityWorkloadV2 } from "@hex-empires/scenario-density";
 
 import type {
   BenchmarkCorrectness,
   BenchmarkEnvironment,
-  BenchmarkOperation,
   BenchmarkScope,
   BenchmarkSource,
   BenchmarkStatistics,
   VariantId,
 } from "./report.js";
+import type {
+  MatrixGrowthModel,
+  MatrixOperation,
+  MatrixOperationUnit,
+} from "./matrix-algorithms.js";
 
 export const MATRIX_SUITE_FORMAT = "simulation-playground/density-matrix-suite/v1";
 export const MATRIX_MANIFEST_FORMAT = "simulation-playground/density-matrix-manifest/v1";
@@ -27,8 +31,8 @@ export const MATRIX_TERMINAL_STATUSES = [
 ] as const;
 
 export type MatrixTerminalStatus = (typeof MATRIX_TERMINAL_STATUSES)[number];
-export type MatrixSuiteId = "smoke" | "claim" | "stress-linear" | "stress-quadratic";
-export type MatrixClaimClass = "smoke" | "claim" | "stress-linear" | "stress-quadratic";
+export type MatrixSuiteId = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index";
+export type MatrixClaimClass = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index";
 export type MatrixScalar = string | number | boolean;
 
 export interface MatrixFactor {
@@ -46,7 +50,7 @@ export interface MatrixControls {
 }
 
 export interface MatrixOperationSelection {
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
 }
 
@@ -85,7 +89,23 @@ export interface MatrixEnvironment extends BenchmarkEnvironment {
 export interface MatrixHarnessIdentity {
   readonly format: "simulation-playground/density-matrix-harness-identity/v1";
   readonly files: readonly {
-    readonly role: "cli" | "runner" | "validator" | "measure" | "cell-worker" | "parity-worker";
+    readonly role:
+      | "cli"
+      | "runner"
+      | "validator"
+      | "measure"
+      | "cell-worker"
+      | "parity-worker"
+      | "algorithm-registry"
+      | "suite-registry"
+      | "artifact-contract"
+      | "scenario-contract"
+      | "scenario-workloads"
+      | "scenario-shared"
+      | "scenario-grid"
+      | "scenario-object"
+      | "scenario-soa"
+      | "scenario-hybrid";
     readonly path: string;
     readonly sha256: string;
   }[];
@@ -138,9 +158,13 @@ export interface MatrixComparisonBlock {
   readonly pointIds: readonly string[];
   readonly workload: DensityWorkloadV2;
   readonly workloadDigest: string;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly scope: BenchmarkScope;
+  /** Present on dispatch-aware plans; absent matrix v1 artifacts remain valid. */
+  readonly semanticScopeId?: string;
+  readonly operationUnit?: MatrixOperationUnit;
+  readonly growthModel?: MatrixGrowthModel | null;
   readonly estimate: MatrixWorkEstimate;
   readonly invocations: readonly MatrixInvocationPlan[];
   readonly shardPaths: readonly string[];
@@ -157,6 +181,8 @@ export interface MatrixManifest {
   readonly format: typeof MATRIX_MANIFEST_FORMAT;
   readonly issuedAt: string;
   readonly manifestId: string;
+  /** Optional so immutable matrix-v1 artifacts remain valid and reproducible. */
+  readonly executionContract?: "algorithm-dispatch/v2";
   readonly suite: MatrixSuite;
   readonly suiteDigest: string;
   readonly source: MatrixSource;
@@ -188,6 +214,10 @@ export interface MatrixCompletedInvocation {
   readonly warmupSamples: number;
   readonly samples: readonly { readonly sampleIndex: number; readonly durationNs: number }[];
   readonly correctness: BenchmarkCorrectness;
+  readonly operation?: MatrixOperation;
+  readonly algorithmId?: string;
+  readonly semanticScopeId?: string;
+  readonly diagnostics?: DensityNeighborSearchDiagnostics;
 }
 
 export interface MatrixIncompleteInvocation {
@@ -204,9 +234,17 @@ export type MatrixInvocationResult = MatrixCompletedInvocation | MatrixIncomplet
 
 export interface MatrixParityReference {
   readonly strategy: "every-tick-and-direct-phase/v1";
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
+  readonly algorithmId?: string;
+  readonly semanticScopeId?: string;
   readonly checkpoints: number;
   readonly finalSnapshotDigest: string;
+  readonly diagnostics?: {
+    readonly activeCount: number;
+    readonly acceptedPairs: number;
+    readonly pairFingerprintXor: number;
+    readonly pairFingerprintSum: number;
+  };
 }
 
 export interface MatrixShard {
@@ -224,7 +262,7 @@ export interface MatrixShard {
   readonly previousShardSha256: string | null;
   readonly blockDigest: string;
   readonly workloadDigest: string;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly status: MatrixTerminalStatus;
   readonly parity: MatrixParityReference | null;
@@ -240,19 +278,80 @@ export interface MatrixProcessSummary {
 export interface MatrixLayoutSummary {
   readonly blockId: string;
   readonly pointIds: readonly string[];
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly scopeId: string;
+  readonly semanticScopeId?: string;
   readonly layout: VariantId;
   readonly operationsPerSample: number;
   readonly perProcess: readonly MatrixProcessSummary[];
   readonly pooled: BenchmarkStatistics;
   readonly correctness: BenchmarkCorrectness;
+  readonly diagnostics?: DensityNeighborSearchDiagnostics;
+}
+
+export interface MatrixAlgorithmRatio {
+  readonly pointId: string;
+  readonly operation: "neighbor-pairs";
+  readonly semanticScopeId: string;
+  readonly layout: VariantId;
+  readonly numeratorAlgorithmId: string;
+  readonly denominatorAlgorithmId: string;
+  readonly medianRatio: number;
+  readonly processRoundRatios: readonly number[];
+}
+
+export interface MatrixGrowthSeries {
+  readonly family: string;
+  readonly operation: "neighbor-pairs";
+  readonly algorithmId: string;
+  readonly semanticScopeId: string;
+  readonly layout: VariantId;
+  readonly metric: "distance-checks" | "structural-total" | "timing";
+  readonly expectedExponent: 1 | 2;
+  readonly pointIds: readonly string[];
+  readonly xValues: readonly number[];
+  readonly values: readonly number[];
+  /** Full-range descriptive fit across every checked-in point. */
+  readonly logLogOls: MatrixOlsFit | null;
+  /**
+   * Fit used by conformance. Structural series use the declared largest-n tail
+   * so known lower-order setup terms do not masquerade as an asymptotic defect;
+   * timing retains the full-range fit.
+   */
+  readonly assessmentPointIds: readonly string[];
+  readonly assessmentLogLogOls: MatrixOlsFit | null;
+  readonly maximumRoundRelativeSpread?: number;
+}
+
+export interface MatrixGrowthAssessment {
+  readonly family: string;
+  readonly algorithmId: string;
+  readonly layout: VariantId;
+  readonly dimension: "structural" | "timing";
+  readonly status: "consistent" | "audit-required" | "inconclusive";
+  readonly expectedExponent: 1 | 2;
+  readonly observedExponent: number | null;
+  readonly rSquared: number | null;
+  readonly reasons: readonly string[];
+}
+
+export interface MatrixGrowthTolerance {
+  readonly id: "density/spatial-growth-tolerance/v1";
+  readonly structuralExponentAbsoluteError: number;
+  readonly structuralAssessmentTailPointCount: number;
+  readonly structuralMinimumTotalPointCount: number;
+  readonly structuralMinimumTailInputSpan: number;
+  readonly timingExponentAbsoluteError: number;
+  readonly timingMinimumRSquared: number;
+  readonly timingMinimumPointCount: number;
+  readonly timingMinimumInputSpan: number;
+  readonly timingMaximumRoundRelativeSpread: number;
 }
 
 export interface MatrixRatio {
   readonly pointId: string;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly scopeId: string;
   readonly numeratorLayout: VariantId;
@@ -278,7 +377,7 @@ export interface MatrixOlsFit {
 export interface MatrixCrossoverBracket {
   readonly family: string;
   readonly factorName: string;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly scopeId: string;
   readonly numeratorLayout: VariantId;
@@ -296,7 +395,7 @@ export interface MatrixSeriesAnalysis {
   readonly family: string;
   readonly factorName: string;
   readonly factorKind: "numeric" | "categorical";
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
   readonly scopeId: string;
   readonly layout: VariantId;
@@ -328,6 +427,12 @@ export interface MatrixAggregate {
   readonly ratios: readonly MatrixRatio[];
   readonly series: readonly MatrixSeriesAnalysis[];
   readonly crossovers: readonly MatrixCrossoverBracket[];
+  /** Present only for the dispatch-aware spatial-index suite. */
+  readonly algorithmRatios?: readonly MatrixAlgorithmRatio[];
+  readonly growthSeries?: readonly MatrixGrowthSeries[];
+  readonly growthAssessments?: readonly MatrixGrowthAssessment[];
+  readonly growthTolerance?: MatrixGrowthTolerance;
+  readonly ratioLimitations?: readonly string[];
   readonly claimEligibility: {
     readonly policy: typeof MATRIX_CLAIM_POLICY;
     readonly eligible: boolean;

@@ -18,6 +18,11 @@ import { canonicalDigest } from "@hex-empires/kernel";
 import type { CellWorkerRequest, CellWorkerResponse } from "./measure.js";
 import { BENCHMARK_CASE_SPECS, type BenchmarkOperation, type BenchmarkSource } from "./report.js";
 import {
+  getMatrixAlgorithmSpec,
+  matrixOperationsPerSample,
+  type MatrixOperation,
+} from "./matrix-algorithms.js";
+import {
   MATRIX_LAYOUTS,
   MATRIX_MANIFEST_FORMAT,
   MATRIX_MAX_ATTEMPTS,
@@ -55,6 +60,8 @@ export interface CreateMatrixManifestOptions {
   readonly limits?: Partial<MatrixLimits> | undefined;
   readonly issuedAt?: string | undefined;
   readonly legacyEvidence?: MatrixLegacyEvidence | null | undefined;
+  /** Validation seam for immutable pre-dispatch artifacts. New plans always use algorithm dispatch. */
+  readonly executionContract?: "legacy-v1" | "algorithm-dispatch/v2" | undefined;
 }
 
 export interface WriteMatrixPlanOptions extends CreateMatrixManifestOptions {
@@ -81,7 +88,8 @@ export interface MatrixParityRunFailure {
 
 export type MatrixParityRunner = (
   workload: MatrixComparisonBlock["workload"],
-  operation: BenchmarkOperation,
+  operation: MatrixOperation,
+  algorithmId: string,
   limits: MatrixLimits,
   environment: MatrixEnvironment,
 ) => Omit<NonNullable<MatrixShard["parity"]>, "strategy"> | MatrixParityRunFailure;
@@ -174,18 +182,32 @@ export function collectMatrixEnvironment(): MatrixEnvironment {
 export function collectMatrixHarnessIdentity(): MatrixHarnessIdentity {
   const root = repositoryRoot();
   const extension = MATRIX_MODULE_PATH.endsWith(".ts") ? ".ts" : ".js";
+  const scenarioModuleDirectory = resolve(
+    MATRIX_MODULE_DIRECTORY,
+    "../../scenario-density",
+    extension === ".ts" ? "src" : "dist",
+  );
   const definitions = [
-    ["cli", `cli${extension}`],
-    ["runner", `matrix-runner${extension}`],
-    ["validator", `matrix-validator${extension}`],
-    ["measure", `measure${extension}`],
-    ["cell-worker", `worker${extension}`],
-    ["parity-worker", `matrix-parity-worker${extension}`],
+    ["cli", resolve(MATRIX_MODULE_DIRECTORY, `cli${extension}`)],
+    ["runner", resolve(MATRIX_MODULE_DIRECTORY, `matrix-runner${extension}`)],
+    ["validator", resolve(MATRIX_MODULE_DIRECTORY, `matrix-validator${extension}`)],
+    ["measure", resolve(MATRIX_MODULE_DIRECTORY, `measure${extension}`)],
+    ["cell-worker", resolve(MATRIX_MODULE_DIRECTORY, `worker${extension}`)],
+    ["parity-worker", resolve(MATRIX_MODULE_DIRECTORY, `matrix-parity-worker${extension}`)],
+    ["algorithm-registry", resolve(MATRIX_MODULE_DIRECTORY, `matrix-algorithms${extension}`)],
+    ["suite-registry", resolve(MATRIX_MODULE_DIRECTORY, `matrix-suites${extension}`)],
+    ["artifact-contract", resolve(MATRIX_MODULE_DIRECTORY, `matrix-contract${extension}`)],
+    ["scenario-contract", resolve(scenarioModuleDirectory, `contracts${extension}`)],
+    ["scenario-workloads", resolve(scenarioModuleDirectory, `workloads${extension}`)],
+    ["scenario-shared", resolve(scenarioModuleDirectory, `shared${extension}`)],
+    ["scenario-grid", resolve(scenarioModuleDirectory, `neighbor-grid${extension}`)],
+    ["scenario-object", resolve(scenarioModuleDirectory, `object${extension}`)],
+    ["scenario-soa", resolve(scenarioModuleDirectory, `soa${extension}`)],
+    ["scenario-hybrid", resolve(scenarioModuleDirectory, `hybrid${extension}`)],
   ] as const;
   return {
     format: "simulation-playground/density-matrix-harness-identity/v1",
-    files: definitions.map(([role, name]) => {
-      const path = resolve(MATRIX_MODULE_DIRECTORY, name);
+    files: definitions.map(([role, path]) => {
       if (!isWithin(path, root)) throw new Error(`benchmark harness file escapes repository: ${path}`);
       return { role, path: relative(root, path).replaceAll("\\", "/"), sha256: sha256File(path) };
     }),
@@ -194,13 +216,14 @@ export function collectMatrixHarnessIdentity(): MatrixHarnessIdentity {
 
 export function defaultMatrixPolicy(suite: MatrixSuite): MatrixSamplePolicy {
   const claim = suite.id === "claim";
+  const spatial = suite.id === "spatial-index";
   return {
     processIsolation: "fresh-child-process-per-layout-per-round",
     timer: "process.hrtime.bigint",
     percentileMethod: "nearest-rank",
-    processRounds: claim ? 3 : 1,
-    warmupSamplesPerProcess: claim ? 5 : 0,
-    measuredSamplesPerProcess: claim ? 10 : 1,
+    processRounds: claim || spatial ? 3 : 1,
+    warmupSamplesPerProcess: claim ? 5 : spatial ? 1 : 0,
+    measuredSamplesPerProcess: claim ? 10 : spatial ? 3 : 1,
     layouts: MATRIX_LAYOUTS,
     crossoverPracticalThreshold: 0.05,
   };
@@ -208,11 +231,12 @@ export function defaultMatrixPolicy(suite: MatrixSuite): MatrixSamplePolicy {
 
 export function defaultMatrixLimits(suite: MatrixSuite): MatrixLimits {
   const stress = suite.id === "stress-linear" || suite.id === "stress-quadratic";
+  const spatial = suite.id === "spatial-index";
   return {
-    childTimeoutMs: stress ? 120_000 : 30_000,
-    totalTimeoutMs: stress ? 30 * 60_000 : 10 * 60_000,
-    maxEstimatedWorkPerChild: stress ? 5_000_000_000 : 1_000_000_000,
-    maxEstimatedWorkTotal: stress ? 50_000_000_000 : 20_000_000_000,
+    childTimeoutMs: stress || spatial ? 120_000 : 30_000,
+    totalTimeoutMs: stress || spatial ? 30 * 60_000 : 10 * 60_000,
+    maxEstimatedWorkPerChild: stress || spatial ? 5_000_000_000 : 1_000_000_000,
+    maxEstimatedWorkTotal: stress ? 50_000_000_000 : spatial ? 20_000_000_000 : 20_000_000_000,
     maxOutputBytesPerChild: 16 * 1024 * 1024,
     v8HeapLimitMb: null,
     allowLarge: false,
@@ -246,11 +270,8 @@ function validateLimits(limits: MatrixLimits): void {
   if (limits.v8HeapLimitMb !== null) requireCount(limits.v8HeapLimitMb, "matrix v8HeapLimitMb", 16);
 }
 
-export function operationsPerSample(workload: MatrixComparisonBlock["workload"], operation: BenchmarkOperation): number {
-  if (operation === "update") return workload.ticks.update;
-  if (operation === "neighborhood-all-pairs") return workload.ticks["neighborhood-all-pairs"];
-  if (operation === "churn") return workload.ticks.churn;
-  return 1;
+export function operationsPerSample(workload: MatrixComparisonBlock["workload"], operation: MatrixOperation): number {
+  return matrixOperationsPerSample(workload, operation);
 }
 
 function checkedProduct(...values: readonly number[]): number {
@@ -264,9 +285,11 @@ function checkedProduct(...values: readonly number[]): number {
 
 export function estimateMatrixBlock(
   workload: MatrixComparisonBlock["workload"],
-  operation: BenchmarkOperation,
+  operation: MatrixOperation,
   policy: MatrixSamplePolicy,
+  algorithmId?: string,
 ): MatrixWorkEstimate {
+  if (algorithmId !== undefined) getMatrixAlgorithmSpec(operation, algorithmId);
   const pairs = workload.initialActive * (workload.initialActive - 1) / 2;
   const transitionsPerTick = workload.churn.despawnPerTick + workload.churn.spawnPerTick;
   let linearScans = 0;
@@ -274,7 +297,14 @@ export function estimateMatrixBlock(
   let transitions = 0;
   let replayTicks = 0;
   if (operation === "update") linearScans = checkedProduct(workload.capacity, workload.ticks.update);
-  else if (operation === "neighborhood-all-pairs") pairCandidates = checkedProduct(pairs, workload.ticks["neighborhood-all-pairs"]);
+  else if (operation === "neighborhood-all-pairs" || operation === "neighbor-pairs") {
+    pairCandidates = checkedProduct(pairs, workload.ticks["neighborhood-all-pairs"]);
+    if (operation === "neighbor-pairs") {
+      const cellWidth = Math.max(1, workload.neighborRadius);
+      const cellsPerAxis = Math.ceil((workload.coordinateLimit * 2 + 1) / cellWidth);
+      linearScans = checkedProduct(workload.capacity + checkedProduct(cellsPerAxis, cellsPerAxis), workload.ticks["neighborhood-all-pairs"]);
+    }
+  }
   else if (operation === "churn") {
     linearScans = checkedProduct(workload.capacity, workload.ticks.churn);
     transitions = checkedProduct(transitionsPerTick, workload.ticks.churn);
@@ -316,19 +346,22 @@ interface BlockDraft {
   readonly pointIds: string[];
   readonly workload: MatrixComparisonBlock["workload"];
   readonly workloadDigest: string;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
   readonly algorithmId: string;
 }
 
-function createBlockDrafts(suite: MatrixSuite): readonly BlockDraft[] {
+function createBlockDrafts(suite: MatrixSuite, executionContract: "legacy-v1" | "algorithm-dispatch/v2"): readonly BlockDraft[] {
   const drafts = new Map<string, BlockDraft>();
   for (const point of suite.points) {
     for (const selection of point.operations) {
+      const spec = executionContract === "algorithm-dispatch/v2"
+        ? getMatrixAlgorithmSpec(selection.operation, selection.algorithmId)
+        : undefined;
       const digest = canonicalDigest({
         workload: point.workload,
         operation: selection.operation,
         algorithmId: selection.algorithmId,
-        scope: BENCHMARK_CASE_SPECS[selection.operation].scope,
+        scope: spec?.scope ?? BENCHMARK_CASE_SPECS[selection.operation as BenchmarkOperation].scope,
       });
       const current = drafts.get(digest);
       if (current === undefined) {
@@ -352,6 +385,7 @@ function createBlockDrafts(suite: MatrixSuite): readonly BlockDraft[] {
 
 export function createMatrixManifest(options: CreateMatrixManifestOptions = {}): MatrixManifest {
   const suite = options.suite ?? createMatrixSuite(options.suiteId ?? "smoke");
+  const executionContract = options.executionContract ?? "algorithm-dispatch/v2";
   validateMatrixSuite(suite);
   const policy = { ...defaultMatrixPolicy(suite), ...options.policy };
   const limits = { ...defaultMatrixLimits(suite), ...options.limits };
@@ -372,7 +406,7 @@ export function createMatrixManifest(options: CreateMatrixManifestOptions = {}):
   const harnessDigest = canonicalDigest(harness);
   const policyDigest = canonicalDigest(policy);
   const limitsDigest = canonicalDigest(limits);
-  const drafts = createBlockDrafts(suite);
+  const drafts = createBlockDrafts(suite, executionContract);
   const manifestId = `density-matrix-${canonicalDigest({
     suiteDigest,
     sourceDigest,
@@ -380,10 +414,14 @@ export function createMatrixManifest(options: CreateMatrixManifestOptions = {}):
     harnessDigest,
     policyDigest,
     limitsDigest,
+    ...(executionContract === "algorithm-dispatch/v2" ? { executionContract } : {}),
     blocks: drafts.map((entry) => entry.deduplicationDigest),
   }).slice(0, 32)}`;
   const blockIds = new Set<string>();
   const blocks: MatrixComparisonBlock[] = drafts.map((draft) => {
+    const algorithmSpec = executionContract === "algorithm-dispatch/v2"
+      ? getMatrixAlgorithmSpec(draft.operation, draft.algorithmId)
+      : undefined;
     const id = `block-${draft.deduplicationDigest.slice(0, 24)}`;
     if (blockIds.has(id)) throw new Error(`matrix block id collision: ${id}`);
     blockIds.add(id);
@@ -410,8 +448,13 @@ export function createMatrixManifest(options: CreateMatrixManifestOptions = {}):
     return {
       ...draft,
       id,
-      scope: BENCHMARK_CASE_SPECS[draft.operation].scope,
-      estimate: estimateMatrixBlock(draft.workload, draft.operation, policy),
+      scope: algorithmSpec?.scope ?? BENCHMARK_CASE_SPECS[draft.operation as BenchmarkOperation].scope,
+      ...(algorithmSpec === undefined ? {} : {
+        semanticScopeId: algorithmSpec.semanticScopeId,
+        operationUnit: algorithmSpec.operationUnit,
+        growthModel: algorithmSpec.growthModel,
+      }),
+      estimate: estimateMatrixBlock(draft.workload, draft.operation, policy, draft.algorithmId),
       invocations,
       shardPaths,
       shardPath: shardPaths[0]!,
@@ -425,6 +468,7 @@ export function createMatrixManifest(options: CreateMatrixManifestOptions = {}):
     format: MATRIX_MANIFEST_FORMAT,
     issuedAt: options.issuedAt ?? new Date().toISOString(),
     manifestId,
+    ...(executionContract === "algorithm-dispatch/v2" ? { executionContract } : {}),
     suite,
     suiteDigest,
     source,
@@ -613,7 +657,8 @@ function actualCellRunner(request: CellWorkerRequest, context: MatrixCellRunCont
 
 function actualParityRunner(
   workload: MatrixComparisonBlock["workload"],
-  operation: BenchmarkOperation,
+  operation: MatrixOperation,
+  algorithmId: string,
   limits: MatrixLimits,
   environment: MatrixEnvironment,
 ): ReturnType<MatrixParityRunner> {
@@ -623,7 +668,7 @@ function actualParityRunner(
   const child = spawnSync(process.execPath, [...v8Arguments, workerPath], {
     cwd: repositoryRoot(),
     env: { ...process.env, NODE_OPTIONS: environment.nodeOptions },
-    input: JSON.stringify({ workload, operation }),
+    input: JSON.stringify({ workload, operation, algorithmId }),
     encoding: "utf8",
     maxBuffer: limits.maxOutputBytesPerChild,
     timeout: limits.childTimeoutMs,
@@ -701,6 +746,7 @@ function assertDeterministicMatrixManifest(manifest: MatrixManifest): void {
     limits: manifest.limits,
     issuedAt: manifest.issuedAt,
     legacyEvidence: manifest.legacyEvidence,
+    executionContract: manifest.executionContract ?? "legacy-v1",
   });
   if (canonicalDigest(rebuilt) !== canonicalDigest(manifest)) {
     throw new Error("matrix resume manifest does not match its deterministic plan");
@@ -801,7 +847,7 @@ export function executeMatrix(options: ExecuteMatrixOptions): readonly MatrixSha
     } else {
       const effectiveParityTimeoutMs = Math.max(1, Math.floor(Math.min(manifest.limits.childTimeoutMs, remainingTotalMs)));
       const parityStartedAt = elapsedTotalMs();
-      const parityResult = parityRunner(block.workload, block.operation, {
+      const parityResult = parityRunner(block.workload, block.operation, block.algorithmId, {
         ...manifest.limits,
         childTimeoutMs: effectiveParityTimeoutMs,
       }, manifest.environment);
@@ -816,7 +862,14 @@ export function executeMatrix(options: ExecuteMatrixOptions): readonly MatrixSha
           reason: "parity completion crossed the effective child or total matrix time budget",
           elapsedMs: parityCompletedAt - parityStartedAt,
         };
-      } else parity = { strategy: "every-tick-and-direct-phase/v1", ...parityResult };
+      } else parity = {
+        strategy: "every-tick-and-direct-phase/v1",
+        ...parityResult,
+        ...(manifest.executionContract === "algorithm-dispatch/v2" ? {
+          algorithmId: block.algorithmId,
+          semanticScopeId: block.semanticScopeId!,
+        } : {}),
+      };
     }
 
     for (const logicalInvocation of pendingInvocations) {
@@ -850,6 +903,7 @@ export function executeMatrix(options: ExecuteMatrixOptions): readonly MatrixSha
       const response = runner({
         workload: block.workload,
         operation: block.operation,
+        algorithmId: block.algorithmId,
         variantId: invocation.layout,
         warmupSamples: manifest.policy.warmupSamplesPerProcess,
         measuredSamples: manifest.policy.measuredSamplesPerProcess,
@@ -861,6 +915,13 @@ export function executeMatrix(options: ExecuteMatrixOptions): readonly MatrixSha
       if ("status" in response) {
         results.push(response);
       } else {
+        if (manifest.executionContract === "algorithm-dispatch/v2" && (
+          response.operation !== block.operation ||
+          response.algorithmId !== block.algorithmId ||
+          response.semanticScopeId !== block.semanticScopeId
+        )) {
+          throw new Error(`matrix child algorithm identity mismatch: ${block.id}/${invocation.layout}`);
+        }
         const childCompletedAt = elapsedTotalMs();
         const maximumReportedSampleMs = Math.max(...response.samples.map((sample) => sample.durationNs / 1_000_000));
         if (

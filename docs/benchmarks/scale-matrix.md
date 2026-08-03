@@ -71,6 +71,35 @@ layout × algorithm factorial.
 Categorical factors such as slot pattern and spatial shape receive ratios, not
 invented exponents.
 
+### Theory-backed spatial growth
+
+The `spatial-index` suite is separate from the accepted general claim matrix. It
+crosses two algorithms with all three layouts over five geometric counts from 32
+through 8,192 in each of two families:
+
+| Family | Brute expectation | Dense-CSR grid expectation |
+| --- | --- | --- |
+| Fixed density, fixed radius | exact `n(n-1)/2`, quadratic | output-sensitive `n + C + K`, approximately linear here |
+| Coincident positions | exact `n(n-1)/2`, quadratic | quadratic because `K = n(n-1)/2` |
+
+The validator checks brute structural identities and the coincident grid's exact
+`n`, `C`, and `K` relations in every raw invocation. It retains the full
+five-point log-log fit, but assesses the dominant structural exponent over the
+largest three points (a 16x input span). This finite-range rule is explicit
+because fixed grid traversal cost dominates the smallest coincident cases even
+when the implementation is correct.
+
+`validate` checks artifact integrity and recomputes all results without deleting
+a mismatch. `enforce` is the guidance gate: all twelve structural assessments
+(two families x two algorithms x three layouts) must be present and consistent,
+and no high-quality timing assessment may require audit. Inconclusive timing is
+retained but does not pretend to confirm a complexity class.
+
+Grid/brute timing ratios are descriptive within-run evidence. Matching process
+round numbers do not temporally interleave separate immutable algorithm shards,
+so the aggregate records that drift limitation and the ratios are not selection
+policy.
+
 ## Failure and scale discipline
 
 Before scheduling, the runner estimates linear scans, pair candidates, replay
@@ -120,11 +149,21 @@ npm run bench:density:matrix -- aggregate --output benchmarks/density/runs/my-ru
 npm run bench:density:matrix -- validate --output benchmarks/density/runs/my-run
 ```
 
+Run and enforce the spatial suite with the same persistent command:
+
+```text
+npm run bench:density:matrix -- plan --suite spatial-index --output benchmarks/density/runs/my-spatial-run
+npm run bench:density:matrix -- run --output benchmarks/density/runs/my-spatial-run
+npm run bench:density:matrix -- aggregate --output benchmarks/density/runs/my-spatial-run
+npm run bench:density:matrix -- validate --output benchmarks/density/runs/my-spatial-run
+npm run bench:density:matrix -- enforce --output benchmarks/density/runs/my-spatial-run
+```
+
 The persistent root command deliberately performs `tsc -b --clean` before the
-build. The v1 manifest hashes the direct matrix harness and worker files, but not
-yet the complete transitive compiled-JavaScript closure, so a forced clean build
-is a required claim-run mitigation. Expanding that digest is tracked as a future
-evidence-hardening improvement.
+build. The manifest hashes the host, workers, suite/contract definitions, and
+the direct density workload/grid/layout implementation files. It does not hash
+every transitive kernel or third-party module, so the forced clean build and
+whole-worktree source identity remain required evidence controls.
 
 Each logical layout/round cell has one initial attempt and two hash-linked,
 immutable continuation attempts. Completed cells are never rerun; failed or

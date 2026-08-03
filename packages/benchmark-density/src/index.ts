@@ -1,5 +1,6 @@
 export * from "./environment.js";
 export * from "./matrix-cli.js";
+export * from "./matrix-algorithms.js";
 export * from "./matrix-contract.js";
 export * from "./matrix-runner.js";
 export * from "./matrix-suites.js";

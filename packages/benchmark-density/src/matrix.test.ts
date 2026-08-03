@@ -28,6 +28,7 @@ import { createMatrixSuite } from "./matrix-suites.js";
 import type { MatrixCompletedInvocation, MatrixRatio } from "./matrix-contract.js";
 import type { CellWorkerResponse } from "./measure.js";
 import type { VariantId } from "./report.js";
+import type { BenchmarkOperation } from "./report.js";
 
 let fixtureRoot = "";
 let baseOutput = "";
@@ -74,7 +75,7 @@ beforeAll(() => {
   let pid = 900_000;
   executeMatrix({
     outputDirectory: baseOutput,
-    parityRunner: (workload, operation) => proveBenchmarkParity(workload, [operation])[0]!,
+    parityRunner: (workload, operation) => proveBenchmarkParity(workload, [operation as BenchmarkOperation])[0]!,
     cellRunner: (request) => ({
       ...measureBenchmarkCell(request),
       pid: pid++,
@@ -168,7 +169,7 @@ describe("density scale matrix", () => {
     let firstCompleted = 0;
     executeMatrix({
       outputDirectory: output,
-      parityRunner: (workload, operation) => proveBenchmarkParity(workload, [operation])[0]!,
+      parityRunner: (workload, operation) => proveBenchmarkParity(workload, [operation as BenchmarkOperation])[0]!,
       cellRunner: (request, context) => {
         if (request.variantId === "object") return { ...context.invocation, status: "timeout", reason: "test timeout", elapsedMs: 1 };
         firstCompleted += 1;
@@ -204,7 +205,7 @@ describe("density scale matrix", () => {
     });
     const parity = new Map(plan.manifest.blocks.map((block) => [
       `${block.workload.id}/${block.operation}`,
-      proveBenchmarkParity(block.workload, [block.operation])[0]!,
+      proveBenchmarkParity(block.workload, [block.operation as BenchmarkOperation])[0]!,
     ]));
     let virtualNow = 0;
     let childCalls = 0;
@@ -213,7 +214,7 @@ describe("density scale matrix", () => {
       outputDirectory: output,
       now: () => virtualNow,
       parityRunner: (workload, operation) => parity.get(`${workload.id}/${operation}`)!,
-      cellRunner: (_request, context) => {
+      cellRunner: (request, context) => {
         childCalls += 1;
         effectiveTimeouts.push(context.limits.childTimeoutMs);
         virtualNow = 11;
@@ -226,6 +227,11 @@ describe("density scale matrix", () => {
           warmupSamples: 0,
           samples: [{ sampleIndex: 0, durationNs: 1 }],
           correctness: { snapshotDigest: "a".repeat(64), canonicalSnapshotBytes: 1, evidenceDigest: null },
+          operation: request.operation,
+          algorithmId: request.algorithmId!,
+          semanticScopeId: plan.manifest.blocks.find((block) =>
+            block.operation === request.operation && block.algorithmId === request.algorithmId
+          )!.semanticScopeId!,
         };
       },
     });
@@ -262,7 +268,11 @@ describe("density scale matrix", () => {
     expect(manifest.source).toEqual(expectedSource);
     expect(manifest.source.revision).not.toBe(foreignRevision);
     expect(manifest.source.lockfile.path).toBe("package-lock.json");
-    expect(manifest.harness.files.every((file) => file.path.startsWith("packages/benchmark-density/dist/"))).toBe(true);
+    expect(manifest.harness.files.every((file) =>
+      file.path.startsWith("packages/benchmark-density/dist/") ||
+      file.path.startsWith("packages/scenario-density/dist/"),
+    )).toBe(true);
+    expect(manifest.harness.files.some((file) => file.role === "scenario-grid")).toBe(true);
     expect(manifest.environment.executableSha256).toMatch(/^[0-9a-f]{64}$/);
   });
 

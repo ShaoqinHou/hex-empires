@@ -9,7 +9,7 @@ export const MAX_DENSITY_TICKS = 0xffff_ffff;
 export type DensityProfile = "update" | "neighborhood-all-pairs" | "churn" | "snapshot" | "replay";
 
 export type DensityActiveSlots = "packed-prefix" | "evenly-spaced";
-export type DensityInitialPositions = "uniform-square" | "four-cluster";
+export type DensityInitialPositions = "uniform-square" | "four-cluster" | "coincident";
 
 export interface DensityInitialization {
   readonly activeSlots: DensityActiveSlots;
@@ -59,6 +59,7 @@ export const DENSITY_ACTIVE_SLOT_FACTORS: readonly DensityActiveSlots[] = [
 export const DENSITY_POSITION_FACTORS: readonly DensityInitialPositions[] = [
   "uniform-square",
   "four-cluster",
+  "coincident",
 ];
 
 export const DENSITY_INITIALIZATION_MATRIX: readonly DensityInitialization[] =
@@ -112,11 +113,53 @@ export interface DensityChurnResult {
   readonly spawned: number;
 }
 
+export type DensityNeighborSearchAlgorithm = "brute-force" | "uniform-grid";
+
+/**
+ * Timer-free structural evidence for one complete neighbor-search pass.
+ * Fingerprints summarize accepted unordered entity-id pairs, independently of
+ * traversal order. `totalStructuralWork` is the sum of slot, cell, stencil,
+ * candidate, and exact-distance visits reported by the pass.
+ */
+export interface DensityNeighborSearchDiagnostics {
+  readonly algorithm: DensityNeighborSearchAlgorithm;
+  readonly activeCount: number;
+  readonly addressableCells: number;
+  readonly occupiedCells: number;
+  readonly maximumOccupancy: number;
+  readonly slotVisits: number;
+  readonly cellVisits: number;
+  readonly stencilVisits: number;
+  readonly candidateVisits: number;
+  readonly distanceChecks: number;
+  readonly acceptedPairs: number;
+  readonly totalStructuralWork: number;
+  readonly pairFingerprintXor: number;
+  readonly pairFingerprintSum: number;
+}
+
+/** Stable, non-authoritative evidence that a world's reusable CSR buffers exist. */
+export interface DensityGridPreparation {
+  readonly addressableCells: number;
+  readonly cellsPerAxis: number;
+  readonly cellWidth: number;
+  readonly particleCapacity: number;
+}
+
+/** Stable, non-authoritative evidence that the brute oracle's ID scratch exists. */
+export interface DensityAllPairsPreparation {
+  readonly particleCapacity: number;
+}
+
 /** Timer-free, experiment-owned operations used by both scenario systems and the benchmark host. */
 export interface DensityOperations<World> {
   update(world: World): void;
   churn(world: World, random: RandomSource): DensityChurnResult;
   countNeighborPairsAllPairs(world: World): number;
+  prepareNeighborPairsAllPairs(world: World): DensityAllPairsPreparation;
+  diagnoseNeighborPairsAllPairs(world: World): DensityNeighborSearchDiagnostics;
+  prepareNeighborPairsUniformGrid(world: World): DensityGridPreparation;
+  diagnoseNeighborPairsUniformGrid(world: World): DensityNeighborSearchDiagnostics;
   materializeSnapshot(world: World): DensitySnapshot;
 }
 

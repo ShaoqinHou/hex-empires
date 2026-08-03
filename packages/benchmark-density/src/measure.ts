@@ -17,12 +17,22 @@ import {
 } from "@hex-empires/scenario-density";
 import type {
   DensityCommand,
+  DensityGridPreparation,
+  DensityNeighborSearchDiagnostics,
   DensityProfile,
   DensityScenario,
   DensitySnapshot,
   DensityVariant,
   DensityWorkload,
 } from "@hex-empires/scenario-density";
+
+import {
+  MATRIX_BRUTE_NEIGHBOR_ALGORITHM,
+  MATRIX_GRID_NEIGHBOR_ALGORITHM,
+  MATRIX_NEIGHBOR_SEMANTIC_SCOPE,
+  getMatrixAlgorithmSpec,
+  type MatrixOperation,
+} from "./matrix-algorithms.js";
 
 import { collectBenchmarkEnvironment, collectBenchmarkSource } from "./environment.js";
 import {
@@ -59,12 +69,18 @@ interface RuntimeVariant {
   update(session: DirectSession): void;
   churn(session: DirectSession): { readonly despawned: number; readonly spawned: number };
   neighborhoodAllPairs(session: DirectSession): number;
+  prepareNeighborPairsAllPairs(session: DirectSession): { readonly particleCapacity: number };
+  diagnoseNeighborPairsAllPairs(session: DirectSession): DensityNeighborSearchDiagnostics;
+  prepareNeighborPairsUniformGrid(session: DirectSession): DensityGridPreparation;
+  diagnoseNeighborPairsUniformGrid(session: DirectSession): DensityNeighborSearchDiagnostics;
   materializeSnapshot(session: DirectSession): DensitySnapshot;
 }
 
 export interface CellWorkerRequest {
   readonly workload: DensityWorkload;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
+  /** Required by dispatch-aware matrix plans; omitted by the legacy v2 report host. */
+  readonly algorithmId?: string;
   readonly variantId: VariantId;
   readonly warmupSamples: number;
   readonly measuredSamples: number;
@@ -79,6 +95,11 @@ export interface CellWorkerResponse {
   readonly warmupSamples: number;
   readonly samples: readonly { readonly sampleIndex: number; readonly durationNs: number }[];
   readonly correctness: BenchmarkCorrectness;
+  /** Dispatch identity and timer-free evidence are present only for matrix algorithm dispatch. */
+  readonly operation?: MatrixOperation;
+  readonly algorithmId?: string;
+  readonly semanticScopeId?: string;
+  readonly diagnostics?: DensityNeighborSearchDiagnostics;
 }
 
 export interface DensityBenchmarkOptions {
@@ -98,6 +119,7 @@ export interface DensityBenchmarkOptions {
 interface SampleResult {
   readonly durationNs: number;
   readonly correctness: BenchmarkCorrectness;
+  readonly diagnostics?: DensityNeighborSearchDiagnostics;
 }
 
 function runtimeVariant<World>(variant: DensityVariant<World>): RuntimeVariant {
@@ -126,6 +148,18 @@ function runtimeVariant<World>(variant: DensityVariant<World>): RuntimeVariant {
     },
     neighborhoodAllPairs(session) {
       return variant.operations.countNeighborPairsAllPairs(session.world as World);
+    },
+    prepareNeighborPairsAllPairs(session) {
+      return variant.operations.prepareNeighborPairsAllPairs(session.world as World);
+    },
+    diagnoseNeighborPairsAllPairs(session) {
+      return variant.operations.diagnoseNeighborPairsAllPairs(session.world as World);
+    },
+    prepareNeighborPairsUniformGrid(session) {
+      return variant.operations.prepareNeighborPairsUniformGrid(session.world as World);
+    },
+    diagnoseNeighborPairsUniformGrid(session) {
+      return variant.operations.diagnoseNeighborPairsUniformGrid(session.world as World);
     },
     materializeSnapshot(session) {
       return variant.operations.materializeSnapshot(session.world as World);
@@ -226,7 +260,19 @@ function operationCount(workload: DensityWorkload, operation: BenchmarkOperation
   return 1;
 }
 
-function measureOne(variant: RuntimeVariant, workload: DensityWorkload, operation: BenchmarkOperation): SampleResult {
+function sameDiagnostics(
+  left: DensityNeighborSearchDiagnostics | undefined,
+  right: DensityNeighborSearchDiagnostics | undefined,
+): boolean {
+  return canonicalDigest(left ?? null) === canonicalDigest(right ?? null);
+}
+
+function measureOne(
+  variant: RuntimeVariant,
+  workload: DensityWorkload,
+  operation: MatrixOperation,
+  algorithmId?: string,
+): SampleResult {
   if (operation === "replay") {
     const fixture = densityReplayFixture(workload, "replay");
     const start = process.hrtime.bigint();
@@ -260,9 +306,9 @@ function measureOne(variant: RuntimeVariant, workload: DensityWorkload, operatio
     return { durationNs: elapsedNanoseconds(start), correctness: snapshotCorrectness(snapshot) };
   }
 
-  const profile: DensityProfile = operation;
+  const profile: DensityProfile = operation === "neighbor-pairs" ? "neighborhood-all-pairs" : operation;
   const session = variant.createDirect(workload, profile);
-  const repetitions = operationCount(workload, operation);
+  const repetitions = operationCount(workload, profile);
   let start: bigint;
   if (operation === "update") {
     start = process.hrtime.bigint();
@@ -270,6 +316,22 @@ function measureOne(variant: RuntimeVariant, workload: DensityWorkload, operatio
   } else if (operation === "neighborhood-all-pairs") {
     start = process.hrtime.bigint();
     for (let index = 0; index < repetitions; index += 1) variant.neighborhoodAllPairs(session);
+  } else if (operation === "neighbor-pairs") {
+    if (algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM) variant.prepareNeighborPairsAllPairs(session);
+    else variant.prepareNeighborPairsUniformGrid(session);
+    let diagnostics: DensityNeighborSearchDiagnostics | undefined;
+    start = process.hrtime.bigint();
+    for (let index = 0; index < repetitions; index += 1) {
+      diagnostics = algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM
+        ? variant.diagnoseNeighborPairsAllPairs(session)
+        : variant.diagnoseNeighborPairsUniformGrid(session);
+    }
+    const durationNs = elapsedNanoseconds(start);
+    return {
+      durationNs,
+      correctness: snapshotCorrectness(variant.materializeSnapshot(session)),
+      diagnostics: diagnostics!,
+    };
   } else {
     start = process.hrtime.bigint();
     for (let index = 0; index < repetitions; index += 1) {
@@ -285,19 +347,32 @@ export function measureBenchmarkCell(request: CellWorkerRequest): CellWorkerResp
   requireCount(request.measuredSamples, "measuredSamples", 1);
   const variant = variants.find((candidate) => candidate.id === request.variantId);
   if (variant === undefined) throw new Error(`unknown variant: ${request.variantId}`);
-  if (!BENCHMARK_OPERATIONS.includes(request.operation)) throw new Error(`unknown operation: ${request.operation}`);
+  const algorithmSpec = request.algorithmId === undefined
+    ? undefined
+    : getMatrixAlgorithmSpec(request.operation, request.algorithmId);
+  if (request.operation === "neighbor-pairs" && algorithmSpec === undefined) {
+    throw new Error("neighbor-pairs requires an algorithmId");
+  }
+  if (request.operation !== "neighbor-pairs" && !BENCHMARK_OPERATIONS.includes(request.operation)) {
+    throw new Error(`unknown operation: ${request.operation}`);
+  }
 
   let expected: BenchmarkCorrectness | undefined;
+  let expectedDiagnostics: DensityNeighborSearchDiagnostics | undefined;
   for (let index = 0; index < request.warmupSamples; index += 1) {
-    const sample = measureOne(variant, request.workload, request.operation);
+    const sample = measureOne(variant, request.workload, request.operation, request.algorithmId);
     expected ??= sample.correctness;
     if (!sameCorrectness(expected, sample.correctness)) throw new Error("warmup correctness changed within one process");
+    expectedDiagnostics ??= sample.diagnostics;
+    if (!sameDiagnostics(expectedDiagnostics, sample.diagnostics)) throw new Error("warmup diagnostics changed within one process");
   }
   const samples: { sampleIndex: number; durationNs: number }[] = [];
   for (let sampleIndex = 0; sampleIndex < request.measuredSamples; sampleIndex += 1) {
-    const sample = measureOne(variant, request.workload, request.operation);
+    const sample = measureOne(variant, request.workload, request.operation, request.algorithmId);
     expected ??= sample.correctness;
     if (!sameCorrectness(expected, sample.correctness)) throw new Error("measured correctness changed within one process");
+    expectedDiagnostics ??= sample.diagnostics;
+    if (!sameDiagnostics(expectedDiagnostics, sample.diagnostics)) throw new Error("measured diagnostics changed within one process");
     samples.push({ sampleIndex, durationNs: sample.durationNs });
   }
   return {
@@ -309,6 +384,12 @@ export function measureBenchmarkCell(request: CellWorkerRequest): CellWorkerResp
     warmupSamples: request.warmupSamples,
     samples,
     correctness: expected!,
+    ...(algorithmSpec === undefined ? {} : {
+      operation: request.operation,
+      algorithmId: algorithmSpec.algorithmId,
+      semanticScopeId: algorithmSpec.semanticScopeId,
+      ...(expectedDiagnostics === undefined ? {} : { diagnostics: expectedDiagnostics }),
+    }),
   };
 }
 
@@ -417,6 +498,74 @@ export function proveBenchmarkParity(workload: DensityWorkload, operations: read
     if (operation === "snapshot-materialization") return proveSnapshotMaterializationParity(workload);
     return proveSimulationParity(workload, operation);
   });
+}
+
+export interface NeighborParityEvidence {
+  readonly algorithmId: string;
+  readonly semanticScopeId: typeof MATRIX_NEIGHBOR_SEMANTIC_SCOPE;
+  readonly checkpoints: number;
+  readonly finalSnapshotDigest: string;
+  readonly diagnostics: {
+    readonly activeCount: number;
+    readonly acceptedPairs: number;
+    readonly pairFingerprintXor: number;
+    readonly pairFingerprintSum: number;
+  };
+}
+
+export function assertNeighborDiagnosticsParity(
+  reference: DensityNeighborSearchDiagnostics,
+  candidate: DensityNeighborSearchDiagnostics,
+  label = "neighbor-pairs",
+): void {
+  for (const field of ["activeCount", "acceptedPairs", "pairFingerprintXor", "pairFingerprintSum"] as const) {
+    if (candidate[field] !== reference[field]) {
+      throw new Error(`${label} parity mismatch for ${field}: ${candidate[field]} != ${reference[field]}`);
+    }
+  }
+}
+
+/**
+ * Proves the selected implementation against the brute oracle independently in
+ * every layout, then proves the oracle result and snapshot agree across layouts.
+ */
+export function proveNeighborAlgorithmParity(
+  workload: DensityWorkload,
+  algorithmId: string,
+): NeighborParityEvidence & { readonly operation: "neighbor-pairs" } {
+  const spec = getMatrixAlgorithmSpec("neighbor-pairs", algorithmId);
+  const snapshots: string[] = [];
+  const references: DensityNeighborSearchDiagnostics[] = [];
+  for (const variant of variants) {
+    const session = variant.createDirect(workload, "neighborhood-all-pairs");
+    variant.prepareNeighborPairsAllPairs(session);
+    const reference = variant.diagnoseNeighborPairsAllPairs(session);
+    if (algorithmId === MATRIX_GRID_NEIGHBOR_ALGORITHM) variant.prepareNeighborPairsUniformGrid(session);
+    const candidate = algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM
+      ? variant.diagnoseNeighborPairsAllPairs(session)
+      : variant.diagnoseNeighborPairsUniformGrid(session);
+    assertNeighborDiagnosticsParity(reference, candidate, `${variant.id}/${algorithmId}`);
+    references.push(reference);
+    snapshots.push(canonicalDigest(variant.materializeSnapshot(session)));
+  }
+  assertSnapshotParity("neighborhood-all-pairs", snapshots);
+  for (const diagnostic of references.slice(1)) {
+    assertNeighborDiagnosticsParity(references[0]!, diagnostic, `cross-layout/${algorithmId}`);
+  }
+  const reference = references[0]!;
+  return {
+    operation: "neighbor-pairs",
+    algorithmId: spec.algorithmId,
+    semanticScopeId: MATRIX_NEIGHBOR_SEMANTIC_SCOPE,
+    checkpoints: 1,
+    finalSnapshotDigest: snapshots[0]!,
+    diagnostics: {
+      activeCount: reference.activeCount,
+      acceptedPairs: reference.acceptedPairs,
+      pairFingerprintXor: reference.pairFingerprintXor,
+      pairFingerprintSum: reference.pairFingerprintSum,
+    },
+  };
 }
 
 function classifyWorkload(workload: DensityWorkload): "smoke" | "baseline" | "custom" {

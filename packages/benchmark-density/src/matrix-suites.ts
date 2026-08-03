@@ -9,6 +9,12 @@ import {
 
 import { BENCHMARK_CASE_SPECS, type BenchmarkOperation } from "./report.js";
 import {
+  MATRIX_BRUTE_NEIGHBOR_ALGORITHM,
+  MATRIX_DEFAULT_ALGORITHM_IDS,
+  MATRIX_GRID_NEIGHBOR_ALGORITHM,
+  getMatrixAlgorithmSpec,
+} from "./matrix-algorithms.js";
+import {
   MATRIX_SUITE_FORMAT,
   type MatrixClaimClass,
   type MatrixControls,
@@ -19,14 +25,8 @@ import {
   type MatrixSuiteId,
 } from "./matrix-contract.js";
 
-export const MATRIX_ALGORITHM_IDS: Readonly<Record<BenchmarkOperation, string>> = {
-  update: "density/direct-motion-update/v1",
-  "neighborhood-all-pairs": "density/brute-force-all-pairs/v1",
-  churn: "density/stable-slot-churn/v1",
-  "snapshot-materialization": "density/sorted-snapshot-materialization/v1",
-  capture: "kernel/canonical-full-capture/v1",
-  replay: "kernel/execute-replay-end-to-end/v1",
-};
+/** Backward-compatible name retained for matrix-v1 consumers. */
+export const MATRIX_ALGORITHM_IDS = MATRIX_DEFAULT_ALGORITHM_IDS;
 
 const ALL_OPERATIONS = Object.freeze(Object.keys(BENCHMARK_CASE_SPECS) as BenchmarkOperation[]);
 const DEFAULT_TICKS = {
@@ -65,7 +65,7 @@ function workload(fields: WorkloadFields): DensityWorkloadV2 {
     `r${fields.neighborRadius ?? 96}`,
     `h${churn}`,
     `s${activeSlots === "packed-prefix" ? "p" : "e"}`,
-    `p${positions === "uniform-square" ? "u" : "c"}`,
+    `p${positions === "uniform-square" ? "u" : positions === "four-cluster" ? "c" : "x"}`,
     `t${ticks.update}-${ticks["neighborhood-all-pairs"]}-${ticks.churn}-${ticks.snapshot}-${ticks.replay}`,
   ].join("-");
   const result: DensityWorkloadV2 = {
@@ -107,6 +107,89 @@ function point(
     workloadDigest: canonicalDigest(definition),
     operations: selections(operations),
   };
+}
+
+function spatialPoint(
+  id: string,
+  family: "spatial-fixed-density" | "spatial-coincident",
+  factor: MatrixFactor,
+  controls: MatrixControls,
+  definition: DensityWorkloadV2,
+): MatrixPoint {
+  return {
+    id,
+    family,
+    claimClass: "spatial-index",
+    factor,
+    controls,
+    workload: definition,
+    workloadDigest: canonicalDigest(definition),
+    operations: [
+      { operation: "neighbor-pairs", algorithmId: MATRIX_BRUTE_NEIGHBOR_ALGORITHM },
+      { operation: "neighbor-pairs", algorithmId: MATRIX_GRID_NEIGHBOR_ALGORITHM },
+    ],
+  };
+}
+
+function spatialIndexPoints(): readonly MatrixPoint[] {
+  const sizes = [32, 128, 512, 2_048, 8_192] as const;
+  const coordinateLimits = [64, 128, 256, 512, 1_024] as const;
+  const fixedDensity = sizes.map((active, index) => spatialPoint(
+    `spatial-fixed-density-${active}`,
+    "spatial-fixed-density",
+    { name: "activeParticles", kind: "numeric", value: active, unit: "particles" },
+    {
+      fixed: {
+        densityNumerator: 1,
+        densityDenominator: 512,
+        neighborRadius: 8,
+        cellSizeRatio: 1,
+        activeSlots: "packed-prefix",
+        positions: "uniform-square",
+        churnPerTick: 0,
+        semanticScope: "fixed-radius-unordered-neighbor-pairs",
+      },
+      derived: {
+        coordinateLimit: "sqrt(128 * activeParticles)",
+        squareArea: "(2 * coordinateLimit + 1)^2, proportional to activeParticles",
+      },
+    },
+    workload({
+      capacity: active,
+      initialActive: active,
+      coordinateLimit: coordinateLimits[index]!,
+      neighborRadius: 8,
+      churn: 0,
+      ticks: { update: 1, "neighborhood-all-pairs": 1, churn: 1, snapshot: 1, replay: 1 },
+    }),
+  ));
+  const coincident = sizes.map((active) => spatialPoint(
+    `spatial-coincident-${active}`,
+    "spatial-coincident",
+    { name: "activeParticles", kind: "numeric", value: active, unit: "particles" },
+    {
+      fixed: {
+        coordinateLimit: 128,
+        neighborRadius: 8,
+        cellSizeRatio: 1,
+        activeSlots: "packed-prefix",
+        positions: "coincident",
+        churnPerTick: 0,
+        semanticScope: "fixed-radius-unordered-neighbor-pairs",
+      },
+      derived: { acceptedPairs: "activeParticles * (activeParticles - 1) / 2" },
+    },
+    workload({
+      capacity: active,
+      initialActive: active,
+      coordinateLimit: 128,
+      neighborRadius: 8,
+      churn: 0,
+      positions: "coincident",
+      ticks: { update: 1, "neighborhood-all-pairs": 1, churn: 1, snapshot: 1, replay: 1 },
+    }),
+  ));
+  return [...fixedDensity, ...coincident];
 }
 
 function stateScalePoints(): readonly MatrixPoint[] {
@@ -353,7 +436,9 @@ export function createMatrixSuite(id: MatrixSuiteId): MatrixSuite {
           ...churnPoints(),
           ...replayPoints(),
         ]
-      : stressPoints(id);
+      : id === "spatial-index"
+        ? spatialIndexPoints()
+        : stressPoints(id);
   const suite: MatrixSuite = {
     format: MATRIX_SUITE_FORMAT,
     id,
@@ -362,6 +447,8 @@ export function createMatrixSuite(id: MatrixSuiteId): MatrixSuite {
       ? "Curated one-factor-at-a-time density scale claim suite"
       : id === "smoke"
         ? "Real two-point by two-operation matrix wiring smoke"
+        : id === "spatial-index"
+          ? "Deterministic brute-force and uniform-grid growth conformance suite"
         : `Non-claim ${id} resource-envelope preset`,
     points,
   };
@@ -384,16 +471,22 @@ export function validateMatrixSuite(suite: MatrixSuite): void {
     if (pointValue.operations.length === 0) throw new Error(`matrix point has no operations: ${pointValue.id}`);
     const operations = new Set<string>();
     for (const selection of pointValue.operations) {
-      if (MATRIX_ALGORITHM_IDS[selection.operation] !== selection.algorithmId) {
-        throw new Error(`matrix point algorithm mismatch: ${pointValue.id}/${selection.operation}`);
-      }
-      if (operations.has(selection.operation)) throw new Error(`duplicate point operation: ${pointValue.id}/${selection.operation}`);
-      operations.add(selection.operation);
+      getMatrixAlgorithmSpec(selection.operation, selection.algorithmId);
+      const key = `${selection.operation}/${selection.algorithmId}`;
+      if (operations.has(key)) throw new Error(`duplicate point operation: ${pointValue.id}/${key}`);
+      operations.add(key);
     }
   }
   if (suite.id === "smoke") {
     if (suite.points.length !== 2 || suite.points.some((entry) => entry.operations.length !== 2)) {
       throw new Error("matrix smoke must be exactly two points by two operations");
+    }
+  }
+  if (suite.id === "spatial-index") {
+    const fixed = suite.points.filter((entry) => entry.family === "spatial-fixed-density");
+    const coincident = suite.points.filter((entry) => entry.family === "spatial-coincident");
+    if (fixed.length < 5 || coincident.length < 5 || suite.points.some((entry) => entry.operations.length !== 2)) {
+      throw new Error("spatial-index suite requires at least five points in each family and both algorithms");
     }
   }
 }

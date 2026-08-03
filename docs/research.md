@@ -44,11 +44,49 @@ ranked replacements for one another.
 
 Reynolds' original distributed behavioral model is the conceptual baseline for
 flocking, while spatial indexing and storage layout determine whether it scales.
+The original implementation describes a naive quadratic neighborhood search,
+which makes it useful as a semantic and growth baseline rather than a scalable
+implementation recommendation.
 [Original paper](https://doi.org/10.1145/37402.37406)
 
-**Hypothesis:** a deterministic fixed-capacity SoA world plus a uniform spatial
-grid will provide a useful CPU baseline for bullets and boids. Workers should be
-tested only after the single-thread memory-access profile is measured.
+**Primary evidence:** fixed-radius cell lists divide a pinned domain into cells,
+visit a bounded stencil, and filter candidates with the exact distance rule.
+The classical result is output-sensitive: `O(n + C + K)` for a dense grid, where
+`C` is the number of addressable cells and `K` the reported pairs. Linear growth
+in `n` requires the additional fixed-density/bounded-occupancy conditions that
+keep `C` and expected `K` linear.
+[Bentley, Stanat, and Williams](https://doi.org/10.1016/0020-0190(77)90070-9) ·
+[Welling and Germano](https://arxiv.org/abs/1006.1239) ·
+[Dobson, Fox, and Saracino](https://arxiv.org/abs/1412.3784)
+
+**Reference implementation evidence:** LAMMPS documents a linear-scaling binned
+half-list, fixed neighbor stencils, exact cutoff filtering, and an explicitly
+quadratic unbinned fallback. HOOMD's cell-list documentation exposes cell width,
+deterministic ordering, and the memory/performance failure modes caused by
+non-uniform density and unsuitable cutoffs. These are implementation comparison
+points, not dependencies or unquestioned truth.
+[LAMMPS neighbor-list internals](https://docs.lammps.org/Developer_par_neigh.html) ·
+[LAMMPS algorithm selection](https://docs.lammps.org/latest/Developer_notes.html) ·
+[LAMMPS repository](https://github.com/lammps/lammps) ·
+[HOOMD Cell](https://hoomd-blue.readthedocs.io/en/v5.4.0/hoomd/md/nlist/cell.html)
+
+**Synthesis:** compare theory first against deterministic primitive work, then
+against time. Under fixed density, brute-force distance work should be
+quadratic while grid build/candidate work should be approximately linear. Under
+fixed domain or coincident positions, `K` becomes quadratic and quadratic grid
+work is correct. A mismatch first triggers a workload audit, then an
+implementation audit, then a runtime/dependency audit.
+
+Dynamic-language benchmark methodology also matters. Independent process
+rounds, warmup, raw samples, and explicit uncertainty are necessary because JIT,
+GC, and system variation make a single timing curve an unreliable oracle.
+[Georges, Buytaert, and Eeckhout](https://users.elis.ugent.be/~leeckhou/papers/oopsla07-stat.pdf) ·
+[Kalibera and Jones](https://www.cs.kent.ac.uk/pubs/2012/3233/)
+
+**Hypothesis under test:** a deterministic fixed-capacity world plus a dense CSR
+uniform grid will provide a useful CPU baseline for bullets and boids when the
+domain-to-entity ratio is bounded. Sparse hashing, workers, and accelerators are
+separate experiments after this single-thread structural-work contract passes.
 
 ## Constrained physics
 

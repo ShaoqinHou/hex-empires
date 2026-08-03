@@ -112,6 +112,8 @@ function initialPosition(
     };
   }
 
+  if (positions === "coincident") return { x: 0, y: 0 };
+
   const centerOffset = Math.max(1, Math.floor(coordinateLimit / 2));
   const spread = Math.floor(coordinateLimit / 8);
   const offsetRange = spread * 2 + 1;

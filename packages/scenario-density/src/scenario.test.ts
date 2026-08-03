@@ -39,6 +39,8 @@ const v2ReplayDigests: Readonly<Record<string, string>> = {
   "density-v2-packed-prefix-four-cluster": "e3b263a954657e8bf07ca0ef6c53b4c9f31eba313e84d9042d6bace8728f20f9",
   "density-v2-evenly-spaced-uniform-square": "0892a67dccd57a43646116010d5daa0e1ff77f50da5bf31a4f1da6d2e785bbf3",
   "density-v2-evenly-spaced-four-cluster": "74db0ab2975d74835f1c134b92605aef4dc2ef44cdf0ec7857dcd91704a630ff",
+  "density-v2-packed-prefix-coincident": "ac0ca7037a688769a0eda921d5cc82435c2ddbf2650590fad4a032f11a3d4ce7",
+  "density-v2-evenly-spaced-coincident": "1114e700db00e0d98e8178163af46afd42dfaf38a93afc14a657b0ad8a52822f",
 };
 
 describe("density storage variants", () => {
@@ -297,8 +299,10 @@ describe("density storage variants", () => {
     expect(DENSITY_INITIALIZATION_MATRIX).toEqual([
       { activeSlots: "packed-prefix", positions: "uniform-square" },
       { activeSlots: "packed-prefix", positions: "four-cluster" },
+      { activeSlots: "packed-prefix", positions: "coincident" },
       { activeSlots: "evenly-spaced", positions: "uniform-square" },
       { activeSlots: "evenly-spaced", positions: "four-cluster" },
+      { activeSlots: "evenly-spaced", positions: "coincident" },
     ]);
     for (const workload of densityV2InitializationFixtures) {
       expect(workload.format).toBe(DENSITY_WORKLOAD_FORMAT_V2);

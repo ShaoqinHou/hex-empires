@@ -42,6 +42,9 @@ Read these before adding code:
 - [`docs/decisions/0003-scale-time-and-network-planes.md`](docs/decisions/0003-scale-time-and-network-planes.md)
   — why scale, rewind, presentation, and multiplayer are coordinated but
   separate experiment planes.
+- [`docs/decisions/0004-theory-backed-spatial-growth.md`](docs/decisions/0004-theory-backed-spatial-growth.md)
+  — why algorithmic work counters and academic growth models gate spatial-query
+  guidance before elapsed-time comparisons.
 
 ## Working rule
 

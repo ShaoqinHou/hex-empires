@@ -2,12 +2,13 @@
 
 import type { DensityWorkload } from "@hex-empires/scenario-density";
 
-import { proveBenchmarkParity } from "./measure.js";
-import type { BenchmarkOperation } from "./report.js";
+import { proveBenchmarkParity, proveNeighborAlgorithmParity } from "./measure.js";
+import type { MatrixOperation } from "./matrix-algorithms.js";
 
 interface MatrixParityWorkerRequest {
   readonly workload: DensityWorkload;
-  readonly operation: BenchmarkOperation;
+  readonly operation: MatrixOperation;
+  readonly algorithmId: string;
 }
 
 let input = "";
@@ -18,7 +19,10 @@ process.stdin.on("data", (chunk: string) => {
 process.stdin.on("end", () => {
   try {
     const request = JSON.parse(input) as MatrixParityWorkerRequest;
-    process.stdout.write(JSON.stringify(proveBenchmarkParity(request.workload, [request.operation])[0]));
+    const result = request.operation === "neighbor-pairs"
+      ? proveNeighborAlgorithmParity(request.workload, request.algorithmId)
+      : proveBenchmarkParity(request.workload, [request.operation])[0];
+    process.stdout.write(JSON.stringify(result));
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
     process.exitCode = 1;

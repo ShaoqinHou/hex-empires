@@ -38,17 +38,26 @@ their workload and host. Multi-size/distribution curves are Track 3A.
 
 ## 3A. Scale curves and spatial queries
 
-- Add curated log-spaced count curves with occupancy, live-slot pattern, spatial
-  distribution, churn intensity, and replay length as declared factors.
+- Preserve the accepted general scale matrix and resource envelopes. Keep
+  occupancy, live-slot pattern, spatial distribution, churn intensity, and
+  replay length as declared factors rather than hidden sources of variation.
 - Shard long runs with explicit environment identity, time/resource limits,
   resumability, atomic artifacts, and recorded terminal failures.
-- Keep linear and quadratic stress envelopes separate. Compare a spatial index
-  with all-pairs only as a full algorithm × storage-layout experiment.
+- Run the theory-backed spatial suite as a full algorithm x storage-layout
+  experiment: exact quadratic brute work, output-sensitive dense-CSR grid work,
+  fixed-density and deliberately degenerate families, and brute-oracle parity.
+- Treat structural work as the primary growth gate. Keep elapsed-time growth as
+  separate runtime evidence, and require an audit when a high-quality curve
+  disagrees with the declared model.
+- Keep linear and quadratic stress envelopes separate. A sparse grid, tree, or
+  accelerator must earn adoption through another scenario-owned experiment;
+  dense CSR is not a universal selection policy.
 - Measure memory/GC, construction, churn, audit capture, and replay in addition
   to hot-loop time.
 
-**Exit:** growth and crossover statements are recomputable from raw shards,
-remain environment-local, and stop at an explicit budget knee.
+**Exit:** semantic parity and structural-growth assessments are recomputable
+from raw shards; timing and crossover statements remain environment-local and
+stop at an explicit budget knee.
 
 ## 3B. Temporal laboratory
 

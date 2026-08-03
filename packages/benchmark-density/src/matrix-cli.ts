@@ -7,9 +7,9 @@ import {
   loadMatrixManifest,
   writeMatrixPlan,
 } from "./matrix-runner.js";
-import { aggregateMatrix, validateMatrixOutput } from "./matrix-validator.js";
+import { aggregateMatrix, enforceMatrixOutput, validateMatrixOutput } from "./matrix-validator.js";
 
-export const MATRIX_COMMANDS = ["plan", "run", "aggregate", "validate"] as const;
+export const MATRIX_COMMANDS = ["plan", "run", "aggregate", "validate", "enforce"] as const;
 export type MatrixCommand = (typeof MATRIX_COMMANDS)[number];
 
 export interface MatrixCliIo {
@@ -37,12 +37,14 @@ Usage:
   benchmark-density run       --output DIR [matrix options]
   benchmark-density aggregate --output DIR
   benchmark-density validate  --output DIR
+  benchmark-density enforce   --output DIR
 
 Suites:
   --suite smoke              Real two-point/two-operation smoke (default)
   --suite claim              Curated one-factor-at-a-time claim suite
   --suite stress-linear      Non-claim linear resource-envelope preset
   --suite stress-quadratic   Non-claim all-pairs resource-envelope preset
+  --suite spatial-index      Brute/grid structural and timing growth conformance
 
 Sampling:
   --process-rounds N
@@ -103,7 +105,7 @@ export function parseMatrixArguments(args: readonly string[]): MatrixCliArgument
       index += 1;
     } else if (argument === "--suite") {
       const value = next(args, index, argument) as MatrixSuiteId;
-      if (!["smoke", "claim", "stress-linear", "stress-quadratic"].includes(value)) throw new Error(`unknown matrix suite: ${value}`);
+      if (!["smoke", "claim", "stress-linear", "stress-quadratic", "spatial-index"].includes(value)) throw new Error(`unknown matrix suite: ${value}`);
       suiteId = value;
       suiteExplicit = true;
       index += 1;
@@ -206,8 +208,10 @@ export function runMatrixCli(
     result = executeMatrix({ outputDirectory: parsed.outputDirectory });
   } else if (parsed.command === "aggregate") {
     result = aggregateMatrix(parsed.outputDirectory);
-  } else {
+  } else if (parsed.command === "validate") {
     result = validateMatrixOutput(parsed.outputDirectory);
+  } else {
+    result = enforceMatrixOutput(parsed.outputDirectory);
   }
   if (!parsed.quiet) io.stdout(`${JSON.stringify(result, null, 2)}\n`);
   return result;

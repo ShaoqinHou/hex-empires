@@ -92,10 +92,24 @@ export const densityV2SpacedClusterFixture: DensityWorkloadV2 = {
   initialization: { activeSlots: "evenly-spaced", positions: "four-cluster" },
 };
 
+export const densityV2PackedCoincidentFixture: DensityWorkloadV2 = {
+  ...densityV2FixtureFields,
+  id: "density-v2-packed-prefix-coincident",
+  initialization: { activeSlots: "packed-prefix", positions: "coincident" },
+};
+
+export const densityV2SpacedCoincidentFixture: DensityWorkloadV2 = {
+  ...densityV2FixtureFields,
+  id: "density-v2-evenly-spaced-coincident",
+  initialization: { activeSlots: "evenly-spaced", positions: "coincident" },
+};
+
 /** Small deterministic fixtures for factor validation, not a claim-grade benchmark suite. */
 export const densityV2InitializationFixtures: readonly DensityWorkloadV2[] = [
   densityV2PackedUniformFixture,
   densityV2PackedClusterFixture,
   densityV2SpacedUniformFixture,
   densityV2SpacedClusterFixture,
+  densityV2PackedCoincidentFixture,
+  densityV2SpacedCoincidentFixture,
 ];

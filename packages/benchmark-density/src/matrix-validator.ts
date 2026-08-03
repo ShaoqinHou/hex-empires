@@ -2,6 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import { canonicalDigest } from "@hex-empires/kernel";
+import type { DensityNeighborSearchDiagnostics } from "@hex-empires/scenario-density";
+
+import {
+  MATRIX_BRUTE_NEIGHBOR_ALGORITHM,
+  MATRIX_GRID_NEIGHBOR_ALGORITHM,
+  getMatrixAlgorithmSpec,
+  type MatrixOperation,
+} from "./matrix-algorithms.js";
 
 import {
   MATRIX_AGGREGATE_FORMAT,
@@ -12,6 +20,7 @@ import {
   MATRIX_TERMINAL_STATUSES,
   type MatrixAdjacentSlope,
   type MatrixAggregate,
+  type MatrixAlgorithmRatio,
   type MatrixComparisonBlock,
   type MatrixCompletedInvocation,
   type MatrixCrossoverBracket,
@@ -21,6 +30,9 @@ import {
   type MatrixOlsFit,
   type MatrixRatio,
   type MatrixSeriesAnalysis,
+  type MatrixGrowthAssessment,
+  type MatrixGrowthSeries,
+  type MatrixGrowthTolerance,
   type MatrixShard,
 } from "./matrix-contract.js";
 import {
@@ -42,7 +54,6 @@ import {
   summarizeDurations,
   validateBenchmarkReport,
   type BenchmarkCorrectness,
-  type BenchmarkOperation,
   type BenchmarkStatistics,
   type VariantId,
 } from "./report.js";
@@ -90,7 +101,7 @@ function sameSemanticCorrectness(left: BenchmarkCorrectness, right: BenchmarkCor
 }
 
 export function validateMatrixCorrectnessEvidence(
-  operation: BenchmarkOperation,
+  operation: MatrixOperation,
   paritySnapshotDigest: string,
   invocations: readonly MatrixCompletedInvocation[],
 ): void {
@@ -125,6 +136,7 @@ function expectedCheckpoints(block: MatrixComparisonBlock): number {
   }
   if (block.operation === "snapshot-materialization") return workload.ticks.snapshot * 3 + 1;
   if (block.operation === "capture") return workload.ticks.snapshot + 1;
+  if (block.operation === "neighbor-pairs") return 1;
   return workload.ticks.replay + 2;
 }
 
@@ -159,6 +171,15 @@ function validateManifest(manifest: MatrixManifest, output: string): void {
     if (!/^block-[0-9a-f]{24}$/.test(block.id)) throw new Error(`unsafe matrix block id: ${block.id}`);
     if (shardIds.has(block.id)) throw new Error(`duplicate matrix block: ${block.id}`);
     shardIds.add(block.id);
+    if (manifest.executionContract === "algorithm-dispatch/v2") {
+      const spec = getMatrixAlgorithmSpec(block.operation, block.algorithmId);
+      if (
+        block.semanticScopeId !== spec.semanticScopeId ||
+        block.operationUnit !== spec.operationUnit ||
+        !sameDigest(block.scope, spec.scope) ||
+        !sameDigest(block.growthModel, spec.growthModel)
+      ) throw new Error(`matrix block algorithm contract mismatch: ${block.id}`);
+    }
     if (block.shardPaths.length !== 3 || block.shardPath !== block.shardPaths[0]) throw new Error(`matrix shard attempt plan mismatch: ${block.id}`);
     for (const [attemptIndex, shardPath] of block.shardPaths.entries()) {
       if (shardPath !== `shards/${block.id}.attempt-${attemptIndex}.json` || shardPath.includes("..") || isAbsolute(shardPath)) {
@@ -187,6 +208,7 @@ function validateManifest(manifest: MatrixManifest, output: string): void {
     limits: manifest.limits,
     issuedAt: manifest.issuedAt,
     legacyEvidence: manifest.legacyEvidence,
+    executionContract: manifest.executionContract ?? "legacy-v1",
   });
   if (!sameDigest(rebuilt, manifest)) throw new Error("matrix manifest does not match its deterministic plan");
 }
@@ -197,6 +219,96 @@ function validateCorrectness(value: unknown, label: string): BenchmarkCorrectnes
   requireInteger(record.canonicalSnapshotBytes, `${label} canonicalSnapshotBytes`, 1);
   if (record.evidenceDigest !== null) requireSha(record.evidenceDigest, `${label} evidenceDigest`);
   return record as unknown as BenchmarkCorrectness;
+}
+
+const DIAGNOSTIC_INTEGER_FIELDS = [
+  "activeCount",
+  "addressableCells",
+  "occupiedCells",
+  "maximumOccupancy",
+  "slotVisits",
+  "cellVisits",
+  "stencilVisits",
+  "candidateVisits",
+  "distanceChecks",
+  "acceptedPairs",
+  "totalStructuralWork",
+  "pairFingerprintXor",
+  "pairFingerprintSum",
+] as const;
+
+function validateNeighborDiagnostics(
+  value: unknown,
+  block: MatrixComparisonBlock,
+  label: string,
+): DensityNeighborSearchDiagnostics {
+  const record = requireRecord(value, label);
+  const expectedAlgorithm = block.algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM ? "brute-force" : "uniform-grid";
+  if (record.algorithm !== expectedAlgorithm) throw new Error(`${label} algorithm mismatch`);
+  for (const field of DIAGNOSTIC_INTEGER_FIELDS) requireInteger(record[field], `${label} ${field}`, 0);
+  const calculated = Number(record.slotVisits) + Number(record.cellVisits) + Number(record.stencilVisits) +
+    Number(record.candidateVisits) + Number(record.distanceChecks);
+  if (record.totalStructuralWork !== calculated) throw new Error(`${label} structural total mismatch`);
+  if (record.activeCount !== block.workload.initialActive) throw new Error(`${label} active count mismatch`);
+  const activeCount = block.workload.initialActive;
+  const maximumPairs = activeCount * (activeCount - 1) / 2;
+  if (Number(record.acceptedPairs) > maximumPairs) {
+    throw new Error(`${label} accepted pair count is impossible`);
+  }
+  if (block.algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM) {
+    if (record.slotVisits !== block.workload.capacity || record.candidateVisits !== maximumPairs || record.distanceChecks !== maximumPairs) {
+      throw new Error(`${label} brute-force structural identity mismatch`);
+    }
+    if (record.addressableCells !== 0 || record.occupiedCells !== 0 || record.maximumOccupancy !== 0 || record.cellVisits !== 0 || record.stencilVisits !== 0) {
+      throw new Error(`${label} brute-force diagnostics contain grid work`);
+    }
+  } else {
+    const cellWidth = Math.max(1, block.workload.neighborRadius);
+    const cellsPerAxis = Math.floor((block.workload.coordinateLimit * 2) / cellWidth) + 1;
+    const addressableCells = cellsPerAxis * cellsPerAxis;
+    if (record.addressableCells !== addressableCells || record.slotVisits !== block.workload.capacity * 2 || record.stencilVisits !== activeCount * 9) {
+      throw new Error(`${label} uniform-grid structural identity mismatch`);
+    }
+    if (block.workload.initialization.positions === "coincident") {
+      const coincidentCell = Math.floor(block.workload.coordinateLimit / cellWidth);
+      const validAxisCells = 1 + Number(coincidentCell > 0) + Number(coincidentCell + 1 < cellsPerAxis);
+      const expectedCellVisits = addressableCells * 3 + activeCount * validAxisCells * validAxisCells;
+      if (
+        record.occupiedCells !== 1 ||
+        record.maximumOccupancy !== activeCount ||
+        record.cellVisits !== expectedCellVisits ||
+        record.candidateVisits !== activeCount * activeCount ||
+        record.distanceChecks !== maximumPairs ||
+        record.acceptedPairs !== maximumPairs
+      ) {
+        throw new Error(`${label} coincident-grid n/C/K traversal identity mismatch`);
+      }
+    }
+  }
+  return record as unknown as DensityNeighborSearchDiagnostics;
+}
+
+function validateNeighborEvidence(
+  block: MatrixComparisonBlock,
+  parity: MatrixShard["parity"],
+  invocations: readonly MatrixCompletedInvocation[],
+): void {
+  if (block.operation !== "neighbor-pairs") return;
+  if (parity === null || parity.diagnostics === undefined) throw new Error(`matrix neighbor parity evidence is missing: ${block.id}`);
+  const reference = parity.diagnostics;
+  for (const field of ["activeCount", "acceptedPairs", "pairFingerprintXor", "pairFingerprintSum"] as const) {
+    requireInteger(reference[field], `matrix parity ${field}`, 0);
+  }
+  let deterministicDigest: string | undefined;
+  for (const invocation of invocations) {
+    const diagnostics = validateNeighborDiagnostics(invocation.diagnostics, block, `matrix child diagnostics ${invocation.invocationId}`);
+    for (const field of ["activeCount", "acceptedPairs", "pairFingerprintXor", "pairFingerprintSum"] as const) {
+      if (diagnostics[field] !== reference[field]) throw new Error(`matrix neighbor parity fingerprint mismatch: ${invocation.invocationId}/${field}`);
+    }
+    const digest = canonicalDigest(diagnostics);
+    deterministicDigest ??= digest;
+    if (digest !== deterministicDigest) throw new Error(`matrix neighbor diagnostics changed across invocations: ${block.id}`);
+  }
 }
 
 function validateCompletedInvocation(
@@ -222,6 +334,13 @@ function validateCompletedInvocation(
   const correctness = validateCorrectness(raw.correctness, "matrix child correctness");
   if (block.operation === "replay" && correctness.evidenceDigest === null) throw new Error("matrix replay is missing evidence digest");
   if (block.operation !== "replay" && correctness.evidenceDigest !== null) throw new Error("matrix non-replay invocation must not claim replay evidence");
+  if (manifest.executionContract === "algorithm-dispatch/v2") {
+    if (raw.operation !== block.operation || raw.algorithmId !== block.algorithmId || raw.semanticScopeId !== block.semanticScopeId) {
+      throw new Error("matrix child algorithm identity mismatch");
+    }
+    if (block.operation === "neighbor-pairs") validateNeighborDiagnostics(raw.diagnostics, block, "matrix child diagnostics");
+    else if (raw.diagnostics !== undefined) throw new Error("matrix non-neighbor invocation must not contain neighbor diagnostics");
+  }
   return raw as unknown as MatrixCompletedInvocation;
 }
 
@@ -289,9 +408,14 @@ function validateShard(
     if (shard.parity.strategy !== "every-tick-and-direct-phase/v1" || shard.parity.operation !== block.operation) {
       throw new Error(`matrix parity reference mismatch: ${block.id}`);
     }
+    if (manifest.executionContract === "algorithm-dispatch/v2" && (
+      shard.parity.algorithmId !== block.algorithmId ||
+      shard.parity.semanticScopeId !== block.semanticScopeId
+    )) throw new Error(`matrix parity algorithm identity mismatch: ${block.id}`);
     if (shard.parity.checkpoints !== expectedCheckpoints(block)) throw new Error(`matrix parity checkpoint count mismatch: ${block.id}`);
     requireSha(shard.parity.finalSnapshotDigest, `matrix parity digest ${block.id}`);
     validateMatrixCorrectnessEvidence(block.operation, shard.parity.finalSnapshotDigest, completed);
+    validateNeighborEvidence(block, shard.parity, completed);
   }
   return completedPlans;
 }
@@ -347,6 +471,8 @@ function loadValidatedArtifacts(outputDirectory: string): ValidatedArtifacts {
     if (completedInvocations.length > 0) {
       if (paritySnapshotDigest === undefined) throw new Error(`matrix block has samples without a parity reference: ${block.id}`);
       validateMatrixCorrectnessEvidence(block.operation, paritySnapshotDigest, completedInvocations);
+      const latestParity = shards.filter((entry) => entry.blockId === block.id && entry.parity !== null).at(-1)?.parity ?? null;
+      validateNeighborEvidence(block, latestParity, completedInvocations);
     }
   }
   let legacyEligible = false;
@@ -383,6 +509,7 @@ function buildSummaries(manifest: MatrixManifest, shards: readonly MatrixShard[]
         operation: block.operation,
         algorithmId: block.algorithmId,
         scopeId: block.scope.id,
+        ...(block.semanticScopeId === undefined ? {} : { semanticScopeId: block.semanticScopeId }),
         layout,
         operationsPerSample: perSample,
         perProcess: invocations.map((entry) => ({
@@ -392,6 +519,7 @@ function buildSummaries(manifest: MatrixManifest, shards: readonly MatrixShard[]
         })),
         pooled: summarizeDurations(invocations.flatMap((entry) => entry.samples.map((sample) => sample.durationNs)), perSample),
         correctness,
+        ...(invocations[0]!.diagnostics === undefined ? {} : { diagnostics: invocations[0]!.diagnostics }),
       });
     }
   }
@@ -434,6 +562,47 @@ function buildRatios(manifest: MatrixManifest, summaries: readonly MatrixLayoutS
   return ratios;
 }
 
+function buildAlgorithmRatios(
+  manifest: MatrixManifest,
+  summaries: readonly MatrixLayoutSummary[],
+): { readonly ratios: readonly MatrixAlgorithmRatio[]; readonly limitations: readonly string[] } {
+  const ratios: MatrixAlgorithmRatio[] = [];
+  const limitations: string[] = [
+    "algorithm blocks are separate immutable shards; matching round labels do not interleave brute and grid execution, so timing ratios can include temporal drift and are descriptive only",
+  ];
+  for (const point of manifest.suite.points) {
+    for (const layout of MATRIX_LAYOUTS) {
+      const candidates = summaries.filter((summary) => summary.pointIds.includes(point.id) && summary.layout === layout && summary.operation === "neighbor-pairs");
+      const brute = candidates.find((entry) => entry.algorithmId === MATRIX_BRUTE_NEIGHBOR_ALGORITHM);
+      const grid = candidates.find((entry) => entry.algorithmId === MATRIX_GRID_NEIGHBOR_ALGORITHM);
+      if (brute === undefined || grid === undefined) {
+        limitations.push(`${point.id}/${layout}: missing separate brute or grid timing execution`);
+        continue;
+      }
+      if (brute.semanticScopeId === undefined || brute.semanticScopeId !== grid.semanticScopeId) {
+        limitations.push(`${point.id}/${layout}: algorithms do not share a bound semantic scope`);
+        continue;
+      }
+      const bruteRounds = new Map(brute.perProcess.map((entry) => [entry.processRound, entry.statistics.medianNsPerOperation]));
+      if (grid.perProcess.some((entry) => !bruteRounds.has(entry.processRound))) {
+        limitations.push(`${point.id}/${layout}: process rounds do not align`);
+        continue;
+      }
+      ratios.push({
+        pointId: point.id,
+        operation: "neighbor-pairs",
+        semanticScopeId: brute.semanticScopeId,
+        layout,
+        numeratorAlgorithmId: MATRIX_GRID_NEIGHBOR_ALGORITHM,
+        denominatorAlgorithmId: MATRIX_BRUTE_NEIGHBOR_ALGORITHM,
+        medianRatio: grid.pooled.medianNsPerOperation / brute.pooled.medianNsPerOperation,
+        processRoundRatios: grid.perProcess.map((entry) => entry.statistics.medianNsPerOperation / bruteRounds.get(entry.processRound)!),
+      });
+    }
+  }
+  return { ratios, limitations };
+}
+
 function geometric(values: readonly number[]): boolean {
   if (values.length < 4 || values.some((value) => value <= 0)) return false;
   const ratios = values.slice(1).map((value, index) => value / values[index]!);
@@ -454,9 +623,141 @@ function olsLogLog(x: readonly number[], y: readonly number[]): MatrixOlsFit {
   return { slope, rSquared: total === 0 ? 1 : 1 - residual / total, pointCount: x.length };
 }
 
+export const MATRIX_SPATIAL_GROWTH_TOLERANCE: MatrixGrowthTolerance = {
+  id: "density/spatial-growth-tolerance/v1",
+  structuralExponentAbsoluteError: 0.15,
+  structuralAssessmentTailPointCount: 3,
+  structuralMinimumTotalPointCount: 5,
+  structuralMinimumTailInputSpan: 16,
+  timingExponentAbsoluteError: 0.35,
+  timingMinimumRSquared: 0.9,
+  timingMinimumPointCount: 5,
+  timingMinimumInputSpan: 16,
+  timingMaximumRoundRelativeSpread: 0.5,
+};
+
+function relativeSpread(values: readonly number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  const median = sorted[Math.floor(sorted.length / 2)]!;
+  return median === 0 ? (sorted.at(-1) === 0 ? 0 : Infinity) : (sorted.at(-1)! - sorted[0]!) / median;
+}
+
+function buildGrowthSeries(manifest: MatrixManifest, summaries: readonly MatrixLayoutSummary[]): readonly MatrixGrowthSeries[] {
+  const pointById = new Map(manifest.suite.points.map((point) => [point.id, point]));
+  const results: MatrixGrowthSeries[] = [];
+  for (const algorithmId of [MATRIX_BRUTE_NEIGHBOR_ALGORITHM, MATRIX_GRID_NEIGHBOR_ALGORITHM]) {
+    for (const family of ["spatial-fixed-density", "spatial-coincident"] as const) {
+      const familyName = family === "spatial-fixed-density" ? "fixed-density" : "coincident";
+      for (const layout of MATRIX_LAYOUTS) {
+        const entries = summaries
+          .filter((summary) => summary.operation === "neighbor-pairs" && summary.algorithmId === algorithmId && summary.layout === layout)
+          .flatMap((summary) => summary.pointIds.map((pointId) => ({ summary, point: pointById.get(pointId)! })))
+          .filter((entry) => entry.point.family === family)
+          .sort((left, right) => Number(left.point.factor.value) - Number(right.point.factor.value));
+        if (entries.length === 0) continue;
+        const block = manifest.blocks.find((candidate) => candidate.algorithmId === algorithmId && candidate.pointIds.includes(entries[0]!.point.id))!;
+        const expectation = block.growthModel?.expectations.find((entry) => entry.family === familyName);
+        if (expectation === undefined || block.semanticScopeId === undefined) continue;
+        const metric = block.growthModel!.structuralMetric;
+        const xValues = entries.map((entry) => Number(entry.point.factor.value));
+        const structuralValues = entries.map((entry) => {
+          if (entry.summary.diagnostics === undefined) return 0;
+          return metric === "distance-checks" ? entry.summary.diagnostics.distanceChecks : entry.summary.diagnostics.totalStructuralWork;
+        });
+        const structuralAssessmentEntries = entries.slice(-MATRIX_SPATIAL_GROWTH_TOLERANCE.structuralAssessmentTailPointCount);
+        const structuralAssessmentX = structuralAssessmentEntries.map((entry) => Number(entry.point.factor.value));
+        const structuralAssessmentValues = structuralValues.slice(-structuralAssessmentEntries.length);
+        results.push({
+          family,
+          operation: "neighbor-pairs",
+          algorithmId,
+          semanticScopeId: block.semanticScopeId,
+          layout,
+          metric,
+          expectedExponent: expectation.expectedExponent,
+          pointIds: entries.map((entry) => entry.point.id),
+          xValues,
+          values: structuralValues,
+          logLogOls: xValues.length >= 2 && structuralValues.every((value) => value > 0) ? olsLogLog(xValues, structuralValues) : null,
+          assessmentPointIds: structuralAssessmentEntries.map((entry) => entry.point.id),
+          assessmentLogLogOls: structuralAssessmentX.length >= 2 && structuralAssessmentValues.every((value) => value > 0)
+            ? olsLogLog(structuralAssessmentX, structuralAssessmentValues)
+            : null,
+        });
+        const timingValues = entries.map((entry) => entry.summary.pooled.medianNsPerOperation);
+        results.push({
+          family,
+          operation: "neighbor-pairs",
+          algorithmId,
+          semanticScopeId: block.semanticScopeId,
+          layout,
+          metric: "timing",
+          expectedExponent: expectation.expectedExponent,
+          pointIds: entries.map((entry) => entry.point.id),
+          xValues,
+          values: timingValues,
+          logLogOls: xValues.length >= 2 && timingValues.every((value) => value > 0) ? olsLogLog(xValues, timingValues) : null,
+          assessmentPointIds: entries.map((entry) => entry.point.id),
+          assessmentLogLogOls: xValues.length >= 2 && timingValues.every((value) => value > 0) ? olsLogLog(xValues, timingValues) : null,
+          maximumRoundRelativeSpread: Math.max(...entries.map((entry) => relativeSpread(entry.summary.perProcess.map((process) => process.statistics.medianNsPerOperation)))),
+        });
+      }
+    }
+  }
+  return results;
+}
+
+export function assessMatrixGrowthSeries(
+  series: readonly MatrixGrowthSeries[],
+  tolerance: MatrixGrowthTolerance = MATRIX_SPATIAL_GROWTH_TOLERANCE,
+): readonly MatrixGrowthAssessment[] {
+  return series.map((entry) => {
+    const fit = entry.assessmentLogLogOls;
+    const reasons: string[] = [];
+    let status: MatrixGrowthAssessment["status"];
+    if (entry.metric !== "timing") {
+      const assessmentIndexes = entry.assessmentPointIds.map((pointId) => entry.pointIds.indexOf(pointId));
+      const assessmentX = assessmentIndexes.map((index) => index < 0 ? 0 : entry.xValues[index]!);
+      const span = assessmentX.length === 0 || assessmentX[0] === 0 ? 0 : assessmentX.at(-1)! / assessmentX[0]!;
+      if (entry.xValues.length < tolerance.structuralMinimumTotalPointCount) reasons.push("structural series has too few total points");
+      if (entry.assessmentPointIds.length < tolerance.structuralAssessmentTailPointCount) reasons.push("structural assessment tail has too few points");
+      if (span < tolerance.structuralMinimumTailInputSpan) reasons.push("structural assessment tail input span is too narrow");
+      if (fit === null) reasons.push("structural assessment tail has no positive log-log fit");
+      if (reasons.length > 0) status = "inconclusive";
+      else {
+        if (Math.abs(fit!.slope - entry.expectedExponent) > tolerance.structuralExponentAbsoluteError) reasons.push("structural tail slope differs from project tolerance");
+        if (fit!.rSquared < 0.99) reasons.push("structural tail is not sufficiently power-law consistent");
+        status = reasons.length === 0 ? "consistent" : "audit-required";
+      }
+    } else {
+      const span = entry.xValues.length === 0 ? 0 : entry.xValues.at(-1)! / entry.xValues[0]!;
+      if (entry.xValues.length < tolerance.timingMinimumPointCount) reasons.push("timing series has too few points");
+      if (span < tolerance.timingMinimumInputSpan) reasons.push("timing series input span is too narrow");
+      if (fit === null || fit.rSquared < tolerance.timingMinimumRSquared) reasons.push("timing fit quality is below threshold");
+      if ((entry.maximumRoundRelativeSpread ?? Infinity) > tolerance.timingMaximumRoundRelativeSpread) reasons.push("timing rounds disagree beyond threshold");
+      if (reasons.length > 0) status = "inconclusive";
+      else if (Math.abs(fit!.slope - entry.expectedExponent) > tolerance.timingExponentAbsoluteError) {
+        reasons.push("timing slope differs from project tolerance after quality gates");
+        status = "audit-required";
+      } else status = "consistent";
+    }
+    return {
+      family: entry.family,
+      algorithmId: entry.algorithmId,
+      layout: entry.layout,
+      dimension: entry.metric === "timing" ? "timing" : "structural",
+      status,
+      expectedExponent: entry.expectedExponent,
+      observedExponent: fit?.slope ?? null,
+      rSquared: fit?.rSquared ?? null,
+      reasons,
+    };
+  });
+}
+
 function buildSeries(manifest: MatrixManifest, summaries: readonly MatrixLayoutSummary[]): readonly MatrixSeriesAnalysis[] {
   const pointById = new Map(manifest.suite.points.map((entry, index) => [entry.id, { point: entry, index }]));
-  const groups = new Map<string, { family: string; operation: BenchmarkOperation; algorithmId: string; scopeId: string; layout: VariantId; values: { pointId: string; x: number | string; index: number; y: number }[] }>();
+  const groups = new Map<string, { family: string; operation: MatrixOperation; algorithmId: string; scopeId: string; layout: VariantId; values: { pointId: string; x: number | string; index: number; y: number }[] }>();
   for (const summary of summaries) {
     for (const pointId of summary.pointIds) {
       const pointEntry = pointById.get(pointId)!;
@@ -612,6 +913,16 @@ function buildAggregateFromArtifacts(artifacts: ValidatedArtifacts, generatedAt:
   const summaries = buildSummaries(artifacts.manifest, artifacts.shards);
   const ratios = buildRatios(artifacts.manifest, summaries);
   const series = buildSeries(artifacts.manifest, summaries);
+  const spatial = artifacts.manifest.suite.id === "spatial-index";
+  const algorithmComparisons = spatial ? buildAlgorithmRatios(artifacts.manifest, summaries) : undefined;
+  const growthSeries = spatial ? buildGrowthSeries(artifacts.manifest, summaries) : undefined;
+  const spatialFields = algorithmComparisons === undefined || growthSeries === undefined ? {} : {
+    algorithmRatios: algorithmComparisons.ratios,
+    ratioLimitations: algorithmComparisons.limitations,
+    growthSeries,
+    growthAssessments: assessMatrixGrowthSeries(growthSeries),
+    growthTolerance: MATRIX_SPATIAL_GROWTH_TOLERANCE,
+  };
   return {
     format: MATRIX_AGGREGATE_FORMAT,
     generatedAt,
@@ -636,6 +947,7 @@ function buildAggregateFromArtifacts(artifacts: ValidatedArtifacts, generatedAt:
     ratios,
     series,
     crossovers: buildMatrixCrossovers(artifacts.manifest, ratios),
+    ...spatialFields,
     claimEligibility: claimEligibility(artifacts, summaries),
   };
 }
@@ -663,6 +975,28 @@ export function validateMatrixOutput(outputDirectory: string, requireAggregate =
   if (Number.isNaN(date.valueOf()) || date.toISOString() !== aggregate.generatedAt) throw new Error("matrix aggregate generatedAt must be canonical ISO");
   const recomputed = buildAggregateFromArtifacts(artifacts, aggregate.generatedAt);
   if (!sameDigest(aggregate, recomputed)) throw new Error("matrix aggregate statistics or analysis do not match raw shards");
+  return aggregate;
+}
+
+/** Validation accepts audit artifacts; enforcement is the opt-in failing policy gate. */
+export function enforceMatrixOutput(outputDirectory: string): MatrixAggregate {
+  const aggregate = validateMatrixOutput(outputDirectory, true)!;
+  const assessments = aggregate.growthAssessments;
+  if (assessments === undefined) throw new Error("matrix growth enforcement requires a spatial-index aggregate");
+  const structural = assessments.filter((entry) => entry.dimension === "structural");
+  const expectedStructuralAssessments = 2 * 2 * MATRIX_LAYOUTS.length;
+  const unacceptable = assessments.filter((entry) =>
+    entry.status === "audit-required" || (entry.dimension === "structural" && entry.status !== "consistent"),
+  );
+  if (structural.length !== expectedStructuralAssessments || unacceptable.length > 0) {
+    const reasons = [
+      ...(structural.length === expectedStructuralAssessments
+        ? []
+        : [`structural assessment coverage is ${structural.length}/${expectedStructuralAssessments}`]),
+      ...unacceptable.map((entry) => `${entry.family}/${entry.algorithmId}/${entry.layout}/${entry.dimension}/${entry.status}`),
+    ];
+    throw new Error(`matrix growth enforcement failed: ${reasons.join(", ")}`);
+  }
   return aggregate;
 }
 

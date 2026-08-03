@@ -1,5 +1,19 @@
-import type { DensityOperations, DensitySnapshotEntity } from "./contracts.js";
+import type {
+  DensityGridPreparation,
+  DensityNeighborSearchDiagnostics,
+  DensityOperations,
+  DensitySnapshotEntity,
+} from "./contracts.js";
 import type { DensityScenario, DensityVariant } from "./contracts.js";
+import {
+  createDensityGridWorkspace,
+  densityGridCellIndex,
+  densityNeighborDiagnostics,
+  densityPairFingerprintSumValue,
+  densityPairFingerprintXorValue,
+  prefixDensityGrid,
+  type DensityGridWorkspace,
+} from "./neighbor-grid.js";
 import {
   areNeighbors,
   assertChurnFulfilled,
@@ -33,6 +47,163 @@ export interface HybridDensityWorld {
   age: Uint32Array;
   completedTicks: number;
   neighborPairs: number;
+}
+
+const hybridGridWorkspaces = new WeakMap<HybridDensityWorld, DensityGridWorkspace>();
+const hybridAllPairsScratch = new WeakMap<HybridDensityWorld, {
+  readonly activeIds: Uint32Array;
+  readonly preparation: { readonly particleCapacity: number };
+}>();
+
+function prepareHybridAllPairs(world: HybridDensityWorld) {
+  let workspace = hybridAllPairsScratch.get(world);
+  if (workspace === undefined) {
+    const activeIds = new Uint32Array(world.metadata.length);
+    workspace = { activeIds, preparation: { particleCapacity: activeIds.length } };
+    hybridAllPairsScratch.set(world, workspace);
+  }
+  return workspace;
+}
+
+function prepareHybridUniformGrid(world: HybridDensityWorld): DensityGridPreparation {
+  const configuration = world.configuration;
+  if (configuration === undefined) throw new Error("density world is not configured");
+  let workspace = hybridGridWorkspaces.get(world);
+  if (workspace === undefined) {
+    workspace = createDensityGridWorkspace(configuration.workload, world.metadata.length);
+    hybridGridWorkspaces.set(world, workspace);
+  }
+  return workspace.preparation;
+}
+
+function hybridGridWorkspace(world: HybridDensityWorld): DensityGridWorkspace {
+  prepareHybridUniformGrid(world);
+  return hybridGridWorkspaces.get(world)!;
+}
+
+function diagnoseHybridAllPairs(world: HybridDensityWorld): DensityNeighborSearchDiagnostics {
+  const configuration = world.configuration;
+  if (configuration === undefined) throw new Error("density world is not configured");
+  const { activeIds } = prepareHybridAllPairs(world);
+  let activeCount = 0;
+  for (const metadata of world.metadata) {
+    if (world.active[metadata.id] === 1) activeIds[activeCount++] = metadata.id;
+  }
+  let acceptedPairs = 0;
+  let fingerprintXor = 0;
+  let fingerprintSum = 0;
+  const candidateVisits = (activeCount * (activeCount - 1)) / 2;
+  for (let leftSlot = 0; leftSlot < activeCount; leftSlot += 1) {
+    const leftId = activeIds[leftSlot] ?? 0;
+    for (let rightSlot = leftSlot + 1; rightSlot < activeCount; rightSlot += 1) {
+      const rightId = activeIds[rightSlot] ?? 0;
+      if (!areNeighbors(
+        world.x[leftId] ?? 0,
+        world.y[leftId] ?? 0,
+        world.x[rightId] ?? 0,
+        world.y[rightId] ?? 0,
+        configuration.workload.neighborRadius,
+      )) continue;
+      acceptedPairs += 1;
+      fingerprintXor = (fingerprintXor ^ densityPairFingerprintXorValue(leftId, rightId)) >>> 0;
+      fingerprintSum = (fingerprintSum + densityPairFingerprintSumValue(leftId, rightId)) >>> 0;
+    }
+  }
+  world.neighborPairs = acceptedPairs;
+  return densityNeighborDiagnostics({
+    algorithm: "brute-force",
+    activeCount,
+    addressableCells: 0,
+    occupiedCells: 0,
+    maximumOccupancy: 0,
+    slotVisits: world.metadata.length,
+    cellVisits: 0,
+    stencilVisits: 0,
+    candidateVisits,
+    distanceChecks: candidateVisits,
+    acceptedPairs,
+    pairFingerprintXor: fingerprintXor,
+    pairFingerprintSum: fingerprintSum,
+  });
+}
+
+function diagnoseHybridUniformGrid(world: HybridDensityWorld): DensityNeighborSearchDiagnostics {
+  const configuration = world.configuration;
+  if (configuration === undefined) throw new Error("density world is not configured");
+  const { geometry, scratch } = hybridGridWorkspace(world);
+  scratch.counts.fill(0);
+  let activeCount = 0;
+  for (const metadata of world.metadata) {
+    const id = metadata.id;
+    if (world.active[id] !== 1) continue;
+    scratch.counts[densityGridCellIndex(world.x[id] ?? 0, world.y[id] ?? 0, geometry)]! += 1;
+    activeCount += 1;
+  }
+  const occupancy = prefixDensityGrid(scratch);
+  for (const metadata of world.metadata) {
+    const id = metadata.id;
+    if (world.active[id] !== 1) continue;
+    const cell = densityGridCellIndex(world.x[id] ?? 0, world.y[id] ?? 0, geometry);
+    scratch.particleIds[scratch.cursors[cell]!] = id;
+    scratch.cursors[cell]! += 1;
+  }
+
+  let cellVisits = geometry.addressableCells * 3;
+  let stencilVisits = 0;
+  let candidateVisits = 0;
+  let distanceChecks = 0;
+  let acceptedPairs = 0;
+  let fingerprintXor = 0;
+  let fingerprintSum = 0;
+  for (let sourceCell = 0; sourceCell < geometry.addressableCells; sourceCell += 1) {
+    const sourceX = sourceCell % geometry.cellsPerAxis;
+    const sourceY = Math.floor(sourceCell / geometry.cellsPerAxis);
+    for (let sourceSlot = scratch.offsets[sourceCell]!; sourceSlot < scratch.offsets[sourceCell + 1]!; sourceSlot += 1) {
+      const leftId = scratch.particleIds[sourceSlot] ?? 0;
+      for (let deltaY = -1; deltaY <= 1; deltaY += 1) {
+        for (let deltaX = -1; deltaX <= 1; deltaX += 1) {
+          stencilVisits += 1;
+          const targetX = sourceX + deltaX;
+          const targetY = sourceY + deltaY;
+          if (targetX < 0 || targetY < 0 || targetX >= geometry.cellsPerAxis || targetY >= geometry.cellsPerAxis) continue;
+          cellVisits += 1;
+          const targetCell = targetY * geometry.cellsPerAxis + targetX;
+          for (let targetSlot = scratch.offsets[targetCell]!; targetSlot < scratch.offsets[targetCell + 1]!; targetSlot += 1) {
+            candidateVisits += 1;
+            const rightId = scratch.particleIds[targetSlot] ?? 0;
+            if (rightId <= leftId) continue;
+            distanceChecks += 1;
+            if (!areNeighbors(
+              world.x[leftId] ?? 0,
+              world.y[leftId] ?? 0,
+              world.x[rightId] ?? 0,
+              world.y[rightId] ?? 0,
+              configuration.workload.neighborRadius,
+            )) continue;
+            acceptedPairs += 1;
+            fingerprintXor = (fingerprintXor ^ densityPairFingerprintXorValue(leftId, rightId)) >>> 0;
+            fingerprintSum = (fingerprintSum + densityPairFingerprintSumValue(leftId, rightId)) >>> 0;
+          }
+        }
+      }
+    }
+  }
+  world.neighborPairs = acceptedPairs;
+  return densityNeighborDiagnostics({
+    algorithm: "uniform-grid",
+    activeCount,
+    addressableCells: geometry.addressableCells,
+    occupiedCells: occupancy.occupiedCells,
+    maximumOccupancy: occupancy.maximumOccupancy,
+    slotVisits: world.metadata.length * 2,
+    cellVisits,
+    stencilVisits,
+    candidateVisits,
+    distanceChecks,
+    acceptedPairs,
+    pairFingerprintXor: fingerprintXor,
+    pairFingerprintSum: fingerprintSum,
+  });
 }
 
 export const hybridDensityOperations: DensityOperations<HybridDensityWorld> = {
@@ -105,6 +276,12 @@ export const hybridDensityOperations: DensityOperations<HybridDensityWorld> = {
     world.neighborPairs = pairs;
     return pairs;
   },
+  prepareNeighborPairsAllPairs(world) {
+    return prepareHybridAllPairs(world).preparation;
+  },
+  diagnoseNeighborPairsAllPairs: diagnoseHybridAllPairs,
+  prepareNeighborPairsUniformGrid: prepareHybridUniformGrid,
+  diagnoseNeighborPairsUniformGrid: diagnoseHybridUniformGrid,
   materializeSnapshot(world) {
     const configuration = world.configuration;
     if (configuration === undefined) throw new Error("density world is not configured");
