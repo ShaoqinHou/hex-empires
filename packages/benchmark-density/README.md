@@ -52,6 +52,12 @@ blocks are immutable separate shards and are not yet temporally interleaved.
 The original `spatial-index` ID is retained as the versioned low-intensity audit
 suite so its rejected artifact remains independently validatable.
 
+The accepted steady-state artifact is
+[`density-spatial-steady-26fbe5c-win32-node24-i7-12700h`](../../benchmarks/density/results/density-spatial-steady-26fbe5c-win32-node24-i7-12700h/aggregate.json).
+All twelve structural assessments are consistent, no timing assessment requires
+audit, and `enforce` passes. Three timing series remain explicitly inconclusive
+because their process rounds exceed the stability threshold.
+
 Stress plans require `--allow-large`. All plans record child and total time
 budgets, conservative work and output estimates, an optional V8 heap limit, and
 the fact that a V8 heap limit is not a total-process or typed-array memory limit.

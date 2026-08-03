@@ -55,9 +55,11 @@ falsifies an approach, or leaves behind a reusable measured primitive.
 
 - [`packages/scenario-density`](packages/scenario-density) keeps one semantic
   density workload across object, SoA, and hybrid storage, now with explicit
-  live-slot and spatial-distribution factors.
+  live-slot and spatial-distribution factors plus a deterministic dense-CSR
+  neighbor-query experiment.
 - [`packages/benchmark-density`](packages/benchmark-density) owns host timing,
-  environment evidence, and storage-layout comparisons.
+  environment evidence, storage-layout comparisons, and executable
+  theory-versus-measurement growth gates.
 - [`packages/experiment-timeline`](packages/experiment-timeline) compares
   immutable object history with typed-array keyframe/dirty-page history. It is
   observation history, not an authority checkpoint implementation.

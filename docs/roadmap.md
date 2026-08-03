@@ -38,6 +38,12 @@ their workload and host. Multi-size/distribution curves are Track 3A.
 
 ## 3A. Scale curves and spatial queries
 
+The first theory-backed dense-CSR conformance run is complete at revision
+`26fbe5c`: exact work identities and all twelve structural growth assessments
+pass through 8,192 entities. This establishes a baseline, not a universal
+spatial-policy decision; sparse domains, moving populations, memory/GC, and
+incremental rebuilds remain open probes.
+
 - Preserve the accepted general scale matrix and resource envelopes. Keep
   occupancy, live-slot pattern, spatial distribution, churn intensity, and
   replay length as declared factors rather than hidden sources of variation.

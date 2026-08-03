@@ -261,3 +261,42 @@ pre-asymptotic full-range slopes of `0.51–0.58` for the fixed-density grid and
 `1.26` for hybrid brute force. Exact work and tail behavior ruled out an
 algorithm or semantic defect. The artifact therefore records the falsified
 sampling policy; the higher-intensity steady-state policy above replaces it.
+
+## Accepted steady-state spatial conformance: 26fbe5c
+
+The replacement artifact is checked in at
+[`density-spatial-steady-26fbe5c-win32-node24-i7-12700h`](../../benchmarks/density/results/density-spatial-steady-26fbe5c-win32-node24-i7-12700h/aggregate.json).
+It binds the clean source revision `26fbe5c0addd4a2c0f20e8ff8c88cecaf400eddc`,
+Node 24.15.0/V8 13.6, Windows `10.0.26200`, an i7-12700H, empty
+`NODE_OPTIONS`, 20 blocks, and 180 fresh child invocations. Every block completed;
+offline validation and the separate spatial `enforce` gate both pass.
+
+All twelve structural assessments are consistent:
+
+| Family and algorithm | Expected exponent | Observed tail exponent |
+| --- | ---: | ---: |
+| Fixed-density brute | 2 | 2.0007 |
+| Coincident brute | 2 | 2.0007 |
+| Fixed-density dense CSR | 1 | 0.9957 |
+| Coincident dense CSR | 2 | 1.9886 |
+
+Nine of twelve timing assessments are consistent. Three are inconclusive—not
+failed—because process-round spread exceeds the declared threshold: coincident
+brute in object and SoA storage, and fixed-density grid in SoA storage. No timing
+assessment is `audit-required`.
+
+At 8,192 active entities, per-pass pooled medians / p95s were:
+
+| Workload | Brute force | Dense CSR grid |
+| --- | ---: | ---: |
+| Fixed density | 72.847–81.178 / 87.089–120.019 ms | 1.125–1.354 / 1.796–2.165 ms |
+| Coincident degeneration | 181.896–196.730 / 247.084–291.946 ms | 286.239–360.350 / 381.102–472.309 ms |
+
+The fixed-density grid performs 383,943 recorded structural work units versus
+67,108,864 for brute force and is descriptively about 54–70 times faster on this
+host. In the coincident family, both correctly become quadratic and the grid is
+about 1.6–1.8 times slower. Those timing ratios are not selection policy because
+the two algorithm shards were not temporally interleaved. The defensible result
+is narrower: dense CSR is the baseline for bounded-domain, fixed-radius,
+fixed-density queries, while clustered output and sparse address spaces require
+separate algorithms or policies.

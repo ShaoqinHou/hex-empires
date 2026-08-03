@@ -1,0 +1,800 @@
+{
+  "format": "simulation-playground/density-matrix-shard/v1",
+  "manifestSha256": "e53aeff74d97f8d8ef8bad62a8ab1df378b59b871f0b13ac94e9debce1e7d969",
+  "manifestId": "density-matrix-6e1ad549fcc606462151115ea266502a",
+  "suiteDigest": "dbedb288576ce116cb8635919246bd48e8eecc953d06d009c121702b6c00f9d3",
+  "sourceDigest": "5c5f0f07ff0bb672ebca52f9805b75411f1c2f0a1e98872a0f06319ed8de6aaa",
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harnessDigest": "05993a5ade0ec36842b13976ebcee9ad4caa457dcf975ff3474b9b09b9846066",
+  "policyDigest": "5db26feffba3831cef4ad4daf9787f0cd569510e7aa47cd72feaeb2aa664a71a",
+  "limitsDigest": "c59e4208ac7cbed2e2db7943f05d74a4782f8ffb5746d8a95a8e8124824c89fa",
+  "blockId": "block-bd58354ea5bea6a0f2caccb7",
+  "attemptIndex": 0,
+  "previousShardSha256": null,
+  "blockDigest": "bd58354ea5bea6a0f2caccb7d5722a4b95eda57c9e04418adac6325b57df5bc7",
+  "workloadDigest": "f4b4f2e6fa50fca5ba40003c597de821385d051ea2abadcb10cb19a86947d139",
+  "operation": "neighbor-pairs",
+  "algorithmId": "density/brute-force-neighbor-pairs/v1",
+  "status": "completed",
+  "parity": {
+    "strategy": "every-tick-and-direct-phase/v1",
+    "operation": "neighbor-pairs",
+    "algorithmId": "density/brute-force-neighbor-pairs/v1",
+    "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+    "checkpoints": 1,
+    "finalSnapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+    "diagnostics": {
+      "activeCount": 512,
+      "acceptedPairs": 101,
+      "pairFingerprintXor": 1192098325,
+      "pairFingerprintSum": 2204399009
+    }
+  },
+  "invocations": [
+    {
+      "pid": 50748,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1315800
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1418000
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1062600
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1672600
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1067000
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1091700
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1016300
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1223000
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1212900
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1991900
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/object/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/object/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 0,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 44692,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1352300
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1411500
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1485300
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1244500
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1219800
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1205300
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1235900
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1326300
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1177900
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1223000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/soa/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/soa/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 0,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 6448,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1290700
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 2191900
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1220600
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1410400
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 2507400
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1348000
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1279500
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1905500
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1767900
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1379100
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/hybrid/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/hybrid/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-0/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 0,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 37232,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1344700
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1401600
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1445300
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1300900
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1561200
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1502100
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1500400
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1471000
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 2141400
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1256500
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/soa/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/soa/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 1,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 2944,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1563000
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 2034100
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1560900
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1537300
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1520400
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1354800
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1658700
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1383700
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1464600
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1249900
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/hybrid/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/hybrid/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 1,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 27744,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1188500
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1248400
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1081300
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1195200
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1853700
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1163200
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1160500
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1277400
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1278800
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1185600
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/object/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/object/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-1/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 1,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 30668,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1317300
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1278100
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1462000
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1273400
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1224200
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1357000
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1307000
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1313700
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 1172000
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1198200
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/hybrid/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/hybrid/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 2,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 34132,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1375700
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1179700
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1144100
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 1114600
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 995900
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1049700
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 972000
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1106700
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 971100
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1025400
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/object/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/object/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 2,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 47432,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 1232500
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 1242400
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 1479500
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 2753000
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 1223700
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 1256900
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 1351600
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 1246800
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 2504600
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 1139400
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "b6157376f41998351c7c15290335ecb0bc586694b38e22a7e7cd02dca9447075",
+        "canonicalSnapshotBytes": 32853,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/brute-force-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "brute-force",
+        "activeCount": 512,
+        "addressableCells": 0,
+        "occupiedCells": 0,
+        "maximumOccupancy": 0,
+        "slotVisits": 512,
+        "cellVisits": 0,
+        "stencilVisits": 0,
+        "candidateVisits": 130816,
+        "distanceChecks": 130816,
+        "acceptedPairs": 101,
+        "pairFingerprintXor": 1192098325,
+        "pairFingerprintSum": 2204399009,
+        "totalStructuralWork": 262144
+      },
+      "invocationId": "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/soa/attempt-0",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/soa/attempt-1",
+        "density-matrix-6e1ad549fcc606462151115ea266502a/block-bd58354ea5bea6a0f2caccb7/round-2/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 2,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    }
+  ]
+}
