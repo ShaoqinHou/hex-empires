@@ -913,7 +913,7 @@ function buildAggregateFromArtifacts(artifacts: ValidatedArtifacts, generatedAt:
   const summaries = buildSummaries(artifacts.manifest, artifacts.shards);
   const ratios = buildRatios(artifacts.manifest, summaries);
   const series = buildSeries(artifacts.manifest, summaries);
-  const spatial = artifacts.manifest.suite.id === "spatial-index";
+  const spatial = artifacts.manifest.suite.id === "spatial-index" || artifacts.manifest.suite.id === "spatial-index-steady";
   const algorithmComparisons = spatial ? buildAlgorithmRatios(artifacts.manifest, summaries) : undefined;
   const growthSeries = spatial ? buildGrowthSeries(artifacts.manifest, summaries) : undefined;
   const spatialFields = algorithmComparisons === undefined || growthSeries === undefined ? {} : {

@@ -112,6 +112,7 @@ function point(
 function spatialPoint(
   id: string,
   family: "spatial-fixed-density" | "spatial-coincident",
+  claimClass: "spatial-index" | "spatial-index-steady",
   factor: MatrixFactor,
   controls: MatrixControls,
   definition: DensityWorkloadV2,
@@ -119,7 +120,7 @@ function spatialPoint(
   return {
     id,
     family,
-    claimClass: "spatial-index",
+    claimClass,
     factor,
     controls,
     workload: definition,
@@ -131,12 +132,15 @@ function spatialPoint(
   };
 }
 
-function spatialIndexPoints(): readonly MatrixPoint[] {
+function spatialIndexPoints(steady: boolean): readonly MatrixPoint[] {
   const sizes = [32, 128, 512, 2_048, 8_192] as const;
   const coordinateLimits = [64, 128, 256, 512, 1_024] as const;
+  const passesPerSample = steady ? [64, 16, 4, 1, 1] as const : [1, 1, 1, 1, 1] as const;
+  const claimClass = steady ? "spatial-index-steady" as const : "spatial-index" as const;
   const fixedDensity = sizes.map((active, index) => spatialPoint(
     `spatial-fixed-density-${active}`,
     "spatial-fixed-density",
+    claimClass,
     { name: "activeParticles", kind: "numeric", value: active, unit: "particles" },
     {
       fixed: {
@@ -152,6 +156,7 @@ function spatialIndexPoints(): readonly MatrixPoint[] {
       derived: {
         coordinateLimit: "sqrt(128 * activeParticles)",
         squareArea: "(2 * coordinateLimit + 1)^2, proportional to activeParticles",
+        ...(steady ? { passesPerSample: `${passesPerSample[index]} complete neighbor passes` } : {}),
       },
     },
     workload({
@@ -160,12 +165,13 @@ function spatialIndexPoints(): readonly MatrixPoint[] {
       coordinateLimit: coordinateLimits[index]!,
       neighborRadius: 8,
       churn: 0,
-      ticks: { update: 1, "neighborhood-all-pairs": 1, churn: 1, snapshot: 1, replay: 1 },
+      ticks: { update: 1, "neighborhood-all-pairs": passesPerSample[index]!, churn: 1, snapshot: 1, replay: 1 },
     }),
   ));
-  const coincident = sizes.map((active) => spatialPoint(
+  const coincident = sizes.map((active, index) => spatialPoint(
     `spatial-coincident-${active}`,
     "spatial-coincident",
+    claimClass,
     { name: "activeParticles", kind: "numeric", value: active, unit: "particles" },
     {
       fixed: {
@@ -177,7 +183,10 @@ function spatialIndexPoints(): readonly MatrixPoint[] {
         churnPerTick: 0,
         semanticScope: "fixed-radius-unordered-neighbor-pairs",
       },
-      derived: { acceptedPairs: "activeParticles * (activeParticles - 1) / 2" },
+      derived: {
+        acceptedPairs: "activeParticles * (activeParticles - 1) / 2",
+        ...(steady ? { passesPerSample: `${passesPerSample[index]} complete neighbor passes` } : {}),
+      },
     },
     workload({
       capacity: active,
@@ -186,7 +195,7 @@ function spatialIndexPoints(): readonly MatrixPoint[] {
       neighborRadius: 8,
       churn: 0,
       positions: "coincident",
-      ticks: { update: 1, "neighborhood-all-pairs": 1, churn: 1, snapshot: 1, replay: 1 },
+      ticks: { update: 1, "neighborhood-all-pairs": passesPerSample[index]!, churn: 1, snapshot: 1, replay: 1 },
     }),
   ));
   return [...fixedDensity, ...coincident];
@@ -436,8 +445,8 @@ export function createMatrixSuite(id: MatrixSuiteId): MatrixSuite {
           ...churnPoints(),
           ...replayPoints(),
         ]
-      : id === "spatial-index"
-        ? spatialIndexPoints()
+      : id === "spatial-index" || id === "spatial-index-steady"
+        ? spatialIndexPoints(id === "spatial-index-steady")
         : stressPoints(id);
   const suite: MatrixSuite = {
     format: MATRIX_SUITE_FORMAT,
@@ -449,6 +458,8 @@ export function createMatrixSuite(id: MatrixSuiteId): MatrixSuite {
         ? "Real two-point by two-operation matrix wiring smoke"
         : id === "spatial-index"
           ? "Deterministic brute-force and uniform-grid growth conformance suite"
+        : id === "spatial-index-steady"
+          ? "Steady-state deterministic brute-force and uniform-grid growth conformance suite"
         : `Non-claim ${id} resource-envelope preset`,
     points,
   };
@@ -482,11 +493,11 @@ export function validateMatrixSuite(suite: MatrixSuite): void {
       throw new Error("matrix smoke must be exactly two points by two operations");
     }
   }
-  if (suite.id === "spatial-index") {
+  if (suite.id === "spatial-index" || suite.id === "spatial-index-steady") {
     const fixed = suite.points.filter((entry) => entry.family === "spatial-fixed-density");
     const coincident = suite.points.filter((entry) => entry.family === "spatial-coincident");
     if (fixed.length < 5 || coincident.length < 5 || suite.points.some((entry) => entry.operations.length !== 2)) {
-      throw new Error("spatial-index suite requires at least five points in each family and both algorithms");
+      throw new Error(`${suite.id} suite requires at least five points in each family and both algorithms`);
     }
   }
 }

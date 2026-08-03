@@ -31,8 +31,8 @@ export const MATRIX_TERMINAL_STATUSES = [
 ] as const;
 
 export type MatrixTerminalStatus = (typeof MATRIX_TERMINAL_STATUSES)[number];
-export type MatrixSuiteId = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index";
-export type MatrixClaimClass = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index";
+export type MatrixSuiteId = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index" | "spatial-index-steady";
+export type MatrixClaimClass = "smoke" | "claim" | "stress-linear" | "stress-quadratic" | "spatial-index" | "spatial-index-steady";
 export type MatrixScalar = string | number | boolean;
 
 export interface MatrixFactor {

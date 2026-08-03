@@ -66,17 +66,32 @@ function rewriteHashedJson(path: string, mutate: (value: Record<string, unknown>
 
 describe("spatial-index matrix contract", () => {
   it("pins five geometric points in both families and dispatches both algorithms through every layout", () => {
-    const suite = createMatrixSuite("spatial-index");
+    const suite = createMatrixSuite("spatial-index-steady");
     expect(suite.points.filter((point) => point.family === "spatial-fixed-density")).toHaveLength(5);
     expect(suite.points.filter((point) => point.family === "spatial-coincident")).toHaveLength(5);
     expect(suite.points.every((point) => point.operations.map((entry) => entry.algorithmId).join() ===
       [MATRIX_BRUTE_NEIGHBOR_ALGORITHM, MATRIX_GRID_NEIGHBOR_ALGORITHM].join())).toBe(true);
+    expect(suite.points.slice(0, 5).map((point) => point.workload.ticks["neighborhood-all-pairs"]))
+      .toEqual([64, 16, 4, 1, 1]);
+    expect(suite.points.slice(5).map((point) => point.workload.ticks["neighborhood-all-pairs"]))
+      .toEqual([64, 16, 4, 1, 1]);
 
     const manifest = createMatrixManifest({ suite, issuedAt: "2026-08-03T00:00:00.000Z" });
     expect(manifest.executionContract).toBe("algorithm-dispatch/v2");
     expect(manifest.blocks).toHaveLength(20);
     expect(manifest.blocks.every((block) => block.invocations.length === 9)).toBe(true);
     expect(manifest.blocks.every((block) => block.semanticScopeId === manifest.blocks[0]!.semanticScopeId)).toBe(true);
+    expect(manifest.policy).toMatchObject({ warmupSamplesPerProcess: 5, measuredSamplesPerProcess: 10 });
+    expect(manifest.limits.maxEstimatedWorkTotal).toBe(21_000_000_000);
+    expect(manifest.blocks.reduce((sum, block) => sum + block.estimate.conservativeUnitsAllInvocations, 0))
+      .toBeLessThanOrEqual(manifest.limits.maxEstimatedWorkTotal);
+
+    const retainedAuditSuite = createMatrixSuite("spatial-index");
+    expect(retainedAuditSuite.points.map((point) => point.workload.ticks["neighborhood-all-pairs"]))
+      .toEqual(Array.from({ length: 10 }, () => 1));
+    const retainedAuditManifest = createMatrixManifest({ suite: retainedAuditSuite, issuedAt: "2026-08-03T00:00:00.000Z" });
+    expect(retainedAuditManifest.policy).toMatchObject({ warmupSamplesPerProcess: 1, measuredSamplesPerProcess: 3 });
+    expect(retainedAuditManifest.limits.maxEstimatedWorkTotal).toBe(20_000_000_000);
   });
 
   it("times reusable-grid clearing plus CSR rebuild/query while keeping allocation in setup", () => {
@@ -87,7 +102,7 @@ describe("spatial-index matrix contract", () => {
   });
 
   it("executes the selected implementation and records deterministic diagnostics", () => {
-    const workload = createMatrixSuite("spatial-index").points[0]!.workload;
+    const workload = createMatrixSuite("spatial-index-steady").points[0]!.workload;
     const brute = measureBenchmarkCell({
       workload,
       operation: "neighbor-pairs",
@@ -118,7 +133,7 @@ describe("spatial-index matrix contract", () => {
   });
 
   it("proves grid fingerprints against brute and rejects an injected faulty fingerprint", () => {
-    const workload = createMatrixSuite("spatial-index").points[0]!.workload;
+    const workload = createMatrixSuite("spatial-index-steady").points[0]!.workload;
     const proof = proveNeighborAlgorithmParity(workload, MATRIX_GRID_NEIGHBOR_ALGORITHM);
     expect(proof.diagnostics.activeCount).toBe(workload.initialActive);
     const brute = measureBenchmarkCell({
@@ -194,7 +209,7 @@ describe("spatial-index matrix contract", () => {
       const base = join(fixtureRoot, "base");
       const plan = writeMatrixPlan({
         outputDirectory: base,
-        suiteId: "spatial-index",
+        suiteId: "spatial-index-steady",
         issuedAt: "2026-08-03T00:00:00.000Z",
         policy: { processRounds: 1, warmupSamplesPerProcess: 0, measuredSamplesPerProcess: 1 },
       });
@@ -231,6 +246,7 @@ describe("spatial-index matrix contract", () => {
           const distanceChecks = brute || coincident ? item.pairs : item.n;
           const totalStructuralWork = slotVisits + cellVisits + stencilVisits + candidateVisits + distanceChecks;
           const spec = getMatrixAlgorithmSpec(request.operation, request.algorithmId!);
+          const passesPerSample = workload.ticks["neighborhood-all-pairs"];
           return {
             pid: pid++,
             executable: process.execPath,
@@ -238,7 +254,10 @@ describe("spatial-index matrix contract", () => {
             node: process.version,
             v8: process.versions.v8,
             warmupSamples: 0,
-            samples: [{ sampleIndex: 0, durationNs: brute ? Math.max(1, item.pairs) : Math.max(1, totalStructuralWork) }],
+            samples: [{
+              sampleIndex: 0,
+              durationNs: (brute ? Math.max(1, item.pairs) : Math.max(1, totalStructuralWork)) * passesPerSample,
+            }],
             correctness: { snapshotDigest: item.digest, canonicalSnapshotBytes: 1, evidenceDigest: null },
             operation: request.operation,
             algorithmId: request.algorithmId!,

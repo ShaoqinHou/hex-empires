@@ -216,14 +216,15 @@ export function collectMatrixHarnessIdentity(): MatrixHarnessIdentity {
 
 export function defaultMatrixPolicy(suite: MatrixSuite): MatrixSamplePolicy {
   const claim = suite.id === "claim";
-  const spatial = suite.id === "spatial-index";
+  const spatialAudit = suite.id === "spatial-index";
+  const spatialSteady = suite.id === "spatial-index-steady";
   return {
     processIsolation: "fresh-child-process-per-layout-per-round",
     timer: "process.hrtime.bigint",
     percentileMethod: "nearest-rank",
-    processRounds: claim || spatial ? 3 : 1,
-    warmupSamplesPerProcess: claim ? 5 : spatial ? 1 : 0,
-    measuredSamplesPerProcess: claim ? 10 : spatial ? 3 : 1,
+    processRounds: claim || spatialAudit || spatialSteady ? 3 : 1,
+    warmupSamplesPerProcess: claim || spatialSteady ? 5 : spatialAudit ? 1 : 0,
+    measuredSamplesPerProcess: claim || spatialSteady ? 10 : spatialAudit ? 3 : 1,
     layouts: MATRIX_LAYOUTS,
     crossoverPracticalThreshold: 0.05,
   };
@@ -231,12 +232,13 @@ export function defaultMatrixPolicy(suite: MatrixSuite): MatrixSamplePolicy {
 
 export function defaultMatrixLimits(suite: MatrixSuite): MatrixLimits {
   const stress = suite.id === "stress-linear" || suite.id === "stress-quadratic";
-  const spatial = suite.id === "spatial-index";
+  const spatial = suite.id === "spatial-index" || suite.id === "spatial-index-steady";
+  const spatialSteady = suite.id === "spatial-index-steady";
   return {
     childTimeoutMs: stress || spatial ? 120_000 : 30_000,
     totalTimeoutMs: stress || spatial ? 30 * 60_000 : 10 * 60_000,
     maxEstimatedWorkPerChild: stress || spatial ? 5_000_000_000 : 1_000_000_000,
-    maxEstimatedWorkTotal: stress ? 50_000_000_000 : spatial ? 20_000_000_000 : 20_000_000_000,
+    maxEstimatedWorkTotal: stress ? 50_000_000_000 : spatialSteady ? 21_000_000_000 : 20_000_000_000,
     maxOutputBytesPerChild: 16 * 1024 * 1024,
     v8HeapLimitMb: null,
     allowLarge: false,

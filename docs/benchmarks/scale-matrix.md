@@ -73,7 +73,7 @@ invented exponents.
 
 ### Theory-backed spatial growth
 
-The `spatial-index` suite is separate from the accepted general claim matrix. It
+The `spatial-index-steady` suite is separate from the accepted general claim matrix. It
 crosses two algorithms with all three layouts over five geometric counts from 32
 through 8,192 in each of two families:
 
@@ -99,6 +99,15 @@ Grid/brute timing ratios are descriptive within-run evidence. Matching process
 round numbers do not temporally interleave separate immutable algorithm shards,
 so the aggregate records that drift limitation and the ratios are not selection
 policy.
+
+The steady-state policy uses three fresh-process rounds, five warmups, and ten
+measured samples. Counts 32, 128, 512, 2,048, and 8,192 execute respectively 64,
+16, 4, 1, and 1 complete query passes per sample; duration is divided by that
+declared operation count. This makes light-load cells exercise the same hot code
+meaningfully without removing grid clearing, CSR rebuilding, exact filtering, or
+fingerprinting from the timer. Cold/first-call latency is a separate experiment.
+The worst-case estimator charges every grid pass as all-pairs work and admits
+this suite under a pinned 21-billion-unit limit, not a generic large-run bypass.
 
 ## Failure and scale discipline
 
@@ -152,7 +161,7 @@ npm run bench:density:matrix -- validate --output benchmarks/density/runs/my-run
 Run and enforce the spatial suite with the same persistent command:
 
 ```text
-npm run bench:density:matrix -- plan --suite spatial-index --output benchmarks/density/runs/my-spatial-run
+npm run bench:density:matrix -- plan --suite spatial-index-steady --output benchmarks/density/runs/my-spatial-run
 npm run bench:density:matrix -- run --output benchmarks/density/runs/my-spatial-run
 npm run bench:density:matrix -- aggregate --output benchmarks/density/runs/my-spatial-run
 npm run bench:density:matrix -- validate --output benchmarks/density/runs/my-spatial-run
@@ -235,4 +244,20 @@ linear result justifies a replicated large-count update curve. The quadratic
 result is already above a 16.67 ms frame on every layout and kills brute-force
 all-pairs as the large-world neighbor strategy before any renderer, AI, history,
 or network cost is added. Track 3A should next compare a spatial index against
-the same all-pairs oracle as a full algorithm × layout experiment.
+the same all-pairs oracle as a full algorithm-by-layout experiment.
+
+## Spatial timing audit: c7c30ff
+
+The first spatial artifact is retained at
+[`density-spatial-audit-c7c30ff-win32-node24-i7-12700h`](../../benchmarks/density/results/density-spatial-audit-c7c30ff-win32-node24-i7-12700h/aggregate.json).
+Its 20 blocks and 180 child invocations completed, and offline validation passes.
+Structural conformance passed in all twelve cells: brute tail exponents were
+`2.0007`, fixed-density grid was `0.9957`, and coincident grid was `1.9886`.
+
+Enforcement correctly rejected the artifact's timing guidance. The run used only
+one warmup, three samples, and one pass per sample; the smallest cells took about
+50–95 microseconds. V8 tiering and fixed call cost produced smooth but
+pre-asymptotic full-range slopes of `0.51–0.58` for the fixed-density grid and
+`1.26` for hybrid brute force. Exact work and tail behavior ruled out an
+algorithm or semantic defect. The artifact therefore records the falsified
+sampling policy; the higher-intensity steady-state policy above replaces it.

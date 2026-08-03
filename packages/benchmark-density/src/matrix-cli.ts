@@ -44,7 +44,8 @@ Suites:
   --suite claim              Curated one-factor-at-a-time claim suite
   --suite stress-linear      Non-claim linear resource-envelope preset
   --suite stress-quadratic   Non-claim all-pairs resource-envelope preset
-  --suite spatial-index      Brute/grid structural and timing growth conformance
+  --suite spatial-index      Retained low-intensity spatial timing audit
+  --suite spatial-index-steady  Brute/grid steady-state growth conformance
 
 Sampling:
   --process-rounds N
@@ -105,7 +106,7 @@ export function parseMatrixArguments(args: readonly string[]): MatrixCliArgument
       index += 1;
     } else if (argument === "--suite") {
       const value = next(args, index, argument) as MatrixSuiteId;
-      if (!["smoke", "claim", "stress-linear", "stress-quadratic", "spatial-index"].includes(value)) throw new Error(`unknown matrix suite: ${value}`);
+      if (!["smoke", "claim", "stress-linear", "stress-quadratic", "spatial-index", "spatial-index-steady"].includes(value)) throw new Error(`unknown matrix suite: ${value}`);
       suiteId = value;
       suiteExplicit = true;
       index += 1;

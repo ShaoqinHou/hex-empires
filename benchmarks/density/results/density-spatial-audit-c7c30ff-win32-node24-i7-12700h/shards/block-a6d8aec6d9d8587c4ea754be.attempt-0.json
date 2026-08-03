@@ -1,0 +1,548 @@
+{
+  "format": "simulation-playground/density-matrix-shard/v1",
+  "manifestSha256": "92b5a8003ca6c041247c552b97fc4656e6c5fb66fb9bc22a56c4743dc3b0716f",
+  "manifestId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431",
+  "suiteDigest": "79bed91baff1f5066e82afe7035fbf1a69a912e348493adf6e11801f54c79d40",
+  "sourceDigest": "2b23727c39bdefcd52123cc75ee8c8288a3260fa64161819de3ba83dd5e645e1",
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harnessDigest": "f459e9947fdcbc0f257bfb06e04161c39bc9817e807322dc1797a1e3217f345b",
+  "policyDigest": "7c87ae14858205ff8c0b8645e646278a86a80421dd96feb33b1410c0069118c8",
+  "limitsDigest": "59764af85c1a41fd54ab65cfc6743db031e8d004af0f123f10fd479794171e4b",
+  "blockId": "block-a6d8aec6d9d8587c4ea754be",
+  "attemptIndex": 0,
+  "previousShardSha256": null,
+  "blockDigest": "a6d8aec6d9d8587c4ea754be087a9d6e6ba9562fc0f5600c10087f843fadfed6",
+  "workloadDigest": "09bb45b37a76c9c200b6c97180f3ea42978d4c8c873fc6cfb610381ed6826ce1",
+  "operation": "neighbor-pairs",
+  "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+  "status": "completed",
+  "parity": {
+    "strategy": "every-tick-and-direct-phase/v1",
+    "operation": "neighbor-pairs",
+    "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+    "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+    "checkpoints": 1,
+    "finalSnapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+    "diagnostics": {
+      "activeCount": 2048,
+      "acceptedPairs": 398,
+      "pairFingerprintXor": 1147654468,
+      "pairFingerprintSum": 3929551705
+    }
+  },
+  "invocations": [
+    {
+      "pid": 35776,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 800300
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 856800
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 522500
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/object/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/object/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 0,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 5544,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 553400
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 639000
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 395000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/soa/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/soa/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 0,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 50736,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 648700
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 636800
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 449500
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/hybrid/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/hybrid/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-0/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 0,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 33624,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 554100
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 645800
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 399200
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/soa/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/soa/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 1,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 48884,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 594400
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 629700
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 463100
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/hybrid/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/hybrid/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 1,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 10176,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 786000
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 900200
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 514000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/object/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/object/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-1/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 1,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 15692,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 717900
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 732000
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 444800
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/hybrid/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/hybrid/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 2,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 13052,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 722900
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 875900
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 556400
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/object/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/object/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 2,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 23204,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 1,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 559800
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 898700
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 393100
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "ce607663350b6f85f31533ae5b8251286cc8b89157015265973d3f20fe8e86be",
+        "canonicalSnapshotBytes": 133066,
+        "evidenceDigest": null
+      },
+      "operation": "neighbor-pairs",
+      "algorithmId": "density/uniform-grid-csr-neighbor-pairs/v1",
+      "semanticScopeId": "density/fixed-radius-unordered-neighbor-pairs/v1",
+      "diagnostics": {
+        "algorithm": "uniform-grid",
+        "activeCount": 2048,
+        "addressableCells": 16641,
+        "occupiedCells": 1923,
+        "maximumOccupancy": 4,
+        "slotVisits": 4096,
+        "cellVisits": 68235,
+        "stencilVisits": 18432,
+        "candidateVisits": 4390,
+        "distanceChecks": 1171,
+        "acceptedPairs": 398,
+        "pairFingerprintXor": 1147654468,
+        "pairFingerprintSum": 3929551705,
+        "totalStructuralWork": 96324
+      },
+      "invocationId": "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/soa/attempt-0",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/soa/attempt-1",
+        "density-matrix-bf57e55cd639a4c27b4d1dc2f7643431/block-a6d8aec6d9d8587c4ea754be/round-2/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 2,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    }
+  ]
+}

@@ -66,6 +66,10 @@ bounded. It remains correctly quadratic when `K` is quadratic.
    steady-state passes include scratch clearing/filling, exact query work, and
    fingerprints. Algorithm ratios remain descriptive until algorithm execution
    is interleaved rather than merely sharing round labels.
+10. Small timing cells execute a checked-in repetition schedule and every process
+    receives claim-grade warmup/sample counts. A cold or low-intensity curve is
+    retained as audit evidence; it does not silently redefine the algorithm's
+    expected growth.
 
 ## Consequences
 

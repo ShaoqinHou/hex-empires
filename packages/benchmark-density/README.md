@@ -27,8 +27,8 @@ The checked-in suites are:
 - `stress-linear`: large direct-update probes; and
 - `stress-quadratic`: large brute-force all-pairs probes.
 
-The separate `spatial-index` suite executes both brute force and a deterministic
-dense-CSR uniform grid across object, SoA, and hybrid layouts. It contains five
+The separate `spatial-index-steady` suite executes both brute force and a
+deterministic dense-CSR uniform grid across object, SoA, and hybrid layouts. It contains five
 geometric fixed-density points and five coincident degeneration points. Raw
 diagnostics bind `n`, addressable cells `C`, reported pairs `K`, structural work,
 and two pair fingerprints. `validate` preserves disagreeing evidence for audit;
@@ -36,7 +36,7 @@ and two pair fingerprints. `validate` preserves disagreeing evidence for audit;
 rejects any high-quality timing mismatch.
 
 ```powershell
-node packages/benchmark-density/dist/cli.js matrix plan --suite spatial-index --output $matrixOutput
+node packages/benchmark-density/dist/cli.js matrix plan --suite spatial-index-steady --output $matrixOutput
 node packages/benchmark-density/dist/cli.js matrix run --output $matrixOutput
 node packages/benchmark-density/dist/cli.js matrix aggregate --output $matrixOutput
 node packages/benchmark-density/dist/cli.js matrix validate --output $matrixOutput
@@ -45,8 +45,12 @@ node packages/benchmark-density/dist/cli.js matrix enforce --output $matrixOutpu
 
 The full five-point fit is descriptive. Structural conformance uses the declared
 largest-three-point tail so valid lower-order `C` cost at small `n` does not look
-like an asymptotic defect. Timing ratios are also descriptive: algorithm blocks
-are immutable separate shards and are not yet temporally interleaved.
+like an asymptotic defect. The steady-state timing policy uses three fresh-process
+rounds, five warmups, ten measured samples, and 64/16/4/1/1 query passes per
+sample from 32 through 8,192 entities. Timing ratios are descriptive: algorithm
+blocks are immutable separate shards and are not yet temporally interleaved.
+The original `spatial-index` ID is retained as the versioned low-intensity audit
+suite so its rejected artifact remains independently validatable.
 
 Stress plans require `--allow-large`. All plans record child and total time
 budgets, conservative work and output estimates, an optional V8 heap limit, and
