@@ -1,0 +1,589 @@
+{
+  "format": "simulation-playground/density-matrix-aggregate/v2",
+  "generatedAt": "2026-08-03T02:15:40.821Z",
+  "manifestSha256": "d6995b1b1017f8949c3573a4dae2b94f7e213185bf3bd20ce995999fa5d80968",
+  "manifestId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44",
+  "suiteDigest": "8e97251526e48610bfbb7307dd881b7443e59993d1a810fe9945a32aa74ac1df",
+  "sourceDigest": "48fa15795530a2848b2633bef0c499cdb4669ef0d37ea9b0036707cb965d1e79",
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harnessDigest": "2ee53b1503507cd71941e4c9e61a03657aebf1552a030b137aabf212fbc6e7cf",
+  "policyDigest": "3af246f8dd809660f2b14739b3cb055d897f66d661532f8701b673a3e500a095",
+  "shardReferences": [
+    {
+      "blockId": "block-5e231c7cc55168fd24d11d14",
+      "attemptIndex": 0,
+      "path": "shards/block-5e231c7cc55168fd24d11d14.attempt-0.json",
+      "sha256": "0c1864fa47d0a801403708b633bfad53789e6312581e9dc9f19f0b4727228924",
+      "status": "completed"
+    },
+    {
+      "blockId": "block-9e2334246ccabe3d43cf3496",
+      "attemptIndex": 0,
+      "path": "shards/block-9e2334246ccabe3d43cf3496.attempt-0.json",
+      "sha256": "5f353bdc3a50ba7bf85f95427248fdbc14729de269b898bf5b6713b633de14bd",
+      "status": "completed"
+    },
+    {
+      "blockId": "block-b3e8fb99de268d19dc55f94d",
+      "attemptIndex": 0,
+      "path": "shards/block-b3e8fb99de268d19dc55f94d.attempt-0.json",
+      "sha256": "7f35a030ec6baa7f1fa4c95d2d02aa15b2dc9843da8c7192c187bbd39b758377",
+      "status": "completed"
+    }
+  ],
+  "summaries": [
+    {
+      "blockId": "block-5e231c7cc55168fd24d11d14",
+      "pointIds": [
+        "stress-quadratic-2048"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "object",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-5e231c7cc55168fd24d11d14/round-0/object/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 5985300,
+            "p95NsPerOperation": 5985300,
+            "minNsPerOperation": 5985300,
+            "maxNsPerOperation": 5985300
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 5985300,
+        "p95NsPerOperation": 5985300,
+        "minNsPerOperation": 5985300,
+        "maxNsPerOperation": 5985300
+      },
+      "correctness": {
+        "snapshotDigest": "eecfc74fa0625cbffca90f30356790a133bdb5cc0e9faa30a6214db829b81c81",
+        "canonicalSnapshotBytes": 102945,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-5e231c7cc55168fd24d11d14",
+      "pointIds": [
+        "stress-quadratic-2048"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "soa",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-5e231c7cc55168fd24d11d14/round-0/soa/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 6312150,
+            "p95NsPerOperation": 6312150,
+            "minNsPerOperation": 6312150,
+            "maxNsPerOperation": 6312150
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 6312150,
+        "p95NsPerOperation": 6312150,
+        "minNsPerOperation": 6312150,
+        "maxNsPerOperation": 6312150
+      },
+      "correctness": {
+        "snapshotDigest": "eecfc74fa0625cbffca90f30356790a133bdb5cc0e9faa30a6214db829b81c81",
+        "canonicalSnapshotBytes": 102945,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-5e231c7cc55168fd24d11d14",
+      "pointIds": [
+        "stress-quadratic-2048"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "hybrid",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-5e231c7cc55168fd24d11d14/round-0/hybrid/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 9119850,
+            "p95NsPerOperation": 9119850,
+            "minNsPerOperation": 9119850,
+            "maxNsPerOperation": 9119850
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 9119850,
+        "p95NsPerOperation": 9119850,
+        "minNsPerOperation": 9119850,
+        "maxNsPerOperation": 9119850
+      },
+      "correctness": {
+        "snapshotDigest": "eecfc74fa0625cbffca90f30356790a133bdb5cc0e9faa30a6214db829b81c81",
+        "canonicalSnapshotBytes": 102945,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-9e2334246ccabe3d43cf3496",
+      "pointIds": [
+        "stress-quadratic-8192"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "object",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-9e2334246ccabe3d43cf3496/round-0/object/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 75753300,
+            "p95NsPerOperation": 75753300,
+            "minNsPerOperation": 75753300,
+            "maxNsPerOperation": 75753300
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 75753300,
+        "p95NsPerOperation": 75753300,
+        "minNsPerOperation": 75753300,
+        "maxNsPerOperation": 75753300
+      },
+      "correctness": {
+        "snapshotDigest": "2d6241dc7e61a100cd1822bada3358f59298f5adcd9bab95bfa3db0336587a79",
+        "canonicalSnapshotBytes": 419893,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-9e2334246ccabe3d43cf3496",
+      "pointIds": [
+        "stress-quadratic-8192"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "soa",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-9e2334246ccabe3d43cf3496/round-0/soa/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 84326550,
+            "p95NsPerOperation": 84326550,
+            "minNsPerOperation": 84326550,
+            "maxNsPerOperation": 84326550
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 84326550,
+        "p95NsPerOperation": 84326550,
+        "minNsPerOperation": 84326550,
+        "maxNsPerOperation": 84326550
+      },
+      "correctness": {
+        "snapshotDigest": "2d6241dc7e61a100cd1822bada3358f59298f5adcd9bab95bfa3db0336587a79",
+        "canonicalSnapshotBytes": 419893,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-9e2334246ccabe3d43cf3496",
+      "pointIds": [
+        "stress-quadratic-8192"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "hybrid",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-9e2334246ccabe3d43cf3496/round-0/hybrid/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 115734150,
+            "p95NsPerOperation": 115734150,
+            "minNsPerOperation": 115734150,
+            "maxNsPerOperation": 115734150
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 115734150,
+        "p95NsPerOperation": 115734150,
+        "minNsPerOperation": 115734150,
+        "maxNsPerOperation": 115734150
+      },
+      "correctness": {
+        "snapshotDigest": "2d6241dc7e61a100cd1822bada3358f59298f5adcd9bab95bfa3db0336587a79",
+        "canonicalSnapshotBytes": 419893,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-b3e8fb99de268d19dc55f94d",
+      "pointIds": [
+        "stress-quadratic-4096"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "object",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-b3e8fb99de268d19dc55f94d/round-0/object/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 19801850,
+            "p95NsPerOperation": 19801850,
+            "minNsPerOperation": 19801850,
+            "maxNsPerOperation": 19801850
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 19801850,
+        "p95NsPerOperation": 19801850,
+        "minNsPerOperation": 19801850,
+        "maxNsPerOperation": 19801850
+      },
+      "correctness": {
+        "snapshotDigest": "669632c4e600cf663441cb92dd8ba32186f881ff6dcdb00d28dc73e0cb1fec94",
+        "canonicalSnapshotBytes": 207764,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-b3e8fb99de268d19dc55f94d",
+      "pointIds": [
+        "stress-quadratic-4096"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "soa",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-b3e8fb99de268d19dc55f94d/round-0/soa/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 26345350,
+            "p95NsPerOperation": 26345350,
+            "minNsPerOperation": 26345350,
+            "maxNsPerOperation": 26345350
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 26345350,
+        "p95NsPerOperation": 26345350,
+        "minNsPerOperation": 26345350,
+        "maxNsPerOperation": 26345350
+      },
+      "correctness": {
+        "snapshotDigest": "669632c4e600cf663441cb92dd8ba32186f881ff6dcdb00d28dc73e0cb1fec94",
+        "canonicalSnapshotBytes": 207764,
+        "evidenceDigest": null
+      }
+    },
+    {
+      "blockId": "block-b3e8fb99de268d19dc55f94d",
+      "pointIds": [
+        "stress-quadratic-4096"
+      ],
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "hybrid",
+      "operationsPerSample": 2,
+      "perProcess": [
+        {
+          "invocationId": "density-matrix-cb456cd30a6a4a81cc9fa5d05c8c0d44/block-b3e8fb99de268d19dc55f94d/round-0/hybrid/attempt-0",
+          "processRound": 0,
+          "statistics": {
+            "medianNsPerOperation": 28791550,
+            "p95NsPerOperation": 28791550,
+            "minNsPerOperation": 28791550,
+            "maxNsPerOperation": 28791550
+          }
+        }
+      ],
+      "pooled": {
+        "medianNsPerOperation": 28791550,
+        "p95NsPerOperation": 28791550,
+        "minNsPerOperation": 28791550,
+        "maxNsPerOperation": 28791550
+      },
+      "correctness": {
+        "snapshotDigest": "669632c4e600cf663441cb92dd8ba32186f881ff6dcdb00d28dc73e0cb1fec94",
+        "canonicalSnapshotBytes": 207764,
+        "evidenceDigest": null
+      }
+    }
+  ],
+  "ratios": [
+    {
+      "pointId": "stress-quadratic-2048",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "soa",
+      "denominatorLayout": "object",
+      "medianRatio": 1.0546087915392712,
+      "processRoundRatios": [
+        1.0546087915392712
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-2048",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "object",
+      "medianRatio": 1.523708084807779,
+      "processRoundRatios": [
+        1.523708084807779
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-2048",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "soa",
+      "medianRatio": 1.4448088210831491,
+      "processRoundRatios": [
+        1.4448088210831491
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-8192",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "soa",
+      "denominatorLayout": "object",
+      "medianRatio": 1.1131732875003466,
+      "processRoundRatios": [
+        1.1131732875003466
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-8192",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "object",
+      "medianRatio": 1.5277770077343165,
+      "processRoundRatios": [
+        1.5277770077343165
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-8192",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "soa",
+      "medianRatio": 1.3724520924904433,
+      "processRoundRatios": [
+        1.3724520924904433
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-4096",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "soa",
+      "denominatorLayout": "object",
+      "medianRatio": 1.3304489227016667,
+      "processRoundRatios": [
+        1.3304489227016667
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-4096",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "object",
+      "medianRatio": 1.4539828349371398,
+      "processRoundRatios": [
+        1.4539828349371398
+      ]
+    },
+    {
+      "pointId": "stress-quadratic-4096",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "numeratorLayout": "hybrid",
+      "denominatorLayout": "soa",
+      "medianRatio": 1.0928513001345588,
+      "processRoundRatios": [
+        1.0928513001345588
+      ]
+    }
+  ],
+  "series": [
+    {
+      "family": "stress-quadratic",
+      "factorName": "capacity",
+      "factorKind": "numeric",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "object",
+      "pointIds": [
+        "stress-quadratic-2048",
+        "stress-quadratic-4096",
+        "stress-quadratic-8192"
+      ],
+      "xValues": [
+        2048,
+        4096,
+        8192
+      ],
+      "pooledMediansNsPerOperation": [
+        5985300,
+        19801850,
+        75753300
+      ],
+      "adjacentSlopes": [
+        {
+          "lowerPointId": "stress-quadratic-2048",
+          "upperPointId": "stress-quadratic-4096",
+          "lowerX": 2048,
+          "upperX": 4096,
+          "alpha": 1.726139755261899
+        },
+        {
+          "lowerPointId": "stress-quadratic-4096",
+          "upperPointId": "stress-quadratic-8192",
+          "lowerX": 4096,
+          "upperX": 8192,
+          "alpha": 1.9356735160257543
+        }
+      ],
+      "logLogOls": null
+    },
+    {
+      "family": "stress-quadratic",
+      "factorName": "capacity",
+      "factorKind": "numeric",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "hybrid",
+      "pointIds": [
+        "stress-quadratic-2048",
+        "stress-quadratic-4096",
+        "stress-quadratic-8192"
+      ],
+      "xValues": [
+        2048,
+        4096,
+        8192
+      ],
+      "pooledMediansNsPerOperation": [
+        9119850,
+        28791550,
+        115734150
+      ],
+      "adjacentSlopes": [
+        {
+          "lowerPointId": "stress-quadratic-2048",
+          "upperPointId": "stress-quadratic-4096",
+          "lowerX": 2048,
+          "upperX": 4096,
+          "alpha": 1.6585634580549578
+        },
+        {
+          "lowerPointId": "stress-quadratic-4096",
+          "upperPointId": "stress-quadratic-8192",
+          "lowerX": 4096,
+          "upperX": 8192,
+          "alpha": 2.007097263394811
+        }
+      ],
+      "logLogOls": null
+    },
+    {
+      "family": "stress-quadratic",
+      "factorName": "capacity",
+      "factorKind": "numeric",
+      "operation": "neighborhood-all-pairs",
+      "algorithmId": "density/brute-force-all-pairs/v1",
+      "scopeId": "density/direct-neighborhood-all-pairs/v1",
+      "layout": "soa",
+      "pointIds": [
+        "stress-quadratic-2048",
+        "stress-quadratic-4096",
+        "stress-quadratic-8192"
+      ],
+      "xValues": [
+        2048,
+        4096,
+        8192
+      ],
+      "pooledMediansNsPerOperation": [
+        6312150,
+        26345350,
+        84326550
+      ],
+      "adjacentSlopes": [
+        {
+          "lowerPointId": "stress-quadratic-2048",
+          "upperPointId": "stress-quadratic-4096",
+          "lowerX": 2048,
+          "upperX": 4096,
+          "alpha": 2.0613449515186177
+        },
+        {
+          "lowerPointId": "stress-quadratic-4096",
+          "upperPointId": "stress-quadratic-8192",
+          "lowerX": 4096,
+          "upperX": 8192,
+          "alpha": 1.6784385854033883
+        }
+      ],
+      "logLogOls": null
+    }
+  ],
+  "crossovers": [],
+  "claimEligibility": {
+    "policy": "simulation-playground/density-matrix-claim/v1",
+    "eligible": false,
+    "reasons": [
+      "suite is not the complete checked-in claim matrix",
+      "an accepted claim-eligible legacy v2 report is not bound to the manifest",
+      "claim matrix requires at least 3 process rounds",
+      "claim matrix requires at least 5 warmups per process",
+      "claim matrix requires at least 10 samples per process"
+    ]
+  }
+}

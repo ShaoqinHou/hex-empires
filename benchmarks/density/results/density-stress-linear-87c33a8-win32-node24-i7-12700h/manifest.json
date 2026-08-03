@@ -1,0 +1,562 @@
+{
+  "format": "simulation-playground/density-matrix-manifest/v1",
+  "issuedAt": "2026-08-03T02:13:17.693Z",
+  "manifestId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b",
+  "suite": {
+    "format": "simulation-playground/density-matrix-suite/v1",
+    "id": "stress-linear",
+    "claimClass": "stress-linear",
+    "description": "Non-claim stress-linear resource-envelope preset",
+    "points": [
+      {
+        "id": "stress-linear-2048",
+        "family": "stress-linear",
+        "claimClass": "stress-linear",
+        "factor": {
+          "name": "capacity",
+          "kind": "numeric",
+          "value": 2048,
+          "unit": "slots"
+        },
+        "controls": {
+          "fixed": {
+            "occupancyPercent": 75,
+            "neighborRadius": 96,
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square",
+            "purpose": "non-claim resource-envelope stress"
+          },
+          "derived": {
+            "initialActive": "capacity * 0.75",
+            "coordinateLimit": "round(4096 * sqrt(capacity / 512))",
+            "churnPerTick": "min(256, capacity / 16)"
+          }
+        },
+        "workload": {
+          "format": "simulation-playground/density-workload/v2",
+          "id": "density-matrix-c2048-a1536-b8192-r96-h128-sp-pu-t50-1-1-1-1",
+          "seed": "density-scale-matrix-seed-v1",
+          "capacity": 2048,
+          "initialActive": 1536,
+          "coordinateLimit": 8192,
+          "neighborRadius": 96,
+          "churn": {
+            "despawnPerTick": 128,
+            "spawnPerTick": 128
+          },
+          "ticks": {
+            "update": 50,
+            "neighborhood-all-pairs": 1,
+            "churn": 1,
+            "snapshot": 1,
+            "replay": 1
+          },
+          "initialization": {
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square"
+          }
+        },
+        "workloadDigest": "09e62beab09dc951aa8cd910371fb4c1c1bb42babf09099c4e1cc314fea1820d",
+        "operations": [
+          {
+            "operation": "update",
+            "algorithmId": "density/direct-motion-update/v1"
+          }
+        ]
+      },
+      {
+        "id": "stress-linear-8192",
+        "family": "stress-linear",
+        "claimClass": "stress-linear",
+        "factor": {
+          "name": "capacity",
+          "kind": "numeric",
+          "value": 8192,
+          "unit": "slots"
+        },
+        "controls": {
+          "fixed": {
+            "occupancyPercent": 75,
+            "neighborRadius": 96,
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square",
+            "purpose": "non-claim resource-envelope stress"
+          },
+          "derived": {
+            "initialActive": "capacity * 0.75",
+            "coordinateLimit": "round(4096 * sqrt(capacity / 512))",
+            "churnPerTick": "min(256, capacity / 16)"
+          }
+        },
+        "workload": {
+          "format": "simulation-playground/density-workload/v2",
+          "id": "density-matrix-c8192-a6144-b16384-r96-h256-sp-pu-t50-1-1-1-1",
+          "seed": "density-scale-matrix-seed-v1",
+          "capacity": 8192,
+          "initialActive": 6144,
+          "coordinateLimit": 16384,
+          "neighborRadius": 96,
+          "churn": {
+            "despawnPerTick": 256,
+            "spawnPerTick": 256
+          },
+          "ticks": {
+            "update": 50,
+            "neighborhood-all-pairs": 1,
+            "churn": 1,
+            "snapshot": 1,
+            "replay": 1
+          },
+          "initialization": {
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square"
+          }
+        },
+        "workloadDigest": "114bb6ec436e2150114a504eb8a2fe2fc63b4f51ab3211ebaaaa297346416b71",
+        "operations": [
+          {
+            "operation": "update",
+            "algorithmId": "density/direct-motion-update/v1"
+          }
+        ]
+      },
+      {
+        "id": "stress-linear-32768",
+        "family": "stress-linear",
+        "claimClass": "stress-linear",
+        "factor": {
+          "name": "capacity",
+          "kind": "numeric",
+          "value": 32768,
+          "unit": "slots"
+        },
+        "controls": {
+          "fixed": {
+            "occupancyPercent": 75,
+            "neighborRadius": 96,
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square",
+            "purpose": "non-claim resource-envelope stress"
+          },
+          "derived": {
+            "initialActive": "capacity * 0.75",
+            "coordinateLimit": "round(4096 * sqrt(capacity / 512))",
+            "churnPerTick": "min(256, capacity / 16)"
+          }
+        },
+        "workload": {
+          "format": "simulation-playground/density-workload/v2",
+          "id": "density-matrix-c32768-a24576-b32768-r96-h256-sp-pu-t50-1-1-1-1",
+          "seed": "density-scale-matrix-seed-v1",
+          "capacity": 32768,
+          "initialActive": 24576,
+          "coordinateLimit": 32768,
+          "neighborRadius": 96,
+          "churn": {
+            "despawnPerTick": 256,
+            "spawnPerTick": 256
+          },
+          "ticks": {
+            "update": 50,
+            "neighborhood-all-pairs": 1,
+            "churn": 1,
+            "snapshot": 1,
+            "replay": 1
+          },
+          "initialization": {
+            "activeSlots": "packed-prefix",
+            "positions": "uniform-square"
+          }
+        },
+        "workloadDigest": "f457407a0d7d5bea59076d04e5dcc05be52218ed39ea1b5062547bebf205ea92",
+        "operations": [
+          {
+            "operation": "update",
+            "algorithmId": "density/direct-motion-update/v1"
+          }
+        ]
+      }
+    ]
+  },
+  "suiteDigest": "832c947deefadce72a040c6bbfed33346237bacdc1f0634f031090388978afde",
+  "source": {
+    "revision": "87c33a86ce964a1e0c5e497169412f0712070f54",
+    "dirty": false,
+    "lockfile": {
+      "path": "package-lock.json",
+      "sha256": "f7c1b80bcfd256f53cf0f8ae6c0797137335fdb9eb30a6f697dbe7a2a15c8dc0"
+    },
+    "worktreeStateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "sourceDigest": "48fa15795530a2848b2633bef0c499cdb4669ef0d37ea9b0036707cb965d1e79",
+  "environment": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64",
+    "cpuModel": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "logicalCpuCount": 20,
+    "totalMemoryBytes": 34029162496,
+    "node": "v24.15.0",
+    "v8": "13.6.233.17-node.48",
+    "executable": "C:\\Program Files\\nodejs\\node.exe",
+    "executableSha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5",
+    "execArgv": [],
+    "nodeOptions": ""
+  },
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harness": {
+    "format": "simulation-playground/density-matrix-harness-identity/v1",
+    "files": [
+      {
+        "role": "cli",
+        "path": "packages/benchmark-density/dist/cli.js",
+        "sha256": "63a10ab208c564be507257213853fcb2e815cf246ca81d7e4446492bf8509a70"
+      },
+      {
+        "role": "runner",
+        "path": "packages/benchmark-density/dist/matrix-runner.js",
+        "sha256": "4f4889788213f605e5c2b13c03d9e07bca5c659bded69a856cf7740a27238444"
+      },
+      {
+        "role": "validator",
+        "path": "packages/benchmark-density/dist/matrix-validator.js",
+        "sha256": "0b39d67b8a554abc6fb1a167406489c43eb060918c7ccbae1eaf44e52880d273"
+      },
+      {
+        "role": "measure",
+        "path": "packages/benchmark-density/dist/measure.js",
+        "sha256": "4d49d92450eba4379589b94910df541f9a8f06a84fe3c336a164ff09553318e4"
+      },
+      {
+        "role": "cell-worker",
+        "path": "packages/benchmark-density/dist/worker.js",
+        "sha256": "564b413f44011f11eae7122cef0e8397fa68186ed7dcf704d59962f7bb8d4cd2"
+      },
+      {
+        "role": "parity-worker",
+        "path": "packages/benchmark-density/dist/matrix-parity-worker.js",
+        "sha256": "91ee86696f493571c4ec8dd072db3b7b60c55d6320d21a19f5bcff4bc35bfba9"
+      }
+    ]
+  },
+  "harnessDigest": "2ee53b1503507cd71941e4c9e61a03657aebf1552a030b137aabf212fbc6e7cf",
+  "policy": {
+    "processIsolation": "fresh-child-process-per-layout-per-round",
+    "timer": "process.hrtime.bigint",
+    "percentileMethod": "nearest-rank",
+    "processRounds": 1,
+    "warmupSamplesPerProcess": 0,
+    "measuredSamplesPerProcess": 1,
+    "layouts": [
+      "object",
+      "soa",
+      "hybrid"
+    ],
+    "crossoverPracticalThreshold": 0.05
+  },
+  "policyDigest": "3af246f8dd809660f2b14739b3cb055d897f66d661532f8701b673a3e500a095",
+  "limits": {
+    "childTimeoutMs": 120000,
+    "totalTimeoutMs": 1800000,
+    "maxEstimatedWorkPerChild": 5000000000,
+    "maxEstimatedWorkTotal": 50000000000,
+    "maxOutputBytesPerChild": 16777216,
+    "v8HeapLimitMb": null,
+    "allowLarge": true
+  },
+  "limitsDigest": "562498ea56dc9e9772b98de2f793014e6505400196e7190666b3b22496c7c9bc",
+  "legacyEvidence": null,
+  "blocks": [
+    {
+      "deduplicationDigest": "0913e068d98a8368232f8c45a0869f6eb3b44b36b036a3bb584917232506fd9d",
+      "pointIds": [
+        "stress-linear-8192"
+      ],
+      "workload": {
+        "format": "simulation-playground/density-workload/v2",
+        "id": "density-matrix-c8192-a6144-b16384-r96-h256-sp-pu-t50-1-1-1-1",
+        "seed": "density-scale-matrix-seed-v1",
+        "capacity": 8192,
+        "initialActive": 6144,
+        "coordinateLimit": 16384,
+        "neighborRadius": 96,
+        "churn": {
+          "despawnPerTick": 256,
+          "spawnPerTick": 256
+        },
+        "ticks": {
+          "update": 50,
+          "neighborhood-all-pairs": 1,
+          "churn": 1,
+          "snapshot": 1,
+          "replay": 1
+        },
+        "initialization": {
+          "activeSlots": "packed-prefix",
+          "positions": "uniform-square"
+        }
+      },
+      "workloadDigest": "114bb6ec436e2150114a504eb8a2fe2fc63b4f51ab3211ebaaaa297346416b71",
+      "operation": "update",
+      "algorithmId": "density/direct-motion-update/v1",
+      "id": "block-0913e068d98a8368232f8c45",
+      "scope": {
+        "id": "density/direct-motion-update/v1",
+        "timedPhases": [
+          "configured-world-validation",
+          "active-slot-scan",
+          "motion-integration-with-coordinate-wrap",
+          "age-increment",
+          "completed-tick-increment"
+        ],
+        "setupPhases": [
+          "fresh-configured-world"
+        ]
+      },
+      "estimate": {
+        "linearScans": 409600,
+        "pairCandidates": 0,
+        "transitions": 0,
+        "replayTicks": 0,
+        "outputBytes": 593920,
+        "conservativeUnitsPerSample": 1003520,
+        "conservativeUnitsAllInvocations": 3010560
+      },
+      "invocations": [
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-2"
+          ],
+          "layout": "object",
+          "processRound": 0,
+          "orderIndex": 0
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-2"
+          ],
+          "layout": "soa",
+          "processRound": 0,
+          "orderIndex": 1
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-2"
+          ],
+          "layout": "hybrid",
+          "processRound": 0,
+          "orderIndex": 2
+        }
+      ],
+      "shardPaths": [
+        "shards/block-0913e068d98a8368232f8c45.attempt-0.json",
+        "shards/block-0913e068d98a8368232f8c45.attempt-1.json",
+        "shards/block-0913e068d98a8368232f8c45.attempt-2.json"
+      ],
+      "shardPath": "shards/block-0913e068d98a8368232f8c45.attempt-0.json"
+    },
+    {
+      "deduplicationDigest": "3fa0bee80d280312de046678016eccd930f55713236fcbd95331bd549f4249c8",
+      "pointIds": [
+        "stress-linear-2048"
+      ],
+      "workload": {
+        "format": "simulation-playground/density-workload/v2",
+        "id": "density-matrix-c2048-a1536-b8192-r96-h128-sp-pu-t50-1-1-1-1",
+        "seed": "density-scale-matrix-seed-v1",
+        "capacity": 2048,
+        "initialActive": 1536,
+        "coordinateLimit": 8192,
+        "neighborRadius": 96,
+        "churn": {
+          "despawnPerTick": 128,
+          "spawnPerTick": 128
+        },
+        "ticks": {
+          "update": 50,
+          "neighborhood-all-pairs": 1,
+          "churn": 1,
+          "snapshot": 1,
+          "replay": 1
+        },
+        "initialization": {
+          "activeSlots": "packed-prefix",
+          "positions": "uniform-square"
+        }
+      },
+      "workloadDigest": "09e62beab09dc951aa8cd910371fb4c1c1bb42babf09099c4e1cc314fea1820d",
+      "operation": "update",
+      "algorithmId": "density/direct-motion-update/v1",
+      "id": "block-3fa0bee80d280312de046678",
+      "scope": {
+        "id": "density/direct-motion-update/v1",
+        "timedPhases": [
+          "configured-world-validation",
+          "active-slot-scan",
+          "motion-integration-with-coordinate-wrap",
+          "age-increment",
+          "completed-tick-increment"
+        ],
+        "setupPhases": [
+          "fresh-configured-world"
+        ]
+      },
+      "estimate": {
+        "linearScans": 102400,
+        "pairCandidates": 0,
+        "transitions": 0,
+        "replayTicks": 0,
+        "outputBytes": 151552,
+        "conservativeUnitsPerSample": 253952,
+        "conservativeUnitsAllInvocations": 761856
+      },
+      "invocations": [
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/object",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/object/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/object/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/object/attempt-2"
+          ],
+          "layout": "object",
+          "processRound": 0,
+          "orderIndex": 0
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/soa",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/soa/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/soa/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/soa/attempt-2"
+          ],
+          "layout": "soa",
+          "processRound": 0,
+          "orderIndex": 1
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/hybrid",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/hybrid/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/hybrid/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-3fa0bee80d280312de046678/round-0/hybrid/attempt-2"
+          ],
+          "layout": "hybrid",
+          "processRound": 0,
+          "orderIndex": 2
+        }
+      ],
+      "shardPaths": [
+        "shards/block-3fa0bee80d280312de046678.attempt-0.json",
+        "shards/block-3fa0bee80d280312de046678.attempt-1.json",
+        "shards/block-3fa0bee80d280312de046678.attempt-2.json"
+      ],
+      "shardPath": "shards/block-3fa0bee80d280312de046678.attempt-0.json"
+    },
+    {
+      "deduplicationDigest": "5045d9a119b6258de08df7e959aea7886e30d75059481b6c70ceff202c7c91b6",
+      "pointIds": [
+        "stress-linear-32768"
+      ],
+      "workload": {
+        "format": "simulation-playground/density-workload/v2",
+        "id": "density-matrix-c32768-a24576-b32768-r96-h256-sp-pu-t50-1-1-1-1",
+        "seed": "density-scale-matrix-seed-v1",
+        "capacity": 32768,
+        "initialActive": 24576,
+        "coordinateLimit": 32768,
+        "neighborRadius": 96,
+        "churn": {
+          "despawnPerTick": 256,
+          "spawnPerTick": 256
+        },
+        "ticks": {
+          "update": 50,
+          "neighborhood-all-pairs": 1,
+          "churn": 1,
+          "snapshot": 1,
+          "replay": 1
+        },
+        "initialization": {
+          "activeSlots": "packed-prefix",
+          "positions": "uniform-square"
+        }
+      },
+      "workloadDigest": "f457407a0d7d5bea59076d04e5dcc05be52218ed39ea1b5062547bebf205ea92",
+      "operation": "update",
+      "algorithmId": "density/direct-motion-update/v1",
+      "id": "block-5045d9a119b6258de08df7e9",
+      "scope": {
+        "id": "density/direct-motion-update/v1",
+        "timedPhases": [
+          "configured-world-validation",
+          "active-slot-scan",
+          "motion-integration-with-coordinate-wrap",
+          "age-increment",
+          "completed-tick-increment"
+        ],
+        "setupPhases": [
+          "fresh-configured-world"
+        ]
+      },
+      "estimate": {
+        "linearScans": 1638400,
+        "pairCandidates": 0,
+        "transitions": 0,
+        "replayTicks": 0,
+        "outputBytes": 2363392,
+        "conservativeUnitsPerSample": 4001792,
+        "conservativeUnitsAllInvocations": 12005376
+      },
+      "invocations": [
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/object",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/object/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/object/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/object/attempt-2"
+          ],
+          "layout": "object",
+          "processRound": 0,
+          "orderIndex": 0
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/soa",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/soa/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/soa/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/soa/attempt-2"
+          ],
+          "layout": "soa",
+          "processRound": 0,
+          "orderIndex": 1
+        },
+        {
+          "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/hybrid",
+          "attemptInvocationIds": [
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/hybrid/attempt-0",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/hybrid/attempt-1",
+            "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-5045d9a119b6258de08df7e9/round-0/hybrid/attempt-2"
+          ],
+          "layout": "hybrid",
+          "processRound": 0,
+          "orderIndex": 2
+        }
+      ],
+      "shardPaths": [
+        "shards/block-5045d9a119b6258de08df7e9.attempt-0.json",
+        "shards/block-5045d9a119b6258de08df7e9.attempt-1.json",
+        "shards/block-5045d9a119b6258de08df7e9.attempt-2.json"
+      ],
+      "shardPath": "shards/block-5045d9a119b6258de08df7e9.attempt-0.json"
+    }
+  ]
+}

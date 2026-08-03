@@ -1,0 +1,117 @@
+{
+  "format": "simulation-playground/density-matrix-shard/v1",
+  "manifestSha256": "0cf70139a3aa8f43a270003fbafa9d21d1a0a4ab832ea306e02110eaea1fc416",
+  "manifestId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b",
+  "suiteDigest": "832c947deefadce72a040c6bbfed33346237bacdc1f0634f031090388978afde",
+  "sourceDigest": "48fa15795530a2848b2633bef0c499cdb4669ef0d37ea9b0036707cb965d1e79",
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harnessDigest": "2ee53b1503507cd71941e4c9e61a03657aebf1552a030b137aabf212fbc6e7cf",
+  "policyDigest": "3af246f8dd809660f2b14739b3cb055d897f66d661532f8701b673a3e500a095",
+  "limitsDigest": "562498ea56dc9e9772b98de2f793014e6505400196e7190666b3b22496c7c9bc",
+  "blockId": "block-0913e068d98a8368232f8c45",
+  "attemptIndex": 0,
+  "previousShardSha256": null,
+  "blockDigest": "0913e068d98a8368232f8c45a0869f6eb3b44b36b036a3bb584917232506fd9d",
+  "workloadDigest": "114bb6ec436e2150114a504eb8a2fe2fc63b4f51ab3211ebaaaa297346416b71",
+  "operation": "update",
+  "algorithmId": "density/direct-motion-update/v1",
+  "status": "completed",
+  "parity": {
+    "strategy": "every-tick-and-direct-phase/v1",
+    "operation": "update",
+    "checkpoints": 51,
+    "finalSnapshotDigest": "eb650805ca7e535ca8e2598b3b59473e6af0cd72e1b500eb78eb81e9bdce015f"
+  },
+  "invocations": [
+    {
+      "pid": 35940,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 0,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 19078900
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "eb650805ca7e535ca8e2598b3b59473e6af0cd72e1b500eb78eb81e9bdce015f",
+        "canonicalSnapshotBytes": 426008,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-0",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-1",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 0,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 38904,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 0,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 4097300
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "eb650805ca7e535ca8e2598b3b59473e6af0cd72e1b500eb78eb81e9bdce015f",
+        "canonicalSnapshotBytes": 426008,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-0",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-1",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 0,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 39784,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 0,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 7858800
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "eb650805ca7e535ca8e2598b3b59473e6af0cd72e1b500eb78eb81e9bdce015f",
+        "canonicalSnapshotBytes": 426008,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-0",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-1",
+        "density-matrix-f2f77323ac6f0304fd59ff30c2bbd98b/block-0913e068d98a8368232f8c45/round-0/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 0,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    }
+  ]
+}

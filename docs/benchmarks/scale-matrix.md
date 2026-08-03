@@ -170,3 +170,30 @@ This accepted suite stops at 1,024 slots. It validates the curve machinery and
 the named interval; it is not an "extremely large" capacity claim. The separate
 linear and quadratic stress suites are the next resource-envelope evidence and
 remain claim-ineligible by design.
+
+## First resource envelopes: 87c33a8
+
+Two checked-in stress runs bind the same clean revision
+`87c33a86ce964a1e0c5e497169412f0712070f54` and environment as the accepted
+matrix host:
+
+- [`stress-linear`](../../benchmarks/density/results/density-stress-linear-87c33a8-win32-node24-i7-12700h/aggregate.json)
+  measured direct update at 2,048, 8,192, and 32,768 slots;
+- [`stress-quadratic`](../../benchmarks/density/results/density-stress-quadratic-87c33a8-win32-node24-i7-12700h/aggregate.json)
+  measured brute-force all-pairs at 2,048, 4,096, and 8,192 slots.
+
+All six comparison blocks completed with parity and no timeout or resource
+failure. At the largest point, the one-shot per-operation measurements were:
+
+| Envelope | Object | SoA | Hybrid |
+| --- | ---: | ---: | ---: |
+| Direct update, 32,768 slots | 1.347 ms | 0.308 ms | 0.403 ms |
+| Brute-force all-pairs, 8,192 slots | 75.753 ms | 84.327 ms | 115.734 ms |
+
+These runs intentionally use one process, no warmup, and one measured sample.
+They locate a resource envelope; they have no p95 and are claim-ineligible. The
+linear result justifies a replicated large-count update curve. The quadratic
+result is already above a 16.67 ms frame on every layout and kills brute-force
+all-pairs as the large-world neighbor strategy before any renderer, AI, history,
+or network cost is added. Track 3A should next compare a spatial index against
+the same all-pairs oracle as a full algorithm × layout experiment.
