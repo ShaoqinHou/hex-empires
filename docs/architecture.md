@@ -148,9 +148,11 @@ set after a baseline exists, then tightened only when a real host needs them.
 must name the relevant resident slots/bytes, active work per tick,
 candidate/accepted interactions, events/churn, AI or path requests,
 visible/dirty instances, timeline bytes and horizon, replay/restore latency,
-replicated bytes/client count, target tick rate, and p95/p99 budget. Curves run
-until a declared budget knee or recorded resource limit; censored runs remain
-failure evidence rather than disappearing from a report.
+replicated bytes/client count, target tick rate, and declared tail percentiles
+against an explicit budget. Use p99 only when the sample count makes that
+quantile meaningful; otherwise report the available p95 and maximum honestly.
+Curves run until a declared budget knee or recorded resource limit; censored
+runs remain failure evidence rather than disappearing from a report.
 
 Environment is an explicit factor. Results from different CPU, OS, Node/V8,
 runtime flags, browser, or GPU environments are never pooled into one percentile.

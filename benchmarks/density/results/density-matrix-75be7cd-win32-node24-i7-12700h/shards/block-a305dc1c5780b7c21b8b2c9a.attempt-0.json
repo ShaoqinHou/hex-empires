@@ -1,0 +1,621 @@
+{
+  "format": "simulation-playground/density-matrix-shard/v1",
+  "manifestSha256": "85b5aabc53eb3d891aefd0fcd59eff8856a8cd590d99893fe30187939ebdbd96",
+  "manifestId": "density-matrix-f947b61cb7464534ce390d0c767ed383",
+  "suiteDigest": "071ad7ed2606991868318172f3e8fb14935739d8ca873996ddbbfe87e1424d0e",
+  "sourceDigest": "fc45954d6fa351e681ed573942cfdf4bfbf88d59b3e76f6fe3298f0854336a87",
+  "environmentDigest": "0bec84098268950a9b16900931492dc66feddce14f981db6c11239cfe3d67b5b",
+  "harnessDigest": "2ee53b1503507cd71941e4c9e61a03657aebf1552a030b137aabf212fbc6e7cf",
+  "policyDigest": "5db26feffba3831cef4ad4daf9787f0cd569510e7aa47cd72feaeb2aa664a71a",
+  "limitsDigest": "4ebb4ca55cdf20bd16fd1929bb87ad2d833ae78558ed350b32a665e235c02d16",
+  "blockId": "block-a305dc1c5780b7c21b8b2c9a",
+  "attemptIndex": 0,
+  "previousShardSha256": null,
+  "blockDigest": "a305dc1c5780b7c21b8b2c9a458524cd748869b816792cbf5379a1b38874e8fe",
+  "workloadDigest": "c42b113471d4d592d9d7b595a62b3904ee9f13eca5f01aabfcaf7cd13a490baa",
+  "operation": "neighborhood-all-pairs",
+  "algorithmId": "density/brute-force-all-pairs/v1",
+  "status": "completed",
+  "parity": {
+    "strategy": "every-tick-and-direct-phase/v1",
+    "operation": "neighborhood-all-pairs",
+    "checkpoints": 5,
+    "finalSnapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980"
+  },
+  "invocations": [
+    {
+      "pid": 1940,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 3442400
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 2948300
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 3100800
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 3175500
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3341900
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 3833300
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 2828900
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 3039900
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 2911400
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3036000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/object/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/object/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 0,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 4940,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 3266800
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 3017000
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 2988000
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 2856800
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 2878500
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 3049900
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 3231000
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 3590800
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 3187200
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3020200
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/soa/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/soa/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 0,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 7852,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 4080000
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 4162900
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 4293600
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 4380600
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 4016600
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 4950900
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 4156400
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 4355300
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 4977500
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 4399700
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/hybrid/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/hybrid/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-0/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 0,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 37668,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 3052100
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 3070900
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 3276400
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 2803600
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3128600
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 2896000
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 3314400
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 2850800
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 3082300
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 2913000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/soa/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/soa/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 1,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 44984,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 4112400
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 4192900
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 5024100
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 4204900
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3943100
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 5283900
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 4573000
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 8845800
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 4195300
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3980000
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/hybrid/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/hybrid/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 1,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 32156,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 2742300
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 2971500
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 3343000
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 3250100
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3046100
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 2958800
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 2887500
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 2780700
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 3040300
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3108100
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/object/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/object/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-1/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 1,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 34880,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 4657400
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 5088600
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 5076600
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 4276300
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3826900
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 3952400
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 3708100
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 4147000
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 4183300
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3608300
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/hybrid/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/hybrid/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/hybrid/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/hybrid/attempt-2"
+      ],
+      "layout": "hybrid",
+      "processRound": 2,
+      "orderIndex": 0,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 33548,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 2872200
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 3182200
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 4899700
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 3301500
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 3437700
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 3092100
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 2757500
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 3818600
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 2562100
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 3041200
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/object/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/object/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/object/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/object/attempt-2"
+      ],
+      "layout": "object",
+      "processRound": 2,
+      "orderIndex": 1,
+      "status": "completed",
+      "nodeOptions": ""
+    },
+    {
+      "pid": 35028,
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "execArgv": [],
+      "node": "v24.15.0",
+      "v8": "13.6.233.17-node.48",
+      "warmupSamples": 5,
+      "samples": [
+        {
+          "sampleIndex": 0,
+          "durationNs": 3061100
+        },
+        {
+          "sampleIndex": 1,
+          "durationNs": 3024300
+        },
+        {
+          "sampleIndex": 2,
+          "durationNs": 3362000
+        },
+        {
+          "sampleIndex": 3,
+          "durationNs": 3013200
+        },
+        {
+          "sampleIndex": 4,
+          "durationNs": 2728800
+        },
+        {
+          "sampleIndex": 5,
+          "durationNs": 3154900
+        },
+        {
+          "sampleIndex": 6,
+          "durationNs": 2944400
+        },
+        {
+          "sampleIndex": 7,
+          "durationNs": 2779100
+        },
+        {
+          "sampleIndex": 8,
+          "durationNs": 2716000
+        },
+        {
+          "sampleIndex": 9,
+          "durationNs": 2587200
+        }
+      ],
+      "correctness": {
+        "snapshotDigest": "c2c0f580ba1706903c6eedebe77f22805dd9f9c5a33e5070b251fc2c147a8980",
+        "canonicalSnapshotBytes": 34143,
+        "evidenceDigest": null
+      },
+      "invocationId": "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/soa/attempt-0",
+      "attemptInvocationIds": [
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/soa/attempt-0",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/soa/attempt-1",
+        "density-matrix-f947b61cb7464534ce390d0c767ed383/block-a305dc1c5780b7c21b8b2c9a/round-2/soa/attempt-2"
+      ],
+      "layout": "soa",
+      "processRound": 2,
+      "orderIndex": 2,
+      "status": "completed",
+      "nodeOptions": ""
+    }
+  ]
+}

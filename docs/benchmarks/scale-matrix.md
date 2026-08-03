@@ -130,3 +130,43 @@ Each logical layout/round cell has one initial attempt and two hash-linked,
 immutable continuation attempts. Completed cells are never rerun; failed or
 timed-out evidence remains in the chain. Exhausting the bounded attempts is a
 recorded limit, not silent retry.
+
+## Accepted matrix: 75be7cd on the i7-12700H host
+
+The first accepted matrix is checked in at
+[`benchmarks/density/results/density-matrix-75be7cd-win32-node24-i7-12700h`](../../benchmarks/density/results/density-matrix-75be7cd-win32-node24-i7-12700h/aggregate.json).
+It binds clean source revision `75be7cd7e2a373e8da725b75f05bb2096d6985f9`,
+Node 24.15.0/V8 13.6, Windows `10.0.26200`, an i7-12700H, an empty
+`NODE_OPTIONS`, the accepted legacy v2 baseline, 22 points, 44 deduplicated
+blocks, and 132 layout summaries. All 44 first-attempt shards completed and the
+offline validator reports claim eligibility with no reasons.
+
+The table below is the 1,024-slot, 768-active state-scale point. Each value is
+pooled median / p95; update is in microseconds and the other rows are in
+milliseconds.
+
+| Operation | Object | SoA | Hybrid |
+| --- | ---: | ---: | ---: |
+| Direct update (µs) | 30.96 / 37.35 | 6.80 / 7.83 | 9.80 / 21.63 |
+| Brute-force all-pairs (ms) | 1.200 / 1.564 | 1.248 / 1.458 | 1.721 / 1.985 |
+| Full audit capture (ms) | 6.245 / 9.947 | 5.839 / 10.567 | 5.629 / 7.555 |
+| 20-tick end-to-end replay (ms) | 36.378 / 40.527 | 37.347 / 45.588 | 46.644 / 54.966 |
+
+Within the tested 128–1,024 interval, the log-log fitted exponents were
+1.93–2.08 for brute-force all-pairs, 0.88–0.98 for full audit capture, and
+1.27–1.39 for end-to-end replay. These are measured interval shapes, not
+complexity proofs. They justify prioritizing a spatial-index experiment and
+keeping audit capture out of the live timeline path.
+
+The aggregate also contains three conservative candidate crossover brackets:
+object/SoA capture between 128 and 256 slots, SoA/object churn between 256 and
+512, and object/hybrid snapshot materialization between 256 and 512. They pass
+the within-run round-consistency and 5% practical gates, but need an independent
+session before becoming selection policy. This is positive evidence for keeping
+mutation and storage scenario-owned rather than choosing one repository-wide
+layout.
+
+This accepted suite stops at 1,024 slots. It validates the curve machinery and
+the named interval; it is not an "extremely large" capacity claim. The separate
+linear and quadratic stress suites are the next resource-envelope evidence and
+remain claim-ineligible by design.
